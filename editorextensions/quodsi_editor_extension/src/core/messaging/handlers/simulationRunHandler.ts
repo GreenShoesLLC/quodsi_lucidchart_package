@@ -41,6 +41,11 @@ export class SimulationRunHandler {
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
+      // OPEN_PATTERN_MODAL is NOT handled here -- it lives in
+      // modelRootHandler.ts. Unlike the OPEN_*_MODAL cases below, it opens a
+      // local quodsim-react view (no server-side model id to resolve via
+      // UpsertModel), and modelRootHandler.ts is where the arrivalPatterns
+      // model-root projection it edits is otherwise read/written.
       case EnvelopeMessageType.OPEN_STUDIES_MODAL:
         SimulationRunHandler.handleOpenStudiesModal(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleOpenStudiesModal failed', e),

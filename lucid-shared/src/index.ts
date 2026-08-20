@@ -20,6 +20,7 @@ export * from './types/ConversionPreview';
 export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
 export * from './types/ModelItemData';
+export * from './types/ModelRootProjection';
 
 export * from './types/PageStatus';
 export * from './types/ProcessAnalysisResult';
@@ -35,6 +36,10 @@ export {
   Activity,
   ActivityFinancialProperties,
   ActivityListManager,
+  ArrivalPattern,
+  ArrivalPatternListManager,
+  ArrivalSchedule,
+  ArrivalScheduleListManager,
   BooleanPropertyModification,
   ComponentListManager,
   ComponentType,
@@ -70,6 +75,7 @@ export {
   ResourceRequirementListManager,
   ScenarioListManager,
   ScenarioObjectType,
+  SeasonMode,
   SimulationObject,
   SimulationObjectType,
   SimulationTimeType,
@@ -80,6 +86,7 @@ export {
   StateModification,
   StateOperation,
   StateType,
+  UnitlessSample,
   applyOperation,
   createAssignModification,
   createBooleanState,

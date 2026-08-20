@@ -68,6 +68,48 @@ interface StoredGeneratorData {
 }
 
 /**
+ * The only storage key a Generator write-back is ever allowed to DELETE.
+ *
+ * arrivalPatternId is one of the few fields where ABSENCE is the meaningful
+ * value: a generator with no linked ArrivalPattern has no key at all (see
+ * @quodsi/studio's arrivalPatternLifecycle.ts -- removePatternForGenerator
+ * clears the field on switching a generator away from PATTERN mode).
+ * StorageAdapter.updateElementData reads the stored q_data, strips
+ * undefined-valued keys from the incoming update (a partial update must not
+ * clobber stored width/height) and merges the rest, so a cleared link would
+ * silently survive. The panel->extension JSON transport compounds it:
+ * `arrivalPatternId: undefined` is dropped before the extension ever sees
+ * the key.
+ *
+ * Scoped to Generator on purpose, mirroring ACTIVITY_CLEARABLE_KEYS's own
+ * scoping rationale in ActivityLucid.ts: the strip loop is correct for
+ * everything else, and a global null-means-delete sentinel was rejected as
+ * too broad (86e2qwvf2, final-review finding 1) in favor of an explicit,
+ * opt-in, per-type declaration.
+ */
+const GENERATOR_CLEARABLE_KEYS: readonly string[] = ['arrivalPatternId'];
+
+/**
+ * Storage keys to delete, given what the writer EXPLICITLY declared cleared.
+ *
+ * Mirrors activityStorageRemoveKeys (ActivityLucid.ts) exactly: deletion is
+ * opt-in from the writer, never inferred from a missing key -- a payload
+ * that means to clear arrivalPatternId names it in CLEARED_FIELDS_KEY (see
+ * `declareClearedFields` in @quodsi/lucid-shared). A partial payload that
+ * simply never mentions the field stays silent and the stored value
+ * survives. The declaration is filtered here rather than trusted: a payload
+ * cannot talk the extension into deleting arbitrary stored keys.
+ */
+export function generatorStorageRemoveKeys(
+    clearedFields: readonly string[] | undefined
+): readonly string[] {
+    if (!clearedFields?.length) {
+        return [];
+    }
+    return GENERATOR_CLEARABLE_KEYS.filter(key => clearedFields.includes(key));
+}
+
+/**
  * Lucid-specific implementation of a Generator.
  * Maps a Lucid Block element to a simulation Generator.
  */

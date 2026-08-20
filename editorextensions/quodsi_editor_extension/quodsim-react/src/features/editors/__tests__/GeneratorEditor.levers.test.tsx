@@ -25,6 +25,14 @@ vi.mock("../SaveStatusLine", () => ({
   default: () => <div />,
 }));
 
+// Task 10: GeneratorEditor now calls useModelRootSource() directly, which
+// needs useMessaging() for its panelType. Mock it the same way
+// GeneratorEditor.pattern.test.tsx does -- without this, render() throws
+// (no MessageProvider ancestor in this test).
+vi.mock("../../../messaging/MessageProvider", () => ({
+  useMessaging: () => ({ app: { panelType: "model" } }),
+}));
+
 const baseProps = {
   generator: { id: "g1", name: "Arrivals", generationConfig: {}, levers: [] } as any,
   onSave: vi.fn(),

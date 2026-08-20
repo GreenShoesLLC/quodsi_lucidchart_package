@@ -20,6 +20,8 @@ import {
     ValidationMessages,
     ISerializedState,
     ISerializedEntity,
+    ISerializedArrivalPattern,
+    ISerializedArrivalSchedule,
     ModelDefaults,
     ISerializedResourceRequirement,
     ISerializedScenario,
@@ -28,7 +30,9 @@ import {
     ValidationIssue,
     ensureBaselineScenario,
     takeClearedFields,
+    ModelRootProjection,
 } from "@quodsi/lucid-shared";
+import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
 import { upsertModel, canonicalModelName } from "./sync/scenarioSync";
@@ -36,6 +40,7 @@ import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { activityStorageRemoveKeys } from "../types/ActivityLucid";
+import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
@@ -433,6 +438,80 @@ export class ModelManager {
             this.debug.debug('Activity deletion detected, performing destination cleanup:', elementId);
             const affectedCount = await this.cleanupActivityDestinationReferences(elementId, this.currentPage);
             this.debug.debug('Cleaned up activity destination references:', { affectedCount });
+        }
+
+        // Check if this is a Generator with a linked ArrivalPattern - if so,
+        // remove the pattern UNLESS another generator still references it
+        // (a hand-authored share; deleting it out from under a sibling
+        // generator would be worse). Read BEFORE the generator record is
+        // removed below, so `arrivalPatternId` is still on hand.
+        //
+        // This mirrors removePatternForGenerator's "generator deleted" rule
+        // (quodsi_studio's platforms/shared/panels/arrivalPatternLifecycle.ts
+        // -- see its own doc comment) -- that helper was previously wired
+        // ONLY into GeneratorEditor.tsx's mode-switch handler, never into
+        // deletion, so a deleted PATTERN generator's pattern survived
+        // forever in q_arrival_patterns. Reimplemented here rather than
+        // imported: removePatternForGenerator operates on a plain-object
+        // `{generators, arrivalPatterns}` projection shape, and the package
+        // that exports it (quodsi_studio) is a dependency of quodsim-react
+        // only -- the extension host has no dependency edge to it. The
+        // invariant enforced is identical: spare a pattern still referenced
+        // by another generator.
+        const existingGenerator = modelDef.generators.get(elementId);
+        const patternIdToCheck = existingGenerator?.arrivalPatternId;
+        if (patternIdToCheck) {
+            const stillReferenced = modelDef.generators.getAll().some(
+                g => g.id !== elementId && g.arrivalPatternId === patternIdToCheck
+            );
+            if (!stillReferenced) {
+                this.debug.debug('Generator deletion detected, removing orphaned ArrivalPattern:', {
+                    elementId,
+                    patternId: patternIdToCheck
+                });
+                modelDef.arrivalPatterns.remove(patternIdToCheck);
+                this.storageAdapter.setArrivalPatterns(
+                    this.currentPage,
+                    modelDef.arrivalPatterns.getAll().map(p => p.toJSON()) as ISerializedArrivalPattern[]
+                );
+            }
+        }
+
+        // Check if this is a Generator with a linked ArrivalSchedule - if so,
+        // remove the schedule UNLESS another generator still references it.
+        // Same shape as the ArrivalPattern block above, and for the same
+        // reason: this method's two callers (saveElementData's un-convert
+        // path, LucidPageConversionService's re-conversion path) run with a
+        // live element proxy, BEFORE the generator record is removed below,
+        // so `arrivalScheduleId` is still on hand here. The rebuild-diff
+        // branch in detectAndCleanupDeletedElements cannot substitute for
+        // this: removeElement mutates `modelDef.generators` in place, so by
+        // the next rebuild `oldModel` no longer carries the deleted
+        // generator's `arrivalScheduleId` and the diff never sees it -- an
+        // un-converted or re-converted SCHEDULED generator's schedule would
+        // otherwise survive forever in q_arrival_schedules as silent dead
+        // data (no validation rule flags an unreferenced schedule).
+        //
+        // A generator can carry both arrivalPatternId and arrivalScheduleId
+        // at once (Lucid storage strips `undefined`, not stale defined
+        // values, so a stale id can survive a mode switch) -- this block is
+        // independent of the pattern block above and fires on its own.
+        const scheduleIdToCheck = existingGenerator?.arrivalScheduleId;
+        if (scheduleIdToCheck) {
+            const stillReferencedSchedule = modelDef.generators.getAll().some(
+                g => g.id !== elementId && g.arrivalScheduleId === scheduleIdToCheck
+            );
+            if (!stillReferencedSchedule) {
+                this.debug.debug('Generator deletion detected, removing orphaned ArrivalSchedule:', {
+                    elementId,
+                    scheduleId: scheduleIdToCheck
+                });
+                modelDef.arrivalSchedules.remove(scheduleIdToCheck);
+                this.storageAdapter.setArrivalSchedules(
+                    this.currentPage,
+                    modelDef.arrivalSchedules.getAll().map(s => s.toJSON()) as ISerializedArrivalSchedule[]
+                );
+            }
         }
 
         // Remove from all list managers
@@ -1536,6 +1615,84 @@ export class ModelManager {
                 }
             }
         }
+
+        // Detect deleted Generators → remove an orphaned ArrivalPattern.
+        //
+        // Native canvas deletion of a generator never reaches removeElement()
+        // (see its doc comment above: only the panel un-convert path and
+        // LucidPageConversionService call it, and it early-returns once the
+        // shape proxy is already gone). This is the only hook that observes
+        // a canvas-deleted generator, via the rebuild diff. oldModel is the
+        // pre-rebuild ModelDefinition, still holding the deleted generator's
+        // arrivalPatternId, so read-before-removal falls out for free.
+        //
+        // Spares a pattern still referenced by another generator in
+        // newModel (a hand-authored share) -- same invariant removeElement
+        // enforces for its own callers.
+        const newGeneratorIds = new Set(newModel.generators.getAll().map(g => g.id));
+        for (const oldGenerator of oldModel.generators.getAll()) {
+            if (newGeneratorIds.has(oldGenerator.id)) continue;
+
+            const patternId = oldGenerator.arrivalPatternId;
+            if (!patternId) continue;
+
+            this.debug.debug('Detected deleted generator during rebuild:', oldGenerator.id);
+
+            const stillReferenced = newModel.generators.getAll().some(
+                g => g.arrivalPatternId === patternId
+            );
+            if (stillReferenced) continue;
+
+            this.debug.debug('Removing orphaned ArrivalPattern after generator deletion:', {
+                generatorId: oldGenerator.id,
+                patternId
+            });
+            newModel.arrivalPatterns.remove(patternId);
+            this.storageAdapter.setArrivalPatterns(
+                page,
+                newModel.arrivalPatterns.getAll().map(p => p.toJSON()) as ISerializedArrivalPattern[]
+            );
+        }
+
+        // Detect deleted Generators → remove an orphaned ArrivalSchedule.
+        //
+        // Mirrors the ArrivalPattern branch above exactly, for the same
+        // reason: native canvas deletion of a generator never reaches
+        // removeElement() (only the panel un-convert path and
+        // LucidPageConversionService call it, and it early-returns once the
+        // shape proxy is already gone). This rebuild diff is the only hook
+        // that observes a canvas-deleted generator. oldModel is the
+        // pre-rebuild ModelDefinition, still holding the deleted generator's
+        // arrivalScheduleId, so read-before-removal falls out for free.
+        //
+        // Spares a schedule still referenced by another generator in
+        // newModel (a hand-authored share) -- evaluated against newModel
+        // (the survivors), not oldModel, which would still show the
+        // deleted generator referencing its own schedule and never clean
+        // up anything.
+        for (const oldGenerator of oldModel.generators.getAll()) {
+            if (newGeneratorIds.has(oldGenerator.id)) continue;
+
+            const scheduleId = oldGenerator.arrivalScheduleId;
+            if (!scheduleId) continue;
+
+            this.debug.debug('Detected deleted generator during rebuild:', oldGenerator.id);
+
+            const stillReferenced = newModel.generators.getAll().some(
+                g => g.arrivalScheduleId === scheduleId
+            );
+            if (stillReferenced) continue;
+
+            this.debug.debug('Removing orphaned ArrivalSchedule after generator deletion:', {
+                generatorId: oldGenerator.id,
+                scheduleId
+            });
+            newModel.arrivalSchedules.remove(scheduleId);
+            this.storageAdapter.setArrivalSchedules(
+                page,
+                newModel.arrivalSchedules.getAll().map(s => s.toJSON()) as ISerializedArrivalSchedule[]
+            );
+        }
     }
 
     /**
@@ -1655,6 +1812,83 @@ export class ModelManager {
             this.debug.error('Error in updateEntities:', error);
             throw error;
         }
+    }
+
+    /**
+     * Persist a model-ROOT patch. The patch arrives WHOLE from
+     * LucidModelStateAccessor.updateModel and is dispatched per key here --
+     * the single place in this path that is allowed to know key names.
+     *
+     * An unrecognised key THROWS. It must never be dropped silently: that is
+     * the bug LucidEmbedModelAccessor once shipped, where branching on
+     * `patch.scenarios` alone made an `{ arrivalPatterns }` patch vanish with
+     * no error and no warning.
+     *
+     * Unknown keys are checked BEFORE anything is written, so a mixed patch
+     * like `{ arrivalPatterns, bogus }` throws without persisting the
+     * recognised keys either -- all-or-nothing, not a partial write followed
+     * by a loud failure.
+     *
+     * Mirrors its siblings (updateStates / updateEntities /
+     * updateResourceRequirements / updateScenarios): every one of them calls
+     * `markModelDirty()` after writing, and this does too, so the cached
+     * ModelDefinition is never left stale for a caller that reads it without
+     * also calling `validateModel()` first.
+     */
+    public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
+        this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
+
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules'];
+        const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
+        if (unhandled.length > 0) {
+            throw new Error(
+                `updateModelRoot: no persistence path for model-root key(s): ${unhandled.join(', ')}. ` +
+                'The patch was NOT persisted. Add a case above rather than ignoring it.'
+            );
+        }
+
+        if ('arrivalPatterns' in patch) {
+            this.storageAdapter.setArrivalPatterns(
+                page,
+                patch.arrivalPatterns as ISerializedArrivalPattern[]
+            );
+        }
+
+        if ('arrivalSchedules' in patch) {
+            this.storageAdapter.setArrivalSchedules(
+                page,
+                patch.arrivalSchedules as ISerializedArrivalSchedule[]
+            );
+        }
+
+        this.markModelDirty();
+    }
+
+    /**
+     * Build the plain-data projection the shared panels read.
+     *
+     * Page resolution only -- the ModelDefinition -> ModelRootProjection
+     * mapping lives in `projectModelRoot` (./modelRootProjection), so
+     * quodsim-react's Vitest suite can run the REAL producer against the REAL
+     * consumer (quodsi_studio's ScheduleModal) without importing this class,
+     * which drags in lucid-extension-sdk and the messaging barrel. See that
+     * module's header for the missing-field bug the split was introduced to
+     * make testable.
+     */
+    public async buildModelRootProjection(page: PageProxy): Promise<ModelRootProjection> {
+        // Honor `page` -- getModelDefinition()/ensureModelDefinition() read
+        // `this.currentPage`, not any parameter, so a caller building the
+        // projection for a page other than the currently-tracked one used to
+        // silently get the WRONG page's data (updateModelRoot, right above,
+        // already honors its own `page` argument for the write side -- this
+        // brings the read side in line). Only switches (and force-rebuilds
+        // via setCurrentPage's markModelDirty) when the pages actually
+        // differ, so the common same-page call stays on the cached
+        // ModelDefinition.
+        if (this.currentPage?.id !== page.id) {
+            this.setCurrentPage(page);
+        }
+        return projectModelRoot(await this.getModelDefinition());
     }
 
     /**
@@ -2080,19 +2314,39 @@ export class ModelManager {
 
             // Determine element name
             const elementName = this.getDefaultElementName(element);
+            // Fetched once, up front, so both the name resolution below and the
+            // create-vs-update branch further down (~line 2229) see the same
+            // snapshot of storage.
+            const existingElementData = this.storageAdapter.getElementData<any>(element);
+            const hasExplicitName = updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData;
             this.debug.debug('Element name determination:', {
                 defaultElementName: elementName,
-                updateDataContainsName: updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData
+                updateDataContainsName: hasExplicitName,
+                hasExistingStoredName: existingElementData?.name !== undefined
             });
+
+            // Resolve the name to persist.
+            //
+            // - An explicit `name` in the patch always wins (a falsy value, e.g.
+            //   `''`, still falls back to the canvas label -- this preserves the
+            //   pre-existing `|| elementName` behaviour, not a new rule).
+            // - A partial patch that OMITS `name` must not reset it: absence of a
+            //   key in a partial patch means "leave this field unchanged", so it
+            //   falls back to whatever name is already in storage.
+            // - Only when there is no prior stored name at all -- i.e. this is the
+            //   element's first save / creation -- does it default to the canvas
+            //   label, matching StorageAdapter.setElementData's create path (see
+            //   the getElementData(element) != null branch below).
+            const resolvedName: string = hasExplicitName
+                ? ((updateData as { name?: string }).name || elementName)
+                : (existingElementData?.name || elementName);
 
             // Prepare element data
             let elementData = {
                 id: element.id,
                 type: type,
                 ...updateData,
-                name: (updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData)
-                    ? (updateData as { name?: string }).name || elementName
-                    : elementName
+                name: resolvedName
             };
 
             this.debug.debug('Prepared Element Data:', {
@@ -2122,24 +2376,27 @@ export class ModelManager {
             // fields the panel did not send (e.g. width/height) are preserved.
             // Fall back to a full create when there is no prior q_data.
             //
-            // Activities carry one field the merge cannot round-trip: queueRanking,
-            // where absence of the key IS the value ("first come, first served").
-            // The panel's clear arrives here as a MISSING key — JSON transport drops
-            // undefined — so it must be spelled out as a deletion or the stored
-            // ranking survives a clear.
+            // Activities and Generators each carry one field the merge cannot
+            // round-trip: Activity.queueRanking and Generator.arrivalPatternId,
+            // where absence of the key IS the value ("first come, first served";
+            // "no linked pattern"). The panel's clear arrives here as a MISSING
+            // key — JSON transport drops undefined — so it must be spelled out
+            // as a deletion or the stored value survives a clear.
             //
             // Spelled out by the WRITER, never inferred from the missing key: most
             // Activity payloads that reach here are partial (ConnectorsEditor sends
             // connectType + financialProperties only; handleElementConvert can send
             // a bare stub) and would otherwise read as a clear. Only a declaration
-            // deletes. See activityStorageRemoveKeys for the full story; this is the
-            // path a panel save actually walks (the panel never reaches
-            // ActivityLucid.updateFromPlatform).
+            // deletes. See activityStorageRemoveKeys / generatorStorageRemoveKeys for
+            // the full story; this is the path a panel save actually walks (the
+            // panel never reaches ActivityLucid.updateFromPlatform).
             const removeKeys = type === SimulationObjectType.Activity
                 ? activityStorageRemoveKeys(clearedFields)
+                : type === SimulationObjectType.Generator
+                ? generatorStorageRemoveKeys(clearedFields)
                 : undefined;
 
-            if (this.storageAdapter.getElementData(element) != null) {
+            if (existingElementData != null) {
                 this.storageAdapter.updateElementData(element, elementData, { removeKeys });
                 this.markModelDirty(element.id);
             } else {

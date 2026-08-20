@@ -7,6 +7,10 @@ import {
     RequirementClause,
     State,
     Entity,
+    ArrivalPattern,
+    ArrivalSchedule,
+    SeasonMode,
+    UnitlessSample,
     Scenario,
     SwimLaneQuodsiData,
     SwimLaneResourceData,
@@ -209,6 +213,12 @@ export class ModelDefinitionPageBuilder {
             // Load entities from storage
             this.loadEntities(page, modelDefinition);
 
+            // Load arrival patterns from storage
+            this.loadArrivalPatterns(page, modelDefinition);
+
+            // Load arrival schedules from storage
+            this.loadArrivalSchedules(page, modelDefinition);
+
             // Load scenarios from storage
             this.loadScenarios(page, modelDefinition);
 
@@ -397,6 +407,93 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final entities count: ${modelDefinition.entities.size()}`);
+    }
+
+    /**
+     * Loads arrival patterns from storage and adds them to the model definition.
+     *
+     * Patterns are a page-level list (q_arrival_patterns), mirroring entities
+     * and states. Fields absent from storage are left at the ArrivalPattern
+     * constructor's defaults — ArrivalPattern.toJSON() omits at those defaults
+     * on the way out, so an absent key means "still default", not "unset".
+     *
+     * `seasonMode` is the one field where that rule does NOT mean "leave it
+     * at the class scaffold default": ArrivalPattern's class default is
+     * MONTH (a deliberate authoring-UX choice), but toJSON()'s omit rule
+     * compares against WEEK, the engine's real wire default
+     * (`CleanArrivalPatternDoc.season_mode`). So an absent `seasonMode` key
+     * means "still WEEK", not "still MONTH" — the reader must resolve the
+     * absent case to the WIRE default, not the constructor's own default,
+     * or a saved WEEK pattern (52 weights) silently reads back as MONTH (12
+     * weights expected) on the very next page load, corrupting the pattern
+     * and failing ArrivalPatternValidation. Do not "simplify" this back to
+     * `if (serialized.seasonMode !== undefined) ...` — that is the bug.
+     */
+    private loadArrivalPatterns(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading arrival patterns from storage');
+
+        const serializedPatterns = this.storageAdapter.getArrivalPatterns(page);
+        this.log(`Found ${serializedPatterns.length} arrival patterns in storage`);
+
+        for (const serialized of serializedPatterns) {
+            try {
+                const pattern = new ArrivalPattern(serialized.id, serialized.name);
+                if (serialized.cycle !== undefined) pattern.cycle = serialized.cycle as any;
+                // Wire default (WEEK), not the class default (MONTH) — see the
+                // method doc comment above for why these two differ.
+                pattern.seasonMode = SeasonMode.WEEK;
+                if (serialized.seasonMode !== undefined) pattern.seasonMode = serialized.seasonMode as any;
+                if (serialized.countMode !== undefined) pattern.countMode = serialized.countMode as any;
+                if (serialized.seasonWeights !== undefined) pattern.seasonWeights = serialized.seasonWeights;
+                if (serialized.dayOfWeekWeights !== undefined) pattern.dayOfWeekWeights = serialized.dayOfWeekWeights;
+                if (serialized.hourWeights !== undefined) pattern.hourWeights = serialized.hourWeights;
+                if (serialized.withinHourOffset !== undefined) {
+                    pattern.withinHourOffset = UnitlessSample.fromJSON(serialized.withinHourOffset);
+                }
+                modelDefinition.arrivalPatterns.add(pattern);
+                this.log(`Added arrival pattern: ${pattern.name}`);
+            } catch (error) {
+                this.log(`Error deserializing arrival pattern: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final arrival patterns count: ${modelDefinition.arrivalPatterns.size()}`);
+    }
+
+    /**
+     * Loads arrival schedules from storage and adds them to the model definition.
+     *
+     * Schedules are a page-level list (q_arrival_schedules), mirroring
+     * arrival patterns. Fields absent from storage are left at the
+     * ArrivalSchedule constructor's defaults — ArrivalSchedule.toJSON()
+     * omits at those defaults on the way out, so an absent key means "still
+     * default", not "unset". Unlike ArrivalPattern's seasonMode, there is no
+     * class-default / wire-omit-rule divergence here: `timeUnit`'s class
+     * default and toJSON() omit value are both PeriodUnit.MINUTES, and
+     * `arrivals`' default/omit value are both []. So no wire-default
+     * override is needed — leaving fields untouched when absent already
+     * resolves to the correct value. `source` is never restored: toJSON()
+     * drops it unconditionally, so the constructor default stands.
+     */
+    private loadArrivalSchedules(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading arrival schedules from storage');
+
+        const serializedSchedules = this.storageAdapter.getArrivalSchedules(page);
+        this.log(`Found ${serializedSchedules.length} arrival schedules in storage`);
+
+        for (const serialized of serializedSchedules) {
+            try {
+                const schedule = new ArrivalSchedule(serialized.id, serialized.name);
+                if (serialized.timeUnit !== undefined) schedule.timeUnit = serialized.timeUnit as any;
+                if (serialized.arrivals !== undefined) schedule.arrivals = serialized.arrivals;
+                modelDefinition.arrivalSchedules.add(schedule);
+                this.log(`Added arrival schedule: ${schedule.name}`);
+            } catch (error) {
+                this.log(`Error deserializing arrival schedule: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final arrival schedules count: ${modelDefinition.arrivalSchedules.size()}`);
     }
 
     /**

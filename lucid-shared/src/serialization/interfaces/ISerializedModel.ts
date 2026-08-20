@@ -11,6 +11,8 @@ import { ISerializedState } from './ISerializedState';
 import { ISerializedDuration } from './ISerializedDuration';
 import { ISerializedScenarioChangeRequest } from './ISerializedScenarioChangeRequest';
 import { ISerializedScenario } from './ISerializedScenario';
+import { ISerializedArrivalPattern } from './ISerializedArrivalPattern';
+import { ISerializedArrivalSchedule } from './ISerializedArrivalSchedule';
 
 export interface ISerializedMetadata {
     /** Model-definition schema version the model was written under (MODEL_SCHEMA_VERSION). */
@@ -66,5 +68,9 @@ export interface ISerializedModel {
     resourceRequirements: ISerializedResourceRequirement[];
     states: ISerializedState[];
     scenarios?: ISerializedScenario[];
+    /** Model-level pattern list. Sparse-omitted when empty, like `scenarios`. */
+    arrivalPatterns?: ISerializedArrivalPattern[];
+    /** Model-level schedule list. Sparse-omitted when empty, like `arrivalPatterns`. */
+    arrivalSchedules?: ISerializedArrivalSchedule[];
     scenarioChangeRequests?: ISerializedScenarioChangeRequest[];
 }

@@ -81,7 +81,9 @@ describe("ActivityEditor — queueRanking preservation", () => {
     await userEvent.type(nameInput, "Nurse");
     fireEvent.blur(nameInput);
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    const saved = onSave.mock.calls.at(-1)[0];
+    const lastCall = onSave.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    const saved = lastCall![0];
     expect(saved.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
   });
 
@@ -122,7 +124,9 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
     await userEvent.type(nameInput, "Nurse");
     fireEvent.blur(nameInput);
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    return onSave.mock.calls.at(-1)[0];
+    const lastCall = onSave.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    return lastCall![0];
   }
 
   it("declares queueRanking cleared when it saves an activity with no ranking", async () => {
@@ -157,7 +161,9 @@ describe("ActivityEditor — queue ranking control", () => {
     expect(within(picker).queryByRole("option", { name: /globalCount/ })).not.toBeInTheDocument();
     await userEvent.selectOptions(picker, "severity");
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    expect(onSave.mock.calls.at(-1)[0].queueRanking).toEqual({
+    const lastCall = onSave.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    expect(lastCall![0].queueRanking).toEqual({
       stateId: "s1",
       order: "ascending",
     });

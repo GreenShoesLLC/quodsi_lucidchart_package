@@ -38,10 +38,34 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId });
   }, [send]);
 
+  /**
+   * Send an OPEN_PATTERN_MODAL message to open the arrival-pattern editor as
+   * a real Lucid modal over the whole application. Handled by
+   * modelRootHandler.ts on the host side (not simulationRunHandler.ts --
+   * see that file's own pointer comment), but the panel-side sender lives
+   * here alongside the other OPEN_*_MODAL senders, matching their idiom
+   * (getModalSizePref() read at send time).
+   */
+  const openPatternModal = useCallback((shapeId: string) => {
+    send(EnvelopeMessageType.OPEN_PATTERN_MODAL, { shapeId, modalSize: getModalSizePref() });
+  }, [send]);
+
+  /**
+   * Send an OPEN_SCHEDULE_MODAL message to open the arrival-schedule editor
+   * as a real Lucid modal over the whole application. Handled by
+   * modelRootHandler.ts on the host side, same as OPEN_PATTERN_MODAL above --
+   * see that sender's own comment for the full rationale this mirrors.
+   */
+  const openScheduleModal = useCallback((shapeId: string) => {
+    send(EnvelopeMessageType.OPEN_SCHEDULE_MODAL, { shapeId, modalSize: getModalSizePref() });
+  }, [send]);
+
   return {
     openStudiesModal,
     openDiagramMappingModal,
     openStatusModal,
     autoConvertPage,
+    openPatternModal,
+    openScheduleModal,
   };
 }

@@ -10,6 +10,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  resolve: {
+    // quodsi_studio is a symlinked (file:) dependency; its own bare `react`
+    // imports otherwise resolve past the symlink to its real path's node_modules
+    // (the monorepo root) instead of this package's node_modules. The production
+    // build already dedupes this correctly on its own; Vitest's SSR-style module
+    // resolution does not, producing a second physical React module instance and
+    // a null-dispatcher "Invalid hook call" the moment GeneratorPatternTab
+    // actually renders. Force both resolutions to the same copy everywhere.
+    dedupe: ['react', 'react-dom'],
+  },
   build: {
     // The extension's webpack hook and both deploy scripts copy from `build/`,
     // which is CRA's default. Keeping the name means Task 7 changes the build
@@ -25,7 +35,22 @@ export default defineConfig({
   // because rolldown converts CJS to ESM at build time, which is exactly why
   // this only ever broke dev.
   optimizeDeps: {
-    include: ['@quodsi/lucid-shared'],
+    include: [
+      '@quodsi/lucid-shared',
+      // Pre-bundled so Vite front-loads them at server boot instead of
+      // discovering them mid-session and forcing a full-page reload
+      // ("optimized dependencies changed. reloading"). All three are used by
+      // quodsim-react's own ActivityEditor.tsx AND by Studio's imported
+      // panels. Note @dnd-kit/utilities is used but NOT declared in
+      // package.json -- it resolves only as a transitive dep of core and
+      // sortable. Pre-existing; listing it here does not fix that.
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@dnd-kit/utilities',
+    ],
+    // quodsi_studio's exports point at .tsx SOURCE -- pre-bundling those
+    // breaks source maps and HMR. Resolve them on demand instead.
+    exclude: ['quodsi_studio'],
   },
   server: {
     // The extension's onWatchRun hook fetches http://localhost:3000 and writes
