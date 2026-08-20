@@ -50,11 +50,22 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_PATTERN_MODAL, { shapeId, modalSize: getModalSizePref() });
   }, [send]);
 
+  /**
+   * Send an OPEN_SCHEDULE_MODAL message to open the arrival-schedule editor
+   * as a real Lucid modal over the whole application. Handled by
+   * modelRootHandler.ts on the host side, same as OPEN_PATTERN_MODAL above --
+   * see that sender's own comment for the full rationale this mirrors.
+   */
+  const openScheduleModal = useCallback((shapeId: string) => {
+    send(EnvelopeMessageType.OPEN_SCHEDULE_MODAL, { shapeId, modalSize: getModalSizePref() });
+  }, [send]);
+
   return {
     openStudiesModal,
     openDiagramMappingModal,
     openStatusModal,
     autoConvertPage,
     openPatternModal,
+    openScheduleModal,
   };
 }

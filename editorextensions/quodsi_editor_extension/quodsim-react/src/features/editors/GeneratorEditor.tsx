@@ -57,6 +57,46 @@ const INFINITY_DISPLAY_VALUE = 999999;
 // exported from the shared barrel, so duplicated here rather than imported).
 const DEFAULT_PATTERN_VOLUME = 1000;
 
+/**
+ * Plain-language summary for the SCHEDULED branch: arrival count and time
+ * range ("12 arrivals, 0 to 480 minutes"). Mirrors
+ * quodsi_studio/src/platforms/shared/panels/GeneratorScheduleTab.tsx's own
+ * inline `min === max ? … : `${min} to ${max}`` helper (not exported from
+ * the shared barrel either, same rationale as DEFAULT_PATTERN_VOLUME above)
+ * -- derived here straight from modelRootProjection.arrivalSchedules rather
+ * than rendering GeneratorScheduleTab itself, since this panel already owns
+ * its own summary+button layout (matching the PATTERN branch) rather than
+ * embedding that component's.
+ *
+ * Zero arrivals gets no range appended -- the simplest honest thing this
+ * data can say when there's nothing to span (same call GeneratorScheduleTab
+ * makes). Calendar-mode arrivals are ISO datetime strings compared/
+ * formatted as-is, with no unit suffix; clock-mode arrivals are numeric
+ * offsets in `timeUnit`.
+ */
+function summarizeArrivalSchedule(
+  arrivals: Array<{ time: string | number }>,
+  timeUnit: string,
+  calendarMode: boolean
+): string {
+  const count = arrivals.length;
+  const countLabel = `${count} arrival${count === 1 ? "" : "s"}`;
+  if (count === 0) {
+    return countLabel;
+  }
+  if (calendarMode) {
+    const times = arrivals.map((a) => String(a.time));
+    const min = times.reduce((a, b) => (a < b ? a : b));
+    const max = times.reduce((a, b) => (a > b ? a : b));
+    return `${countLabel}, ${min === max ? min : `${min} to ${max}`}`;
+  }
+  const times = arrivals.map((a) => Number(a.time));
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  const rangeLabel = min === max ? `${min}` : `${min} to ${max}`;
+  return `${countLabel}, ${rangeLabel} ${timeUnit}`;
+}
+
 // Tab navigation configuration
 const TAB_CONFIG = [
   {
@@ -118,8 +158,9 @@ type GeneratorTab = "settings" | "events" | "states";
  *   modal (OPEN_PATTERN_MODAL, handled by modelRootHandler.ts), hosting the
  *   shared Season/Week/Day cascade editor (quodsi_studio's
  *   GeneratorPatternTab) over the whole application rather than inside this
- *   300px panel. SCHEDULED generators still get the read-only notice —
- *   Lucid has no Schedule editor yet.
+ *   300px panel. SCHEDULED generators get the same treatment: an arrival
+ *   count + time range summary plus an "Edit schedule" button that opens
+ *   OPEN_SCHEDULE_MODAL, hosting quodsi_studio's ScheduleModal.
  * - Events: Initial state modifications for created entities
  * - States: State variable definitions
  *
@@ -148,7 +189,8 @@ type GeneratorTab = "settings" | "events" | "states";
  * - FREQUENCY generators get the full editable settings; PATTERN generators
  *   get a summary + "Edit pattern" button that opens the shared cascade
  *   editor in a host modal (see OPEN_PATTERN_MODAL above); SCHEDULED
- *   generators (Lucid can't author these yet) get a read-only notice.
+ *   generators get a summary + "Edit schedule" button that opens the shared
+ *   ScheduleModal the same way (see OPEN_SCHEDULE_MODAL above).
  * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush
  *   on typed inputs; useEffect flush for select dropdowns)
  * - Guard conditions prevent data loss when switching generators
@@ -210,13 +252,15 @@ const GeneratorEditor: React.FC<Props> = ({
     extractedGenerator.batchSize = data.batchSize ?? 1;
     extractedGenerator.startDelay = data.startDelay ?? Duration.constant(0, PeriodUnit.MINUTES);
     extractedGenerator.maxCycles = data.maxCycles ?? INFINITY_DISPLAY_VALUE;
-    // PATTERN-mode fields. arrivalPatternId/volume are not driven by any
-    // input in THIS form (the arrival-pattern editor modal/GeneratorPatternTab
-    // write them through the accessor directly), and arrivalScheduleId stays read-only
-    // (Lucid has no Schedule editor). A generator authored elsewhere must
-    // still round-trip these losslessly when opened here — otherwise editing
-    // anything else on the generator (even its name) would silently revert
-    // it toward a FREQUENCY shape.
+    // PATTERN/SCHEDULED-mode fields. arrivalPatternId/volume are not driven
+    // by any input in THIS form (the arrival-pattern editor modal/
+    // GeneratorPatternTab write them through the accessor directly), and
+    // arrivalScheduleId stays read-only here too — the arrival-schedule
+    // editor modal/ScheduleModal owns writing it, through the SAME accessor,
+    // not through this draft. A generator authored elsewhere (or via that
+    // modal) must still round-trip these losslessly when opened here —
+    // otherwise editing anything else on the generator (even its name)
+    // would silently revert it toward a FREQUENCY shape.
     extractedGenerator.arrivalPatternId = data.arrivalPatternId;
     extractedGenerator.volume = data.volume;
     extractedGenerator.arrivalScheduleId = data.arrivalScheduleId;
@@ -285,10 +329,12 @@ const GeneratorEditor: React.FC<Props> = ({
     // handler in this component produces these keys (the arrival-pattern
     // editor modal's own volume slider writes through the accessor
     // directly, not through this draft). arrivalScheduleId is never
-    // settable from `updates` at all --
-    // it stays read-only, Lucid has no Schedule editor. Silently dropping
-    // any of the three here would corrupt a generator authored as
-    // PATTERN/SCHEDULED elsewhere.
+    // settable from `updates` at all -- unlike PATTERN, the SCHEDULED
+    // mode-switch deliberately does no lifecycle write of its own (see
+    // handleInputChange's generatorType branch); ScheduleModal creates and
+    // links a schedule itself, through the accessor, on first edit.
+    // Silently dropping any of the three here would corrupt a generator
+    // authored as PATTERN/SCHEDULED elsewhere.
     updated.arrivalPatternId = 'arrivalPatternId' in updates ? updates.arrivalPatternId : base.arrivalPatternId;
     updated.volume = 'volume' in updates ? updates.volume : base.volume;
     updated.arrivalScheduleId = base.arrivalScheduleId;
@@ -387,8 +433,9 @@ const GeneratorEditor: React.FC<Props> = ({
   // Get the selectElement function for navigating to Model Editor
   const { selectElement } = useModelOpsSender();
 
-  // Get the sender for OPEN_PATTERN_MODAL (host-hosted arrival-pattern editor).
-  const { openPatternModal } = useSimulationRunSender();
+  // Get the senders for OPEN_PATTERN_MODAL / OPEN_SCHEDULE_MODAL (host-hosted
+  // arrival-pattern / arrival-schedule editors).
+  const { openPatternModal, openScheduleModal } = useSimulationRunSender();
 
   /**
    * Redux-managed state for save operation tracking.
@@ -530,9 +577,8 @@ const GeneratorEditor: React.FC<Props> = ({
   useFlushOnChange(localGeneratorDraft.entityId, saveNow);
 
   // Fire saveNow when generator type changes. The "Generator Type" select
-  // renders (offering FREQUENCY and PATTERN) whenever the generator was not
-  // authored as SCHEDULED elsewhere (see isScheduledGenerator below) — Lucid
-  // still has no Schedule editor.
+  // always renders now (offering FREQUENCY, PATTERN, and SCHEDULED) -- no
+  // generator type is externally-authored-only any more.
   useFlushOnChange(localGeneratorDraft.mode, saveNow);
 
   const entities = referenceData.entities || [];
@@ -540,13 +586,28 @@ const GeneratorEditor: React.FC<Props> = ({
   /** True when this generator is authored as an Arrival Pattern (editable via the host-hosted arrival-pattern editor modal). */
   const isPatternGenerator = localGeneratorDraft.mode === GeneratorType.PATTERN;
   /**
-   * True when this generator was authored as SCHEDULED elsewhere (Studio,
-   * drawio). Lucid still has no Schedule editor, so this generator keeps the
-   * read-only notice and is kept off the type <select> entirely -- its only
-   * FREQUENCY/PATTERN options can't represent SCHEDULED, and one click there
-   * would rewrite mode and orphan arrivalScheduleId.
+   * True when this generator is authored as an Arrival Schedule (editable
+   * via the host-hosted arrival-schedule editor modal -- see
+   * openScheduleModal below). Selects which branch of the "Dynamic content"
+   * ternary renders: the schedule summary + "Edit schedule" button, not the
+   * FREQUENCY controls or the PATTERN summary.
    */
   const isScheduledGenerator = localGeneratorDraft.mode === GeneratorType.SCHEDULED;
+
+  /**
+   * The linked ArrivalSchedule record (if any), read from
+   * modelRootProjection.arrivalSchedules the same way isPatternGenerator's
+   * branch reads modelRootProjection.arrivalPatterns. `undefined` both while
+   * modelRootProjection is null (no snapshot yet) and once it has arrived if
+   * this generator has no schedule linked yet (arrivalScheduleId unset, or
+   * ScheduleModal hasn't created one -- see its own "Create-on-first-edit"
+   * header comment: nothing exists until the first edit inside the modal).
+   */
+  const linkedSchedule = modelRootProjection
+    ? (modelRootProjection.arrivalSchedules ?? []).find(
+        (s) => s.id === localGeneratorDraft.arrivalScheduleId
+      )
+    : undefined;
 
   /**
    * Validates that the generator name is unique among all generators.
@@ -922,36 +983,34 @@ const GeneratorEditor: React.FC<Props> = ({
               </select>
             </div>
 
-            {/* Generator Type Selection - only shown when editable. Lucid can
-                author FREQUENCY and PATTERN generators now; it still has no
-                Schedule editor, so a SCHEDULED generator skips straight to
-                the read-only notice below rather than offering a dropdown
-                that can't represent its type. */}
-            {!isScheduledGenerator && (
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-xs font-medium text-gray-700" htmlFor="generatorType">
-                    Generator Type
-                  </label>
-                  <span title="FREQUENCY: entities at regular intervals using interarrival time. ARRIVAL PATTERN: a volume shaped across season, week and day. Arrival-schedule generators are authored in Quodsi Studio or the drawio extension.">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-                <select
-                  id="generatorType"
-                  name="generatorType"
-                  className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                  value={localGeneratorDraft.mode}
-                  onChange={handleInputChange}
-                >
-                  <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
-                  <option value={GeneratorType.PATTERN}>Arrival Pattern</option>
-                </select>
-                {patternLifecycleError && (
-                  <p className="text-xs text-red-500 mt-1">{patternLifecycleError}</p>
-                )}
+            {/* Generator Type Selection. Lucid can now author FREQUENCY,
+                PATTERN, and SCHEDULED generators -- no type is
+                externally-authored-only any more, so the dropdown always
+                renders. */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-gray-700" htmlFor="generatorType">
+                  Generator Type
+                </label>
+                <span title="FREQUENCY: entities at regular intervals using interarrival time. ARRIVAL PATTERN: a volume shaped across season, week and day. ARRIVAL SCHEDULE: a table of specific arrival times.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
               </div>
-            )}
+              <select
+                id="generatorType"
+                name="generatorType"
+                className="w-full px-2 py-1.5 text-xs border rounded bg-white"
+                value={localGeneratorDraft.mode}
+                onChange={handleInputChange}
+              >
+                <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
+                <option value={GeneratorType.PATTERN}>Arrival Pattern</option>
+                <option value={GeneratorType.SCHEDULED}>Arrival Schedule</option>
+              </select>
+              {patternLifecycleError && (
+                <p className="text-xs text-red-500 mt-1">{patternLifecycleError}</p>
+              )}
+            </div>
 
             {/* Dynamic content based on generator type */}
             {isPatternGenerator ? (
@@ -994,38 +1053,41 @@ const GeneratorEditor: React.FC<Props> = ({
                 </button>
               </div>
             ) : isScheduledGenerator ? (
-              // Schedule generators keep the existing read-only notice verbatim --
-              // Lucid still has no Schedule editor.
-              <div className="pt-2 border-t">
-                <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-900 space-y-1">
-                  <div className="font-medium">
-                    {isPatternGenerator
-                      ? "Arrival Pattern generator"
-                      : "Scheduled Arrival generator"}
-                  </div>
-                  <div>
-                    {isPatternGenerator
-                      ? "This generator's arrival timing is defined by an Arrival Pattern authored in Quodsi Studio or the drawio extension."
-                      : "This generator's arrivals are defined by an Arrival Schedule authored in Quodsi Studio or the drawio extension."}{" "}
-                    Lucid does not have an editor for it yet, so it can only be
-                    changed there — editing this generator here (e.g. renaming it
-                    or changing its initial state modifications) will not affect
-                    its arrival timing.
-                  </div>
-                  {localGeneratorDraft.arrivalPatternId && (
+              <div className="pt-2 border-t space-y-2">
+                <div className="text-xs text-secondary space-y-0.5">
+                  {modelRootProjection === null ? (
+                    // Mirrors the PATTERN branch's own loading placeholder
+                    // above -- no MODEL_ROOT_SNAPSHOT has arrived yet, so
+                    // there is no arrivalSchedules list to summarize.
+                    <div>Loading schedule…</div>
+                  ) : (
                     <div>
-                      Pattern ID: <span className="font-mono">{localGeneratorDraft.arrivalPatternId}</span>
-                    </div>
-                  )}
-                  {localGeneratorDraft.volume !== undefined && (
-                    <div>Volume: {localGeneratorDraft.volume}</div>
-                  )}
-                  {localGeneratorDraft.arrivalScheduleId && (
-                    <div>
-                      Schedule ID: <span className="font-mono">{localGeneratorDraft.arrivalScheduleId}</span>
+                      {summarizeArrivalSchedule(
+                        linkedSchedule?.arrivals ?? [],
+                        linkedSchedule?.timeUnit ?? PeriodUnit.MINUTES,
+                        modelRootProjection.model?.timeMode === "calendar"
+                      )}
                     </div>
                   )}
                 </div>
+                <button
+                  type="button"
+                  className="w-full px-2 py-1.5 text-xs border border-border-strong rounded bg-surface text-secondary hover:bg-surface-hover"
+                  onClick={() => {
+                    // Ask the host to open the arrival-schedule editor as a
+                    // real Lucid modal over the whole application (see
+                    // useSimulationRunSender's openScheduleModal). Mirrors
+                    // "Edit pattern" above -- the panel does not draw the
+                    // editor itself. No lifecycle wiring fires here: unlike
+                    // ensurePatternForGenerator on the PATTERN switch above,
+                    // ScheduleModal -- the host modal this opens -- creates
+                    // and links a schedule itself the first time it is
+                    // edited; adding an equivalent here would just race it.
+                    openScheduleModal(localGeneratorDraft.id);
+                  }}
+                >
+                  Edit schedule
+                </button>
               </div>
             ) : (
               <>

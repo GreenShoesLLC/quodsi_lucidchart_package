@@ -265,7 +265,13 @@ describe("GeneratorEditor PATTERN mode", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("still shows the SCHEDULED read-only notice unchanged (byte-unchanged branch, sanity check)", () => {
+  // Task 4: SCHEDULED got the same treatment PATTERN got in Task 10 -- the
+  // old read-only notice is gone, replaced by a summary + "Edit schedule"
+  // button, and SCHEDULED is back on the type dropdown. This test used to
+  // assert the notice "unchanged" as a sanity check that the PATTERN work
+  // hadn't touched the SCHEDULED branch; now it asserts the SCHEDULED
+  // branch's own new behaviour instead.
+  it("shows a schedule summary and dropdown instead of the old read-only notice", () => {
     render(
       <GeneratorEditor
         {...baseProps}
@@ -279,17 +285,20 @@ describe("GeneratorEditor PATTERN mode", () => {
       />
     );
 
-    expect(screen.getByText(/Scheduled Arrival generator/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Scheduled Arrival generator/i)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Quodsi Studio or the drawio extension/i)
+      screen.queryByText(/Quodsi Studio or the drawio extension/i)
+    ).not.toBeInTheDocument();
+    // SCHEDULED is selectable again, like PATTERN, and gets its own launcher.
+    expect(
+      screen.getByRole("combobox", { name: /generator type/i })
     ).toBeInTheDocument();
-    // SCHEDULED still has no dropdown and no Edit pattern button.
     expect(
-      screen.queryByRole("combobox", { name: /generator type/i })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /edit pattern/i })
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /edit schedule/i })
+    ).toBeInTheDocument();
+    // No snapshot dispatched in this describe block -- modelRootProjection
+    // stays null, same as the PATTERN "Loading pattern…" case above.
+    expect(screen.getByText(/Loading schedule/i)).toBeInTheDocument();
   });
 });
 
