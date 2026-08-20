@@ -237,4 +237,36 @@ describe("GeneratorEditor SCHEDULED mode — summary reflects a populated projec
       screen.getByText(/^2 arrivals, 2026-01-01T08:00:00 to 2026-01-01T09:30:00$/i)
     ).toBeInTheDocument();
   });
+  /**
+   * The min === max collapse is written TWICE in summarizeArrivalSchedule --
+   * once inside the calendar-mode branch (string compare) and once in the
+   * clock-mode branch (numeric). The clock-mode copy is pinned by the
+   * "same time" test above; this pins the calendar-mode one, so deleting
+   * either collapse fails a test rather than only the one that happens to
+   * be covered.
+   */
+  it("collapses the calendar-mode range when every arrival shares a timestamp", () => {
+    render(<GeneratorEditor {...baseProps} generator={scheduledGenerator()} />);
+
+    dispatchSnapshot({
+      generators: [{ id: "g-sched", name: "Appointments", mode: "scheduled", arrivalScheduleId: "as-1" }],
+      arrivalPatterns: [],
+      arrivalSchedules: [
+        {
+          id: "as-1",
+          name: "Appointments schedule",
+          arrivals: [
+            { time: "2026-01-01T08:00:00" },
+            { time: "2026-01-01T08:00:00" },
+          ],
+        },
+      ],
+      model: { timeMode: "calendar" },
+    });
+
+    expect(
+      screen.getByText(/^2 arrivals, 2026-01-01T08:00:00$/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/ to /i)).not.toBeInTheDocument();
+  });
 });
