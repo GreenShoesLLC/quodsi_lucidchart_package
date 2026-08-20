@@ -4,6 +4,7 @@ import "./App.css";
 import LucidApp from "./features/LucidApp";
 import { StudioEmbedView } from "./features/embed/StudioEmbedView";
 import { PatternEditorView } from "./features/pattern/PatternEditorView";
+import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 
 interface AppProps {
   panelType?: "model";
@@ -17,6 +18,16 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
       <MessageProvider initialPanelType="pattern">
         <div className="h-full w-full">
           <PatternEditorView />
+        </div>
+      </MessageProvider>
+    );
+  }
+
+  if (urlParams.get("view") === "schedule") {
+    return (
+      <MessageProvider initialPanelType="schedule">
+        <div className="h-full w-full">
+          <ScheduleEditorView />
         </div>
       </MessageProvider>
     );
