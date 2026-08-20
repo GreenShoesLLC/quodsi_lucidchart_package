@@ -20,6 +20,16 @@
 //     there is no in-view toggle -- ScheduleModal unmounts everything it
 //     owns (including its useSyncExternalStore subscription) when `open` is
 //     false, which we never want here.
+//   - `embedded` is set. ScheduleModal normally draws its own overlay: a
+//     dimming scrim plus a fixed 900x640 card with border, shadow and
+//     rounded corners. Here the HOST already supplies the modal -- a real,
+//     chromeless Lucid modal sized by the user's own preference (medium
+//     1000x640 by default) -- so that chrome would be doubled: a card
+//     inside a card, a visible band of scrim between the two, and a second
+//     scrollbar. `embedded` collapses it to a plain full-size surface, and
+//     the h-full chain above it (index_new.css's `html, body, #root`, then
+//     App's wrapper, then this view's) is what gives it a real height. That
+//     chain was previously inert, because `fixed inset-0` escaped the flow.
 //   - `onClose` must ask the HOST to close the Lucid modal, not flip local
 //     state. CLOSE_MODAL is exactly this hook: StudioEmbedView's own close
 //     button (`sendMessage(EnvelopeMessageType.CLOSE_MODAL)`) is the
@@ -105,6 +115,7 @@ export function ScheduleEditorView() {
     <div className="h-full w-full">
       <ScheduleModal
         open
+        embedded
         onClose={() => sendMessage(EnvelopeMessageType.CLOSE_MODAL)}
         shapeId={shapeId}
         accessor={accessor}
