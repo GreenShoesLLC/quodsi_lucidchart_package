@@ -119,10 +119,24 @@ export function createModelRootSource(transport: ModelRootTransport) {
 // React hook
 // ---------------------------------------------------------------------------
 
+// Panel type (the `?view=` the iframe was opened with) -> the `source` this
+// realm stamps on outgoing envelopes.
+//
+// `pattern` and `schedule` were missing here, so both modal realms fell
+// through to 'model-iframe'. That is invisible today ONLY because
+// RoutingModal.messageFromFrame re-stamps `envelope.source` from the channel
+// role before routing, which is the actual guarantee and must stay -- do not
+// "simplify" it away on the strength of this map. But a compile-time union
+// disagreeing with a runtime list is exactly the shape of the bug documented
+// at the top of lucid-shared's envelope.ts (MESSAGE_SOURCES): the union
+// accepted 'pattern-iframe' while the validator did not, and every message
+// from the pattern modal was silently dropped. Keep the two in agreement.
 const SOURCE_BY_PANEL: Record<string, MessageSource> = {
   auth: 'auth-iframe',
   model: 'model-iframe',
   results: 'results-iframe',
+  pattern: 'pattern-iframe',
+  schedule: 'schedule-iframe',
 }
 
 // Generous but bounded: a model-root write is a local ModelManager mutation

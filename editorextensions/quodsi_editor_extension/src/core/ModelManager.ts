@@ -32,6 +32,7 @@ import {
     takeClearedFields,
     ModelRootProjection,
 } from "@quodsi/lucid-shared";
+import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
 import { upsertModel, canonicalModelName } from "./sync/scenarioSync";
@@ -1866,11 +1867,13 @@ export class ModelManager {
     /**
      * Build the plain-data projection the shared panels read.
      *
-     * Shape is dictated by GeneratorPatternTab, which reads
-     * `state.modelDefinition` as `{ generators, arrivalPatterns, model }` with
-     * `model` as a SUB-OBJECT. ISerializedModel cannot serve this: it is flat
-     * by design and carries warmupTime/runTime as Durations rather than the
-     * warmupDateTime/finishDateTime the cascade's date math needs.
+     * Page resolution only -- the ModelDefinition -> ModelRootProjection
+     * mapping lives in `projectModelRoot` (./modelRootProjection), so
+     * quodsim-react's Vitest suite can run the REAL producer against the REAL
+     * consumer (quodsi_studio's ScheduleModal) without importing this class,
+     * which drags in lucid-extension-sdk and the messaging barrel. See that
+     * module's header for the missing-field bug the split was introduced to
+     * make testable.
      */
     public async buildModelRootProjection(page: PageProxy): Promise<ModelRootProjection> {
         // Honor `page` -- getModelDefinition()/ensureModelDefinition() read
@@ -1885,35 +1888,7 @@ export class ModelManager {
         if (this.currentPage?.id !== page.id) {
             this.setCurrentPage(page);
         }
-        const def = await this.getModelDefinition();
-        if (!def) {
-            return { generators: [], arrivalPatterns: [], arrivalSchedules: [], model: {} };
-        }
-
-        const toIso = (v: Date | null | undefined): string | null =>
-            v ? v.toISOString() : null;
-
-        return {
-            generators: def.generators.getAll().map(g => ({
-                id: g.id,
-                name: g.name,
-                levers: g.levers,
-                entityId: g.entityId,
-                mode: g.mode,
-                arrivalPatternId: g.arrivalPatternId,
-                volume: g.volume,
-            })),
-            arrivalPatterns: def.arrivalPatterns.getAll()
-                .map(p => p.toJSON()) as ISerializedArrivalPattern[],
-            arrivalSchedules: def.arrivalSchedules.getAll()
-                .map(s => s.toJSON()) as ISerializedArrivalSchedule[],
-            model: {
-                timeMode: def.model.timeMode,
-                startDateTime: toIso(def.model.startDateTime),
-                warmupDateTime: toIso(def.model.warmupDateTime),
-                finishDateTime: toIso(def.model.finishDateTime),
-            },
-        };
+        return projectModelRoot(await this.getModelDefinition());
     }
 
     /**
