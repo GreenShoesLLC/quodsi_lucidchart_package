@@ -2,13 +2,16 @@
 //
 // Pins WHO gets a MODEL_ROOT_SNAPSHOT, and who does not.
 //
-// sendSnapshot used to broadcast. Both consuming surfaces (the side panel and
-// the pattern-editor modal) do need it -- that was the point -- but broadcast
-// also enqueued a copy on the 'results' and 'studio-embed' channels, which
-// never read the message and therefore never drain it, and made
-// ensureChannelHasPanel log an error-level "Could not recover panel for ..."
-// three times per snapshot. It now names its targets: 'model' always, and
-// 'pattern' only while a pattern modal is actually registered.
+// sendSnapshot used to broadcast. All consuming surfaces (the side panel, the
+// pattern-editor modal, and the schedule-editor modal) do need it -- that was
+// the point -- but broadcast also enqueued a copy on the 'results' and
+// 'studio-embed' channels, which never read the message and therefore never
+// drain it, and made ensureChannelHasPanel log an error-level "Could not
+// recover panel for ..." three times per snapshot. It now names its targets:
+// 'model' always, 'pattern' only while a pattern modal is actually
+// registered, and 'schedule' only while a schedule modal is actually
+// registered (added in Task 2 of the schedule-editor plan, mirroring the
+// 'pattern' condition exactly).
 //
 // The other half this file pins is unchanged: MODEL_ROOT_UPDATE_RESULT goes
 // only to 'model' (the requester) -- fanning a write RESULT out would let one
@@ -33,15 +36,19 @@ let currentPage: any = null;
 
 const sendMock = jest.fn();
 // Which channels currently have a registered panel. sendSnapshot consults the
-// channel manager before addressing the 'pattern' channel, so tests set this
-// to model "a pattern modal is open" vs "no pattern modal".
+// channel manager before addressing the 'pattern' / 'schedule' channels, so
+// tests set these to model "a pattern/schedule modal is open" vs "not open".
 let patternChannelPanel: unknown = undefined;
+let scheduleChannelPanel: unknown = undefined;
 jest.mock('../../src/core/messaging/index', () => ({
   router: {
     send: sendMock,
     getChannelManager: () => ({
-      getChannel: (role: string) =>
-        role === 'pattern' ? { ready: true, queue: [], panel: patternChannelPanel } : undefined,
+      getChannel: (role: string) => {
+        if (role === 'pattern') return { ready: true, queue: [], panel: patternChannelPanel };
+        if (role === 'schedule') return { ready: true, queue: [], panel: scheduleChannelPanel };
+        return undefined;
+      },
     }),
   },
 }));
@@ -68,6 +75,7 @@ function flush(): Promise<void> {
 beforeEach(() => {
   sendMock.mockClear();
   patternChannelPanel = undefined;
+  scheduleChannelPanel = undefined;
   currentPage = { id: 'page-1' };
   modelManagerStub = {
     buildModelRootProjection: async () => ({ generators: [], arrivalPatterns: [] }),
@@ -106,6 +114,33 @@ describe('ModelRootHandler snapshot targeting', () => {
     expect(modelMsg).not.toBe(patternMsg);
     expect(modelMsg.target).toBe('model-iframe');
     expect(patternMsg.target).toBe('pattern-iframe');
+  });
+
+  it('also sends it to "schedule" while a schedule modal IS registered, so both surfaces stay in sync', async () => {
+    scheduleChannelPanel = { relayToIframe: () => undefined };
+
+    await ModelRootHandler.sendSnapshot('corr-1');
+
+    const targets = sendMock.mock.calls.map(([t]: [string]) => t);
+    expect(targets).toEqual(['model', 'schedule']);
+    for (const [, msg] of sendMock.mock.calls) {
+      expect(msg.type).toBe(EnvelopeMessageType.MODEL_ROOT_SNAPSHOT);
+    }
+    const [, modelMsg] = sendMock.mock.calls[0];
+    const [, scheduleMsg] = sendMock.mock.calls[1];
+    expect(modelMsg).not.toBe(scheduleMsg);
+    expect(modelMsg.target).toBe('model-iframe');
+    expect(scheduleMsg.target).toBe('schedule-iframe');
+  });
+
+  it('addresses all three when both a pattern modal and a schedule modal are registered', async () => {
+    patternChannelPanel = { relayToIframe: () => undefined };
+    scheduleChannelPanel = { relayToIframe: () => undefined };
+
+    await ModelRootHandler.sendSnapshot('corr-1');
+
+    const targets = sendMock.mock.calls.map(([t]: [string]) => t);
+    expect(targets).toEqual(['model', 'pattern', 'schedule']);
   });
 
   it('a successful MODEL_ROOT_UPDATE targets the RESULT at "model" and follows with a targeted snapshot', async () => {

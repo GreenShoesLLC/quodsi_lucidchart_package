@@ -4,6 +4,7 @@ import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { PatternEditorModal } from '../../../panels/PatternEditorModal';
+import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
 
 const log = getLogger('ModelRootHandler');
 
@@ -21,6 +22,15 @@ export class ModelRootHandler {
    */
   private static openPatternModal: PatternEditorModal | null = null;
 
+  /**
+   * The schedule-editor modal currently open, if any. Same guard shape as
+   * openPatternModal above -- set synchronously in
+   * handleOpenScheduleModal (before show(), so a second click in the same
+   * tick already sees it) and cleared by that modal's own frameClosed
+   * callback.
+   */
+  private static openScheduleModal: ScheduleEditorModal | null = null;
+
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.MODEL_ROOT_REQUEST:
@@ -35,6 +45,10 @@ export class ModelRootHandler {
 
       case EnvelopeMessageType.OPEN_PATTERN_MODAL:
         ModelRootHandler.handleOpenPatternModal(msg);
+        return true;
+
+      case EnvelopeMessageType.OPEN_SCHEDULE_MODAL:
+        ModelRootHandler.handleOpenScheduleModal(msg);
         return true;
 
       default:
@@ -91,17 +105,53 @@ export class ModelRootHandler {
   }
 
   /**
+   * Handle OPEN_SCHEDULE_MODAL: open the scheduled-arrival editor in a real
+   * Lucid modal over the whole application. Mirrors handleOpenPatternModal
+   * above -- see its comment for why this lives here and why the guard
+   * exists -- with 'schedule' standing in for 'pattern' throughout.
+   */
+  private static handleOpenScheduleModal(msg: EnvelopeBase): void {
+    const data = msg.data as { shapeId?: string; modalSize?: ModalSize };
+    if (!data?.shapeId) {
+      log.error('OPEN_SCHEDULE_MODAL: missing shapeId');
+      return;
+    }
+
+    // SINGLETON GUARD -- see handleOpenPatternModal's comment for the full
+    // rationale (same hazard, same fix: hold the open modal, refuse a
+    // second open, release on frameClosed, identity-checked).
+    if (ModelRootHandler.openScheduleModal) {
+      log.debug('OPEN_SCHEDULE_MODAL: a schedule modal is already open; ignoring');
+      return;
+    }
+
+    const modal = new ScheduleEditorModal(ModelManager.getClient(), {
+      shapeId: data.shapeId,
+      modalSize: data.modalSize,
+      onClosed: () => {
+        if (ModelRootHandler.openScheduleModal === modal) {
+          ModelRootHandler.openScheduleModal = null;
+        }
+      },
+    });
+    ModelRootHandler.openScheduleModal = modal;
+    modal.show();
+  }
+
+  /**
    * Determine which channel to send a response to based on the message
    * source. Mirrors SimulationRunHandler.getResponseChannel /
    * DiagramMappingRelayHandler.getResponseChannel: a message that
-   * originates from the pattern-editor modal ('pattern-iframe') gets its
-   * reply routed back to the 'pattern' channel; everything else (the side
-   * panel, source 'model-iframe') goes to 'model' -- the same channel this
-   * handler always used before the modal existed, so a panel-originated
-   * request is unaffected.
+   * originates from the pattern-editor modal ('pattern-iframe') or the
+   * schedule-editor modal ('schedule-iframe') gets its reply routed back to
+   * that modal's own channel; everything else (the side panel, source
+   * 'model-iframe') goes to 'model' -- the same channel this handler always
+   * used before either modal existed, so a panel-originated request is
+   * unaffected.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'pattern-iframe') return 'pattern';
+    if (msg.source === 'schedule-iframe') return 'schedule';
     return 'model';
   }
 
@@ -116,8 +166,9 @@ export class ModelRootHandler {
 
     const projection = await modelManager.buildModelRootProjection(currentPage);
 
-    // Sent to the two surfaces that CONSUME a model-root snapshot -- the side
-    // panel and the pattern-editor modal -- rather than broadcast.
+    // Sent to the surfaces that CONSUME a model-root snapshot -- the side
+    // panel, the pattern-editor modal, and the schedule-editor modal --
+    // rather than broadcast.
     //
     // Both must still receive it: that was the point of the change that
     // introduced the broadcast (the panel's summary has to stay in sync while
@@ -140,14 +191,18 @@ export class ModelRootHandler {
     //
     // 'model' is sent unconditionally -- its queue is legitimate: a snapshot
     // that predates REACT_APP_READY must wait for the panel, and that queue is
-    // drained on ready. 'pattern' is skipped when no modal is registered,
-    // because a closed modal's queue is never drained by anyone (RoutingModal
-    // clears it on frameClosed) -- and a modal that opens LATER asks for its
-    // own snapshot on mount via MODEL_ROOT_REQUEST, so it loses nothing.
+    // drained on ready. 'pattern' and 'schedule' are each skipped when no
+    // modal is registered on that channel, because a closed modal's queue is
+    // never drained by anyone (RoutingModal clears it on frameClosed) -- and
+    // a modal that opens LATER asks for its own snapshot on mount via
+    // MODEL_ROOT_REQUEST, so it loses nothing.
     const channelManager = router.getChannelManager();
     const targets: PanelRole[] = ['model'];
     if (channelManager.getChannel('pattern')?.panel) {
       targets.push('pattern');
+    }
+    if (channelManager.getChannel('schedule')?.panel) {
+      targets.push('schedule');
     }
 
     for (const target of targets) {
