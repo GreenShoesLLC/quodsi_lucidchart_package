@@ -1060,11 +1060,22 @@ const GeneratorEditor: React.FC<Props> = ({
                     // above -- no MODEL_ROOT_SNAPSHOT has arrived yet, so
                     // there is no arrivalSchedules list to summarize.
                     <div>Loading schedule…</div>
+                  ) : linkedSchedule === undefined ? (
+                    // No schedule linked at all -- arrivalScheduleId unset,
+                    // or it points at a schedule that no longer exists in
+                    // modelRootProjection.arrivalSchedules. Distinct from a
+                    // REAL schedule that genuinely has zero arrival rows
+                    // (which does run summarizeArrivalSchedule below and
+                    // reports "0 arrivals" -- that count is a measurement).
+                    // Reporting "0 arrivals" here too would read as the same
+                    // measured fact when it actually means "there is nothing
+                    // to measure yet".
+                    <div>No schedule yet</div>
                   ) : (
                     <div>
                       {summarizeArrivalSchedule(
-                        linkedSchedule?.arrivals ?? [],
-                        linkedSchedule?.timeUnit ?? PeriodUnit.MINUTES,
+                        linkedSchedule.arrivals ?? [],
+                        linkedSchedule.timeUnit ?? PeriodUnit.MINUTES,
                         modelRootProjection.model?.timeMode === "calendar"
                       )}
                     </div>
