@@ -22,6 +22,7 @@ export const MESSAGE_SOURCES = [
   'results-iframe',
   'studio-embed-iframe',
   'pattern-iframe',
+  'schedule-iframe',
 ] as const;
 
 /**

@@ -85,6 +85,13 @@ export enum EnvelopeMessageType {
   // trapped in.
   OPEN_PATTERN_MODAL = "OPEN_PATTERN_MODAL",
 
+  // Arrival Schedule editor -- hosted directly by the extension (not an
+  // embedded Studio surface), mirroring OPEN_PATTERN_MODAL above: opens a
+  // RoutingModal that loads the packaged extension's own quodsim-react
+  // bundle at ?view=schedule so the modal can escape the 300px right-dock
+  // panel iframe it used to be trapped in.
+  OPEN_SCHEDULE_MODAL = "OPEN_SCHEDULE_MODAL",
+
   // Diagram Mapping (Phase 2B)
   ANALYZE_PAGE = "ANALYZE_PAGE",
   PAGE_ANALYSIS_RESULT = "PAGE_ANALYSIS_RESULT",
