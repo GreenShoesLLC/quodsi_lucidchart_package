@@ -167,9 +167,17 @@ export type BufferingAccessorOptions = {
 
 /**
  * Which model-root list a shape-scoped patch merges into, per domain type.
- * Only `generators` is exercised today (Lucid's ModelRootProjection carries
- * generators/arrivalPatterns/model and nothing else); the rest are listed so a
- * later editor migrated onto this wrapper merges instead of silently no-opping.
+ * Only `generators` is exercised today; the rest are listed so a later editor
+ * migrated onto this wrapper merges instead of silently no-opping.
+ *
+ * Do NOT re-add a claim here about which keys the projection carries. This
+ * comment used to assert "generators/arrivalPatterns/model and nothing else",
+ * and that went stale the moment the projection grew arrivalSchedules, then
+ * entities and states -- the last two added precisely because a silently
+ * missing key let ScheduleModal mint duplicate schedules. `entities` is now a
+ * LIVE key, so an Entity patch finds a real row here instead of no-opping.
+ * Nothing issues one in the pattern/schedule realms today, but the projection's
+ * shape is ModelRootProjection's to state, not this file's to duplicate.
  * A missing list, or a shape id not present in it, is a no-op -- this wrapper
  * displays edits to things the projection knows about, it does not invent rows.
  */

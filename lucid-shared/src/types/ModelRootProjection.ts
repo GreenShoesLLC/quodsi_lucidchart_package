@@ -46,7 +46,7 @@ export type ModelRootProjection = {
     // STALE: ScheduleModal reads it
     // (quodsi_studio/src/platforms/shared/panels/ScheduleModal.tsx:109).
     // Keeping it optional is a deliberate, separate deferral: making it
-    // required invalidates ~57 ModelRootProjection fixture literals across
+    // required invalidates ~65 ModelRootProjection fixture literals across
     // quodsim-react, which is mechanical churn unrelated to the missing-field
     // bug this file's other fields were added to fix. Widen it in its own
     // change and let the fixtures fail until updated.
