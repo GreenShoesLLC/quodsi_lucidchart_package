@@ -54,24 +54,36 @@ export class ElementOpsHandler {
    * source. Mirrors SimulationRunHandler.getResponseChannel /
    * DiagramMappingRelayHandler.getResponseChannel / ModelRootHandler's own
    * copy: a message that originates from the pattern-editor modal
-   * ('pattern-iframe') gets its reply routed back to the 'pattern' channel;
-   * everything else (the side panel, source 'model-iframe') goes to
-   * 'model' -- the channel this handler always used before the modal
-   * existed, so a panel-originated request is unaffected.
+   * ('pattern-iframe') or the schedule-editor modal ('schedule-iframe') gets
+   * its reply routed back to that modal's own channel; everything else (the
+   * side panel, source 'model-iframe') goes to 'model' -- the channel this
+   * handler always used before either modal existed, so a panel-originated
+   * request is unaffected.
+   *
+   * The 'schedule-iframe' branch matters on the FIRST interaction with a
+   * fresh Scheduled generator: quodsi_studio's ScheduleModal creates and
+   * links a default schedule on first use via accessor.updateShape(...),
+   * which is an ELEMENT_UPDATE through this same handler (not a
+   * MODEL_ROOT_UPDATE through ModelRootHandler). Without this branch that
+   * write's RESULT would route to 'model' instead of 'schedule', and the
+   * modal's saveShape call would hang for the full 30s ELEMENT_UPDATE
+   * timeout before rejecting and rolling back -- see
+   * elementOpsHandler.scheduleRouting.test.ts.
    *
    * Used only by handleElementUpdate (ELEMENT_UPDATE / ELEMENT_UPDATE_RESULT)
-   * -- the route the pattern modal's bufferingAccessor actually calls
-   * (via useModelRootSource's saveShape). handleElementConvert
+   * -- the route the pattern/schedule modals' bufferingAccessor actually
+   * calls (via useModelRootSource's saveShape). handleElementConvert
    * (ELEMENT_CONVERT / ELEMENT_CONVERT_RESULT) intentionally does NOT use
-   * this: the pattern modal never sends ELEMENT_CONVERT (its
-   * GeneratorPatternTab only calls accessor.updateShape/updateModel), and
-   * shape-type conversion is only reachable from the side panel's element
-   * editors (ActivityEditor/GeneratorEditor/ModelEditor via
+   * this: neither modal sends ELEMENT_CONVERT (their tabs only call
+   * accessor.updateShape/updateModel), and shape-type conversion is only
+   * reachable from the side panel's element editors
+   * (ActivityEditor/GeneratorEditor/ModelEditor via
    * modelOpsSender.convertElement) -- see elementOpsHandler.ts's
    * handleElementConvert sends, left hardcoded to 'model'.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'pattern-iframe') return 'pattern';
+    if (msg.source === 'schedule-iframe') return 'schedule';
     return 'model';
   }
 
