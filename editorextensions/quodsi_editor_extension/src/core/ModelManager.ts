@@ -1261,14 +1261,35 @@ export class ModelManager {
             const typeInfo = this.storageAdapter.getElementType(block);
             const elementType = typeInfo?.type;
 
-            if (elementType === SimulationObjectType.Activity && elementData.actions) {
-                const result = this.cleanActionsRequirementReferences(
-                    elementData.actions,
-                    requirementId
-                );
+            if (elementType === SimulationObjectType.Activity) {
+                let modified = false;
 
-                if (result.modified) {
-                    elementData.actions = result.actions;
+                if (elementData.actions) {
+                    const result = this.cleanActionsRequirementReferences(
+                        elementData.actions,
+                        requirementId
+                    );
+
+                    if (result.modified) {
+                        elementData.actions = result.actions;
+                        modified = true;
+                    }
+                }
+
+                // The Failure tab's repair requirement is a second reference
+                // path that lives outside `actions` -- Task 2 feeds it into
+                // the usage index (referenceDataBuilder's failureProperties
+                // summary), so the delete confirmation counts it and the
+                // extension must actually clear it, same as the actions
+                // cleanup above. "" is the existing empty sentinel (see
+                // cleanupEntityReferences' Generator.entityId precedent).
+                if (elementData.failureProperties?.repairResourceRequirementId === requirementId) {
+                    this.debug.debug('Clearing failureProperties.repairResourceRequirementId:', requirementId);
+                    elementData.failureProperties.repairResourceRequirementId = '';
+                    modified = true;
+                }
+
+                if (modified) {
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
                     affectedCount++;
                     this.debug.debug('Updated activity after requirement cleanup:', block.id);

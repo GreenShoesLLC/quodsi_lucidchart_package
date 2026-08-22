@@ -4,6 +4,13 @@ import { EnvelopeBase, EnvelopeMessageType, ISerializedState, ISerializedEntity,
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
+// Generous but bounded — a local ModelManager mutation + re-validate, not a
+// network call (same reasoning as useModelRootSource's MODEL_ROOT_UPDATE).
+// Module scope: it's a constant, not per-render state, and declaring it
+// inside the hook body allocated (and discarded) a fresh binding on every
+// render for no reason.
+const RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS = 30_000;
+
 /**
  * Custom hook that provides typed functions for sending model operations messages
  *
@@ -139,10 +146,6 @@ export function useModelOpsSender() {
       entities
     });
   }, [send]);
-
-  // Generous but bounded — a local ModelManager mutation + re-validate, not a
-  // network call (same reasoning as useModelRootSource's MODEL_ROOT_UPDATE).
-  const RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS = 30_000;
 
   /**
    * Persist the custom resource-requirements list. Unlike the other senders
