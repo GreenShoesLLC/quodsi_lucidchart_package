@@ -128,6 +128,9 @@ export const referenceDataBuilder = {
             // through BRANCH/LOOP — see summarizeAction above).
             actions: (a.actions || []).map(action => summarizeAction(action as any)),
             sourceConfig: sourceConfigMods ? { initialStates: sourceConfigMods } : undefined,
+            failureProperties: (a as any).failureProperties?.repairResourceRequirementId
+              ? { repairResourceRequirementId: (a as any).failureProperties.repairResourceRequirementId as string }
+              : undefined,
           };
         });
 

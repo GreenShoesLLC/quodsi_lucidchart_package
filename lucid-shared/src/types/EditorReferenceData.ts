@@ -84,6 +84,8 @@ export interface EditorReferenceData {
         sourceConfig?: {
             initialStates?: EditorReferenceStateModification[];
         };
+        /** Failure-tab repair requirement, so usage counts include repair references. */
+        failureProperties?: { repairResourceRequirementId?: string };
     }>;
     generators?: Array<{
         id: string;
