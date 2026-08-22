@@ -2,6 +2,11 @@
 //
 // Verifies the optional "Name" input in the Action editor: editing it patches
 // `name` onto the action draft via onChange.
+//
+// Uses a plain DELAY action deliberately: Seize/Release/DELAY_WITH_RESOURCE
+// render the shared RequirementField, which throws without a
+// RequirementFieldContext.Provider above it (see ActivityEditor.tsx) — this
+// test renders ActionEditor standalone, with no such provider.
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
