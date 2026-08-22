@@ -36,11 +36,11 @@ import {
   State,
   StateCondition,
 } from "@quodsi/lucid-shared";
-import { X, Edit2, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import { X, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { StateConditionEditor } from "./StateConditionEditor";
-import { convertRootClausesToStructure, generatePreview } from "../../utils/resourceRequirementConverter";
+import { RequirementField } from "quodsi_studio/platforms/shared";
 
 interface ActionEditorProps {
   activityId?: string;
@@ -50,12 +50,8 @@ interface ActionEditorProps {
   onToggleExpand: () => void;
   onDelete: (index: number) => void;
   onChange: (updatedAction: Action) => void;
-  resourceRequirements?: ResourceRequirement[];
-  availableResources?: Array<{ id: string; name: string }>;
   availableEntities?: Array<{ id: string; name: string }>;
   availableActivities?: Array<{ id: string; name: string }>;
-  onOpenRequirementModal?: (requirementId: string) => void;
-  onCreateRequirement?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   states?: StateListManager;
   /** Callback to navigate to Model Editor (for creating states) */
@@ -274,26 +270,13 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   onToggleExpand,
   onDelete,
   onChange,
-  resourceRequirements = [],
-  availableResources = [],
   availableEntities = [],
   availableActivities = [],
-  onOpenRequirementModal,
-  onCreateRequirement,
   dragHandleProps,
   states,
   onNavigateToModelEditor,
 }) => {
   const [conditionExpanded, setConditionExpanded] = useState(false);
-
-  const getResourceName = (id: string): string => {
-    return availableResources.find((r) => r.id === id)?.name || "Unknown";
-  };
-
-  const generateRequirementPreview = (req: ResourceRequirement): string => {
-    const structure = convertRootClausesToStructure(req.rootClause);
-    return generatePreview(structure, getResourceName);
-  };
 
   const handleActionTypeChange = (newType: ActionType) => {
     let newAction: Action;
@@ -345,90 +328,6 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
     }
 
     onChange(newAction);
-  };
-
-  // Render resource requirement selector
-  const renderResourceRequirementSelector = (
-    currentRequirementId: string | null,
-    onRequirementChange: (newId: string | null) => void,
-    label: string = "Resource Requirement",
-    emptyOptionLabel: string = "None"
-  ) => {
-    const selectedRequirement = currentRequirementId
-      ? resourceRequirements.find((r) => r.id === currentRequirementId)
-      : null;
-
-    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value;
-      if (value === "__new__") {
-        if (onCreateRequirement) {
-          onCreateRequirement();
-        }
-      } else {
-        onRequirementChange(value === "" ? null : value);
-      }
-    };
-
-    const handleEditRequirement = () => {
-      if (currentRequirementId && onOpenRequirementModal) {
-        onOpenRequirementModal(currentRequirementId);
-      }
-    };
-
-    return (
-      <div>
-        <label className="block text-xs text-gray-600 mb-0.5">
-          <span className="inline-flex items-center gap-1">
-            {label}
-            <span title="Specify which resources are needed for this action.">
-              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-            </span>
-          </span>
-        </label>
-        <div className="flex gap-1">
-          <select
-            value={currentRequirementId || ""}
-            onChange={handleChange}
-            className="flex-1 px-1 py-0.5 text-xs border rounded bg-white"
-          >
-            <option value="">{emptyOptionLabel}</option>
-            {onCreateRequirement && (
-              <option value="__new__" className="font-semibold text-blue-600">
-                + Create New...
-              </option>
-            )}
-            {resourceRequirements.map((req) => (
-              <option key={req.id} value={req.id}>
-                {req.name}
-              </option>
-            ))}
-          </select>
-
-          {currentRequirementId &&
-            currentRequirementId !== "__new__" &&
-            onOpenRequirementModal && (
-              <button
-                onClick={handleEditRequirement}
-                className="px-1 py-0.5 border rounded bg-gray-50 hover:bg-gray-100 transition"
-                title="Edit requirement"
-              >
-                <Edit2 className="w-3 h-3 text-blue-600" />
-              </button>
-            )}
-        </div>
-
-        {selectedRequirement && (
-          <div className="mt-0.5 p-1 bg-blue-50 rounded border border-blue-200">
-            <div className="text-[10px] text-blue-900 font-medium leading-tight">
-              {selectedRequirement.name}
-            </div>
-            <div className="text-[10px] text-blue-700 leading-tight">
-              {generateRequirementPreview(selectedRequirement)}
-            </div>
-          </div>
-        )}
-      </div>
-    );
   };
 
   // Render duration editor. Wire-cleanup Phase B2 Task 4/10: `Duration` is
@@ -557,39 +456,34 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
       case ActionType.SEIZE: {
         const seizeAction = action as SeizeAction;
-        return renderResourceRequirementSelector(
-          seizeAction.resourceRequirementId || null,
-          (newId) =>
-            onChange({
-              ...seizeAction,
-              // Wire-cleanup Phase B2 Task 6/10: absent (never `''`) is the
-              // only valid "not set" spelling on the clean wire — `''` is
-              // now a loud validation error, not a second way to say the
-              // same thing. Safe to clear via `undefined` here: the panel
-              // always sends the FULL actions array as one top-level
-              // `q_data` key (StorageAdapter.updateElementData replaces it
-              // wholesale, never merges inside it), and the eventual
-              // JSON.stringify on persist drops an `undefined`-valued key
-              // at any nesting depth — verified against StorageAdapter.ts.
-              resourceRequirementId: newId || undefined,
-            }),
-          "Resource to Seize"
+        return (
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Resource to Seize</label>
+            <RequirementField
+              value={seizeAction.resourceRequirementId || null}
+              // Wire-cleanup Phase B2 Task 6/10: absent (never '') is the only
+              // valid "not set" spelling on the clean wire; the panel sends the
+              // FULL actions array so an undefined key is dropped on persist.
+              onChange={(id) => onChange({ ...seizeAction, resourceRequirementId: id ?? undefined })}
+              placeholder="(none selected)"
+              ariaLabel="Resource requirement"
+            />
+          </div>
         );
       }
 
       case ActionType.RELEASE: {
         const releaseAction = action as ReleaseAction;
-        return renderResourceRequirementSelector(
-          releaseAction.resourceRequirementId || null,
-          (newId) =>
-            onChange({
-              ...releaseAction,
-              // Absent means "release ALL" on the clean wire (see SEIZE's
-              // comment above for why `undefined`, not `''`, is correct here).
-              resourceRequirementId: newId || undefined,
-            }),
-          "Resource to Release",
-          "All (release all held resources)"
+        return (
+          <div>
+            <label className="block text-xs text-gray-600 mb-0.5">Resource to Release</label>
+            <RequirementField
+              value={releaseAction.resourceRequirementId || null}
+              onChange={(id) => onChange({ ...releaseAction, resourceRequirementId: id ?? undefined })}
+              emptyLabel="(release all)"
+              ariaLabel="Resource requirement"
+            />
+          </div>
         );
       }
 
@@ -614,15 +508,15 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               })
             )}
 
-            {renderResourceRequirementSelector(
-              dwrAction.resourceRequirementId,
-              (newId) =>
-                onChange({
-                  ...dwrAction,
-                  resourceRequirementId: newId,
-                }),
-              "Resource Requirement"
-            )}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">Resource Requirement</label>
+              <RequirementField
+                value={dwrAction.resourceRequirementId ?? null}
+                onChange={(id) => onChange({ ...dwrAction, resourceRequirementId: id })}
+                emptyLabel="(none — just a delay)"
+                ariaLabel="Resource requirement"
+              />
+            </div>
 
             {dwrAction.resourceRequirementId && (
               <div>
@@ -1248,7 +1142,11 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   };
 
   // Get summary for collapsed view
-  const summary = getActionSummary(action, resourceRequirements, availableActivities);
+  // Requirement names for the collapsed summary row now live behind the
+  // shared RequirementField's own context lookup (see the expanded picker
+  // below) rather than a prop threaded into this component; the summary
+  // row shows the resourceRequirementId's raw name only once expanded.
+  const summary = getActionSummary(action, [], availableActivities);
 
   return (
     <div className="bg-gray-50 rounded border border-gray-200">

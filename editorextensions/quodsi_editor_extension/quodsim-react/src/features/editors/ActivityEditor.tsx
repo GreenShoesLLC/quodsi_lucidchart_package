@@ -47,7 +47,6 @@ import {
   StateListManager,
   ComponentType,
   Connector,
-  ResourceRequirement,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
   isDelayAction,
@@ -62,13 +61,9 @@ import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
-import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
-import {
-  convertStructureToRootClauses,
-  convertRootClausesToStructure,
-  TeamStructure,
-} from "../../utils/resourceRequirementConverter";
+import { RequirementField, RequirementFieldContext } from "quodsi_studio/platforms/shared";
+import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
@@ -87,12 +82,8 @@ interface SortableActionItemProps {
   onToggleExpand: () => void;
   onChange: (action: Action) => void;
   onDelete: () => void;
-  resourceRequirements?: ResourceRequirement[];
-  availableResources?: Array<{ id: string; name: string }>;
   availableEntities?: Array<{ id: string; name: string }>;
   availableActivities?: Array<{ id: string; name: string }>;
-  onOpenRequirementModal?: (requirementId: string) => void;
-  onCreateRequirement?: () => void;
   states?: StateListManager;
   onNavigateToModelEditor?: () => void;
 }
@@ -106,12 +97,8 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
   onToggleExpand,
   onChange,
   onDelete,
-  resourceRequirements,
-  availableResources,
   availableEntities,
   availableActivities,
-  onOpenRequirementModal,
-  onCreateRequirement,
   states,
   onNavigateToModelEditor,
 }) => {
@@ -140,12 +127,8 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
         onToggleExpand={onToggleExpand}
         onChange={onChange}
         onDelete={() => onDelete()}
-        resourceRequirements={resourceRequirements}
-        availableResources={availableResources}
         availableEntities={availableEntities}
         availableActivities={availableActivities}
-        onOpenRequirementModal={onOpenRequirementModal}
-        onCreateRequirement={onCreateRequirement}
         dragHandleProps={{ ...attributes, ...listeners }}
         states={states}
         onNavigateToModelEditor={onNavigateToModelEditor}
@@ -369,15 +352,6 @@ export const updateActivityImmutably = (
 type ActivityInput = Activity | { data: Partial<Activity> } | Partial<Activity>;
 
 /**
- * Type for tracking resource requirement being edited in modal
- */
-interface EditingRequirement {
-  id: string;
-  name: string;
-  structure: TeamStructure;
-}
-
-/**
  * Props for the ActivityEditor component
  */
 interface ActivityEditorProps {
@@ -456,9 +430,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   outgoingConnectors = [],
 }) => {
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
-  const [requirementModalOpen, setRequirementModalOpen] = useState(false);
-  const [editingRequirement, setEditingRequirement] =
-    useState<EditingRequirement | null>(null);
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
 
@@ -467,6 +438,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   // Get message sender for updating resource requirements and navigating to Model Editor
   const { updateResourceRequirements, selectElement } = useModelOpsSender();
+  // Unconditional (hook order): backs every RequirementField rendered below,
+  // in the actions list and the Failure tab, via RequirementFieldContext.
+  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements });
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -968,86 +942,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setHasPendingChanges(true);
   };
 
-  /**
-   * Opens the resource requirement modal in edit mode.
-   *
-   * Loads the specified resource requirement's configuration into the modal,
-   * converting the internal root clauses format to the UI-friendly team structure.
-   *
-   * @param requirementId - ID of the resource requirement to edit
-   */
-  const handleOpenRequirementModal = (requirementId: string) => {
-    const req = referenceData?.resourceRequirements?.find(
-      (r) => r.id === requirementId
-    );
-    if (req) {
-      const structure = convertRootClausesToStructure(req.rootClause);
-      setEditingRequirement({ id: req.id, name: req.name, structure });
-      setRequirementModalOpen(true);
-    }
-  };
-
-  /**
-   * Opens the resource requirement modal in create mode.
-   *
-   * Clears any existing editing state to start fresh with a new requirement.
-   * The modal will generate a new ID when saved.
-   */
-  const handleCreateRequirement = () => {
-    setEditingRequirement(null);
-    setRequirementModalOpen(true);
-  };
-
-  /**
-   * Saves a resource requirement (either new or edited).
-   *
-   * Converts the UI-friendly team structure back to internal root clauses format.
-   * Either updates an existing requirement or creates a new one with generated ID.
-   *
-   * Sends update message to extension via Redux to persist to model.
-   *
-   * @param data - Requirement name and team structure from modal
-   */
-  const handleSaveRequirement = (data: {
-    name: string;
-    structure: TeamStructure;
-  }) => {
-    const rootClause = convertStructureToRootClauses(data.structure);
-
-    // Get the current requirements array
-    const currentRequirements = referenceData?.resourceRequirements || [];
-
-    let updatedRequirements;
-
-    if (editingRequirement) {
-      // Update existing requirement
-      updatedRequirements = currentRequirements.map((req) =>
-        req.id === editingRequirement.id
-          ? {
-              id: req.id,
-              name: data.name,
-              rootClause,
-            }
-          : req
-      );
-    } else {
-      // Create new requirement with generated ID
-      const newRequirement = {
-        id: `rr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: data.name,
-        rootClause,
-      };
-      updatedRequirements = [...currentRequirements, newRequirement];
-    }
-
-    // Send update message to extension
-    updateResourceRequirements(updatedRequirements);
-
-    // Close modal
-    setRequirementModalOpen(false);
-    setEditingRequirement(null);
-  };
-
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -1065,7 +959,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   }
 
   return (
-    <>
+    <RequirementFieldContext.Provider value={accessor}>
       <div className="space-y-2">
         {/* Swimlane Resource Banner */}
         {referenceData?.swimLaneContainment && (
@@ -1293,14 +1187,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           handleActionChange(index, updatedAction)
                         }
                         onDelete={() => handleActionDelete(index)}
-                        resourceRequirements={referenceData?.resourceRequirements}
-                        availableResources={referenceData?.resources}
                         availableEntities={referenceData?.entities}
                         availableActivities={referenceData?.activities?.filter(
                           (a) => a.id !== localActivityDraft.id
                         )}
-                        onOpenRequirementModal={handleOpenRequirementModal}
-                        onCreateRequirement={handleCreateRequirement}
                         states={states}
                         onNavigateToModelEditor={() => selectElement('model', { targetTab: 'states' })}
                       />
@@ -1610,85 +1500,19 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     </select>
                   </div>
 
-                  {/* Repair Resource Requirement */}
                   <div className="pt-1 border-t">
                     <div className="flex items-center gap-1 mb-0.5">
-                      <label className="text-xs font-medium text-gray-700">
-                        Repair Resource Requirement
-                      </label>
+                      <label className="text-xs font-medium text-gray-700">Repair Resource Requirement</label>
                       <span title="Optional resource requirement that must be acquired before repair can begin">
                         <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                       </span>
                     </div>
-                    <div className="flex gap-1">
-                      <select
-                        className="flex-1 px-2 py-1 text-xs border rounded bg-white"
-                        value={
-                          localActivityDraft.failureProperties
-                            ?.repairResourceRequirementId || ""
-                        }
-                        onChange={(e) =>
-                          handleFailureChange(
-                            "repairResourceRequirementId",
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="">None (no resource needed)</option>
-                        {referenceData?.resourceRequirements?.map((req) => (
-                          <option key={req.id} value={req.id}>
-                            {req.name}
-                          </option>
-                        ))}
-                      </select>
-                      {localActivityDraft.failureProperties
-                        ?.repairResourceRequirementId && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleOpenRequirementModal(
-                              localActivityDraft.failureProperties!
-                                .repairResourceRequirementId
-                            )
-                          }
-                          className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
-                          title="Edit resource requirement"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleCreateRequirement}
-                        className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
-                        title="Create new resource requirement"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-                    {/* Resource requirement preview */}
-                    {localActivityDraft.failureProperties
-                      ?.repairResourceRequirementId && (() => {
-                      const req = referenceData?.resourceRequirements?.find(
-                        (r) =>
-                          r.id ===
-                          localActivityDraft.failureProperties
-                            ?.repairResourceRequirementId
-                      );
-                      if (!req) return null;
-                      const clauseCount = req.rootClause?.clauses.length ?? 0;
-                      return (
-                        <div className="mt-1 p-1.5 bg-gray-50 border rounded text-xs text-gray-600">
-                          <span className="font-medium">{req.name}</span>
-                          {clauseCount > 0 && (
-                            <span className="ml-1">
-                              ({clauseCount} clause
-                              {clauseCount !== 1 ? "s" : ""})
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    <RequirementField
+                      value={localActivityDraft.failureProperties?.repairResourceRequirementId || null}
+                      onChange={(id) => handleFailureChange("repairResourceRequirementId", id ?? "")}
+                      emptyLabel="(none — no resource needed)"
+                      ariaLabel="Repair resource requirement"
+                    />
                   </div>
                 </div>
               )}
@@ -1763,19 +1587,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
           </div>
       </div>
-
-      {/* Resource Requirement Modal */}
-      <ResourceRequirementModal
-        isOpen={requirementModalOpen}
-        onClose={() => {
-          setRequirementModalOpen(false);
-          setEditingRequirement(null);
-        }}
-        onSave={handleSaveRequirement}
-        editingRequirement={editingRequirement}
-        availableResources={referenceData?.resources || []}
-      />
-    </>
+    </RequirementFieldContext.Provider>
   );
 };
 
