@@ -50,6 +50,11 @@ interface ActionEditorProps {
   onToggleExpand: () => void;
   onDelete: (index: number) => void;
   onChange: (updatedAction: Action) => void;
+  // Kept ONLY for the collapsed summary row's name lookup (getActionSummary
+  // below) — mirrors Studio's ActionCard, which keeps `allRequirements` for
+  // summarizeAction while the expanded picker (RequirementField) reads the
+  // model through RequirementFieldContext instead of a threaded prop.
+  resourceRequirements?: ResourceRequirement[];
   availableEntities?: Array<{ id: string; name: string }>;
   availableActivities?: Array<{ id: string; name: string }>;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -270,6 +275,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   onToggleExpand,
   onDelete,
   onChange,
+  resourceRequirements = [],
   availableEntities = [],
   availableActivities = [],
   dragHandleProps,
@@ -1142,11 +1148,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   };
 
   // Get summary for collapsed view
-  // Requirement names for the collapsed summary row now live behind the
-  // shared RequirementField's own context lookup (see the expanded picker
-  // below) rather than a prop threaded into this component; the summary
-  // row shows the resourceRequirementId's raw name only once expanded.
-  const summary = getActionSummary(action, [], availableActivities);
+  const summary = getActionSummary(action, resourceRequirements, availableActivities);
 
   return (
     <div className="bg-gray-50 rounded border border-gray-200">

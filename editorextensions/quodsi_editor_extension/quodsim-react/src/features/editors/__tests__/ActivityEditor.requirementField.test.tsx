@@ -99,4 +99,19 @@ describe('ActivityEditor — shared RequirementField', () => {
     await user.click(screen.getByRole('button', { name: /repair resource requirement/i }))
     expect(screen.getByRole('option', { name: /\(none — no resource needed\)/ })).toBeInTheDocument()
   })
+
+  it('shows the resolved requirement name in the collapsed summary row (not "Unknown")', async () => {
+    const user = userEvent.setup()
+    const activityWithRequirement = {
+      ...activity,
+      actions: [
+        { id: 'a2', type: 'seize', resourceRequirementId: 'req-1' },
+      ],
+    } as any
+    render(<ActivityEditor activity={activityWithRequirement} onSave={vi.fn()} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    await user.click(screen.getByRole('button', { name: /actions/i }))
+    // Collapsed (never expanded) — the summary row still resolves the name.
+    expect(screen.getByText('Triage team')).toBeInTheDocument()
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument()
+  })
 })

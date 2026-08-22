@@ -47,6 +47,7 @@ import {
   StateListManager,
   ComponentType,
   Connector,
+  ResourceRequirement,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
   isDelayAction,
@@ -82,6 +83,9 @@ interface SortableActionItemProps {
   onToggleExpand: () => void;
   onChange: (action: Action) => void;
   onDelete: () => void;
+  // Passed through to ActionEditor's collapsed-summary lookup ONLY — see
+  // the comment on ActionEditorProps.resourceRequirements.
+  resourceRequirements?: ResourceRequirement[];
   availableEntities?: Array<{ id: string; name: string }>;
   availableActivities?: Array<{ id: string; name: string }>;
   states?: StateListManager;
@@ -97,6 +101,7 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
   onToggleExpand,
   onChange,
   onDelete,
+  resourceRequirements,
   availableEntities,
   availableActivities,
   states,
@@ -127,6 +132,7 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
         onToggleExpand={onToggleExpand}
         onChange={onChange}
         onDelete={() => onDelete()}
+        resourceRequirements={resourceRequirements}
         availableEntities={availableEntities}
         availableActivities={availableActivities}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -1187,6 +1193,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           handleActionChange(index, updatedAction)
                         }
                         onDelete={() => handleActionDelete(index)}
+                        resourceRequirements={referenceData?.resourceRequirements}
                         availableEntities={referenceData?.entities}
                         availableActivities={referenceData?.activities?.filter(
                           (a) => a.id !== localActivityDraft.id
