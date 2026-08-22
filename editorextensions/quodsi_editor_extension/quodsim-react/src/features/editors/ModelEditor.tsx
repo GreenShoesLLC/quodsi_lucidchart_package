@@ -10,12 +10,13 @@ import {
   ScenarioObjectType,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
-import { Settings, Hash, Info, Users, AlertTriangle, Boxes } from "lucide-react";
+import { Settings, Hash, Info, Users, AlertTriangle, Boxes, CalendarClock } from "lucide-react";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import StatesEditor from "./StatesEditor";
 import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
+import { ArrivalsTab } from "./ArrivalsTab";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
@@ -53,7 +54,7 @@ interface Props {
   onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
-export type EditorTab = "basic" | "states" | "entities" | "requirements" | "scenarios" | "validation";
+export type EditorTab = "basic" | "states" | "entities" | "requirements" | "arrivals" | "scenarios" | "validation";
 
 /**
  * Type for tracking resource requirement being edited in modal
@@ -92,6 +93,12 @@ const TAB_CONFIG = [
     title: "Resource Requirements",
     icon: Users,
     tooltip: "Create reusable resource requirement templates that define which resources are needed for activities"
+  },
+  {
+    id: "arrivals" as const,
+    title: "Arrivals",
+    icon: CalendarClock,
+    tooltip: "Review the arrival patterns and schedules this model carries, and remove any no longer used by a generator"
   },
   {
     id: "validation" as const,
@@ -631,6 +638,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             onEntitiesChange={onEntitiesChange}
           />
       )}
+      {activeTab === "arrivals" && <ArrivalsTab />}
       {activeTab === "requirements" && (
         <ResourceRequirementsManager
             requirements={resourceRequirements || []}
