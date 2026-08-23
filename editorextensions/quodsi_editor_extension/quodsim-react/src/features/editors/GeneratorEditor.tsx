@@ -350,11 +350,12 @@ const GeneratorEditor: React.FC<Props> = ({
     updated.arrivalScheduleId = base.arrivalScheduleId;
     updated.maxEntities = updates.maxEntities ?? base.maxEntities;
     updated.initialStates = updates.initialStates ?? base.initialStates;
-    // Task 5 (routing tab): the shared ConnectorRoutingView's mode select
-    // writes routing through this same immutable-update helper via the
-    // routing accessor's shapeWriter -- so, unlike the comment above this
-    // block used to say, `routing` DOES need a real caller-provided path
-    // now, not just base-preservation.
+    // Task 5 (routing tab): before this task, `routing` was never read from
+    // `updates` here -- this line was `updated.routing = base.routing`
+    // unconditionally, so any caller-provided `routing` patch silently
+    // no-opped. The shared ConnectorRoutingView's mode select now writes
+    // routing through this same immutable-update helper via the routing
+    // accessor's shapeWriter, so `updates.routing` needs a real path here.
     updated.routing = updates.routing ?? base.routing;
     updated.description = base.description;
 

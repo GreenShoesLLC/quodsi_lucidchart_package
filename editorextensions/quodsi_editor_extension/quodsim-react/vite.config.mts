@@ -29,6 +29,24 @@ export default defineConfig({
     // here too, that produced a null dispatcher ("Cannot read properties of
     // null (reading 'useContext')") only under Vitest's SSR-style
     // resolution, the moment ConnectorRoutingView actually rendered.
+    //
+    // VERSION SKEW -- this dedupe also applies to `vite build` (not just
+    // Vitest), so it changes the shipped production bundle, not just tests.
+    // Dedupe resolves every `lucide-react` import to the copy nearest the
+    // Vite root, i.e. THIS package's node_modules/lucide-react (0.468.0) --
+    // NOT the monorepo root's copy (1.16.0) that quodsi_studio's own
+    // tsc/vitest normally compile/test against. Studio's shared panels
+    // therefore compile into the Lucid bundle against 0.468.0, a silent
+    // major-version downgrade from what Studio itself ships with. Verified
+    // safe as of Task 5 (`npm run build` succeeds; every icon the shared
+    // Studio layer imports -- InfoIcon's Info, LeverAuthoringSection's
+    // icons, etc. -- exists in 0.468.0). This is NOT guaranteed going
+    // forward -- the next Studio panel pulled into quodsim-react that
+    // imports an icon added to lucide-react after 0.468.0 will resolve to
+    // `undefined` at render time (lucide-react has no build-time
+    // export-existence check), not a build error. If that happens: bump
+    // this package's own lucide-react dependency to cover the icon, or
+    // avoid the offending icon in the Studio panel being adopted.
     dedupe: ['react', 'react-dom', 'lucide-react'],
   },
   build: {

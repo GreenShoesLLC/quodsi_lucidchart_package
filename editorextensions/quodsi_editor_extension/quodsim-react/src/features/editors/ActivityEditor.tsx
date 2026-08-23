@@ -409,7 +409,7 @@ type ActivityTab =
  *   repairResourceRequirementId, connectType): immediate save via
  *   useFlushOnChange — selects/checkboxes have no useful onBlur.
  * - Sub-component-driven changes (ActionEditor, EnhancedDurationEditor,
- *   RoutingConfigurationContent): debounced auto-save — sub-components fire
+ *   ConnectorRoutingView): debounced auto-save — sub-components fire
  *   onChange per keystroke, debounce coalesces.
  * - Validation: name uniqueness + 4 action validation checks (Split needs
  *   destination, Create needs entityTemplate+destination, Join needs
