@@ -201,7 +201,7 @@ describe('updateShape', () => {
     expect(s.accessor.getSnapshot().saveStatus).toBe('idle')         // the host editor owns save status on this path
   })
 
-  it('a connector patch goes through updateElement, resolves on the result, then overlays', async () => {
+  it('a connector patch overlays optimistically before the round trip, then resolves on the result', async () => {
     let resolveHost!: () => void
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(() => new Promise((r) => { resolveHost = r }))
     const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }))
@@ -209,6 +209,9 @@ describe('updateShape', () => {
     const p = s.accessor.updateShape('c2', 'Connector', { priority: 1 }).then(() => { settled = true })
     expect(updateElement).toHaveBeenCalledWith('c2', 'Connector', { priority: 1 })
     expect(s.accessor.getSnapshot().saveStatus).toBe('saving')
+    // Overlay lands BEFORE the send resolves: a controlled input reading the
+    // snapshot must see the typed value immediately, not just after RESULT.
+    expect(snap(s).connectors.find((c) => c.id === 'c2')!.priority).toBe(1)
     await Promise.resolve()
     expect(settled).toBe(false)
     resolveHost()
@@ -227,12 +230,19 @@ describe('updateShape', () => {
     expect(snap(s).generators[0].routing).toBe('first_available')
   })
 
-  it('a rejected element update sets saveError, keeps the snapshot, and rethrows', async () => {
-    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => { throw new Error('line not found') })
+  it('a rejected element update rolls back the optimistic overlay to the pre-edit value', async () => {
+    let rejectHost!: (err: Error) => void
+    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(() => new Promise((_resolve, reject) => { rejectHost = reject }))
     const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }))
-    await expect(s.accessor.updateShape('c1', 'Connector', { priority: 5 })).rejects.toThrow('line not found')
+    const p = s.accessor.updateShape('c1', 'Connector', { priority: 5 })
+    await Promise.resolve()
+    // Optimistic overlay is visible while the write is still pending.
+    expect(snap(s).connectors[0].priority).toBe(5)
+    rejectHost(new Error('line not found'))
+    await expect(p).rejects.toThrow('line not found')
+    expect(s.accessor.getSnapshot().saveStatus).toBe('failed')
     expect(s.accessor.getSnapshot().saveError).toBe('line not found')
-    expect(snap(s).connectors[0].priority).toBe(1)
+    expect(snap(s).connectors[0].priority).toBe(1)   // rolled back to the pre-edit value
   })
 
   it('an unknown type throws before sending; a missing sender throws', async () => {

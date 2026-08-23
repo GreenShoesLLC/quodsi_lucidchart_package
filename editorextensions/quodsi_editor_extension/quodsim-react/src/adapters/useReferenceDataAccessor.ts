@@ -35,8 +35,16 @@
 //    persists either through a host-registered shape writer (Lucid's own
 //    shape-data write, no envelope) or through Task 2's ELEMENT_UPDATE
 //    sender, overlaying the patch onto the matching element either way so
-//    the view reflects the change immediately -- the host editor's autosave
-//    is a separate ELEMENT_UPDATE that never refreshes referenceData. See
+//    the view reflects the change immediately. A successful ELEMENT_UPDATE
+//    DOES trigger a host-side refresh -- elementOpsHandler re-processes the
+//    current selection after a save, and the Activity/Generator/Connector
+//    processors each rebuild referenceData unconditionally -- but that round
+//    trip is not instant. On the ELEMENT_UPDATE sender path the overlay is
+//    therefore applied optimistically, before the send resolves, so a fully
+//    controlled input (e.g. the priority field) doesn't snap back to the
+//    pre-edit value while the write is pending; it rolls back on rejection.
+//    On the shape-writer path the host editor's own autosave is a separate,
+//    later ELEMENT_UPDATE, so the overlay also bridges that window. See
 //    spec docs/superpowers/specs/2026-08-22-lucid-routing-tab-design.md.
 
 import { useEffect, useRef } from 'react'
@@ -117,7 +125,11 @@ export function createReferenceDataAccessor(
 ): ReferenceDataSource {
   let referenceData = initial
   let overlay: RequirementRecord[] | null = null
-  let elementOverlays: Record<string, Record<string, unknown>> = {} // id -> merged patch
+  // id -> merged patch. Object.create(null): shapeId is host-controlled data,
+  // not a trusted key set, so a plain {} risks a prototype-chain lookup
+  // (e.g. shapeId === 'constructor') resolving to something other than
+  // undefined.
+  let elementOverlays: Record<string, Record<string, unknown>> = Object.create(null)
   let saveStatus: ModelStateSnapshot['saveStatus'] = 'idle'
   let saveError: string | null = null
   const listeners = new Set<() => void>()
@@ -182,9 +194,10 @@ export function createReferenceDataAccessor(
       const writer = getOptions?.().shapeWriters?.[shapeId]
       if (writer) {
         await writer(patch)
-        // The host editor persists via its own autosave (an ELEMENT_UPDATE,
-        // which never refreshes referenceData) -- overlay so the view shows
-        // the change now.
+        // The host editor persists via its own autosave -- a separate,
+        // later ELEMENT_UPDATE that will itself trigger a referenceData
+        // refresh once it round-trips -- so overlay now to bridge that
+        // window.
         elementOverlays = { ...elementOverlays, [shapeId]: { ...(elementOverlays[shapeId] ?? {}), ...patch } }
         notify()
         return
@@ -194,15 +207,28 @@ export function createReferenceDataAccessor(
       }
       const send = getSenders().updateElement
       if (!send) throw new Error('useReferenceDataAccessor.updateShape: no updateElement sender configured')
+      // Apply the overlay optimistically, before the round trip, so a fully
+      // controlled input reading off the snapshot (e.g. ConnectorRoutingView's
+      // priority field) doesn't revert to the pre-edit value while the write
+      // is pending. Roll back to the captured previous overlay on rejection.
+      const hadOverlay = Object.prototype.hasOwnProperty.call(elementOverlays, shapeId)
+      const previousOverlay = elementOverlays[shapeId]
+      elementOverlays = { ...elementOverlays, [shapeId]: { ...(elementOverlays[shapeId] ?? {}), ...patch } }
       saveStatus = 'saving'
       saveError = null
       notify()
       try {
         await send(shapeId, type, patch)
-        elementOverlays = { ...elementOverlays, [shapeId]: { ...(elementOverlays[shapeId] ?? {}), ...patch } }
         saveStatus = 'saved'
         notify()
       } catch (err) {
+        if (hadOverlay) {
+          elementOverlays = { ...elementOverlays, [shapeId]: previousOverlay }
+        } else {
+          const rest: Record<string, Record<string, unknown>> = { ...elementOverlays }
+          delete rest[shapeId]
+          elementOverlays = rest
+        }
         saveStatus = 'failed'
         saveError = err instanceof Error ? err.message : String(err)
         notify()
@@ -217,7 +243,7 @@ export function createReferenceDataAccessor(
       if (next === referenceData) return
       referenceData = next
       overlay = null
-      elementOverlays = {}
+      elementOverlays = Object.create(null)
       notify()
     },
   }
