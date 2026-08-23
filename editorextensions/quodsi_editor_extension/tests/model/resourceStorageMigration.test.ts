@@ -114,6 +114,34 @@ describe('migrateResourcesToModelLevel', () => {
         expect(readJson(swim, 'q_swimlane').lanes[0].resourceId).toBe('shared-id'); // the lane still points; the builder's resolver rejects it as duplicate
     });
 
+    it('leaves a pointer block alone even when a merge write put name/capacity back on it', () => {
+        // StorageAdapter.updateElementData MERGES, so a panel edit on an
+        // already-migrated pointer block writes name/capacity NEXT TO the
+        // surviving resourceId. Classifying that as legacy would mint a second
+        // record under the block id and repoint the block, silently discarding
+        // the edit. `resourceId` present == already migrated, full stop.
+        const sa = new StorageAdapter();
+        const page = makeFakePage('p');
+        const blk = addBlock(page, makeFakeBlock('blk-p'));
+        sa.setElementData(blk, { id: 'blk-p', name: 'Nurse', capacity: 3 } as any, SimulationObjectType.Resource);
+        migrateResourcesToModelLevel(page, sa);
+
+        // the merge write a panel edit produces
+        sa.updateElementData(blk, { id: 'blk-p', name: 'Edited', capacity: 9 } as any);
+        const before = { res: page.shapeData.get('q_resources'), data: blk.shapeData.get('q_data') };
+        expect((sa.getElementData(blk) as any).resourceId).toBe('blk-p');
+        expect((sa.getElementData(blk) as any).name).toBe('Edited');
+
+        const again = migrateResourcesToModelLevel(page, sa);
+
+        expect(again.migrated).toBe(false);
+        expect(again.renames).toEqual([]);
+        expect(page.shapeData.get('q_resources')).toBe(before.res);
+        expect(blk.shapeData.get('q_data')).toBe(before.data);
+        expect(sa.getResources(page)).toHaveLength(1);
+        expect(sa.getResources(page)[0].name).toBe('Nurse');   // no second record minted from the edit
+    });
+
     it('restores every touched key when a write throws mid-way', () => {
         const sa = new StorageAdapter();
         const page = buildLegacyResourcesPage(sa);

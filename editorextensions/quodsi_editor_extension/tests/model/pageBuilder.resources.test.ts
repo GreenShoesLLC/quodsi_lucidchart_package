@@ -51,15 +51,36 @@ describe('ModelDefinitionPageBuilder with q_resources', () => {
         const sa = new StorageAdapter();
         const page = buildLegacyResourcesPage(sa);
         migrateResourcesToModelLevel(page, sa);
-        // a stale custom-stored override under the auto id with an old name
         sa.setResourceRequirements(page, [
             ...sa.getResourceRequirements(page),
+            // a stale AUTO-SHAPED override under a resource id, with an old name
             { id: IDS.laneTechResource, name: 'Old Tech Name', rootClause: { id: 'c', mode: 'require_all', requests: [{ resourceId: IDS.laneTechResource, quantity: 1 }] } } as any,
+            // a genuinely CUSTOM override under a resource id: the user replaced
+            // Nurse's auto-requirement with a real multi-resource rule. Not auto
+            // shaped, so it must keep its own name and clause -- never renamed to
+            // the resource name, never replaced by a derived auto.
+            {
+                id: IDS.nurseBlock, name: 'Custom Nurse Rule',
+                rootClause: {
+                    id: 'c-nurse', mode: 'require_all', requests: [
+                        { resourceId: IDS.nurseBlock, quantity: 2 },
+                        { resourceId: IDS.laneDoctorResource, quantity: 1 },
+                    ]
+                }
+            } as any,
         ]);
         const { def } = build(page);
-        expect(def.resourceRequirements.get(IDS.nurseBlock)).toBeDefined();
         expect(def.resourceRequirements.get(IDS.laneDoctorResource)).toBeDefined();
         expect(def.resourceRequirements.get(IDS.laneTechResource)!.name).toBe('Tech');   // renamed to the resource name
+
+        const nurseReq = def.resourceRequirements.get(IDS.nurseBlock)!;
+        expect(nurseReq.name).toBe('Custom Nurse Rule');          // NOT renamed to 'Nurse'
+        expect(nurseReq.rootClause.id).toBe('c-nurse');           // NOT replaced by a derived auto
+        expect(nurseReq.rootClause.requests).toEqual([
+            { resourceId: IDS.nurseBlock, quantity: 2 },
+            { resourceId: IDS.laneDoctorResource, quantity: 1 },
+        ]);
+
         expect(def.resourceRequirements.get(IDS.customReq)!.name).toBe('Doctor or 2 Nurses');
         expect(def.resourceRequirements.size()).toBe(4);
     });

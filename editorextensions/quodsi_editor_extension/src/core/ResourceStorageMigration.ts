@@ -72,7 +72,15 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
             const typeInfo = sa.getElementType(block);
             if (typeInfo?.type === SimulationObjectType.Resource) {
                 const data = (sa.getElementData(block) ?? {}) as Record<string, unknown>;
-                const isPointer = data.resourceId !== undefined && data.name === undefined;
+                // `resourceId` alone decides it: a format-1 record NEVER carries one,
+                // so this lifts exactly the same legacy set. Do NOT also require
+                // `name === undefined` -- StorageAdapter.updateElementData MERGES, so a
+                // panel edit on an already-migrated pointer block leaves `name`/`capacity`
+                // sitting next to `resourceId`, and the stricter test would re-classify
+                // that block as legacy: it would mint a fresh record under block.id and
+                // repoint the block, discarding the edit (resourceId === block.id) or
+                // forking a duplicate and orphaning the real link (resourceId !== block.id).
+                const isPointer = data.resourceId !== undefined;
                 if (!isPointer) {
                     remember(block);
                     const record: StoredResourceRecord = {
@@ -89,7 +97,14 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
                 }
             }
             // 2. Swimlane lanes holding inline records -> lift + resourceId.
-            const swimStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
+            // Guarded on the SAME predicate the builder claims lanes with
+            // (ModelDefinitionPageBuilder.linkResourceClaimants). If migration
+            // stripped inline records from a block the builder never reads lanes
+            // from, those resources would move into q_resources and then have no
+            // claimant at all -- the two passes must agree on what a swimlane is.
+            const swimStr = block.getClassName() === 'AdvancedSwimLaneBlock'
+                ? (block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined)
+                : undefined;
             if (swimStr) {
                 let swim: SwimLaneQuodsiData | null = null;
                 try { swim = JSON.parse(swimStr); } catch { swim = null; }

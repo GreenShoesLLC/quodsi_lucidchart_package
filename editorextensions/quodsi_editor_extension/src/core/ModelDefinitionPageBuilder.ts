@@ -302,7 +302,7 @@ export class ModelDefinitionPageBuilder {
     private loadResources(page: PageProxy, modelDefinition: ModelDefinition): void {
         for (const stored of this.storageAdapter.getResources(page)) {
             try {
-                const resource = new Resource(String(stored.id), stored.name, stored.capacity ?? 1);
+                const resource = new Resource(String(stored.id), stored.name || 'New Resource', stored.capacity ?? 1);
                 resource.description = stored.description ?? '';
                 if (stored.financialProperties) {
                     resource.financialProperties = new ResourceFinancialProperties({
@@ -418,7 +418,7 @@ export class ModelDefinitionPageBuilder {
                 // (recursively) before it enters the model.
                 const rootClause = this.deserializeClause(raw.rootClause);
                 modelDefinition.resourceRequirements.add(
-                    new ResourceRequirement(String(raw.id), String(raw.name), rootClause)
+                    new ResourceRequirement(String(raw.id), String(raw.name ?? ''), rootClause)
                 );
             } catch (error) {
                 this.log(`Error deserializing resource requirement ${raw?.id}: ${error}`, 'error');
