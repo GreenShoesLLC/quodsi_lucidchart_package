@@ -10,13 +10,15 @@ import {
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 
+import { ConnectorRoutingView } from "quodsi_studio/platforms/shared";
 import ModelEditor, { EditorTab } from "../editors/ModelEditor";
 import { EntityRow } from "../editors/EntitiesEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
-import ConnectorsEditor from "../editors/ConnectorsEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
+import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
+import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 const log = getLogger("ElementEditor");
 
@@ -65,6 +67,18 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   // Track editor type for fade transition
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousEditorTypeRef = useRef<string | null>(null);
+
+  // Unconditional (hook order): backs the Connector case's ConnectorRoutingView
+  // below. This screen holds no draft of its own -- every routing edit made
+  // here (weight/priority/condition/entity template/connect type) writes
+  // straight through to storage via Task 2's ELEMENT_UPDATE sender, so no
+  // shapeWriters are registered (compare ActivityEditor/GeneratorEditor,
+  // which register one for the shape they already own a draft of).
+  const { updateResourceRequirements, updateElement } = useModelOpsSender();
+  const connectorAccessor = useReferenceDataAccessor(referenceData, {
+    updateResourceRequirements,
+    updateElement,
+  });
 
   const currentEditorType = elementData?.className === 'AdvancedSwimLaneBlock'
     ? 'SwimLane'
@@ -184,72 +198,33 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         );
 
       case SimulationObjectType.Connector:
-      case "Connector":
-        // Try to find source Activity for routing configuration
-        const sourceActivityRef = referenceData.activities?.find(
-          (a) => a.id === safeElementData.sourceId
-        );
+      case "Connector": {
+        const sourceId = safeElementData.sourceId as string | undefined;
+        const isActivitySource = !!referenceData.activities?.some((a) => a.id === sourceId);
+        const isGeneratorSource = !isActivitySource && !!referenceData.generators?.some((g) => g.id === sourceId);
 
-        if (sourceActivityRef) {
-          // Filter connectors by source Activity ID
-          // (outgoingConnectors prop is filtered by selected element ID, which is wrong for Connectors)
-          const activityOutgoingConnectors = referenceData.connectors?.filter(
-            (conn) => conn.sourceId === sourceActivityRef.id
-          ) || [];
-
+        if (!sourceId || (!isActivitySource && !isGeneratorSource)) {
+          // Error: Source not found in either Activities or Generators - data integrity issue
+          log.error("Source not found for connector:", safeElementData.id, "sourceId:", sourceId);
           return (
-            <ConnectorsEditor
-              activity={sourceActivityRef as any}
-              outgoingConnectors={activityOutgoingConnectors}
-              selectedConnectorId={safeElementData.id}
-              referenceData={referenceData}
-              states={states}
-            />
-          );
-        }
-
-        // Check if source is a Generator instead
-        const sourceGeneratorRef = referenceData.generators?.find(
-          (g) => g.id === safeElementData.sourceId
-        );
-
-        if (sourceGeneratorRef) {
-          // Generator connectors don't have routing configuration
-          // Show read-only information
-          const targetActivity = referenceData.activities?.find(
-            (a) => a.id === safeElementData.targetId
-          );
-
-          return (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm space-y-2">
-              <div className="font-medium text-blue-900">Generator Connector</div>
-              <div className="text-xs text-blue-800 space-y-1">
-                <div>
-                  <span className="font-medium">Source:</span> {sourceGeneratorRef.name} (Generator)
-                </div>
-                <div>
-                  <span className="font-medium">Target:</span> {targetActivity?.name || safeElementData.targetId} (Activity)
-                </div>
-                <div className="mt-2 pt-2 border-t border-blue-300 text-blue-700">
-                  Generator connectors are simple point-to-point connections. They don't have routing
-                  configuration like Activity connectors because Generators always send entities to
-                  their designated target Activity.
-                </div>
+            <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
+              <div className="font-medium">Cannot edit connector</div>
+              <div className="text-xs mt-1">
+                Source element not found. This indicates a data integrity issue.
               </div>
             </div>
           );
         }
 
-        // Error: Source not found in either Activities or Generators - data integrity issue
-        log.error("Source not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
         return (
-          <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
-            <div className="font-medium">Cannot edit connector</div>
-            <div className="text-xs mt-1">
-              Source element not found. This indicates a data integrity issue.
-            </div>
-          </div>
+          <ConnectorRoutingView
+            sourceId={sourceId}
+            sourceType={isActivitySource ? 'Activity' : 'Generator'}
+            selectedConnectorId={safeElementData.id}
+            accessor={connectorAccessor}
+          />
         );
+      }
 
       default:
         return (
