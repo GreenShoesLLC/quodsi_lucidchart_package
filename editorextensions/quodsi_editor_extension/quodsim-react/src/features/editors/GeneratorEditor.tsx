@@ -15,9 +15,10 @@ import {
   declareClearedFields,
   getLogger,
   type ScenarioLever,
+  type ConnectType,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
-import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight } from "lucide-react";
+import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight, GitBranch } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
@@ -27,11 +28,13 @@ import SaveStatusLine from "./SaveStatusLine";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
+import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import {
   summarizeArrivalPattern,
   ensurePatternForGenerator,
   removePatternForGenerator,
   renamePatternForGenerator,
+  ConnectorRoutingView,
   type LifecycleModel,
 } from "quodsi_studio/platforms/shared";
 
@@ -111,6 +114,12 @@ const TAB_CONFIG = [
     icon: Zap,
     tooltip: "Set initial state values for entities when they are created"
   },
+  {
+    id: "routing" as const,
+    title: "Routing",
+    icon: GitBranch,
+    tooltip: "Choose how entities pick a target when this generator has several outgoing connectors"
+  },
   // Temporarily hidden - states managed at Model level
   // {
   //   id: "states" as const,
@@ -144,7 +153,7 @@ interface Props {
 /**
  * Available tabs in the generator editor
  */
-type GeneratorTab = "settings" | "events" | "states";
+type GeneratorTab = "settings" | "events" | "routing" | "states";
 
 /**
  * GeneratorEditor - Comprehensive editor for Generator simulation objects
@@ -300,6 +309,7 @@ const GeneratorEditor: React.FC<Props> = ({
       maxEntities: number;
       initialStates: any[];
       levers: ScenarioLever[];
+      routing: ConnectType;
       // Settable ONLY by the PATTERN lifecycle handlers in handleInputChange
       // (mode switch), never by a plain typed/selected field. `undefined` is
       // a meaningful value here (clears the link on switching away from
@@ -340,7 +350,12 @@ const GeneratorEditor: React.FC<Props> = ({
     updated.arrivalScheduleId = base.arrivalScheduleId;
     updated.maxEntities = updates.maxEntities ?? base.maxEntities;
     updated.initialStates = updates.initialStates ?? base.initialStates;
-    updated.routing = base.routing;
+    // Task 5 (routing tab): the shared ConnectorRoutingView's mode select
+    // writes routing through this same immutable-update helper via the
+    // routing accessor's shapeWriter -- so, unlike the comment above this
+    // block used to say, `routing` DOES need a real caller-provided path
+    // now, not just base-preservation.
+    updated.routing = updates.routing ?? base.routing;
     updated.description = base.description;
 
     // Preserve scenario levers (not a constructor param — must be copied forward).
@@ -430,12 +445,38 @@ const GeneratorEditor: React.FC<Props> = ({
   // guard, never assumes it is populated.
   const { accessor, projection: modelRootProjection } = useModelRootSource();
 
-  // Get the selectElement function for navigating to Model Editor
-  const { selectElement } = useModelOpsSender();
+  // Get the selectElement function for navigating to Model Editor, plus the
+  // senders the Routing tab's accessor persists through.
+  const { selectElement, updateResourceRequirements, updateElement } = useModelOpsSender();
 
   // Get the senders for OPEN_PATTERN_MODAL / OPEN_SCHEDULE_MODAL (host-hosted
   // arrival-pattern / arrival-schedule editors).
   const { openPatternModal, openScheduleModal } = useSimulationRunSender();
+
+  // Task 5 (routing tab): a SEPARATE accessor from `accessor` above --
+  // useModelRootSource's projects generators/arrivalPatterns/model settings
+  // for the pattern/schedule modals; this one projects referenceData's
+  // activities/generators/connectors/entities/states for the shared
+  // ConnectorRoutingView, mirroring ActivityEditor's own routing accessor.
+  // The shapeWriter is keyed on the draft's CURRENT id so a routing-tab edit
+  // (accessor.updateShape(localGeneratorDraft.id, 'Generator', patch)) lands
+  // on this component's own draft/autosave path (useFlushOnChange watches
+  // localGeneratorDraft.routing below) rather than round-tripping through
+  // updateElement for the shape this panel already owns.
+  const routingAccessor = useReferenceDataAccessor(
+    referenceData,
+    { updateResourceRequirements, updateElement },
+    {
+      shapeWriters: {
+        [localGeneratorDraft.id]: (patch) => {
+          setLocalGeneratorDraft((prev) =>
+            updateGeneratorImmutably(prev, patch as Partial<Generator>)
+          );
+          setHasPendingChanges(true);
+        },
+      },
+    }
+  );
 
   /**
    * Redux-managed state for save operation tracking.
@@ -580,6 +621,10 @@ const GeneratorEditor: React.FC<Props> = ({
   // always renders now (offering FREQUENCY, PATTERN, and SCHEDULED) -- no
   // generator type is externally-authored-only any more.
   useFlushOnChange(localGeneratorDraft.mode, saveNow);
+
+  // Fire saveNow when the Routing tab's mode select changes (no onBlur on
+  // selects) -- mirrors ActivityEditor's own useFlushOnChange(...routing...).
+  useFlushOnChange(localGeneratorDraft.routing, saveNow);
 
   const entities = referenceData.entities || [];
 
@@ -1280,6 +1325,14 @@ const GeneratorEditor: React.FC<Props> = ({
             title="Initial State Modifications"
             description="Applied to new entities"
             onNavigateToModelEditor={() => selectElement('model', { targetTab: 'states' })}
+          />
+        )}
+
+        {activeTab === "routing" && (
+          <ConnectorRoutingView
+            sourceId={localGeneratorDraft.id}
+            sourceType="Generator"
+            accessor={routingAccessor}
           />
         )}
 

@@ -18,7 +18,18 @@ export default defineConfig({
     // resolution does not, producing a second physical React module instance and
     // a null-dispatcher "Invalid hook call" the moment GeneratorPatternTab
     // actually renders. Force both resolutions to the same copy everywhere.
-    dedupe: ['react', 'react-dom'],
+    // lucide-react added (Task 5, routing-tab adoption): quodsi_studio's
+    // ConnectorRoutingView pulls in InfoIcon/LeverAuthoringSection, the
+    // first Studio panels to use lucide-react icons themselves (earlier
+    // Studio imports here -- RequirementField -- never rendered one). Same
+    // duplicate-module class as react/react-dom above: this package's own
+    // node_modules/lucide-react and the monorepo root's are two distinct
+    // physical copies, each internally calling React's createContext/
+    // useContext against whichever "react" IT resolves -- without dedupe
+    // here too, that produced a null dispatcher ("Cannot read properties of
+    // null (reading 'useContext')") only under Vitest's SSR-style
+    // resolution, the moment ConnectorRoutingView actually rendered.
+    dedupe: ['react', 'react-dom', 'lucide-react'],
   },
   build: {
     // The extension's webpack hook and both deploy scripts copy from `build/`,
