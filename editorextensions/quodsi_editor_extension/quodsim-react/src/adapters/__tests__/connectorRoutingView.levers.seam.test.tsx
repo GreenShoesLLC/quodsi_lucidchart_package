@@ -7,7 +7,7 @@
 // wires LeverAuthoringSection with objectType={ScenarioObjectType.CONNECTOR}
 // per connector card and routes `onChange` through
 // accessor.updateShape(connectorId, 'Connector', { levers: next }).
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, type Mock } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ConnectorRoutingView } from 'quodsi_studio/platforms/shared'
 import { ScenarioPropertyName, createScenarioLever, type ScenarioLever } from '@quodsi/lucid-shared'
@@ -26,7 +26,9 @@ const makeReferenceData = (c1Levers: ScenarioLever[] = []) => ({
   resourceRequirements: [],
 }) as any
 
-function renderView(referenceData: any, updateElement = vi.fn(async () => {})) {
+type UpdateElementMock = Mock<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>
+
+function renderView(referenceData: any, updateElement: UpdateElementMock = vi.fn(async () => {})) {
   const updateResourceRequirements = vi.fn(async () => {})
   const source = createReferenceDataAccessor(referenceData, () => ({ updateResourceRequirements, updateElement }))
   render(<ConnectorRoutingView sourceId="act-1" sourceType="Activity" accessor={source.accessor} />)
