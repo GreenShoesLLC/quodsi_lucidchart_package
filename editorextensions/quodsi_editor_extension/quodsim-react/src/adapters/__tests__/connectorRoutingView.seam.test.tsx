@@ -28,8 +28,8 @@ const referenceData = {
   ],
   generators: [{ id: 'gen-1', name: 'Door', routing: 'probability' }],
   connectors: [
-    { id: 'c1', sourceId: 'gen-1', targetId: 'a1', weight: 1, priority: 1 },
-    { id: 'c2', sourceId: 'gen-1', targetId: 'a2', weight: 1, priority: 2 },
+    { id: 'c1', sourceId: 'gen-1', targetId: 'a1', weight: 1, priority: 3 },
+    { id: 'c2', sourceId: 'gen-1', targetId: 'a2', weight: 1, priority: 5 },
   ],
   entities: [],
   states: [],
@@ -54,10 +54,17 @@ describe('ConnectorRoutingView over useReferenceDataAccessor (seam)', () => {
     expect(updateElement).not.toHaveBeenCalled()
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('first_available')) // writer-path overlay
 
+    // Pre-edit order: c1 (priority 3) ranks ahead of c2 (priority 5).
+    expect(screen.getByTestId('connector-order-c1').textContent).toMatch(/1/)
+    expect(screen.getByTestId('connector-order-c2').textContent).toMatch(/2/)
+
     fireEvent.change(screen.getByTestId('connector-priority-input-c2'), { target: { value: '0' } }) // clamps to 1
 
     await waitFor(() => expect(updateElement).toHaveBeenCalledWith('c2', 'Connector', { priority: 1 }))
-    await waitFor(() => expect(screen.getByTestId('connector-order-c1').textContent).toMatch(/1/)) // tie on priority -> ordinal by target id keeps c1 first
+    // Post-edit: c2 (now priority 1) outranks c1 (priority 3) -- the order
+    // flips, which only happens if the overlay actually reached the view.
+    await waitFor(() => expect(screen.getByTestId('connector-order-c2').textContent).toMatch(/1/))
+    expect(screen.getByTestId('connector-order-c1').textContent).toMatch(/2/)
   })
 
   it('with no writer, the mode change goes to ELEMENT_UPDATE for the source', async () => {
