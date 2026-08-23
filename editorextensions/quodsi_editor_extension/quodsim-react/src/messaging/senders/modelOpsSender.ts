@@ -11,6 +11,9 @@ import { useMessagingDispatch } from '../MessageContext';
 // render for no reason.
 const RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS = 30_000;
 
+// Same reasoning as RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS above.
+const ELEMENT_UPDATE_TIMEOUT_MS = 30_000;
+
 /**
  * Custom hook that provides typed functions for sending model operations messages
  *
@@ -195,6 +198,39 @@ export function useModelOpsSender() {
   );
 
   /**
+   * Confirmed round trip for a shape-scoped patch — the same ELEMENT_UPDATE
+   * envelope updateElementData posts, but resolved/rejected on the host's
+   * ELEMENT_UPDATE_RESULT so a caller can order dependent work after the
+   * write is durable. Mirrors useModelRootSource.transport.saveShape.
+   * StorageAdapter.updateElementData MERGES the patch (never clobbers).
+   */
+  const updateElement = useCallback(
+    (elementId: string, type: string, data: Record<string, unknown>): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
+        if (!window.parent) { reject(new Error('No parent window to send element update to')); return; }
+        const correlationId = uuid();
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const handler = (event: MessageEvent) => {
+          const msg = event.data;
+          if (msg?.id === correlationId && msg?.type === EnvelopeMessageType.ELEMENT_UPDATE_RESULT) {
+            window.removeEventListener('message', handler);
+            if (timeoutId !== undefined) clearTimeout(timeoutId);
+            const d = (msg.data || {}) as { success?: boolean; errorMessage?: string };
+            if (d.success) resolve(); else reject(new Error(d.errorMessage || 'Element update failed'));
+          }
+        };
+        window.addEventListener('message', handler);
+        timeoutId = setTimeout(() => { window.removeEventListener('message', handler); reject(new Error('Element update timed out')); }, ELEMENT_UPDATE_TIMEOUT_MS);
+        const envelope: EnvelopeBase = {
+          id: correlationId, type: EnvelopeMessageType.ELEMENT_UPDATE, source: 'model-iframe', target: 'host', version: '1.0',
+          data: { elementId, type, data: { ...data, id: elementId } },
+        };
+        window.parent.postMessage(envelope, '*');
+      }),
+    [],
+  );
+
+  /**
    * Send a request for the serialized model JSON
    *
    * @param documentId Document ID to get model JSON from
@@ -245,6 +281,7 @@ export function useModelOpsSender() {
     updateStates,
     updateEntities,
     updateResourceRequirements,
+    updateElement,
     requestModelJson,
     selectElement,
     locateElement
@@ -258,6 +295,7 @@ export function useModelOpsSender() {
     updateStates,
     updateEntities,
     updateResourceRequirements,
+    updateElement,
     requestModelJson,
     selectElement,
     locateElement
