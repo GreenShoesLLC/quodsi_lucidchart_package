@@ -199,8 +199,14 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
               onLink={async (resourceId) => {
                 writeLane(activeLaneIndex, {
                   laneId: activeMapping?.laneId ?? generateUUID(),
+                  // `||`, NOT `??`: an untitled Lucid lane returns '' from
+                  // getTitle(), and '' is not a lane name. ActivityProcessor
+                  // reports titleSnapshot as the banner's `laneName` and reuses
+                  // it as the resourceName fallback for a pointer that no
+                  // longer resolves, so an empty one shows up as a blank where
+                  // a lane identity belongs.
                   titleSnapshot:
-                    activeMapping?.titleSnapshot ?? activeLane.title ?? `Lane ${activeLane.index}`,
+                    activeMapping?.titleSnapshot || activeLane.title || `Lane ${activeLane.index}`,
                   assignmentMode: activeMapping?.assignmentMode ?? "runtime-derive",
                   resourceId,
                 });

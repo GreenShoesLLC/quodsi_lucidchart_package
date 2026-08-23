@@ -158,6 +158,35 @@ describe('SwimLaneEditor', () => {
     expect(await screen.findByDisplayValue('Doctor')).toBeInTheDocument()
   })
 
+  it('linking an UNTITLED lane falls back to "Lane N", not an empty titleSnapshot', async () => {
+    // titleSnapshot is not decoration: ActivityProcessor.detectSwimLaneContainment
+    // reports it as `laneName`, and uses it again as the resourceName fallback
+    // when the lane's pointer no longer resolves. An empty string there puts a
+    // blank where a lane identity belongs, on the Activity editor's banner.
+    // An untitled Lucid lane returns '' from getTitle(), so the fallback has to
+    // be `||`, never `??`.
+    const sent = installHost([{ id: 'doctor-id', name: 'Doctor', capacity: 1 }])
+
+    render(
+      <SwimLaneEditor
+        elementData={{
+          ...elementData([null, null]),
+          lanes: [
+            { index: 0, title: 'Intake', size: 100, boundingBox: { x: 0, y: 0, w: 10, h: 10 } },
+            { index: 1, title: '', size: 100, boundingBox: { x: 0, y: 10, w: 10, h: 10 } },
+          ],
+        }}
+        onSave={() => {}}
+      />,
+    )
+
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: '1' } })
+    fireEvent.click(await screen.findByRole('button', { name: /Doctor/ }))
+
+    await waitFor(() => expect(swimlaneUpdates(sent).length).toBe(1))
+    expect(swimlaneUpdates(sent)[0].data.swimlaneData.lanes[1].titleSnapshot).toBe('Lane 1')
+  })
+
   it('a lane pointing at a DELETED resource offers the picker, and relinking keeps the laneId', async () => {
     // Deleting a resource from the Resources tab does not rewrite q_swimlane
     // (the builder reports the leftover pointer as `resource_link_dangling`),
