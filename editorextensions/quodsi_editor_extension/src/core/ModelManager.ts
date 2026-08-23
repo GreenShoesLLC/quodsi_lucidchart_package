@@ -31,6 +31,8 @@ import {
     ensureBaselineScenario,
     takeClearedFields,
     ModelRootProjection,
+    stripTransientResourceMarkers,
+    StoredResourceRecord,
 } from "@quodsi/lucid-shared";
 import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
@@ -44,6 +46,7 @@ import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
+import { isPlainAutoRequirement } from "./autoRequirements";
 
 
 
@@ -1859,7 +1862,7 @@ export class ModelManager {
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const knownKeys = ['arrivalPatterns', 'arrivalSchedules'];
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'resources', 'resourceRequirements'];
         const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
@@ -1879,6 +1882,38 @@ export class ModelManager {
             this.storageAdapter.setArrivalSchedules(
                 page,
                 patch.arrivalSchedules as ISerializedArrivalSchedule[]
+            );
+        }
+
+        // `resources` before `resourceRequirements`: a delete patch's cascade
+        // (below) removes the deleted resource's auto/custom requirements
+        // from storage first, so if the same patch also carries
+        // `resourceRequirements`, updateResourceRequirements's own
+        // before/after diff has nothing further to clean up.
+        if ('resources' in patch) {
+            const next = (patch.resources as Array<Record<string, unknown>>)
+                .map(stripTransientResourceMarkers)
+                .map(({ shapeLabel: _label, ...rest }) => rest) as unknown as StoredResourceRecord[];
+            const before = this.storageAdapter.getResources(page);
+            const nextIds = new Set(next.map(r => String(r.id)));
+            const removed = before.filter(r => !nextIds.has(String(r.id))).map(r => String(r.id));
+            this.storageAdapter.setResources(page, next);
+            // Host-side cascade (the shared Resources tab sends model-level
+            // lists only; activities/connectors are shape-owned here and
+            // cleaned per shape via removeElement's own resource-delete path).
+            for (const id of removed) {
+                const deletedReqIds = await this.cleanupResourceReferences(id, page);
+                for (const reqId of deletedReqIds) {
+                    await this.cleanupRequirementReferences(reqId, page);
+                }
+            }
+        }
+
+        if ('resourceRequirements' in patch) {
+            const incoming = patch.resourceRequirements as ISerializedResourceRequirement[];
+            await this.updateResourceRequirements(
+                incoming.filter(r => !isPlainAutoRequirement(r as any)),
+                page
             );
         }
 
