@@ -322,6 +322,12 @@ export type {
   ResourceLinkResolution,
 } from '@quodsi/shared';
 export { deriveAutoResourceRequirements, reconcileAutoRequirements } from '@quodsi/shared';
+// Validation copy for pointers resolveResourceLinks refused (dangling /
+// duplicate). Not a ValidationRule -- a dangling pointer is by definition
+// absent from the model, so hosts append these at model-build time. Lucid's
+// ModelManager.validateModel() appends them from the page builder's
+// getLastResourceLinkRejections().
+export { resourceLinkIssues } from '@quodsi/shared';
 export type { AutoRequirementResourceLike } from '@quodsi/shared';
 
 // Topology classification rule — re-exported from @quodsi/shared. The SAME

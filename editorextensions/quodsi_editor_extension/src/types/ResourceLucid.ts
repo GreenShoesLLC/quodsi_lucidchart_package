@@ -3,11 +3,9 @@ import {
     Resource,
     SimulationObjectType,
     ComponentLogger,
-    ResourceFinancialProperties,
     parseStructuredName,
     extractResourceFields,
-    MappingSource,
-    ScenarioLever
+    MappingSource
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -25,18 +23,20 @@ export const setResourceLucidLogging = (enabled: boolean): void => {
     ComponentLogger.setEnabled(LOG_PREFIX, enabled);
 };
 
+/**
+ * What a Resource BLOCK stores under q_data in storage format 2: a POINTER at
+ * a model-level record in the page's q_resources list, and nothing else.
+ *
+ * The record itself (name, capacity, description, financials, levers) and the
+ * geometry no longer live here -- ModelDefinitionPageBuilder reads the record
+ * from q_resources and stamps the claiming block's box onto it. Anything this
+ * class wrote beyond the pointer would be dead data at best, and at worst
+ * re-classify the block as a format-1 record (see ResourceStorageMigration's
+ * docblock on why `resourceId` alone decides that).
+ */
 interface StoredResourceData {
     id: string;
-    x?: number;
-    y?: number;
-    // Optional shape dimensions in SVG userSpace (Path X-lite).
-    width?: number;
-    height?: number;
-    name?: string;
-    description?: string;
-    capacity?: number;
-    financialProperties?: any;
-    levers?: ScenarioLever[];
+    resourceId?: string;
 }
 
 /**
@@ -56,102 +56,54 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         return SimulationObjectType.Resource;
     }
 
+    /**
+     * A PLACEHOLDER, not the model's resource.
+     *
+     * SimObjectLucid requires every wrapper to carry a sim object, and callers
+     * use it for TYPE DISPATCH (`instanceof` / `.type`). Under storage format 2
+     * the real record lives in q_resources and is loaded by
+     * ModelDefinitionPageBuilder.loadResources(), which never consults this
+     * class -- so nothing built here reaches modelDefinition.resources, and
+     * ModelManager.registerElement/updateElement ignore Resource objects too.
+     * It is stamped with the block's box only so a caller that reads geometry
+     * off the wrapper sees the block it is drawn as.
+     */
     protected createSimObject(): Resource {
-        ComponentLogger.log(LOG_PREFIX, `Creating Resource simulation object for element ID: ${this.platformElementId}`);
-        
-        // Get stored custom data first
-        const storedData = this.storageAdapter.getElementData(this.element) as StoredResourceData;
+        ComponentLogger.log(LOG_PREFIX, `Creating placeholder Resource for element ID: ${this.platformElementId}`);
 
-        // Create resource using stored data or defaults
+        const stored = this.storageAdapter.getElementData(this.element) as StoredResourceData | null;
+        const box = (this.element as BlockProxy).getBoundingBox();
+
         const resource = new Resource(
-            this.platformElementId,
-            storedData?.name || 'New Resource',
-            storedData?.capacity ?? 1,
-            storedData?.x ?? 0,
-            storedData?.y ?? 0
+            stored?.resourceId ?? this.platformElementId,
+            'Unlinked Resource',
+            1,
+            box.x ?? 0,
+            box.y ?? 0
         );
-
-        // Restore description
-        if (storedData?.description !== undefined) {
-            resource.description = storedData.description;
-        }
-
-        // Deserialize financial properties
-        if (storedData?.financialProperties) {
-            resource.financialProperties = ResourceFinancialProperties.fromJSON(storedData.financialProperties);
-        }
-
-        // Carry forward scenario-lever authoring metadata. `levers` is a class
-        // field (not a constructor param) defaulting to [], so reconstruction
-        // drops it unless copied here -> published model.json loses levers.
-        if (storedData?.levers) {
-            resource.levers = storedData.levers;
-        }
-
-        // Update platform-specific fields after creation
-        this.updatePlatformSpecificFields(resource);
+        resource.width = box.w;
+        resource.height = box.h;
 
         return resource;
     }
 
-    private updatePlatformSpecificFields(resource: Resource): void {
-        const block = this.element as BlockProxy;
-        
-        // Update location AND shape size from current platform (Path X-lite).
-        const box = block.getBoundingBox();
-        resource.setLocation(box.x ?? resource.x, box.y ?? resource.y);
-        resource.width = box.w;
-        resource.height = box.h;
-
-        // Update name if needed
-        if (!resource.name || resource.name === 'New Resource') {
-            resource.name = this.getElementName('Resource');
-        }
-
-        ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
-            x: resource.x,
-            y: resource.y,
-            width: resource.width,
-            height: resource.height,
-            name: resource.name
-        });
-    }
-
+    /**
+     * Writes back the POINTER and nothing else.
+     *
+     * Geometry, name, capacity, description, financials and levers all belong
+     * to the model-level record now; writing any of them here would re-create
+     * the format-1 shape-owned record this plan removes.
+     */
     public updateFromPlatform(): void {
-        ComponentLogger.log(LOG_PREFIX, `Updating Resource from platform for element ID: ${this.platformElementId}`);
-        
-        // Extract location AND shape size from platform (Path X-lite).
-        const box = (this.element as BlockProxy).getBoundingBox();
+        ComponentLogger.log(LOG_PREFIX, `Updating Resource pointer from platform for element ID: ${this.platformElementId}`);
 
-        // Update location
-        this.simObject.setLocation(
-            box.x ?? this.simObject.x,
-            box.y ?? this.simObject.y
-        );
-        this.simObject.width = box.w;
-        this.simObject.height = box.h;
-
-        // Update name if not already set
-        if (!this.simObject.name) {
-            this.simObject.name = this.getElementName('Resource');
-        }
-
-        // Store updated data
+        const stored = this.storageAdapter.getElementData(this.element) as StoredResourceData | null;
         const dataToStore: StoredResourceData = {
             id: this.platformElementId,
-            x: this.simObject.x,
-            y: this.simObject.y,
-            width: this.simObject.width,
-            height: this.simObject.height,
-            name: this.simObject.name,
-            description: this.simObject.description,
-            capacity: this.simObject.capacity,
-            financialProperties: this.simObject.financialProperties?.toJSON(),
-            // Levers survive the write-back (conditional — see ActivityLucid).
-            levers: this.simObject.levers?.length ? this.simObject.levers : undefined
+            resourceId: stored?.resourceId
         };
 
-        ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
+        ComponentLogger.log(LOG_PREFIX, `Storing pointer for element ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -207,8 +159,11 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             SimObjectLucid.updateBlockText(block, fields.name);
         }
 
-        // Convert to StoredResourceData format, using parsed values where available
-        const storedData: StoredResourceData = {
+        // Task 6 rewrites this to mint a q_resources record and write a pointer.
+        // Until then it still writes the format-1 shape-owned record; only the
+        // type annotation is dropped, because StoredResourceData is now the
+        // pointer shape.
+        const storedData = {
             id: defaultResource.id,
             name: fields.name || rawName,
             x: defaultResource.x,
