@@ -114,7 +114,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         <SwimLaneEditor
           elementData={safeElementData}
           onSave={onSave}
-          referenceData={referenceData}
         />
       );
     }

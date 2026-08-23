@@ -94,40 +94,82 @@ describe('SwimLaneHandler.handleUpdate', () => {
   });
 });
 
-describe('SwimLaneHandler.handleConvertLane', () => {
-  it('writes the new resource into q_resources and the lane holds only a pointer', async () => {
+describe('SwimLaneHandler.handleUpdate -- linking a lane', () => {
+  // The lane-convert message is gone (Task 9). A lane is linked the same way
+  // a Resource BLOCK is: the PANEL mints the model-level record through the
+  // shared ResourceLinkPicker (a model-root write the extension confirms),
+  // then writes a POINTER -- so the only thing that reaches this handler is
+  // the finished q_swimlane blob. This test therefore seeds through the same
+  // seam the panel uses (StorageAdapter for the record, handleUpdate for the
+  // blob) and keeps the assertions the convert-path test carried: the lane
+  // holds a pointer and no inline record, and no resource is created or
+  // destroyed here.
+  it('persists a pointer-only lane and mints no resource of its own', async () => {
     const page = makeFakePage('p1');
     currentPage = page;
-    storage.setResources(page, [{ id: 'res-0', name: 'Nurse' }]);
+    // Already on the page: the record the picker created before linking.
+    storage.setResources(page, [
+      { id: 'res-0', name: 'Nurse', capacity: 1, description: '' },
+      { id: 'res-1', name: 'Doctor', capacity: 1, description: '' },
+    ]);
 
     const block = addBlock(page, makeFakeBlock('sw-1', {
       className: 'AdvancedSwimLaneBlock',
       lanes: ['Nurse', 'Doctor'],
     }));
+    block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify({
+      lanes: [null, null],
+      lastSyncedAt: '2026-01-01T00:00:00.000Z',
+    } as SwimLaneQuodsiData));
 
-    await (SwimLaneHandler as any).handleConvertLane({
+    const linked: SwimLaneQuodsiData = {
+      lanes: [
+        null,
+        {
+          laneId: 'lane-2',
+          titleSnapshot: 'Doctor',
+          assignmentMode: 'runtime-derive',
+          resourceId: 'res-1',
+        },
+      ],
+      lastSyncedAt: '2026-01-02T00:00:00.000Z',
+    };
+
+    await (SwimLaneHandler as any).handleUpdate({
       id: 'msg-2',
-      type: EnvelopeMessageType.SWIMLANE_CONVERT_LANE,
+      type: EnvelopeMessageType.SWIMLANE_UPDATE,
       source: 'model-iframe',
       target: 'host',
       version: '1.0',
-      data: { swimlaneBlockId: 'sw-1', laneIndex: 1, resourceName: 'Nurse' },
+      data: { swimlaneBlockId: 'sw-1', swimlaneData: linked },
     });
-
-    const records = storage.getResources(page);
-    expect(records.map((r) => r.name)).toEqual(['Nurse', 'Nurse_2']);
-    expect(records[1]).toMatchObject({ capacity: 1, description: '' });
 
     const data = JSON.parse(block.shapeData.get(SWIMLANE_DATA_KEY) as string);
     expect(data.lanes[0]).toBeNull();
-    expect(data.lanes[1]).toMatchObject({
-      // The lane's TITLE is what the user typed; only the record's name is
-      // de-duplicated against the resources already on the page.
-      titleSnapshot: 'Nurse',
+    expect(data.lanes[1]).toEqual({
+      laneId: 'lane-2',
+      titleSnapshot: 'Doctor',
       assignmentMode: 'runtime-derive',
-      resourceId: records[1].id,
+      resourceId: 'res-1',
     });
+    // Format 1's inline copy never comes back.
     expect('resource' in data.lanes[1]).toBe(false);
+
+    // The handler is a persister, not a factory: the record list is exactly
+    // what the panel put there.
+    expect(storage.getResources(page)).toEqual([
+      { id: 'res-0', name: 'Nurse', capacity: 1, description: '' },
+      { id: 'res-1', name: 'Doctor', capacity: 1, description: '' },
+    ]);
     expect(invalidated).toBe(1);
+    expect(sendMock).toHaveBeenCalledWith('model', expect.objectContaining({
+      id: 'msg-2',
+      type: EnvelopeMessageType.SWIMLANE_UPDATE_RESULT,
+      data: { success: true, error: undefined },
+    }));
+  });
+
+  it('has no lane-side resource-creation entry point left', () => {
+    expect((SwimLaneHandler as any).handleConvertLane).toBeUndefined();
   });
 });
