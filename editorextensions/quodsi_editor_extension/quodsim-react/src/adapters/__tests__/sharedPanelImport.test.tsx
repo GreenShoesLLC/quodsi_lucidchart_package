@@ -5,6 +5,7 @@ import {
   ArrivalsEditor,
   findArrivalUsage,
   RequirementField, RequirementFieldContext, ResourceRequirementsEditor, useRequirementCommit,
+  ConnectorRoutingView,
 } from 'quodsi_studio/platforms/shared'
 
 describe('shared panel import', () => {
@@ -20,6 +21,7 @@ describe('shared panel import', () => {
     expect(typeof ResourceRequirementsEditor).toBe('function')
     expect(typeof useRequirementCommit).toBe('function')
     expect(RequirementFieldContext).toBeDefined()
+    expect(typeof ConnectorRoutingView).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {
