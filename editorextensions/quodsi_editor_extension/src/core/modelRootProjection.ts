@@ -30,9 +30,19 @@
 import {
     ISerializedArrivalPattern,
     ISerializedArrivalSchedule,
+    ISerializedResourceRequirement,
     ModelDefinition,
     ModelRootProjection,
+    Resource,
 } from "@quodsi/lucid-shared";
+
+/**
+ * One row of `ModelRootProjection.resources` -- the shape ResourcesEditor
+ * (quodsi_studio/src/platforms/shared/panels/ResourcesEditor.tsx) reads.
+ * Declared here (module scope) rather than inline so the `financialProperties`
+ * cast below has somewhere to point.
+ */
+type ProjectedResource = NonNullable<ModelRootProjection['resources']>[number];
 
 /** The empty projection, used when the page has no ModelDefinition at all. */
 export function emptyModelRootProjection(): ModelRootProjection {
@@ -42,6 +52,8 @@ export function emptyModelRootProjection(): ModelRootProjection {
         arrivalSchedules: [],
         entities: [],
         states: [],
+        resources: [],
+        resourceRequirements: [],
         model: {},
     };
 }
@@ -94,6 +106,32 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
         // engine requires and the document was rejected wholesale.
         entities: def.entities.getAll().map(e => ({ id: e.id, name: e.name })),
         states: def.states.getAll().map(s => ({ id: s.id, name: s.name })),
+        // Lucid global resources (Plan 2b). shapeId/shapeLabel/laneRef are
+        // TRANSIENT link markers -- stamped in-memory on the Resource
+        // instance at builder time (ModelDefinitionPageBuilder, via
+        // resolveResourceLinks), never on the class and never emitted by
+        // Resource.toJSON() -- so they must be read through an intersection
+        // cast, not the declared Resource type. ResourcesEditor's status
+        // column is the sole reason they're projected at all: a shape-linked
+        // row shows the linked shape's name, a lane-linked row shows "lane",
+        // and a row with neither shows "no shape" (both wording paths read
+        // straight off these three fields).
+        resources: def.resources.getAll().map(r => {
+            const t = r as Resource & { shapeId?: string; shapeLabel?: string; laneRef?: { blockId: string; laneId: string } };
+            const fp = r.financialProperties as { toJSON?: () => ProjectedResource['financialProperties'] } | undefined;
+            return {
+                id: r.id,
+                name: r.name,
+                capacity: r.capacity,
+                description: r.description,
+                financialProperties: fp?.toJSON ? fp.toJSON() : (fp as ProjectedResource['financialProperties']),
+                levers: r.levers,
+                shapeId: t.shapeId,
+                shapeLabel: t.shapeLabel,
+                laneRef: t.laneRef,
+            };
+        }),
+        resourceRequirements: def.resourceRequirements.getAll().map(q => q.toJSON()) as ISerializedResourceRequirement[],
         model: {
             timeMode: def.model.timeMode,
             startDateTime: toIso(def.model.startDateTime),

@@ -5,6 +5,7 @@ import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
+import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('ModelRootHandler');
 
@@ -275,5 +276,17 @@ export class ModelRootHandler {
     // didn't save). It gets its own independent error log instead.
     ModelRootHandler.sendSnapshot(msg.id)
       .catch(err => log.error('Error sending post-update model-root snapshot:', err));
+
+    // Re-process the current selection so the Activity/Generator panel's
+    // referenceData (the Requirements picker's Resources group) reflects a
+    // resource created or renamed on the Resources tab. Same refresh
+    // handleElementConvert performs after a convert.
+    try {
+      const client = ModelManager.getClient();
+      const viewport = new Viewport(client);
+      await SelectionHandler.handleLucidSelectionEvent(client, viewport.getSelectedItems(), ModelManager.getInstance());
+    } catch (err) {
+      log.error('Error refreshing selection after model-root update:', err);
+    }
   }
 }
