@@ -26,13 +26,55 @@ import { LucidVersionManager } from '../../src/versioning/LucidVersionManager';
 import { ModelDefinitionPageBuilder } from '../../src/core/ModelDefinitionPageBuilder';
 import { router } from '../../src/core/messaging';
 import { LUCID_STORAGE_FORMAT } from '../../src/core/storageFormat';
-import { SimulationObjectType } from '@quodsi/lucid-shared';
-import { makeFakePage, makeFakeBlock, addBlock } from '../helpers/fakeProxies';
+import { SimulationObjectType, ActionType, PeriodUnit } from '@quodsi/lucid-shared';
+import { makeFakePage, makeFakeBlock, makeFakeLine, addBlock } from '../helpers/fakeProxies';
 import { buildLegacyResourcesPage } from '../fixtures/legacyResourcesPage';
 
 /** Model-typed q_data on the page — the only shape that reaches the guard. */
 function markAsQuodsiPage(storage: StorageAdapter, page: any): void {
     storage.setElementData(page, { id: 'model-1', name: 'M' } as any, SimulationObjectType.Model);
+}
+
+/**
+ * A page whose model the rule engine finds NOTHING wrong with -- so
+ * ModelValidationService adds its `validation_success` INFO and nothing else.
+ * (Generator -> Activity with an exit connector, a resource actually seized and
+ * released, default entity.) Anything less is not a control: on a model the
+ * rules already complain about, "did the success note survive?" is vacuous.
+ */
+function buildCleanModelPage(storage: StorageAdapter): any {
+    const page = makeFakePage('page-1');
+    markAsQuodsiPage(storage, page);
+    storage.setStorageFormat(page, LUCID_STORAGE_FORMAT);
+    storage.setResources(page, [{ id: 'r1', name: 'Nurse', capacity: 1 }]);
+
+    const gen = addBlock(page, makeFakeBlock('gen-1', { text: 'Arrivals' }));
+    storage.setElementData(gen, {
+        id: 'gen-1', name: 'Arrivals', entityId: '00000000-0000-0000-0000-000000000000',
+        interarrivalTime: { value: 5, unit: PeriodUnit.MINUTES }, entitiesPerCreation: 1,
+    } as any, SimulationObjectType.Generator);
+
+    const act = addBlock(page, makeFakeBlock('act-1', { text: 'Triage' }));
+    storage.setElementData(act, {
+        id: 'act-1', name: 'Triage', capacity: 1, inboundCapacity: 1, outboundCapacity: 1,
+        actions: [
+            { id: 'a1', type: ActionType.SEIZE, resourceRequirementId: 'r1' },
+            { id: 'a2', type: ActionType.DELAY, duration: { value: 5, unit: PeriodUnit.MINUTES } },
+            { id: 'a3', type: ActionType.RELEASE, resourceRequirementId: 'r1' },
+        ],
+    } as any, SimulationObjectType.Activity);
+
+    // ConnectorLucid reads the LINE's endpoints, not stored sourceId/targetId.
+    const line: any = makeFakeLine('conn-1');
+    line.getEndpoint1 = () => ({ x: 0, y: 0, connection: { id: 'gen-1' } });
+    line.getEndpoint2 = () => ({ x: 1, y: 1, connection: { id: 'act-1' } });
+    line.getPage = () => page;
+    page.allLines.set('conn-1', line);
+    storage.setElementData(line, {
+        id: 'conn-1', name: 'C', sourceId: 'gen-1', targetId: 'act-1', weight: 1,
+    } as any, SimulationObjectType.Connector);
+
+    return page;
 }
 
 /** A Resource BLOCK in storage format 2: q_data holds a pointer, nothing else. */
@@ -187,18 +229,34 @@ describe('ModelManager — storage-format forward guard + migrate-on-open (Plan 
         expect(page.shapeData.get('q_lucid_format')).toBeUndefined();
     });
 });
-
 describe('ModelManager.validateModel — resource-link rejections surface as WARNINGs (Plan 2b Task 5)', () => {
     afterEach(() => {
         jest.restoreAllMocks();
     });
 
+    it('a clean model keeps the rule engine\'s validation_success note', async () => {
+        const storage = new StorageAdapter();
+        const page = buildCleanModelPage(storage);
+
+        jest.spyOn(LucidVersionManager.prototype, 'handlePageLoad')
+            .mockResolvedValue({ upgraded: false, sourceVersion: '', targetVersion: '' });
+        jest.spyOn(router, 'send').mockImplementation(() => { });
+
+        const manager = new ModelManager(storage);
+        manager.setCurrentPage(page);
+
+        const result = await manager.validateModel();
+
+        // Control for the next test: with nothing appended, ModelValidationService's
+        // "Model validation passed successfully" INFO must survive untouched.
+        expect(result.issues.map(i => i.code)).toEqual(['validation_success']);
+        expect(result.summary).toEqual({ errorCount: 0, warningCount: 0, infoCount: 1 });
+        expect(result.isValid).toBe(true);
+    });
+
     it('reports a dangling pointer and a duplicate claim, each against the claiming block', async () => {
         const storage = new StorageAdapter();
-        const page = makeFakePage('page-1');
-        markAsQuodsiPage(storage, page);
-        storage.setStorageFormat(page, LUCID_STORAGE_FORMAT);
-        storage.setResources(page, [{ id: 'r1', name: 'Nurse', capacity: 1 }]);
+        const page = buildCleanModelPage(storage);
 
         // Document order decides the winner: blk-1 claims r1, blk-2 is the
         // duplicate. blk-3 points at a record that is not there at all.
@@ -229,8 +287,18 @@ describe('ModelManager.validateModel — resource-link rejections surface as WAR
         expect(dangling!.elementId).toBe('blk-3');
         expect(dangling!.message).toContain('ghost');
 
+        // The rules found nothing on this model, so ModelValidationService added
+        // its "passed successfully" INFO. Appending a warning after the fact would
+        // otherwise render both in the same panel: "validation passed
+        // successfully" next to "this shape points at a Resource that no longer
+        // exists". The success note has to go whenever anything is appended --
+        // checked by code AND by the id ValidationMessages derives from it.
+        expect(result.issues.some(i => i.code === 'validation_success')).toBe(false);
+        expect(result.issues.some(i => String(i.id).includes('validation_success'))).toBe(false);
+
         // A WARNING never blocks simulation, and the counts match the list.
         expect(result.summary.warningCount).toBe(result.issues.filter(i => i.severity === 'warning').length);
-        expect(result.isValid).toBe(result.summary.errorCount === 0);
+        expect(result.summary.infoCount).toBe(0);
+        expect(result.isValid).toBe(true);
     });
 });

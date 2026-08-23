@@ -634,7 +634,18 @@ export class ModelManager {
             : [];
         const extra = [...linkIssues, ...this.pendingMigrationNotices.splice(0)];
         if (extra.length > 0) {
-            result.issues = [...result.issues, ...extra];
+            // ModelValidationService pushes its "Model validation passed
+            // successfully" INFO when the RULES produce nothing (see its
+            // validate(): `if (issues.length === 0) issues.push(...)`). It
+            // cannot know about the issues appended here, so an otherwise-clean
+            // model with a dangling pointer would render "passed successfully"
+            // and a warning side by side in the same panel. Drop the success
+            // note whenever we are about to add something; a clean model with
+            // no appended issues keeps it.
+            result.issues = [
+                ...result.issues.filter(i => i.code !== 'validation_success'),
+                ...extra,
+            ];
             result.summary = {
                 errorCount: result.issues.filter(i => i.severity === ValidationSeverity.ERROR).length,
                 warningCount: result.issues.filter(i => i.severity === ValidationSeverity.WARNING).length,
@@ -1963,9 +1974,11 @@ export class ModelManager {
             const nextIds = new Set(next.map(r => String(r.id)));
             const removed = before.filter(r => !nextIds.has(String(r.id))).map(r => String(r.id));
             this.storageAdapter.setResources(page, next);
-            // Host-side cascade (the shared Resources tab sends model-level
-            // lists only; activities/connectors are shape-owned here and
-            // cleaned per shape via removeElement's own resource-delete path).
+            // Host-side cascade, and the ONLY one: since Plan 2b Task 5 neither
+            // removeElement nor the rebuild diff cascades on a resource (a
+            // Resource block is just a pointer), so deleting a resource from the
+            // shared Resources tab is the single path that has to clean up the
+            // requirements and actions that referenced it.
             for (const id of removed) {
                 const deletedReqIds = await this.cleanupResourceReferences(id, page);
                 for (const reqId of deletedReqIds) {

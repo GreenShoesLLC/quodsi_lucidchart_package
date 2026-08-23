@@ -177,6 +177,52 @@ describe('ModelManager — a Resource block is a pointer (Plan 2b Task 5)', () =
         expect(block.shapeData.get('q_data')).toBe(pointerBefore);
     });
 
+
+    it('deleting a resource from the Resources tab cascades exactly ONCE, not again on the rebuild', async () => {
+        // Pins the deleted resource branch of detectAndCleanupDeletedElements.
+        // updateModelRoot({ resources }) already runs the requirement/action
+        // cascade before writing q_resources; the rebuild that follows sees the
+        // resource gone from the new model and, with that branch restored,
+        // cascades a SECOND time over storage the first pass already cleaned.
+        // (The "block vanishes" test above cannot catch this: there both models
+        // still carry r1, so the branch never fires either way.)
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        storage.setElementData(page, { id: 'model-1', name: 'M' } as any, SimulationObjectType.Model);
+        storage.setStorageFormat(page, 2);
+        storage.setResources(page, [{ id: 'r1', name: 'Nurse', capacity: 2 }]);
+        storage.setResourceRequirements(page, [customRequirementRequesting('r1')]);
+        const block = addBlock(page, makeFakeBlock('blk-1'));
+        storage.setElementData(block, { id: 'blk-1', resourceId: 'r1' }, SimulationObjectType.Resource);
+
+        jest.spyOn(LucidVersionManager.prototype, 'handlePageLoad')
+            .mockResolvedValue({ upgraded: false, sourceVersion: '', targetVersion: '' });
+
+        const manager = new ModelManager(storage);
+        manager.setCurrentPage(page);
+
+        // First build: the model knows r1, so the next rebuild has an oldModel
+        // to diff against (detectAndCleanupDeletedElements only runs then).
+        expect((await manager.getModelDefinition())!.resources.get('r1')).toBeDefined();
+
+        // Count calls while still letting the real cascade run.
+        const cascaded: string[] = [];
+        const realCleanup = (manager as any).cleanupResourceReferences.bind(manager);
+        (manager as any).cleanupResourceReferences = async (resourceId: string, p: any) => {
+            cascaded.push(resourceId);
+            return realCleanup(resourceId, p);
+        };
+
+        await manager.updateModelRoot({ resources: [] }, page);
+
+        // The rebuild that updateModelRoot's markModelDirty() asked for.
+        const rebuilt = (await manager.getModelDefinition())!;
+
+        expect(cascaded).toEqual(['r1']);                       // exactly once, by updateModelRoot
+        expect(rebuilt.resources.get('r1')).toBeUndefined();
+        expect(storage.getResourceRequirements(page)).toEqual([]);
+    });
+
     it('a Resource block vanishing from the canvas leaves its resource present and unclaimed', async () => {
         const storage = new StorageAdapter();
         const page = makeFakePage('page-1');
