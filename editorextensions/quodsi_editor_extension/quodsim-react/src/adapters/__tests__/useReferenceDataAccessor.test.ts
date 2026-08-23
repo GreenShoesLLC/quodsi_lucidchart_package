@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { EditorReferenceData, ISerializedResourceRequirement } from '@quodsi/lucid-shared'
 import { createReferenceDataAccessor, useReferenceDataAccessor, isPlainAutoRequirement } from '../useReferenceDataAccessor'
+import type { ReferenceDataSource } from '../useReferenceDataAccessor'
 
 const auto = (id: string, name: string) => ({ id, name, rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: id }] } })
 const custom = { id: 'req-1', name: 'Triage', rootClause: { id: 'root', mode: 'require_any', requests: [{ resourceId: 'doc' }, { resourceId: 'nurse', quantity: 2 }] } }
@@ -81,14 +82,17 @@ describe('createReferenceDataAccessor', () => {
     expect(updateResourceRequirements).not.toHaveBeenCalled()
   })
 
-  it('updateShape throws', async () => {
+  it('updateShape throws for an unknown type with no writer', async () => {
     const { accessor } = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements: vi.fn() }))
-    await expect(accessor.updateShape('a1', 'Activity', {})).rejects.toThrow('not supported')
+    await expect(accessor.updateShape('e1', 'Entity', {})).rejects.toThrow('no persistence path for type Entity')
   })
 
   it('tolerates an undefined referenceData', () => {
     const { accessor } = createReferenceDataAccessor(undefined, () => ({ updateResourceRequirements: vi.fn() }))
-    expect(def(accessor.getSnapshot())).toEqual({ resources: [], resourceRequirements: [], activities: [] })
+    expect(def(accessor.getSnapshot())).toEqual({
+      resources: [], resourceRequirements: [], activities: [],
+      connectors: [], generators: [], entities: [], states: [],
+    })
   })
 
   // C1: an entry whose id collides with a resource id is NOT automatically
@@ -167,6 +171,80 @@ describe('createReferenceDataAccessor', () => {
   })
 })
 
+describe('updateShape', () => {
+  const base = () => refData({
+    connectors: [{ id: 'c1', sourceId: 'gen-1', targetId: 'a1', weight: 1, priority: 1 }, { id: 'c2', sourceId: 'gen-1', targetId: 'a2', weight: 1, priority: 2 }] as never,
+    generators: [{ id: 'gen-1', name: 'Door', routing: 'probability' }] as never,
+    entities: [{ id: 'e1', name: 'Patient' }],
+    states: [],
+  })
+  const snap = (s: ReferenceDataSource) => s.accessor.getSnapshot().modelDefinition as unknown as {
+    connectors: Array<{ id: string; priority?: number }>; generators: Array<{ id: string; routing?: string }>; entities: unknown[]; states: unknown[]
+  }
+
+  it('snapshot carries connectors, generators, entities, states', () => {
+    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn() }))
+    expect(snap(s).connectors.map((c) => c.id)).toEqual(['c1', 'c2'])
+    expect(snap(s).generators[0].routing).toBe('probability')
+    expect(snap(s).entities).toHaveLength(1)
+    expect(snap(s).states).toEqual([])
+  })
+
+  it('a registered shape writer receives the patch, no envelope is sent, and the snapshot overlays it', async () => {
+    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
+    const writer = vi.fn()
+    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }), () => ({ shapeWriters: { 'gen-1': writer } }))
+    await s.accessor.updateShape('gen-1', 'Generator', { routing: 'first_available' })
+    expect(writer).toHaveBeenCalledWith({ routing: 'first_available' })
+    expect(updateElement).not.toHaveBeenCalled()
+    expect(snap(s).generators[0].routing).toBe('first_available')   // overlay so the view reflects the draft immediately
+    expect(s.accessor.getSnapshot().saveStatus).toBe('idle')         // the host editor owns save status on this path
+  })
+
+  it('a connector patch goes through updateElement, resolves on the result, then overlays', async () => {
+    let resolveHost!: () => void
+    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(() => new Promise((r) => { resolveHost = r }))
+    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }))
+    let settled = false
+    const p = s.accessor.updateShape('c2', 'Connector', { priority: 1 }).then(() => { settled = true })
+    expect(updateElement).toHaveBeenCalledWith('c2', 'Connector', { priority: 1 })
+    expect(s.accessor.getSnapshot().saveStatus).toBe('saving')
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    resolveHost()
+    await p
+    expect(snap(s).connectors.find((c) => c.id === 'c2')!.priority).toBe(1)
+    expect(s.accessor.getSnapshot().saveStatus).toBe('saved')
+    s.setReferenceData(base())
+    expect(snap(s).connectors.find((c) => c.id === 'c2')!.priority).toBe(2)   // overlay cleared by the next prop
+  })
+
+  it('a source patch with no writer goes to updateElement and overlays the source', async () => {
+    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
+    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }))
+    await s.accessor.updateShape('gen-1', 'Generator', { routing: 'first_available' })
+    expect(updateElement).toHaveBeenCalledWith('gen-1', 'Generator', { routing: 'first_available' })
+    expect(snap(s).generators[0].routing).toBe('first_available')
+  })
+
+  it('a rejected element update sets saveError, keeps the snapshot, and rethrows', async () => {
+    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => { throw new Error('line not found') })
+    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }))
+    await expect(s.accessor.updateShape('c1', 'Connector', { priority: 5 })).rejects.toThrow('line not found')
+    expect(s.accessor.getSnapshot().saveError).toBe('line not found')
+    expect(snap(s).connectors[0].priority).toBe(1)
+  })
+
+  it('an unknown type throws before sending; a missing sender throws', async () => {
+    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
+    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }))
+    await expect(s.accessor.updateShape('x', 'Entity', {})).rejects.toThrow('no persistence path for type Entity')
+    expect(updateElement).not.toHaveBeenCalled()
+    const noSender = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn() }))
+    await expect(noSender.accessor.updateShape('c1', 'Connector', { priority: 1 })).rejects.toThrow('no updateElement sender configured')
+  })
+})
+
 describe('useReferenceDataAccessor', () => {
   it('returns a stable accessor and follows prop changes', () => {
     const senders = { updateResourceRequirements: vi.fn() }
@@ -178,5 +256,22 @@ describe('useReferenceDataAccessor', () => {
     act(() => { rerender({ rd: second }) })
     expect(result.current).toBe(accessor)
     expect(def(accessor.getSnapshot()).resources).toHaveLength(1)
+  })
+
+  it('reads options through a ref: a rerender with a new writer object calls the NEW writer', async () => {
+    const rd = refData({ generators: [{ id: 'gen-1', name: 'Door', routing: 'probability' }] as never })
+    const senders = { updateResourceRequirements: vi.fn() }
+    const writer1 = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ w }) => useReferenceDataAccessor(rd, senders, { shapeWriters: w }),
+      { initialProps: { w: { 'gen-1': writer1 } } },
+    )
+    const writer2 = vi.fn()
+    act(() => { rerender({ w: { 'gen-1': writer2 } }) })
+    await act(async () => {
+      await result.current.updateShape('gen-1', 'Generator', { routing: 'first_available' })
+    })
+    expect(writer1).not.toHaveBeenCalled()
+    expect(writer2).toHaveBeenCalledWith({ routing: 'first_available' })
   })
 })
