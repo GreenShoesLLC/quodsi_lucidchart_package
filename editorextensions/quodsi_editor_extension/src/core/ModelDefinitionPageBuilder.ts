@@ -212,8 +212,10 @@ export class ModelDefinitionPageBuilder {
                 }
             }
 
-            // Link blocks and swimlane lanes to the resources they claim (needs
-            // both the loaded Resource objects and the block pass to have run).
+            // Link blocks and swimlane lanes to the resources they claim. Must
+            // run after loadResources (needs the Resource objects); its position
+            // relative to the block pass is incidental -- claims are read from
+            // shapeData, not from anything that pass builds.
             this.linkResourceClaimants(page, modelDefinition);
 
             // Derive/reconcile resource requirements against those resources

@@ -1,7 +1,6 @@
 import { ElementProxy, LineProxy, BlockProxy, PageProxy } from 'lucid-extension-sdk';
 import {
     SimulationObjectType,
-    Resource,
     ComponentLogger,
     MappingSource
 } from '@quodsi/lucid-shared';
@@ -143,20 +142,6 @@ export class LucidElementFactory {
 
             throw error;
         }
-    }
-
-    /**
-     * Creates a ResourceRequirement from a Resource
-     */
-    public createResourceRequirement(
-        element: BlockProxy,
-        resource: Resource
-    ): ResourceRequirementLucid {
-        return ResourceRequirementLucid.createFromResource(
-            element,
-            this.storageAdapter,
-            resource
-        );
     }
 
     /**

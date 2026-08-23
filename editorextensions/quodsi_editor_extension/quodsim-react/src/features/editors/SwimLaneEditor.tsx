@@ -7,11 +7,20 @@
 //
 // So this editor owns no resource state. It chooses between the two SHARED
 // Studio panels the Resource block also uses:
-//   - no resourceId -> <ResourceLinkPicker claimantNoun="lane">, whose
+//   - no resourceId, or a resourceId that resolves to NOTHING in the
+//     model-root snapshot -> <ResourceLinkPicker claimantNoun="lane">, whose
 //     onLink writes ONLY the pointer into the lane. The create -> confirmed
 //     model-root write -> link ordering lives inside the picker; do not
 //     reimplement it here.
-//   - resourceId    -> <ResourceEditor> on that resource.
+//   - a resourceId that resolves -> <ResourceEditor> on that resource.
+//
+// Resolving the pointer against the snapshot (rather than trusting its mere
+// presence) is what keeps a DANGLING lane out of the shared editor. Deleting a
+// resource from the Resources tab does not rewrite q_swimlane -- the cascade
+// leaves the pointer behind and the builder reports it as
+// `resource_link_dangling` -- and ResourceEditor's answer to an unknown id is
+// a "Resource ... not found ... Re-bootstrap" dead end that no gesture in this
+// panel can clear. Same posture, same copy, as ResourceBlockEditor next door.
 //
 // Two consequences worth stating, because both were true the other way round
 // until this task:
@@ -27,7 +36,7 @@
 // It exists on the type for ResourceStorageMigration alone, and this file
 // must never write it back.
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { Layers, Unlink } from "lucide-react";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
@@ -87,6 +96,16 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
 
   const activeMapping = swimlaneData.lanes[activeLaneIndex] || null;
   const activeLane = elementData.lanes[activeLaneIndex];
+
+  // Same subscription idiom every shared panel uses, so this re-renders the
+  // moment a MODEL_ROOT_SNAPSHOT lands.
+  const snap = useSyncExternalStore(accessor.subscribe, accessor.getSnapshot);
+  const resources =
+    (snap.modelDefinition as unknown as { resources?: Array<{ id: string }> } | null)?.resources ??
+    [];
+  const linkedResource = activeMapping?.resourceId
+    ? resources.find((r) => r.id === activeMapping.resourceId)
+    : undefined;
 
   // Reset confirmation state when switching lanes
   useEffect(() => {
@@ -165,17 +184,23 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
 
       {/* Lane Content */}
       <div className="flex-1 overflow-y-auto p-3">
-        {activeLane && !activeMapping?.resourceId && (
-          /* Unlinked lane -- pick or create the model-level resource it stands for */
+        {activeLane && !linkedResource && (
+          /* Unlinked -- or DANGLING -- lane: pick or create the model-level
+             resource it stands for. Either way the fix is the same picker. */
           <div className="space-y-2">
-            <p className="text-xs text-gray-500">This lane is not linked to a Resource.</p>
+            <p className="text-xs text-gray-500">
+              {activeMapping?.resourceId
+                ? "This lane points at a Resource that no longer exists. Link it to an existing Resource or create a new one."
+                : "This lane is not linked to a Resource."}
+            </p>
             <ResourceLinkPicker
               accessor={accessor}
               claimantNoun="lane"
               onLink={async (resourceId) => {
                 writeLane(activeLaneIndex, {
                   laneId: activeMapping?.laneId ?? generateUUID(),
-                  titleSnapshot: activeLane.title || `Lane ${activeLane.index}`,
+                  titleSnapshot:
+                    activeMapping?.titleSnapshot ?? activeLane.title ?? `Lane ${activeLane.index}`,
                   assignmentMode: activeMapping?.assignmentMode ?? "runtime-derive",
                   resourceId,
                 });
@@ -185,7 +210,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
           </div>
         )}
 
-        {activeLane && activeMapping?.resourceId && (
+        {activeLane && activeMapping?.resourceId && linkedResource && (
           /* Linked lane -- assignment mode + the SHARED editor on the resource */
           <div className="space-y-4">
             {/* Assignment Mode */}

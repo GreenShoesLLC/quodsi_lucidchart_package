@@ -369,7 +369,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         resources += autoResourceCount;
 
         // Auto-convert swimlane lanes to Resources (same as quick convert)
-        const swimlaneResourceCount = await this.convertSwimLanes(page, usedNamesByType);
+        const swimlaneResourceCount = this.convertSwimLanes(page, usedNamesByType);
         resources += swimlaneResourceCount;
 
         this.log('Conversion counts:', { activities, generators, resources, connectors });
@@ -459,7 +459,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         resources += autoResourceCount;
 
         // Auto-convert swimlane lanes to Resources
-        const swimlaneResourceCount = await this.convertSwimLanes(page, usedNamesByType);
+        const swimlaneResourceCount = this.convertSwimLanes(page, usedNamesByType);
         resources += swimlaneResourceCount;
 
         return { activities, generators, resources };
@@ -743,11 +743,24 @@ export class LucidPageConversionService extends QuodsiLogger {
      * auto-requirements itself (reconcileAutoRequirements), so adding either
      * here would produce a duplicate that the rebuild then has to reconcile
      * away.
+     *
+     * RE-ENTRANT. "Convert page" is a gesture a user repeats (add a shape,
+     * convert again), so this reuses what a previous pass already minted: a
+     * lane whose stored `resourceId` still resolves in q_resources keeps its
+     * mapping untouched. Minting a fresh UUID per lane every pass instead
+     * appended a duplicate record for every existing lane on every conversion
+     * -- the lane pointed at the newest one and every earlier record was left
+     * orphaned in the model, each still deriving its own auto-requirement.
+     * A pointer that no longer resolves (the record was deleted from the
+     * Resources tab) is re-minted rather than kept dangling.
+     *
+     * Nothing in here awaits: it is page shapeData reads and writes, and the
+     * one q_resources write at the end. Deliberately synchronous.
      */
-    private async convertSwimLanes(
+    private convertSwimLanes(
         page: PageProxy,
         usedNamesByType: Map<SimulationObjectType, Set<string>>
-    ): Promise<number> {
+    ): number {
         this.log('Processing swimlane lanes as Resources');
         let resourceCount = 0;
 
@@ -768,9 +781,16 @@ export class LucidPageConversionService extends QuodsiLogger {
         // `resourceNames` alone is not enough -- a caller that reaches this
         // method directly (or any future path that forgets to seed it) would
         // otherwise mint a second record carrying an existing record's name.
+        //
+        // `storedById` is the same list keyed by id: it is also the resolver
+        // that decides whether a lane pointer left by an earlier conversion is
+        // live or dangling. Records minted below are added as they are created.
+        const storedById = new Map<string, StoredResourceRecord>();
+        for (const r of this.storageAdapter.getResources(page)) storedById.set(String(r.id), r);
+
         const takenNames = new Set<string>([
             ...resourceNames,
-            ...this.storageAdapter.getResources(page).map(r => r.name),
+            ...[...storedById.values()].map(r => r.name),
         ]);
 
         for (const [blockId, block] of page.allBlocks) {
@@ -794,9 +814,38 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             const laneMappings: (SwimLaneLaneMapping | null)[] = [];
 
+            // What a previous conversion (or the panel) already mapped on this
+            // block. An unreadable blob is treated as "never converted".
+            let existingLanes: (SwimLaneLaneMapping | null)[] = [];
+            const existingSwimStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
+            if (existingSwimStr) {
+                try {
+                    const parsed = JSON.parse(existingSwimStr) as SwimLaneQuodsiData;
+                    if (Array.isArray(parsed?.lanes)) existingLanes = parsed.lanes;
+                } catch {
+                    this.log(`Unreadable q_swimlane on ${blockId}; treating every lane as new`);
+                }
+            }
+
             for (let i = 0; i < lanes.length; i++) {
                 const lane = lanes[i];
                 const laneTitle = lane.getTitle() || `Lane ${i}`;
+
+                // Already linked to a live record -> keep the mapping verbatim
+                // (laneId, assignmentMode and all), create nothing, count
+                // nothing. Its name is still reserved for the rest of the
+                // conversion, exactly as a freshly minted one would be.
+                const existing = existingLanes[i];
+                const existingId = existing?.resourceId ? String(existing.resourceId) : undefined;
+                const existingRecord = existingId ? storedById.get(existingId) : undefined;
+                if (existing && existingRecord) {
+                    laneMappings.push(existing);
+                    takenNames.add(existingRecord.name);
+                    resourceNames.add(existingRecord.name);
+                    this.log(`Lane ${i} of swimlane ${blockId} already points at "${existingRecord.name}"; reusing`);
+                    continue;
+                }
+
                 const resourceId = generateUUID();
 
                 const resourceName = generateUniqueName(laneTitle, (n) => takenNames.has(n));
@@ -805,12 +854,14 @@ export class LucidPageConversionService extends QuodsiLogger {
 
                 // No geometry: a lane resource has no block of its own, and the
                 // builder stamps the lane's box onto it at build time.
-                createdRecords.push({
+                const created: StoredResourceRecord = {
                     id: resourceId,
                     name: resourceName,
                     capacity: 1,
                     description: `Auto-created from swimlane lane: ${laneTitle}`,
-                });
+                };
+                createdRecords.push(created);
+                storedById.set(resourceId, created);
 
                 laneMappings.push({
                     laneId: generateUUID(),

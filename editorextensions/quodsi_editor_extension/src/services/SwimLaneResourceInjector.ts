@@ -65,6 +65,15 @@ export class SwimLaneResourceInjector {
         const reqId = mapping.resourceId;
         if (!reqId) continue;
 
+        // ...and the pointer may be DANGLING. Deleting a resource from the
+        // Resources tab does not rewrite q_swimlane (the builder reports the
+        // leftover pointer as `resource_link_dangling`), so a lane can name a
+        // resource that no longer exists. No resource means
+        // reconcileAutoRequirements derived no auto-requirement under that id,
+        // and a Seize naming an unresolvable requirement id must never reach
+        // the engine.
+        if (!serializedModel.resourceRequirements?.some((r) => String(r.id) === reqId)) continue;
+
         const laneBB = lanes[i].getBoundingBox();
 
         // Find activity blocks whose center falls within this lane

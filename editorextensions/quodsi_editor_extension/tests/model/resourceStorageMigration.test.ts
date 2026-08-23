@@ -142,6 +142,76 @@ describe('migrateResourcesToModelLevel', () => {
         expect(sa.getResources(page)[0].name).toBe('Nurse');   // no second record minted from the edit
     });
 
+    it('drops stored PLAIN AUTO requirements for resources that exist, keeping customs', () => {
+        // One-time seam. Format 1 persisted the auto-requirement a Resource
+        // block minted alongside its record. Format 2 DERIVES that requirement
+        // at build (reconcileAutoRequirements, id === resource.id), so a stored
+        // copy is redundant -- and worse than redundant: updateResourceRequirements
+        // diffs the panel's list against what is stored, so the first delete on
+        // the Resources tab would read the leftover row as "the user deleted
+        // this requirement" and strip Seize/Release off every shape using it.
+        const sa = new StorageAdapter();
+        const page = makeFakePage('p');
+        const blk = addBlock(page, makeFakeBlock('r1'));
+        sa.setElementData(blk, { id: 'r1', name: 'Nurse', capacity: 2 } as any, SimulationObjectType.Resource);
+        sa.setResourceRequirements(page, [
+            // the plain auto for r1 -- derivation recreates this identically
+            { id: 'r1', name: 'Nurse', rootClause: { id: 'c1', mode: 'RequireAll', requests: [{ resourceId: 'r1' }], clauses: [] } },
+            // a real custom requirement -- must survive
+            { id: 'custom-1', name: 'Nurse x2', rootClause: { id: 'c1', mode: 'RequireAll', requests: [{ resourceId: 'r1', quantity: 2 }], clauses: [] } },
+        ] as any);
+
+        const result = migrateResourcesToModelLevel(page, sa);
+
+        expect(result.migrated).toBe(true);
+        expect(sa.getResourceRequirements(page).map(r => r.id)).toEqual(['custom-1']);
+
+        // second pass writes nothing
+        const writes: string[] = [];
+        const origSet = page.shapeData.set;
+        page.shapeData.set = (k: string, v: string) => { writes.push(k); origSet(k, v); };
+        const before = page.shapeData.get('q_res_requirements');
+
+        const second = migrateResourcesToModelLevel(page, sa);
+
+        expect(second.migrated).toBe(false);
+        expect(writes).toEqual([]);
+        expect(page.shapeData.get('q_res_requirements')).toBe(before);
+    });
+
+    it('keeps a stored plain auto whose id matches NO resource', () => {
+        // Nothing derives it, so dropping it would delete a requirement the
+        // model still references.
+        const sa = new StorageAdapter();
+        const page = makeFakePage('p');
+        sa.setResources(page, [{ id: 'r1', name: 'Nurse' }]);
+        sa.setResourceRequirements(page, [
+            { id: 'orphan', name: 'Orphan', rootClause: { id: 'c1', mode: 'RequireAll', requests: [{ resourceId: 'orphan' }], clauses: [] } },
+        ] as any);
+
+        migrateResourcesToModelLevel(page, sa);
+
+        expect(sa.getResourceRequirements(page).map(r => r.id)).toEqual(['orphan']);
+    });
+
+    it('restores q_res_requirements too when a write throws mid-way', () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('p');
+        const blk = addBlock(page, makeFakeBlock('r1'));
+        sa.setElementData(blk, { id: 'r1', name: 'Nurse', capacity: 2 } as any, SimulationObjectType.Resource);
+        sa.setResourceRequirements(page, [
+            { id: 'r1', name: 'Nurse', rootClause: { id: 'c1', mode: 'RequireAll', requests: [{ resourceId: 'r1' }], clauses: [] } },
+        ] as any);
+        const before = page.shapeData.get('q_res_requirements');
+
+        const origSet = page.shapeData.set;
+        page.shapeData.set = (k: string, v: string) => { if (k === 'q_resources') throw new Error('boom'); origSet(k, v); };
+
+        expect(() => migrateResourcesToModelLevel(page, sa)).toThrow('boom');
+
+        expect(page.shapeData.get('q_res_requirements')).toBe(before);
+    });
+
     it('restores every touched key when a write throws mid-way', () => {
         const sa = new StorageAdapter();
         const page = buildLegacyResourcesPage(sa);

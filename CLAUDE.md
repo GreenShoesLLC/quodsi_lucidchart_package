@@ -231,8 +231,8 @@ unchanged). Geometry follows whichever shape currently claims a resource: a
 block-linked resource is positioned at build time, a lane-linked one is
 not. Block and lane claims are resolved through `resolveResourceLinks`,
 which enforces one claimant per resource and reports dangling or duplicate
-claims as `resource_link_*` WARNINGs. Auto-derived requirements (from
-Seize/Release actions) are computed at build time by
+claims as `resource_link_*` WARNINGs. Auto-derived requirements (one per
+resource, `id === resource.id`) are computed at build time by
 `reconcileAutoRequirements`; `q_res_requirements` stores only custom
 requirements and overrides. All resource writes go through
 `updateModelRoot({ resources, resourceRequirements })`, and the panel

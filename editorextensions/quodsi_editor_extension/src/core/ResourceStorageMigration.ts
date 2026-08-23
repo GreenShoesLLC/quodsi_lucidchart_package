@@ -9,8 +9,10 @@
 // would otherwise never migrate. Idempotent: a pointer block or a lane with
 // resourceId is skipped, and a second pass writes nothing.
 //
-// Own backup/restore envelope (LucidVersionUpgrader's envelope is not
-// available outside its upgrade, and it does not back up q_swimlane).
+// Own backup/restore envelope covering every key this may write --
+// q_resources, q_res_requirements, q_lucid_format, and each touched block's
+// q_data / q_swimlane (LucidVersionUpgrader's envelope is not available
+// outside its upgrade, and it does not back up q_swimlane).
 import { PageProxy } from 'lucid-extension-sdk';
 import {
     SimulationObjectType,
@@ -20,6 +22,7 @@ import {
     getLogger,
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from './StorageAdapter';
+import { isPlainAutoRequirement } from './autoRequirements';
 import { LUCID_STORAGE_FORMAT } from './storageFormat';
 
 const log = getLogger('ResourceStorageMigration');
@@ -49,6 +52,7 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
     const backup = {
         page: {
             resources: page.shapeData.get('q_resources') as string | undefined,
+            requirements: page.shapeData.get('q_res_requirements') as string | undefined,
             format: page.shapeData.get('q_lucid_format') as string | undefined,
         },
         blocks: new Map<string, { data?: string; swim?: string; block: any }>(),
@@ -61,6 +65,7 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
     const restore = () => {
         const put = (el: any, key: string, v: string | undefined) => (v === undefined ? el.shapeData.delete(key) : el.shapeData.set(key, v));
         put(page, 'q_resources', backup.page.resources);
+        put(page, 'q_res_requirements', backup.page.requirements);
         put(page, 'q_lucid_format', backup.page.format);
         for (const { block, data, swim } of backup.blocks.values()) { put(block, DATA_KEY, data); put(block, SWIMLANE_DATA_KEY, swim); }
     };
@@ -142,6 +147,35 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
         if (lifted || renames.length || (existingCount !== records.length)) {
             sa.setResources(page, records);
         }
+
+        // 4. One-time seam: STORED plain auto-requirements.
+        // Format 1 persisted the auto-requirement a Resource block minted
+        // alongside its record. Format 2 DERIVES it at build instead
+        // (reconcileAutoRequirements, one per resource, id === resource.id),
+        // so a stored copy is not merely redundant: updateResourceRequirements
+        // diffs the panel's list against what is stored, and the panel's list
+        // never contains derived rows -- so the first delete on the Resources
+        // tab would read every leftover row as "the user deleted this
+        // requirement" and strip Seize/Release off every shape that used it.
+        //
+        // Only rows whose id matches a MERGED record are dropped: those are
+        // exactly the ones derivation recreates identically. A plain-auto-
+        // shaped row pointing at no resource is left alone -- nothing would
+        // bring it back. Idempotent: a second pass finds nothing to drop and
+        // does not write.
+        const recordIds = new Set(records.map((r) => String(r.id)));
+        const storedRequirements = sa.getResourceRequirements(page);
+        const keptRequirements = storedRequirements.filter(
+            (r) => !(recordIds.has(String(r.id)) && isPlainAutoRequirement(r as unknown as Parameters<typeof isPlainAutoRequirement>[0])),
+        );
+        if (keptRequirements.length !== storedRequirements.length) {
+            sa.setResourceRequirements(page, keptRequirements);
+            lifted = true;
+            log.info('Dropped stored plain auto-requirements now derived at build', {
+                dropped: storedRequirements.length - keptRequirements.length,
+            });
+        }
+
         if (sa.getStorageFormat(page) !== LUCID_STORAGE_FORMAT) {
             sa.setStorageFormat(page, LUCID_STORAGE_FORMAT);
         }

@@ -158,6 +158,48 @@ describe('SwimLaneEditor', () => {
     expect(await screen.findByDisplayValue('Doctor')).toBeInTheDocument()
   })
 
+  it('a lane pointing at a DELETED resource offers the picker, and relinking keeps the laneId', async () => {
+    // Deleting a resource from the Resources tab does not rewrite q_swimlane
+    // (the builder reports the leftover pointer as `resource_link_dangling`),
+    // so a lane can carry an id nothing resolves. Handing that id to the
+    // shared ResourceEditor renders its "Resource ... not found ...
+    // Re-bootstrap" dead end, which no gesture in this panel can clear.
+    const sent = installHost([{ id: 'doctor-id', name: 'Doctor', capacity: 1 }])
+
+    render(
+      <SwimLaneEditor
+        elementData={elementData([
+          {
+            laneId: 'l0',
+            titleSnapshot: 'Intake',
+            assignmentMode: 'explicit',
+            resourceId: 'gone',
+          },
+          null,
+        ])}
+        onSave={() => {}}
+      />,
+    )
+
+    expect(
+      await screen.findByText(/points at a Resource that no longer exists/i),
+    ).toBeInTheDocument()
+    // The shared editor's dead end must NOT be what renders.
+    expect(screen.queryByText(/Re-bootstrap/i)).toBeNull()
+
+    fireEvent.click(await screen.findByRole('button', { name: /Doctor/ }))
+
+    await waitFor(() => expect(swimlaneUpdates(sent).length).toBe(1))
+    expect(swimlaneUpdates(sent)[0].data.swimlaneData.lanes[0]).toEqual({
+      // The lane's own identity and mode survive a re-link -- only the
+      // pointer moves.
+      laneId: 'l0',
+      titleSnapshot: 'Intake',
+      assignmentMode: 'explicit',
+      resourceId: 'doctor-id',
+    })
+  })
+
   it('Unlink sets the lane to null and the copy says the resource stays', async () => {
     const sent = installHost([{ id: 'doctor-id', name: 'Doctor', capacity: 1 }])
 

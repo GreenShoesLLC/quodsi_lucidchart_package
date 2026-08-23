@@ -57,6 +57,11 @@ export type ModelRootTransport = {
   saveShape?(shapeId: string, type: string, patch: Record<string, unknown>): Promise<void>
 }
 
+// Markers the HOST stamps onto each projected resource row at build time
+// (which shape claims it, that shape's label, which lane). They describe the
+// canvas, not the record, so no patch a panel sends ever carries them.
+const TRANSIENT_RESOURCE_KEYS = ['shapeId', 'shapeLabel', 'laneRef'] as const
+
 export function createModelRootSource(transport: ModelRootTransport) {
   const listeners = new Set<() => void>()
   let projection: ModelRootProjection | null = null
@@ -65,6 +70,63 @@ export function createModelRootSource(transport: ModelRootTransport) {
     // Replace the reference wholesale. Never mutate in place: the accessor's
     // cache compares by identity, so an in-place edit would be invisible.
     projection = next
+    listeners.forEach((l) => l())
+  }
+
+  /**
+   * OPTIMISTIC ECHO. Folds an outgoing model-root patch into the cached
+   * projection immediately, before the host has seen it.
+   *
+   * Without this, a controlled input whose value is read out of the projection
+   * and whose onChange calls accessor.updateModel is a full postMessage round
+   * trip per keystroke: React re-renders the input with the PRE-keystroke
+   * value the instant the change event settles, and only the eventual
+   * MODEL_ROOT_SNAPSHOT catches it up. Type "Radiology Technician" at speed
+   * into Studio's ResourceBasicTab name field and characters drop and reorder.
+   *
+   * `resources` merges PER ROW BY ID rather than replacing rows, so the
+   * transient link markers above -- which exist only on the host's projection
+   * and never on a patch -- survive the echo; otherwise the Resources tab's
+   * link column flickers to "no shape" for the length of a round trip. Every
+   * other key is replaced wholesale: they carry no host-only fields.
+   *
+   * The projection object is always REBUILT, never mutated: the accessor's
+   * getSnapshot cache compares by identity. The authoritative
+   * MODEL_ROOT_SNAPSHOT that follows replaces whatever this guessed.
+   */
+  function echoPatch(patch: Record<string, unknown>): void {
+    // No snapshot yet means nothing to echo into -- and nothing is rendering
+    // off the projection either, so the first snapshot is the whole answer.
+    if (!projection) return
+
+    const current = projection as unknown as Record<string, unknown>
+    const next: Record<string, unknown> = { ...current }
+
+    for (const [key, value] of Object.entries(patch)) {
+      if (key === 'resources' && Array.isArray(value)) {
+        const cachedById = new Map<string, Record<string, unknown>>()
+        for (const row of (current.resources as Array<Record<string, unknown>> | undefined) ?? []) {
+          if (row) cachedById.set(String(row.id), row)
+        }
+        next.resources = value.map((row: Record<string, unknown>) => {
+          const prev = row ? cachedById.get(String(row.id)) : undefined
+          if (!prev) return row
+          const merged: Record<string, unknown> = { ...prev, ...row }
+          for (const k of TRANSIENT_RESOURCE_KEYS) {
+            // Covers the spread's blind spot: an explicit `shapeId: undefined`
+            // on the patch row overwrites the cached marker with undefined,
+            // and that still means "the patch did not carry it", not "clear
+            // it" -- only the host can clear a marker.
+            if (merged[k] === undefined && prev[k] !== undefined) merged[k] = prev[k]
+          }
+          return merged
+        })
+      } else {
+        next[key] = value
+      }
+    }
+
+    projection = next as unknown as ModelRootProjection
     listeners.forEach((l) => l())
   }
 
@@ -138,8 +200,13 @@ export function createModelRootSource(transport: ModelRootTransport) {
     },
 
     // Forwarded VERBATIM. Never branch on keys here -- see the module doc on
-    // LucidModelStateAccessor for the bug this prevents.
-    saveModel: (patch: Record<string, unknown>) => transport.send(patch),
+    // LucidModelStateAccessor for the bug this prevents. (echoPatch above
+    // does branch on keys, but only over the LOCAL cache; what goes on the
+    // wire is untouched.)
+    saveModel: (patch: Record<string, unknown>) => {
+      echoPatch(patch)
+      return transport.send(patch)
+    },
   }
 
   return {
