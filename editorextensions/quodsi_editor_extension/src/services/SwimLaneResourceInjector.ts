@@ -58,16 +58,14 @@ export class SwimLaneResourceInjector {
         const mapping = swimlaneData.lanes[i];
         if (!mapping || mapping.assignmentMode !== 'runtime-derive') continue;
         if (i >= lanes.length) continue; // Lane index out of range
-        // Storage format 1 only: format-2 lanes carry a resourceId pointer
-        // instead of an inline `resource` record; resolving that pointer
-        // here is out of this task's scope.
-        if (!mapping.resource) continue;
+
+        // A mapped-but-UNLINKED lane (no resourceId) has nothing to seize.
+        // The auto-requirement the builder derives for a resource carries the
+        // resource's own id, so the lane's pointer doubles as the requirement id.
+        const reqId = mapping.resourceId;
+        if (!reqId) continue;
 
         const laneBB = lanes[i].getBoundingBox();
-
-        // The resourceRequirementId is the same as the resource ID
-        // (ResourceRequirement.createForSingleResource uses resource.id as the requirement ID)
-        const reqId = mapping.resource.id;
 
         // Find activity blocks whose center falls within this lane
         for (const [, candidateBlock] of allBlocks) {

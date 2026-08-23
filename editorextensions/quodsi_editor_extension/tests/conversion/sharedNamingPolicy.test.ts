@@ -153,13 +153,14 @@ describe('Lucid conversion on the shared naming policy', () => {
     // Asserted on STORAGE, not on the registered sim object: since Plan 2b
     // Task 5 a Resource block is a POINTER, and ResourceLucid's sim object is
     // a deliberate placeholder ('Unlinked Resource') that exists only for type
-    // dispatch -- the record's name is model-level data. Conversion still
-    // writes the name into q_data today; Task 6 moves that write to the
-    // page-level q_resources record. Either way the policy under test is the
-    // same one: "Resource 1", never "Resource ProcessBlock".
+    // dispatch -- the record's name is model-level data. Since Task 6 that
+    // record lives in the page's q_resources and the block holds only
+    // `{ resourceId }`. Either way the policy under test is the same one:
+    // "Resource 1", never "Resource ProcessBlock".
     const out: { storageAdapter?: StorageAdapter } = {};
     await convert(page, new Map([['r1', SimulationObjectType.Resource]]), out);
-    expect(out.storageAdapter!.getElementData<any>(block).name).toBe('Resource 1');
+    expect(out.storageAdapter!.getResources(page).map((r) => r.name)).toEqual(['Resource 1']);
+    expect(out.storageAdapter!.getElementData<any>(block).resourceId).toBe('r1');
   });
 });
 

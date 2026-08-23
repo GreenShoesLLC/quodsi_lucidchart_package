@@ -8,13 +8,11 @@ import {
     QuodsiLogger,
     ProcessAnalysisResult,
     DiagramElementKind,
-    Resource,
-    ResourceRequirement,
     MappingSource,
     generateUniqueName,
+    StoredResourceRecord,
     SwimLaneQuodsiData,
     SwimLaneLaneMapping,
-    SwimLaneResourceData,
     generateUUID,
     planAutoResources,
     type ActivityResourceRef
@@ -661,15 +659,17 @@ export class LucidPageConversionService extends QuodsiLogger {
             );
             const resource = platformObject.getSimulationObject();
 
-            // Ensure unique name before registration using local tracking
-            if (resourceNames.has(resource.name)) {
-                resource.name = generateUniqueName(resource.name, (n) => resourceNames!.has(n));
-                // Update storage with the unique name (createFromConversion already wrote the original)
-                this.storageAdapter.updateElementData(newBlock, resource);
-            }
-
-            // Track the name we're using
-            resourceNames.add(resource.name);
+            // The NAME lives on the q_resources record createFromConversion just
+            // minted, not on the sim object -- ResourceLucid's sim object is a
+            // placeholder ('Unlinked Resource') that exists for type dispatch
+            // only. De-duplication happened twice already: planAutoResources
+            // against `resourceNames`, and createFromConversion against the
+            // records already on the page. Re-deriving a name from the
+            // placeholder here would rename every resource after the first to
+            // 'Unlinked Resource_n' AND write the whole sim object back over
+            // the block's pointer, re-creating a format-1 shape-owned record.
+            const record = this.storageAdapter.getResources(page).find(r => String(r.id) === newBlock.id);
+            resourceNames.add(record?.name ?? resourceName);
 
             await this.modelManager.registerElement(resource, newBlock);
 
@@ -685,6 +685,14 @@ export class LucidPageConversionService extends QuodsiLogger {
 
     /**
      * Auto-converts swimlane lanes to Resources during page conversion.
+     *
+     * Storage format 2: each lane mints a MODEL-LEVEL record in the page's
+     * q_resources and the lane mapping keeps only a `resourceId` pointer at
+     * it. Nothing is pushed into the in-memory ModelDefinition -- the next
+     * rebuild loads the records from q_resources and derives the
+     * auto-requirements itself (reconcileAutoRequirements), so adding either
+     * here would produce a duplicate that the rebuild then has to reconcile
+     * away.
      */
     private async convertSwimLanes(
         page: PageProxy,
@@ -698,6 +706,11 @@ export class LucidPageConversionService extends QuodsiLogger {
             resourceNames = new Set<string>();
             usedNamesByType.set(SimulationObjectType.Resource, resourceNames);
         }
+
+        // Collected across every swimlane block on the page and written ONCE
+        // below, so a page with several swimlanes still takes one q_resources
+        // write instead of one per lane.
+        const createdRecords: StoredResourceRecord[] = [];
 
         for (const [blockId, block] of page.allBlocks) {
             if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
@@ -728,35 +741,20 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const resourceName = generateUniqueName(laneTitle, (n) => resourceNames!.has(n));
                 resourceNames.add(resourceName);
 
-                const bb = block.getBoundingBox();
-                const resource = new Resource(
-                    resourceId,
-                    resourceName,
-                    1,
-                    bb.x + bb.w + 50,
-                    bb.y + (i * 60)
-                );
-                resource.description = `Auto-created from swimlane lane: ${laneTitle}`;
-
-                const modelDef = await this.modelManager.getModelDefinition();
-                if (modelDef) {
-                    modelDef.resources.add(resource);
-                    const requirement = ResourceRequirement.createForSingleResource(resource);
-                    modelDef.resourceRequirements.add(requirement);
-                }
-
-                const inlineResource: SwimLaneResourceData = {
+                // No geometry: a lane resource has no block of its own, and the
+                // builder stamps the lane's box onto it at build time.
+                createdRecords.push({
                     id: resourceId,
                     name: resourceName,
                     capacity: 1,
-                    description: resource.description,
-                };
+                    description: `Auto-created from swimlane lane: ${laneTitle}`,
+                });
 
                 laneMappings.push({
                     laneId: generateUUID(),
                     titleSnapshot: laneTitle,
                     assignmentMode: 'runtime-derive',
-                    resource: inlineResource,
+                    resourceId,
                 });
 
                 resourceCount++;
@@ -770,6 +768,11 @@ export class LucidPageConversionService extends QuodsiLogger {
             block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(swimlaneData));
 
             this.log(`Persisted q_swimlane for block ${blockId} with ${laneMappings.length} lane mappings`);
+        }
+
+        if (createdRecords.length > 0) {
+            this.storageAdapter.setResources(page, [...this.storageAdapter.getResources(page), ...createdRecords]);
+            this.log(`Appended ${createdRecords.length} lane resources to q_resources`);
         }
 
         this.log(`Auto-converted ${resourceCount} swimlane lanes to Resources`);

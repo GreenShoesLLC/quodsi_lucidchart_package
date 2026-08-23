@@ -7,6 +7,7 @@ import {
 import { SelectionType, SwimLaneQuodsiData, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
+import { StorageAdapter } from '../../../../../core/StorageAdapter';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
 import { referenceDataBuilder } from '../utils/referenceDataBuilder';
@@ -79,7 +80,7 @@ export class ActivityProcessor extends BaseSelectionProcessor {
 
         // Check if this activity is contained in a swimlane lane
         if (messageData.referenceData) {
-          this.detectSwimLaneContainment(item, currentPage, messageData);
+          this.detectSwimLaneContainment(item, currentPage, messageData, modelManager.getStorageAdapter());
         }
 
         log.trace('Processed activity data:', {
@@ -112,12 +113,18 @@ export class ActivityProcessor extends BaseSelectionProcessor {
   private detectSwimLaneContainment(
     item: ItemProxy,
     currentPage: PageProxy,
-    messageData: Partial<SelectionStateData>
+    messageData: Partial<SelectionStateData>,
+    storageAdapter: StorageAdapter
   ): void {
     const SWIMLANE_DATA_KEY = 'q_swimlane';
 
     try {
       const itemBB = (item as any).getBoundingBox();
+      // The lane holds a POINTER; the name the banner shows is the record's,
+      // read once for the whole page rather than per lane.
+      const resourcesById = new Map(
+        storageAdapter.getResources(currentPage).map((r) => [String(r.id), r])
+      );
 
       for (const [blockId, block] of currentPage.allBlocks) {
         if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
@@ -141,23 +148,22 @@ export class ActivityProcessor extends BaseSelectionProcessor {
 
         for (let i = 0; i < swimlaneData.lanes.length; i++) {
           const mapping = swimlaneData.lanes[i];
-          // Storage format 1 only: format-2 lanes carry a resourceId pointer
-          // (resolved against page q_resources) instead of an inline
-          // `resource` record; resolving that pointer for the containment
-          // banner is out of this task's scope.
-          if (!mapping || !mapping.resource || i >= lanes.length) continue;
+          if (!mapping || i >= lanes.length) continue;
 
           const laneBB = lanes[i].getBoundingBox();
           if (isCenterInBox(
             { x: itemBB.x, y: itemBB.y, w: itemBB.w, h: itemBB.h },
             { x: laneBB.x, y: laneBB.y, w: laneBB.w, h: laneBB.h }
           )) {
+            // A mapped-but-unlinked lane still CONTAINS the activity -- the
+            // banner falls back to the lane's own title so it can say so.
             messageData.referenceData!.swimLaneContainment = {
               swimlaneBlockId: blockId,
               laneIndex: i,
               laneName: mapping.titleSnapshot,
-              resourceId: mapping.resource.id,
-              resourceName: mapping.resource.name,
+              resourceId: mapping.resourceId ?? '',
+              resourceName: (mapping.resourceId ? resourcesById.get(mapping.resourceId)?.name : undefined)
+                ?? mapping.titleSnapshot,
               assignmentMode: mapping.assignmentMode,
             };
             return; // Found the containing lane, stop searching

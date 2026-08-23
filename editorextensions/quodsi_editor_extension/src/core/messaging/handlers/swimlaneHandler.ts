@@ -2,7 +2,7 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   SwimLaneQuodsiData,
-  SwimLaneLaneMapping,
+  generateUniqueName,
   generateUUID,
 } from '@quodsi/lucid-shared';
 import { router } from '../index';
@@ -11,16 +11,6 @@ import { ModelManager } from '../../ModelManager';
 import { getLogger } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
-
-/** Extract resource IDs from swimlane data for diffing. */
-function extractResourceIds(data: SwimLaneQuodsiData): string[] {
-  // Storage format 1 only: format-2 lanes carry a resourceId pointer
-  // instead of an inline `resource` record. Resolving that pointer here
-  // is out of this task's scope.
-  return data.lanes
-    .filter((lane): lane is SwimLaneLaneMapping => lane !== null && !!lane.resource)
-    .map(lane => lane.resource!.id);
-}
 
 /**
  * Handler for swimlane lane-resource mapping operations.
@@ -52,9 +42,13 @@ export class SwimLaneHandler {
   }
 
   /**
-   * Handle SWIMLANE_UPDATE: save q_swimlane data (e.g., assignment mode changes,
-   * lane unconverts). When a lane is unconverted, cascades cleanup of
-   * ResourceRequirements and actions that referenced the removed resource.
+   * Handle SWIMLANE_UPDATE: save q_swimlane data (e.g., assignment mode
+   * changes, lane unconverts).
+   *
+   * Unlinking a lane does NOT delete a resource. Under storage format 2 the
+   * record lives in the page's q_resources and outlives every claimant, so a
+   * lane that lets go of one simply leaves it unclaimed -- cascading a delete
+   * from here would destroy model-level data the user never asked to remove.
    */
   private static async handleUpdate(msg: EnvelopeBase): Promise<void> {
     try {
@@ -78,39 +72,17 @@ export class SwimLaneHandler {
         return;
       }
 
-      // Read OLD swimlane data before overwriting so we can detect removed resources
-      const oldDataStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
-      let oldResourceIds: string[] = [];
-      if (oldDataStr) {
-        try {
-          const oldData: SwimLaneQuodsiData = JSON.parse(oldDataStr);
-          oldResourceIds = extractResourceIds(oldData);
-        } catch { /* ignore parse errors on old data */ }
-      }
-
       // Write new data
       block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(data.swimlaneData));
 
-      // Detect removed resources and cascade cleanup
-      const newResourceIds = new Set(extractResourceIds(data.swimlaneData));
-      const removedResourceIds = oldResourceIds.filter(id => !newResourceIds.has(id));
-
+      // Invalidate model cache so the next rebuild re-reads the lane claims
       const modelManager = ModelManager.getInstance();
-
-      for (const resourceId of removedResourceIds) {
-        SwimLaneHandler.logger.debug('Lane unconverted, cleaning up resource:', resourceId);
-        await modelManager.cleanupDeletedResource(resourceId);
-      }
-
-      // Invalidate model cache so changes (resource edits, unconverts) are
-      // picked up by loadSwimLaneResources() on next rebuild
       modelManager.invalidateModelCache();
 
       SwimLaneHandler.logger.debug('Saved swimlane data', {
         blockId: data.swimlaneBlockId,
         laneCount: data.swimlaneData.lanes.length,
         mappedLanes: data.swimlaneData.lanes.filter(l => l !== null).length,
-        removedResources: removedResourceIds.length,
       });
 
       SwimLaneHandler.sendUpdateResult(msg.id, true);
@@ -146,9 +118,16 @@ export class SwimLaneHandler {
         return;
       }
 
-      // Generate resource identity — the full Resource object will be created
-      // during the next model rebuild via loadSwimLaneResources()
+      const modelManager = ModelManager.getInstance();
+      const storageAdapter = modelManager.getStorageAdapter();
+
+      // Format 2: the resource is a MODEL-LEVEL record on the page and the
+      // lane keeps only a pointer at it. The name is de-duplicated against the
+      // records already there, exactly as block conversion does.
       const resourceId = generateUUID();
+      const existingResources = storageAdapter.getResources(currentPage);
+      const takenNames = new Set(existingResources.map(r => r.name));
+      const resourceName = generateUniqueName(data.resourceName, (n) => takenNames.has(n));
 
       // Read existing q_swimlane data or create new
       const existingStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
@@ -169,31 +148,32 @@ export class SwimLaneHandler {
         swimlaneData.lanes.push(null);
       }
 
-      // Create the lane mapping with inline Resource data
+      // Persist the record, then point the lane at it.
+      storageAdapter.setResources(currentPage, [
+        ...existingResources,
+        { id: resourceId, name: resourceName, capacity: 1, description: '' },
+      ]);
+
+      // The lane's TITLE is what the user typed; only the record's name is
+      // de-duplicated.
       const laneId = generateUUID();
       swimlaneData.lanes[data.laneIndex] = {
         laneId,
         titleSnapshot: data.resourceName,
         assignmentMode: 'runtime-derive',
-        resource: {
-          id: resourceId,
-          name: data.resourceName,
-          capacity: 1,
-          description: '',
-        },
+        resourceId,
       };
       swimlaneData.lastSyncedAt = new Date().toISOString();
 
       // Persist q_swimlane
       block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(swimlaneData));
 
-      // Invalidate model cache so loadSwimLaneResources picks up the new resource
-      const modelManager = ModelManager.getInstance();
+      // Invalidate model cache so the next rebuild picks up the new resource
       modelManager.invalidateModelCache();
 
       SwimLaneHandler.logger.debug('Created Resource for lane', {
         resourceId,
-        resourceName: data.resourceName,
+        resourceName,
         laneIndex: data.laneIndex,
       });
 

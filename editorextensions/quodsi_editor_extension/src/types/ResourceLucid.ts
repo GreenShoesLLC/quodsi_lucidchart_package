@@ -5,6 +5,7 @@ import {
     ComponentLogger,
     parseStructuredName,
     extractResourceFields,
+    generateUniqueName,
     MappingSource
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
@@ -128,20 +129,23 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         return name;
     }
 
+    /**
+     * Converts a block to a Resource: mints the MODEL-LEVEL record in the
+     * page's q_resources and leaves the block holding only a pointer at it.
+     *
+     * The record's id is the block's id, so the block that created a resource
+     * is also its first claimant. Geometry is deliberately not stored -- the
+     * builder stamps it from whichever block claims the record.
+     *
+     * Re-converting a block that already owns a record is a NO-OP on
+     * q_resources: the record is model-level data the user may have edited
+     * since, and re-minting it would reset the name/capacity and (worse)
+     * re-run de-duplication against the record's own name.
+     */
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): ResourceLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
-        // Extract location AND shape size (Path X-lite)
-        const box = block.getBoundingBox();
-
-        // Create default resource using the static method with location
-        const defaultResource = Resource.createDefault(
-            block.id,
-            box.x ?? 0,
-            box.y ?? 0
-        );
-        defaultResource.width = box.w;
-        defaultResource.height = box.h;
+        const page = block.getPage();
 
         // Get raw name and parse for structured data
         const rawName = SimObjectLucid.pickBlockName(block, {
@@ -149,8 +153,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             includeMasterName: false,
             sequence: nameSequence,
         });
-        const parsed = parseStructuredName(rawName);
-        const fields = extractResourceFields(parsed);
+        const fields = extractResourceFields(parseStructuredName(rawName));
 
         ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
 
@@ -159,27 +162,26 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             SimObjectLucid.updateBlockText(block, fields.name);
         }
 
-        // Task 6 rewrites this to mint a q_resources record and write a pointer.
-        // Until then it still writes the format-1 shape-owned record; only the
-        // type annotation is dropped, because StoredResourceData is now the
-        // pointer shape.
-        const storedData = {
-            id: defaultResource.id,
-            name: fields.name || rawName,
-            x: defaultResource.x,
-            y: defaultResource.y,
-            width: defaultResource.width,
-            height: defaultResource.height,
-            capacity: fields.capacity ?? defaultResource.capacity,
-            financialProperties: defaultResource.financialProperties?.toJSON()
-        };
+        const existing = storageAdapter.getResources(page);
+        if (!existing.some(r => String(r.id) === block.id)) {
+            const taken = new Set(existing.map(r => r.name));
+            const defaults = Resource.createDefault(block.id);
+            existing.push({
+                id: block.id,
+                name: generateUniqueName(fields.name || rawName, (n) => taken.has(n)),
+                capacity: fields.capacity ?? defaults.capacity,
+                description: '',
+                financialProperties: { enabled: false, costPerSeize: 0, costPerHourUtilized: 0, costPerHourIdle: 0 },
+            });
+            storageAdapter.setResources(page, existing);
+        }
 
-        ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted resource, block ID: ${block.id}`, storedData);
+        ComponentLogger.log(LOG_PREFIX, `Setting pointer for converted resource, block ID: ${block.id}`);
 
-        // Set up element data (type + component data merged into single q_data)
+        // The block stores the POINTER and nothing else -- see StoredResourceData.
         storageAdapter.setElementData(
             block,
-            storedData,
+            { id: block.id, resourceId: block.id } as StoredResourceData,
             SimulationObjectType.Resource,
             {
                 mappingSource: mappingSource
