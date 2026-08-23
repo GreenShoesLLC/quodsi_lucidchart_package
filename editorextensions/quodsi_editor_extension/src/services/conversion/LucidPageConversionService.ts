@@ -9,6 +9,7 @@ import {
     ProcessAnalysisResult,
     DiagramElementKind,
     MappingSource,
+    SimulationObject,
     generateUniqueName,
     StoredResourceRecord,
     SwimLaneQuodsiData,
@@ -219,6 +220,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         // This is necessary because getModelDefinition() may rebuild from storage,
         // which doesn't include elements we've added in-memory during this conversion
         const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
+        this.seedResourceNames(page, usedNamesByType);
 
         // Process blocks
         for (const [blockId, block] of page.allBlocks) {
@@ -267,15 +269,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                     usedNamesByType.set(targetType, typeNames);
                 }
 
-                // Check if name is already used in this conversion session
-                if (typeNames.has(element.name)) {
-                    element.name = generateUniqueName(element.name, (n) => typeNames!.has(n));
-                    // Update storage with the unique name (createFromConversion already wrote the original)
-                    this.storageAdapter.updateElementData(block, element);
-                }
-
-                // Track the name we're using
-                typeNames.add(element.name);
+                this.reserveConvertedName(page, block, element, targetType, typeNames);
 
                 await this.modelManager.registerElement(element, block);
 
@@ -399,6 +393,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         // This is necessary because getModelDefinition() may rebuild from storage,
         // which doesn't include elements we've added in-memory during this conversion
         const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
+        this.seedResourceNames(page, usedNamesByType);
 
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
@@ -430,15 +425,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                     usedNamesByType.set(blockAnalysis.elementType, typeNames);
                 }
 
-                // Check if name is already used in this conversion session
-                if (typeNames.has(element.name)) {
-                    element.name = generateUniqueName(element.name, (n) => typeNames!.has(n));
-                    // Update storage with the unique name (createFromConversion already wrote the original)
-                    this.storageAdapter.updateElementData(block, element);
-                }
-
-                // Track the name we're using
-                typeNames.add(element.name);
+                this.reserveConvertedName(page, block, element, blockAnalysis.elementType, typeNames);
 
                 // Register with model manager
                 await this.modelManager.registerElement(element, block);
@@ -575,6 +562,65 @@ export class LucidPageConversionService extends QuodsiLogger {
     }
 
     /**
+     * Seeds the Resource name set from the records ALREADY on the page.
+     *
+     * Every other type's names live on the elements this pass converts, so an
+     * empty set is the right starting point for them. Resources do not: since
+     * Plan 2b the records live in the page's q_resources and outlive any shape,
+     * so a page can arrive at conversion already holding resources (authored in
+     * the Resources tab, left behind by a deleted block, or written by an
+     * earlier partial conversion). Starting from an empty set would let this
+     * pass mint a second "Nurse".
+     */
+    private seedResourceNames(
+        page: PageProxy,
+        usedNamesByType: Map<SimulationObjectType, Set<string>>
+    ): void {
+        usedNamesByType.set(
+            SimulationObjectType.Resource,
+            new Set(this.storageAdapter.getResources(page).map(r => r.name))
+        );
+    }
+
+    /**
+     * Records the name a just-converted block ended up with, renaming it first
+     * if this pass has already used it.
+     *
+     * A Resource block is EXEMPT from the rename, and that exemption is load
+     * bearing. Its sim object is a PLACEHOLDER (always 'Unlinked Resource' --
+     * see ResourceLucid.createSimObject), so the name it carries is not the
+     * resource's name: the real one is on the q_resources record
+     * createFromConversion just minted, already de-duplicated against every
+     * record on the page. Renaming the placeholder would therefore rename
+     * nothing, while the updateElementData that follows would merge the whole
+     * domain Resource -- name, capacity, x/y/width/height, financials -- onto
+     * the block's q_data, destroying the pointer and re-classifying the block
+     * as storage format 1 on the next open (ResourceStorageMigration decides
+     * purely on resourceId !== undefined). With two Resource blocks on a page
+     * that fires on the second one every single time.
+     */
+    private reserveConvertedName(
+        page: PageProxy,
+        block: BlockProxy,
+        element: SimulationObject,
+        type: SimulationObjectType,
+        typeNames: Set<string>
+    ): void {
+        if (type === SimulationObjectType.Resource) {
+            const record = this.storageAdapter.getResources(page).find(r => String(r.id) === block.id);
+            typeNames.add(record?.name ?? element.name);
+            return;
+        }
+
+        if (typeNames.has(element.name)) {
+            element.name = generateUniqueName(element.name, (n) => typeNames.has(n));
+            // Update storage with the unique name (createFromConversion already wrote the original)
+            this.storageAdapter.updateElementData(block, element);
+        }
+        typeNames.add(element.name);
+    }
+
+    /**
      * Creates visual Resource blocks for any Activities that have a resourceName field.
      * This allows users to embed resource references in Activity names like:
      * "name: Triage | duration: 5 | resource: Nurse"
@@ -618,10 +664,20 @@ export class LucidPageConversionService extends QuodsiLogger {
             return 0;
         }
 
+        // Checked against BOTH sources of a resource name: what this pass has
+        // reserved, and what is already stored on the page. The planner labels
+        // the shape it plans, so a predicate that could not see the stored
+        // records would label a shape 'Nurse' while createFromConversion --
+        // which does see them -- stored the record as 'Nurse_2'.
+        const takenNames = new Set<string>([
+            ...resourceNames,
+            ...this.storageAdapter.getResources(page).map(r => r.name),
+        ]);
+
         const plan = planAutoResources(
             refs,
             { originX: this.findRightmostX(page) },
-            (candidate) => resourceNames!.has(candidate)
+            (candidate) => takenNames.has(candidate)
         );
 
         if (plan.length === 0) {
@@ -659,17 +715,11 @@ export class LucidPageConversionService extends QuodsiLogger {
             );
             const resource = platformObject.getSimulationObject();
 
-            // The NAME lives on the q_resources record createFromConversion just
-            // minted, not on the sim object -- ResourceLucid's sim object is a
-            // placeholder ('Unlinked Resource') that exists for type dispatch
-            // only. De-duplication happened twice already: planAutoResources
-            // against `resourceNames`, and createFromConversion against the
-            // records already on the page. Re-deriving a name from the
-            // placeholder here would rename every resource after the first to
-            // 'Unlinked Resource_n' AND write the whole sim object back over
-            // the block's pointer, re-creating a format-1 shape-owned record.
-            const record = this.storageAdapter.getResources(page).find(r => String(r.id) === newBlock.id);
-            resourceNames.add(record?.name ?? resourceName);
+            // Reserve what the RECORD is called (see reserveConvertedName): the
+            // name was settled twice over already -- by planAutoResources above
+            // and by createFromConversion against the page's records -- and the
+            // sim object here is only the placeholder.
+            this.reserveConvertedName(page, newBlock, resource, SimulationObjectType.Resource, resourceNames);
 
             await this.modelManager.registerElement(resource, newBlock);
 
@@ -712,6 +762,17 @@ export class LucidPageConversionService extends QuodsiLogger {
         // write instead of one per lane.
         const createdRecords: StoredResourceRecord[] = [];
 
+        // A lane name is checked against EVERY source of a resource name: the
+        // names this conversion pass reserved, the records already stored on
+        // the page, and the lane records created further down this same loop.
+        // `resourceNames` alone is not enough -- a caller that reaches this
+        // method directly (or any future path that forgets to seed it) would
+        // otherwise mint a second record carrying an existing record's name.
+        const takenNames = new Set<string>([
+            ...resourceNames,
+            ...this.storageAdapter.getResources(page).map(r => r.name),
+        ]);
+
         for (const [blockId, block] of page.allBlocks) {
             if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
 
@@ -738,7 +799,8 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const laneTitle = lane.getTitle() || `Lane ${i}`;
                 const resourceId = generateUUID();
 
-                const resourceName = generateUniqueName(laneTitle, (n) => resourceNames!.has(n));
+                const resourceName = generateUniqueName(laneTitle, (n) => takenNames.has(n));
+                takenNames.add(resourceName);
                 resourceNames.add(resourceName);
 
                 // No geometry: a lane resource has no block of its own, and the

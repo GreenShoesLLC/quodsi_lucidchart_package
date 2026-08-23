@@ -21,6 +21,8 @@ describe('convertPageWithMappings re-conversion', () => {
       getElementType: () => ({ type: SimulationObjectType.Activity, id: 'b1' }),
       updateElementData: () => {},
       getElementData: () => null,           // no resourceName → processAutoCreatedResources is a no-op
+      getResources: () => [],               // page holds no model-level resources
+      setResources: () => {},
     };
     const factory: any = {
       createPlatformObject: () => ({

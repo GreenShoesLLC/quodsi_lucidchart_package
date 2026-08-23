@@ -149,21 +149,26 @@ export class ActivityProcessor extends BaseSelectionProcessor {
         for (let i = 0; i < swimlaneData.lanes.length; i++) {
           const mapping = swimlaneData.lanes[i];
           if (!mapping || i >= lanes.length) continue;
+          // Same predicate as SwimLaneResourceInjector: a lane with no
+          // resourceId seizes nothing, so claiming containment for it would
+          // put "auto-injected here" on screen for an activity the serialized
+          // model leaves alone.
+          if (!mapping.resourceId) continue;
 
           const laneBB = lanes[i].getBoundingBox();
           if (isCenterInBox(
             { x: itemBB.x, y: itemBB.y, w: itemBB.w, h: itemBB.h },
             { x: laneBB.x, y: laneBB.y, w: laneBB.w, h: laneBB.h }
           )) {
-            // A mapped-but-unlinked lane still CONTAINS the activity -- the
-            // banner falls back to the lane's own title so it can say so.
+            // The lane holds a pointer; the name shown is the record's, with
+            // the lane title as a fallback for a pointer that no longer
+            // resolves (the record was deleted out from under it).
             messageData.referenceData!.swimLaneContainment = {
               swimlaneBlockId: blockId,
               laneIndex: i,
               laneName: mapping.titleSnapshot,
-              resourceId: mapping.resourceId ?? '',
-              resourceName: (mapping.resourceId ? resourcesById.get(mapping.resourceId)?.name : undefined)
-                ?? mapping.titleSnapshot,
+              resourceId: mapping.resourceId,
+              resourceName: resourcesById.get(mapping.resourceId)?.name ?? mapping.titleSnapshot,
               assignmentMode: mapping.assignmentMode,
             };
             return; // Found the containing lane, stop searching
