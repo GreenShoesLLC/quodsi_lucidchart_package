@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "2026.11.01",
+  "metadata": {
+    "version": "2026.11.01",
+    "timestamp": "NORMALIZED"
+  },
+  "name": "Legacy",
+  "replications": 1,
+  "seed": 1,
+  "timeUnit": "minutes",
+  "runTime": {
+    "value": 24,
+    "unit": "hours"
+  },
+  "entities": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "Default Entity"
+    }
+  ],
+  "activities": [
+    {
+      "id": "blk-triage",
+      "name": "Triage",
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
+      "actions": [
+        {
+          "id": "act-seize",
+          "type": "seize",
+          "resourceRequirementId": "req-doctor-or-2-nurses"
+        },
+        {
+          "id": "act-delay",
+          "type": "delay",
+          "duration": {
+            "value": 5,
+            "unit": "minutes"
+          }
+        },
+        {
+          "id": "act-release",
+          "type": "release",
+          "resourceRequirementId": "req-doctor-or-2-nurses"
+        }
+      ],
+      "failureProperties": {
+        "enabled": true,
+        "repairResourceRequirementId": "blk-nurse"
+      },
+      "x": 100,
+      "y": 50,
+      "width": 120,
+      "height": 60
+    }
+  ],
+  "resources": [
+    {
+      "id": "blk-nurse",
+      "name": "Nurse",
+      "capacity": 3,
+      "financialProperties": {
+        "enabled": true,
+        "costPerSeize": 0,
+        "costPerHourUtilized": 45,
+        "costPerHourIdle": 10
+      },
+      "description": "Floor nurses"
+    },
+    {
+      "id": "res-doctor",
+      "name": "Doctor"
+    },
+    {
+      "id": "res-tech",
+      "name": "Tech",
+      "capacity": 2,
+      "financialProperties": {
+        "enabled": true,
+        "costPerSeize": 5,
+        "costPerHourUtilized": 30,
+        "costPerHourIdle": 0
+      },
+      "description": "Lab tech"
+    }
+  ],
+  "generators": [],
+  "connectors": [],
+  "resourceRequirements": [
+    {
+      "id": "blk-nurse",
+      "name": "Nurse",
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "blk-nurse"
+          }
+        ]
+      }
+    },
+    {
+      "id": "req-doctor-or-2-nurses",
+      "name": "Doctor or 2 Nurses",
+      "rootClause": {
+        "id": "c-root",
+        "mode": "require_any",
+        "requests": [
+          {
+            "resourceId": "res-doctor",
+            "quantity": 1
+          },
+          {
+            "resourceId": "blk-nurse",
+            "quantity": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "res-doctor",
+      "name": "Doctor",
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "res-doctor"
+          }
+        ]
+      }
+    },
+    {
+      "id": "res-tech",
+      "name": "Tech",
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "res-tech"
+          }
+        ]
+      }
+    }
+  ],
+  "states": []
+}
