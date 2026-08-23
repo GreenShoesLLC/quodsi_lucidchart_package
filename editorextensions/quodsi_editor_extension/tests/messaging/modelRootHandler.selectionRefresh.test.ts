@@ -14,6 +14,14 @@
 // there is nothing new to reflect, and refreshing selection state after a
 // rejected write would be pure noise on the failure path.
 //
+// Plan 2b polish P3: a FAILED write must nonetheless push a fresh SNAPSHOT.
+// createModelRootSource.saveModel echoes the patch into its cached
+// projection optimistically before sending, so a write the host REJECTS
+// would otherwise leave the echoed (wrong) value on screen indefinitely --
+// handleUpdate used to send MODEL_ROOT_UPDATE_RESULT { success: false } and
+// return, with no snapshot behind it. The snapshot goes AFTER the result
+// send so the panel's own saveModel promise rejects first.
+//
 // Mocking style mirrors tests/messaging/modelRootHandler.broadcast.test.ts
 // (Viewport monkey-patched via the shared __mocks__ file, core/messaging and
 // core/ModelManager mocked before importing ModelRootHandler) and
@@ -109,5 +117,41 @@ describe('ModelRootHandler selection refresh after model-root writes', () => {
     await flush();
 
     expect(handleLucidSelectionEventMock).not.toHaveBeenCalled();
+  });
+
+  it('pushes a fresh snapshot after a FAILED update, after the failure result and without a selection refresh', async () => {
+    modelManagerStub.updateModelRoot = async () => {
+      throw new Error('boom');
+    };
+
+    // Recorded at call time so the ordering assertion below is on what the
+    // panel actually observes: the rejecting UPDATE_RESULT first, the
+    // corrective snapshot behind it.
+    let sendCountWhenSnapshotStarted = -1;
+    const snapshotSpy = jest
+      .spyOn(ModelRootHandler as any, 'sendSnapshot')
+      .mockImplementation(async () => {
+        sendCountWhenSnapshotStarted = sendMock.mock.calls.length;
+      });
+
+    try {
+      await (ModelRootHandler as any).handleUpdate(updateMsg());
+      await flush();
+
+      const failureResult = sendMock.mock.calls.find(
+        ([, envelope]: any[]) => envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
+      );
+      expect(failureResult?.[1].data.success).toBe(false);
+
+      expect(snapshotSpy).toHaveBeenCalledTimes(1);
+      expect(snapshotSpy).toHaveBeenCalledWith('req-1');
+      // The failure result was already on the wire when the snapshot began.
+      expect(sendCountWhenSnapshotStarted).toBe(1);
+
+      // The selection re-process stays a SUCCESS-path-only concern.
+      expect(handleLucidSelectionEventMock).not.toHaveBeenCalled();
+    } finally {
+      snapshotSpy.mockRestore();
+    }
   });
 });

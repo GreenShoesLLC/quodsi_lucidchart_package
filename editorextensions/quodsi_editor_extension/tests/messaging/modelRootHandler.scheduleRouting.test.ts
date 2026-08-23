@@ -122,10 +122,19 @@ describe('ModelRootHandler.getResponseChannel routing (schedule)', () => {
     await (ModelRootHandler as any).handleUpdate(updateMsg('schedule-iframe', 'req-schedule-3'));
     await flush();
 
-    expect(sendMock).toHaveBeenCalledTimes(1);
+    // Same shape as the pattern case (see
+    // modelRootHandler.routing.test.ts): the failure RESULT goes to the
+    // requester ALONE; the corrective snapshot behind it (Plan 2b polish
+    // P3) fans out like any other snapshot.
+    expect(sendMock).toHaveBeenCalledTimes(3);
     const [target, resultMsg] = sendMock.mock.calls[0];
     expect(target).toBe('schedule');
     expect(resultMsg.type).toBe(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT);
     expect(resultMsg.data.success).toBe(false);
+
+    expect(sendMock.mock.calls.slice(1).map(([t]: [string]) => t)).toEqual(['model', 'schedule']);
+    for (const [, msg] of sendMock.mock.calls.slice(1)) {
+      expect(msg.type).toBe(EnvelopeMessageType.MODEL_ROOT_SNAPSHOT);
+    }
   });
 });

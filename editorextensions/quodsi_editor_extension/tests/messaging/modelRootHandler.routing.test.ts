@@ -125,10 +125,21 @@ describe('ModelRootHandler.getResponseChannel routing', () => {
     await (ModelRootHandler as any).handleUpdate(updateMsg('pattern-iframe', 'req-pattern-3'));
     await flush();
 
-    expect(sendMock).toHaveBeenCalledTimes(1);
+    // The failure RESULT goes to the requester ALONE. The corrective
+    // snapshot behind it (Plan 2b polish P3 -- it undoes saveModel's
+    // optimistic echo of a patch the host rejected) still fans out to both
+    // surfaces, exactly as the success path's snapshot does; that is a
+    // snapshot, not an error, so no surface is painted with an error it
+    // never asked for.
+    expect(sendMock).toHaveBeenCalledTimes(3);
     const [target, resultMsg] = sendMock.mock.calls[0];
     expect(target).toBe('pattern');
     expect(resultMsg.type).toBe(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT);
     expect(resultMsg.data.success).toBe(false);
+
+    expect(sendMock.mock.calls.slice(1).map(([t]: [string]) => t)).toEqual(['model', 'pattern']);
+    for (const [, msg] of sendMock.mock.calls.slice(1)) {
+      expect(msg.type).toBe(EnvelopeMessageType.MODEL_ROOT_SNAPSHOT);
+    }
   });
 });

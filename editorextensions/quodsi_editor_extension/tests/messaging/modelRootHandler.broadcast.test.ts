@@ -207,14 +207,24 @@ describe('ModelRootHandler snapshot targeting', () => {
     await (ModelRootHandler as any).handleUpdate(msg);
     await flush();
 
-    // No post-update snapshot on failure (it's outside the try/catch's
-    // success path) -- and critically, the failure RESULT itself must not
-    // have reached the OTHER surface, which would paint its UI with an error
-    // it never asked for.
-    expect(sendMock).toHaveBeenCalledTimes(1);
+    // The failure RESULT must not reach the OTHER surface, which would
+    // paint its UI with an error it never asked for -- so it is a single
+    // send, targeted at the requester.
+    //
+    // A corrective SNAPSHOT does follow it (Plan 2b polish P3): saveModel
+    // echoes the patch into React's cached projection before sending, so a
+    // rejected write needs the truth pushed back or the echoed value stays
+    // on screen. It obeys the same targeting rules as every other snapshot
+    // -- here only 'model', because no pattern modal is registered in this
+    // test.
+    expect(sendMock).toHaveBeenCalledTimes(2);
     const [target, resultMsg] = sendMock.mock.calls[0];
     expect(target).toBe('model');
     expect(resultMsg.type).toBe(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT);
     expect(resultMsg.data.success).toBe(false);
+
+    const [snapshotTarget, snapshotMsg] = sendMock.mock.calls[1];
+    expect(snapshotTarget).toBe('model');
+    expect(snapshotMsg.type).toBe(EnvelopeMessageType.MODEL_ROOT_SNAPSHOT);
   });
 });
