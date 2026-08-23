@@ -10,13 +10,14 @@ import {
   ScenarioObjectType,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
-import { Settings, Hash, Info, Users, AlertTriangle, Boxes, CalendarClock } from "lucide-react";
+import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock } from "lucide-react";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import StatesEditor from "./StatesEditor";
 import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ResourceRequirementsEditor } from "quodsi_studio/platforms/shared";
 import { ArrivalsTab } from "./ArrivalsTab";
+import { ResourcesTab } from "./ResourcesTab";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -51,7 +52,7 @@ interface Props {
   onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
-export type EditorTab = "basic" | "states" | "entities" | "requirements" | "arrivals" | "scenarios" | "validation";
+export type EditorTab = "basic" | "states" | "entities" | "resources" | "requirements" | "arrivals" | "scenarios" | "validation";
 
 /**
  * Tab navigation configuration for ModelEditor.
@@ -75,6 +76,12 @@ const TAB_CONFIG = [
     title: "Entities",
     icon: Boxes,
     tooltip: "Define the entity types that flow through the simulation (e.g. customers, parts, orders)"
+  },
+  {
+    id: "resources" as const,
+    title: "Resources",
+    icon: Briefcase,
+    tooltip: "Define the model's resources and see which shape or swimlane lane represents each"
   },
   {
     id: "requirements" as const,
@@ -625,6 +632,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             onEntitiesChange={onEntitiesChange}
           />
       )}
+      {activeTab === "resources" && <ResourcesTab />}
       {activeTab === "arrivals" && <ArrivalsTab />}
       {activeTab === "requirements" && (
         <ResourceRequirementsEditor accessor={accessor} referenceCleanup="host" />

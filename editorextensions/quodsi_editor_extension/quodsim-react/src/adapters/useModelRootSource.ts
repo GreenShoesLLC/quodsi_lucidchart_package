@@ -103,6 +103,40 @@ export function createModelRootSource(transport: ModelRootTransport) {
       await transport.saveShape(shapeId, type, patch)
     },
 
+    // Synchronous shape lookup, served ENTIRELY from the cached projection.
+    // Lucid's shapes live in the extension realm, so there is no way to ask
+    // the host "what is blk-1 called?" and answer inside a synchronous
+    // `ShapeInfoLike | null` return -- but there is no need to: every
+    // resources[] row already carries the shapeId it is claimed by and that
+    // shape's label, stamped at projection-build time (Plan 2b Tasks 3/7).
+    //
+    // SCOPE IS DELIBERATELY RESOURCE-ONLY. The single consumer today is
+    // ResourcesEditor's link-status column
+    // (`accessor.getShapeInfo?.(shapeId)?.name ?? shapeId`), and the
+    // projection carries link markers for nothing else. A shape id that no
+    // resource row claims therefore returns null rather than a fabricated
+    // descriptor -- the caller's own `?? shapeId` fallback then shows the raw
+    // id, which is honest, where an invented name would not be.
+    //
+    // masterName / quodsiData are null and is1D is false because the
+    // projection does not carry them; they exist on ShapeInfoLike for
+    // Visio's classification flow (classifyShape / removeClassification),
+    // neither of which this host wires up.
+    getShapeInfo: (shapeId: string) => {
+      const row = projection?.resources?.find((r) => r.shapeId === shapeId)
+      if (!row) return null
+      const label = row.shapeLabel ?? shapeId
+      return {
+        shapeId,
+        name: label,
+        text: label,
+        masterName: null,
+        is1D: false,
+        quodsiType: 'Resource',
+        quodsiData: null,
+      }
+    },
+
     // Forwarded VERBATIM. Never branch on keys here -- see the module doc on
     // LucidModelStateAccessor for the bug this prevents.
     saveModel: (patch: Record<string, unknown>) => transport.send(patch),

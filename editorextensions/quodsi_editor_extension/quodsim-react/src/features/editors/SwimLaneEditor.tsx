@@ -11,7 +11,6 @@ import {
   StateListManager,
 } from "@quodsi/lucid-shared";
 import { useMessaging } from "../../messaging/MessageContext";
-import ResourceEditor from "./ResourceEditor";
 
 interface LaneInfo {
   index: number;
@@ -314,15 +313,24 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
               </div>
             </AccordionSection>
 
-            {/* Embedded ResourceEditor */}
-            <div className="border-t border-gray-200 pt-3">
-              <ResourceEditor
-                resource={resourceFromMapping}
-                onSave={handleResourceSave}
-                states={emptyStates}
-                onStatesChange={noopStatesChange}
-                referenceData={referenceData}
-              />
+            {/* PLACEHOLDER -- Plan 2b, Task 9 replaces this whole block.
+                Lucid's own features/editors/ResourceEditor.tsx (an inline
+                name/capacity form over the lane's EMBEDDED resource copy)
+                was deleted in Task 8: a lane, like a Resource block, is now a
+                POINTER at a model-level resource, so an inline copy-editing
+                form is the wrong surface. Task 9 mounts the shared Studio
+                ResourceEditor / ResourceLinkPicker pair here against the
+                lane's resource pointer. Until then this shows only what the
+                lane currently carries -- deliberately read-only rather than
+                an editor that would write to the doomed embedded copy. The
+                adapter state above it (resourceFromMapping /
+                handleResourceSave / emptyStates / noopStatesChange) is left
+                in place for the same reason: Task 9 owns this file, and
+                deleting its scaffolding here would be churn in someone
+                else's diff. */}
+            <div className="border-t border-gray-200 pt-3 text-xs text-gray-500">
+              Resource editing for this lane moves to the shared Resources
+              surface (Plan 2b, Task 9).
             </div>
 
             {/* Lane Info */}

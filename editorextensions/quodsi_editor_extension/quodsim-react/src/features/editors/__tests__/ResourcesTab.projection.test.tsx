@@ -17,15 +17,17 @@
 // pair the Lucid panel uses in production, built from a REAL ModelDefinition
 // with real ResourceListManager / ResourceRequirementListManager instances.
 //
-// getShapeInfo is NOT wired into useModelRootSource's deps yet (that's Task
-// 8) -- useModelRootSource.ts never passes a getShapeInfo dependency into
-// createModelRootSource's `deps`, so createLucidModelStateAccessor omits
-// `accessor.getShapeInfo` entirely (see its "Optional members" block), and
-// ResourcesEditor's `accessor.getShapeInfo?.(shapeId)?.name ?? shapeId`
-// (ResourcesEditor.tsx:324) falls through to the raw shapeId. The first test
-// below asserts that CURRENT behaviour (the raw id, not a resolved shape
-// name) and says so -- Task 8 flips it to the label and should update this
-// assertion, not silently start failing it.
+// getShapeInfo IS wired into useModelRootSource's deps as of Task 8: it
+// serves ShapeInfoLike straight from this same projection's resources[] rows
+// (shapeId + shapeLabel), so createLucidModelStateAccessor now attaches
+// `accessor.getShapeInfo` and ResourcesEditor's
+// `accessor.getShapeInfo?.(shapeId)?.name ?? shapeId`
+// (ResourcesEditor.tsx:324) resolves to the shape LABEL instead of falling
+// through to the raw id. The first test below asserts that -- it is the only
+// end-to-end check that the label actually survives projection -> source ->
+// accessor -> panel, since the dep unit test
+// (adapters/__tests__/useModelRootSource.getShapeInfo.test.ts) stops at the
+// deps boundary.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
@@ -137,13 +139,12 @@ describe('ResourcesEditor against a real model-root projection', () => {
     expect(screen.getByText('Doctor')).toBeInTheDocument()
     expect(screen.getByText('Tech')).toBeInTheDocument()
 
-    // getShapeInfo is not wired into useModelRootSource's deps until Task 8,
-    // so accessor.getShapeInfo is undefined and ResourcesEditor's
-    // `accessor.getShapeInfo?.(shapeId)?.name ?? shapeId` falls through to
-    // the raw shapeId -- NOT the shape's display name ("Nurse Station").
-    // Task 8 wires getShapeInfo and should flip this assertion to the label.
-    expect(screen.getByText(new RegExp(NURSE_SHAPE_ID))).toBeInTheDocument()
-    expect(screen.queryByText(new RegExp(NURSE_SHAPE_LABEL))).not.toBeInTheDocument()
+    // Task 8 wired getShapeInfo, so ResourcesEditor's
+    // `accessor.getShapeInfo?.(shapeId)?.name ?? shapeId` resolves the
+    // shape's display name ("Nurse Station") rather than falling through to
+    // the raw block id.
+    expect(screen.getByText(new RegExp(NURSE_SHAPE_LABEL))).toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(NURSE_SHAPE_ID))).not.toBeInTheDocument()
 
     // Doctor is claimed by a lane, not a shape: "lane" wording, no geometry.
     expect(screen.getByText(/lane/i)).toBeInTheDocument()

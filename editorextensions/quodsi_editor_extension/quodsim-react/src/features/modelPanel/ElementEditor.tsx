@@ -15,7 +15,7 @@ import ModelEditor, { EditorTab } from "../editors/ModelEditor";
 import { EntityRow } from "../editors/EntitiesEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
-import ResourceEditor from "../editors/ResourceEditor";
+import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
@@ -185,15 +185,18 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           />
         );
 
+      // A Resource block is a POINTER at a model-level resource (Plan 2b):
+      // its shape data carries only { id, type, resourceId }. Everything
+      // editable -- name, capacity, financials, levers -- lives on the
+      // model-root `resources` list and is edited through the SHARED Studio
+      // panels ResourceBlockEditor mounts. Nothing here is onSave-driven any
+      // more: those panels write through the accessor themselves.
       case SimulationObjectType.Resource:
       case "Resource":
         return (
-          <ResourceEditor
-            resource={safeElementData}
-            onSave={onSave}
-            states={states}
-            onStatesChange={onStatesChange}
-            referenceData={referenceData}
+          <ResourceBlockEditor
+            blockId={safeElementData.id}
+            resourceId={safeElementData.resourceId}
           />
         );
 
