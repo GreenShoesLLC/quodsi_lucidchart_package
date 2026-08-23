@@ -58,6 +58,10 @@ export class SwimLaneResourceInjector {
         const mapping = swimlaneData.lanes[i];
         if (!mapping || mapping.assignmentMode !== 'runtime-derive') continue;
         if (i >= lanes.length) continue; // Lane index out of range
+        // Storage format 1 only: format-2 lanes carry a resourceId pointer
+        // instead of an inline `resource` record; resolving that pointer
+        // here is out of this task's scope.
+        if (!mapping.resource) continue;
 
         const laneBB = lanes[i].getBoundingBox();
 

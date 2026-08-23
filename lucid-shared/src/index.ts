@@ -28,6 +28,7 @@ export * from './types/SelectionState';
 export * from './types/SelectionType';
 export * from './types/simComponentType';
 export * from './types/ElementTypeInfo';
+export * from './types/StoredResourceRecord';
 
 // Element types — sourced from monorepo core (Phase 3 slice 2)
 export { RunState } from '@quodsi/shared';

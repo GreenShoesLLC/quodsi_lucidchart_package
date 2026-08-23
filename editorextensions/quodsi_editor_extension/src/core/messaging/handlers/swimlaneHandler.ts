@@ -14,9 +14,12 @@ const SWIMLANE_DATA_KEY = 'q_swimlane';
 
 /** Extract resource IDs from swimlane data for diffing. */
 function extractResourceIds(data: SwimLaneQuodsiData): string[] {
+  // Storage format 1 only: format-2 lanes carry a resourceId pointer
+  // instead of an inline `resource` record. Resolving that pointer here
+  // is out of this task's scope.
   return data.lanes
-    .filter((lane): lane is SwimLaneLaneMapping => lane !== null)
-    .map(lane => lane.resource.id);
+    .filter((lane): lane is SwimLaneLaneMapping => lane !== null && !!lane.resource)
+    .map(lane => lane.resource!.id);
 }
 
 /**

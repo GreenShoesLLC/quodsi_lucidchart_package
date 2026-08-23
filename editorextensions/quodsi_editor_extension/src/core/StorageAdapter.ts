@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger, StoredResourceRecord } from '@quodsi/lucid-shared';
 
 const log = getLogger('StorageAdapter');
 
@@ -19,6 +19,8 @@ export class StorageAdapter {
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
     private static readonly SCENARIOS_KEY = 'q_scenarios';
     private static readonly SWIMLANE_DATA_KEY = 'q_swimlane';
+    private static readonly RESOURCES_KEY = 'q_resources';
+    private static readonly STORAGE_FORMAT_KEY = 'q_lucid_format';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
 
@@ -232,6 +234,48 @@ export class StorageAdapter {
             this.logError('Error clearing entities:', error);
             throw error;
         }
+    }
+
+    public setResources(page: ElementProxy, resources: StoredResourceRecord[]): void {
+        try {
+            page.shapeData.set(StorageAdapter.RESOURCES_KEY, JSON.stringify(resources));
+            this.log('Set resources', { pageId: page.id, count: resources.length });
+        } catch (error) {
+            this.logError('Error setting resources:', error);
+            throw error;
+        }
+    }
+
+    public getResources(page: ElementProxy): StoredResourceRecord[] {
+        try {
+            const str = page.shapeData.get(StorageAdapter.RESOURCES_KEY);
+            if (!str || typeof str !== 'string') return [];
+            const parsed = JSON.parse(str);
+            return Array.isArray(parsed) ? (parsed as StoredResourceRecord[]) : [];
+        } catch (error) {
+            this.logError('Error getting resources:', error);
+            return [];
+        }
+    }
+
+    public clearResources(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.RESOURCES_KEY);
+        } catch (error) {
+            this.logError('Error clearing resources:', error);
+            throw error;
+        }
+    }
+
+    /** Integer from `q_lucid_format`, or null when absent / not an integer. */
+    public getStorageFormat(page: ElementProxy): number | null {
+        const str = page.shapeData.get(StorageAdapter.STORAGE_FORMAT_KEY);
+        if (typeof str !== 'string' || !/^\d+$/.test(str)) return null;
+        return parseInt(str, 10);
+    }
+
+    public setStorageFormat(page: ElementProxy, format: number): void {
+        page.shapeData.set(StorageAdapter.STORAGE_FORMAT_KEY, String(format));
     }
 
     /**
@@ -748,6 +792,8 @@ export class StorageAdapter {
             // deleted read/write code paths just to delete a key.
             this.clearScenarios(page);
             this.clearSkippedElements(page);
+            this.clearResources(page);
+            this.clearShapeDataKey(page, StorageAdapter.STORAGE_FORMAT_KEY);
 
             // Clear data from all blocks (q_data and q_swimlane)
             for (const [, block] of page.allBlocks) {

@@ -33,8 +33,17 @@ export interface SwimLaneLaneMapping {
   titleSnapshot: string;
   /** Whether contained Activities auto-get resource requirements at serialization */
   assignmentMode: 'runtime-derive' | 'explicit';
-  /** Full Resource data stored inline (the swimlane block is the sole persistence host) */
-  resource: SwimLaneResourceData;
+  /**
+   * Storage format 2: the model-level Resource (page `q_resources`) this
+   * lane represents. Absent = the lane is mapped but unlinked.
+   */
+  resourceId?: string;
+  /**
+   * Storage format 1 (legacy): the full record stored inline. Read ONLY by
+   * ResourceStorageMigration, which lifts it into `q_resources` and deletes
+   * it. Never written by format-2 code.
+   */
+  resource?: SwimLaneResourceData;
 }
 
 /**

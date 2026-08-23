@@ -543,7 +543,11 @@ export class ModelDefinitionPageBuilder {
             }
 
             for (const mapping of swimlaneData.lanes) {
-                if (!mapping) continue;
+                // Storage format 1 only: format-2 lanes carry a resourceId
+                // pointer (resolved against page q_resources) instead of an
+                // inline `resource` record; that path is out of this task's
+                // scope.
+                if (!mapping || !mapping.resource) continue;
 
                 const resData: SwimLaneResourceData = mapping.resource;
 

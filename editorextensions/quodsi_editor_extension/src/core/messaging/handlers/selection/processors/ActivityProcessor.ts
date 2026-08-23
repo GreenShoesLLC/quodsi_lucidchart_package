@@ -141,7 +141,11 @@ export class ActivityProcessor extends BaseSelectionProcessor {
 
         for (let i = 0; i < swimlaneData.lanes.length; i++) {
           const mapping = swimlaneData.lanes[i];
-          if (!mapping || i >= lanes.length) continue;
+          // Storage format 1 only: format-2 lanes carry a resourceId pointer
+          // (resolved against page q_resources) instead of an inline
+          // `resource` record; resolving that pointer for the containment
+          // banner is out of this task's scope.
+          if (!mapping || !mapping.resource || i >= lanes.length) continue;
 
           const laneBB = lanes[i].getBoundingBox();
           if (isCenterInBox(
