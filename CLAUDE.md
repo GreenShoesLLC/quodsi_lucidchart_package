@@ -211,6 +211,36 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 - `ModelDefinition`: Core domain model containing all simulation objects
 - `ModelValidationService`: Validates model correctness before simulation
 
+**Storage format 2 (2026-08-23, Plan 2b — global resources).** Resources
+are model-level, not per-shape: each page's `q_resources` shapeData key
+holds the resource list as JSON (`StoredResourceRecord[]`, no geometry, no
+transient markers). A Resource block no longer owns its resource data
+directly — its `q_data` domain is just a pointer, `{ resourceId }` — and a
+swimlane lane that has been linked to a resource stores
+`q_swimlane.lanes[n].resourceId`; the legacy inline `lanes[n].resource` is
+read only by `src/core/ResourceStorageMigration.ts`, which runs
+unconditionally on every open from `ModelManager.ensureModelDefinition`, is
+idempotent, restores every key it touched if it throws, and reports any
+name collision it had to rename as a `resource_renamed_on_migration`
+WARNING. The page is stamped with `LUCID_STORAGE_FORMAT` (currently `2`, in
+`src/core/storageFormat.ts`) via `q_lucid_format`; a document stamped
+strictly higher than the running extension's version is refused with an
+`extension_outdated` ERROR, while absent or lower proceeds — this stamp is
+independent of `MODEL_SCHEMA_VERSION` (the engine wire format is
+unchanged). Geometry follows whichever shape currently claims a resource: a
+block-linked resource is positioned at build time, a lane-linked one is
+not. Block and lane claims are resolved through `resolveResourceLinks`,
+which enforces one claimant per resource and reports dangling or duplicate
+claims as `resource_link_*` WARNINGs. Auto-derived requirements (from
+Seize/Release actions) are computed at build time by
+`reconcileAutoRequirements`; `q_res_requirements` stores only custom
+requirements and overrides. All resource writes go through
+`updateModelRoot({ resources, resourceRequirements })`, and the panel
+renders Studio's shared `ResourcesEditor` / `ResourceEditor` /
+`ResourceLinkPicker` components. Un-classifying a block or unlinking a lane
+leaves its resource record unclaimed rather than deleting it — deletion
+only happens explicitly, from the Resources tab.
+
 ### Debugging Tips
 1. Enable console logging in browser developer tools
 2. Use the test extension mode (`npm start`) for faster iteration
