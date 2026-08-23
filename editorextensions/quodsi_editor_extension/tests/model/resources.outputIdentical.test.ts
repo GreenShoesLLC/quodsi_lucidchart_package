@@ -9,13 +9,14 @@ import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelDefinitionPageBuilder } from '../../src/core/ModelDefinitionPageBuilder';
 import { LucidElementFactory } from '../../src/services/LucidElementFactory';
 import { ModelSerializerFactory } from '@quodsi/lucid-shared';
+import { migrateResourcesToModelLevel } from '../../src/core/ResourceStorageMigration';
 import { buildLegacyResourcesPage, IDS } from '../fixtures/legacyResourcesPage';
 
 const GOLDEN = path.join(__dirname, '..', 'fixtures', 'legacyResourcesPage.golden.json');
 
 function upgradeAndBuild(page: any) {
     const sa = new StorageAdapter();
-    // Task 3 inserts the migration here: migrateResourcesToModelLevel(page, sa)
+    migrateResourcesToModelLevel(page, sa);
     const builder = new ModelDefinitionPageBuilder(sa, new LucidElementFactory(sa));
     const def = builder.buildFromConvertedPage(page);
     if (!def) throw new Error('build returned null');

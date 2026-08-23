@@ -308,6 +308,22 @@ export type {
   PlannedAutoResource,
 } from '@quodsi/shared';
 
+// Resource claim resolution + auto-requirement reconciliation — re-exported
+// from @quodsi/shared so drawio, Visio and Lucid resolve a shape/lane claim
+// on a model-level Resource, and derive the implicit one-per-resource
+// requirement, with ONE implementation. Lucid reaches them through
+// ModelDefinitionPageBuilder (Plan 2b, storage format 2).
+export { resolveResourceLinks, stripTransientResourceMarkers } from '@quodsi/shared';
+export type {
+  ResourceClaim,
+  ResourceClaimantKind,
+  ResourceLaneRef,
+  ResourceLinkRejection,
+  ResourceLinkResolution,
+} from '@quodsi/shared';
+export { deriveAutoResourceRequirements, reconcileAutoRequirements } from '@quodsi/shared';
+export type { AutoRequirementResourceLike } from '@quodsi/shared';
+
 // Topology classification rule — re-exported from @quodsi/shared. The SAME
 // rule drawio and Visio reach through PageAnalyzer; LucidPageAnalyzer used to
 // re-implement it privately.
