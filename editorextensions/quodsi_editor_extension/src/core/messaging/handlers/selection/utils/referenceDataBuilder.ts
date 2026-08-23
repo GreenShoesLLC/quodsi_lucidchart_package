@@ -140,6 +140,11 @@ export const referenceDataBuilder = {
           // name — `findExpressionsReferencingState` reads this key directly off
           // this same summary object.
           initialStates: summarizeModifications(g.initialStates),
+          // Carry routing/mode/entityId so the shared ConnectorRoutingView can
+          // drive its mode selector and single-entity-type hint.
+          routing: g.routing,
+          mode: g.mode,
+          entityId: g.entityId,
         }));
 
         referenceData.resources = modelDef.resources.getAll().map(r => ({
