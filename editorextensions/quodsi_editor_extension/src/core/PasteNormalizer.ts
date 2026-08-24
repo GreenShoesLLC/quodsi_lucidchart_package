@@ -29,6 +29,10 @@
 // the shared `liveEndpointIds` helper, also used by ConnectorLucid), and the
 // stored name regenerated from those endpoints' stored names ONLY when both
 // resolve to a named block.
+// Task 8 adds PAGE-DUPLICATE mode (see normalizeDuplicatedPage), which
+// branches above EVERY per-item rule -- swimlane pass included -- when the
+// page's own q_data envelope names a different page. A duplicated page is
+// self-consistent, so it is re-stamped and repaired rather than cloned.
 
 import { ItemProxy, LineProxy, PageProxy } from 'lucid-extension-sdk';
 import {
@@ -93,6 +97,19 @@ export function normalizePastedItems(
         byPage.get(page)!.push(item);
     }
     for (const [page, pageItems] of byPage) {
+        // Task 8: a DUPLICATED PAGE is repaired wholesale and takes none of
+        // the per-item rules -- not even the swimlane pass, which is why this
+        // branch sits above it. See normalizeDuplicatedPage.
+        const duplicated = duplicatedPageEnvelope(page);
+        if (duplicated) {
+            try {
+                normalizeDuplicatedPage(page, pageItems, duplicated, sa, result);
+                continue;
+            } catch (error) {
+                log.error('Duplicated-page normalization failed; falling back to per-item rules', { pageId: page.id, error });
+            }
+        }
+
         // Ordering ruling (Task 3 review): pasted swimlanes are normalized
         // BEFORE the generic per-item loop -- and therefore before the
         // Resource rule -- in the same page's batch. The swimlane rule always
@@ -110,7 +127,6 @@ export function normalizePastedItems(
             }
         }
 
-        // Task 8 inserts page-duplicate detection here, before per-item rules.
         for (const item of pageItems) {
             try {
                 if (!isPastedItem(item, sa)) continue;
@@ -760,4 +776,158 @@ function isPastedSwimlaneBlock(
         if (collidesOn(other)) return true;
     }
     return false;
+}
+
+/* ------------------------------------------------------------------------ *
+ * Task 8: PAGE-DUPLICATE mode
+ * ------------------------------------------------------------------------ */
+
+const MODEL_DATA_KEY = 'q_data';
+
+/** A raw (unparsed-then-reparsed) `q_data` blob plus the string it came from. */
+interface RawEnvelopeBlob {
+    raw: string;
+    parsed: Record<string, unknown>;
+}
+
+/** Reads an element's `q_data` as raw JSON, bypassing StorageAdapter's flatten/re-serialize round-trip. */
+function readRawEnvelope(element: { shapeData: { get(key: string): unknown } }): RawEnvelopeBlob | null {
+    const raw = element.shapeData.get(MODEL_DATA_KEY);
+    if (typeof raw !== 'string' || !raw) return null;
+    try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+        return { raw, parsed: parsed as Record<string, unknown> };
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The page's own `q_data` Model envelope when it names a DIFFERENT page --
+ * i.e. this page is a duplicate of the one the envelope was written for.
+ * Lucid's page duplication copies shapeData byte-for-byte, so the stored id
+ * is the only witness. A page with no `q_data` (never converted) is never in
+ * page mode.
+ */
+function duplicatedPageEnvelope(page: PageProxy): RawEnvelopeBlob | null {
+    const blob = readRawEnvelope(page as unknown as { shapeData: { get(key: string): unknown } });
+    if (!blob) return null;
+    const storedId = blob.parsed.id;
+    if (typeof storedId !== 'string' || !storedId || storedId === page.id) return null;
+    return blob;
+}
+
+/**
+ * Page-duplicate mode. A duplicated page is SELF-CONSISTENT: every id its
+ * copied envelopes name is unique within the new page, and the model-level
+ * lists (`q_resources`, `q_arrival_patterns`, ...) came across intact. So
+ * nothing is cloned and nothing is re-minted here -- doing either would
+ * manufacture a second copy of a record the page already owns outright, and
+ * would gratuitously break the pointers that already resolve. What IS broken
+ * is only identity plumbing, and this repairs exactly that:
+ *
+ *   1. the page envelope's stored `id` (ruling R2: edited in the RAW JSON,
+ *      never through `setElementData` -- see `restampPageEnvelope`);
+ *   2. every batch item's envelope id, via the generic `restampEnvelope`;
+ *   3. every LINE on the page -- `page.allLines`, not just the batch, since
+ *      Lucid need not hand us every item in one callback -- whose stored
+ *      endpoints still name the SOURCE page's blocks while the live line is
+ *      attached to the new ones (see `overlayLineEndpoints`);
+ *   4. the copied run state, which describes a run that never happened on
+ *      this page (ruling R3: `clearSimulationStatus`).
+ *
+ * Idempotent: after step 1 the page envelope id equals `page.id`, so a second
+ * pass is not in page mode at all; its items' envelopes already match, so the
+ * per-item loop skips them; and `overlayLineEndpoints` would compute the
+ * identical bytes, which is why it skips the write when nothing changes.
+ */
+function normalizeDuplicatedPage(
+    page: PageProxy,
+    pageItems: ItemProxy[],
+    envelope: RawEnvelopeBlob,
+    sa: StorageAdapter,
+    result: PasteNormalizationResult
+): void {
+    restampPageEnvelope(page, envelope);
+
+    for (const item of pageItems) {
+        try {
+            if (!sa.getElementType(item)?.type) continue;      // never converted: nothing to re-stamp
+            restampEnvelope(item, sa);
+        } catch (error) {
+            log.error('Duplicated-page item re-stamp failed; left as duplicated', { itemId: item.id, error });
+        }
+    }
+
+    for (const [, line] of page.allLines) {
+        try {
+            overlayLineEndpoints(line);
+        } catch (error) {
+            log.error('Duplicated-page line endpoint repair failed; left as duplicated', { lineId: line.id, error });
+        }
+    }
+
+    sa.clearSkippedElements(page);
+    sa.clearSimulationStatus(page);
+
+    result.changed = true;
+    result.notices.push('Duplicated page normalized');
+}
+
+/**
+ * Re-stamps the page envelope's `id` (and `domain.id`, when a legacy blob
+ * carried one) by editing the RAW JSON in place.
+ *
+ * Ruling R2: this deliberately does NOT go through
+ * `StorageAdapter.setElementData`. That path rewrites a Model envelope's
+ * top-level `version` marker to the running `MODEL_SCHEMA_VERSION`, which
+ * would tell `LucidPreflightChecker.getPageVersion` the page is already
+ * current and silently skip every pending schema upgrade. Duplicating a page
+ * must not upgrade it. Every other byte of the envelope -- `version`,
+ * `schemaVersion`, `platform`, `domain` -- is carried through untouched.
+ */
+function restampPageEnvelope(page: PageProxy, envelope: RawEnvelopeBlob): void {
+    const next = envelope.parsed;
+    next.id = page.id;
+    const domain = next.domain;
+    if (domain && typeof domain === 'object' && !Array.isArray(domain) && (domain as Record<string, unknown>).id !== undefined) {
+        (domain as Record<string, unknown>).id = page.id;
+    }
+    page.shapeData.set(MODEL_DATA_KEY, JSON.stringify(next));
+}
+
+/**
+ * Overlays a line's LIVE attached endpoints onto its stored
+ * `sourceId`/`targetId`, editing the raw `q_data` JSON so `type`,
+ * `platform.mappingSource`, `schemaVersion` and every other domain field are
+ * carried through verbatim.
+ *
+ * Runs over EVERY line on a duplicated page, including lines whose envelope
+ * id already matches: a duplicated line's stored endpoints name the SOURCE
+ * page's blocks regardless of whose id the envelope carries, and only the
+ * live line knows the new ones. Detached ends (no live connection) keep their
+ * stored value -- the same `liveEndpointIds` rule the Connector paste rule and
+ * `ConnectorLucid.refreshEndpointIds` share.
+ *
+ * Writes only when the serialized result actually differs, so a second pass
+ * over an already-repaired page writes nothing at all.
+ */
+function overlayLineEndpoints(line: LineProxy): void {
+    const blob = readRawEnvelope(line as unknown as { shapeData: { get(key: string): unknown } });
+    if (!blob) return;
+
+    const overlay = liveEndpointIds(line);
+    if (!overlay.sourceId && !overlay.targetId) return;
+
+    const parsed = blob.parsed;
+    const domain = (parsed.domain && typeof parsed.domain === 'object' && !Array.isArray(parsed.domain))
+        ? (parsed.domain as Record<string, unknown>)   // envelope
+        : parsed;                                       // legacy flat blob
+    if (overlay.sourceId) domain.sourceId = overlay.sourceId;
+    if (overlay.targetId) domain.targetId = overlay.targetId;
+
+    const next = JSON.stringify(parsed);
+    if (next === blob.raw) return;
+    line.shapeData.set(MODEL_DATA_KEY, next);
 }
