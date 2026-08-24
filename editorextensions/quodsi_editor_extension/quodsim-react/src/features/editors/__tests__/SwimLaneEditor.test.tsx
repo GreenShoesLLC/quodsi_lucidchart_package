@@ -43,6 +43,7 @@ type ResourceRow = {
   name: string
   capacity?: number
   shapeId?: string
+  laneRef?: { blockId: string; laneId: string }
 }
 
 /** Stands the fake host up on window.parent.postMessage; returns every envelope sent. */
@@ -254,5 +255,128 @@ describe('SwimLaneEditor', () => {
 
     await waitFor(() => expect(swimlaneUpdates(sent).length).toBe(1))
     expect(swimlaneUpdates(sent)[0].data.swimlaneData.lanes[0]).toBeNull()
+  })
+  // Lucid copies shapeData wholesale on paste, and a copied swimlane brings
+  // q_swimlane's resourceId with it. resolveResourceLinks is first-wins, so
+  // the ORIGINAL lane keeps the row and stamps its `laneRef`; the copy's
+  // claim is rejected. Resolving by existence alone put the copy's lane in
+  // the shared editor, editing the record the original owns.
+  it('a lane whose resource is claimed by ANOTHER lane gets the notice and the picker, not the editor', async () => {
+    installHost([
+      {
+        id: 'doctor-id',
+        name: 'Doctor',
+        capacity: 1,
+        laneRef: { blockId: 'sw-original', laneId: 'l0' },
+      },
+      { id: 'free-id', name: 'Porter', capacity: 1 },
+    ])
+
+    render(
+      <SwimLaneEditor
+        elementData={elementData([
+          {
+            laneId: 'l0',
+            titleSnapshot: 'Intake',
+            assignmentMode: 'runtime-derive',
+            resourceId: 'doctor-id',
+          },
+          null,
+        ])}
+        onSave={() => {}}
+      />,
+    )
+
+    expect(await screen.findByText(/already represented elsewhere/i)).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Doctor')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Porter/ })).toBeInTheDocument()
+  })
+
+  it('a lane whose resource is claimed by a BLOCK gets the notice too', async () => {
+    installHost([{ id: 'doctor-id', name: 'Doctor', capacity: 1, shapeId: 'blk-9' }])
+
+    render(
+      <SwimLaneEditor
+        elementData={elementData([
+          {
+            laneId: 'l0',
+            titleSnapshot: 'Intake',
+            assignmentMode: 'runtime-derive',
+            resourceId: 'doctor-id',
+          },
+          null,
+        ])}
+        onSave={() => {}}
+      />,
+    )
+
+    expect(await screen.findByText(/already represented elsewhere/i)).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Doctor')).not.toBeInTheDocument()
+  })
+
+  it('the lane that OWNS the claim still gets the editor', async () => {
+    installHost([
+      {
+        id: 'doctor-id',
+        name: 'Doctor',
+        capacity: 1,
+        laneRef: { blockId: 'sw-1', laneId: 'l0' },
+      },
+    ])
+
+    render(
+      <SwimLaneEditor
+        elementData={elementData([
+          {
+            laneId: 'l0',
+            titleSnapshot: 'Intake',
+            assignmentMode: 'runtime-derive',
+            resourceId: 'doctor-id',
+          },
+          null,
+        ])}
+        onSave={() => {}}
+      />,
+    )
+
+    expect(await screen.findByDisplayValue('Doctor')).toBeInTheDocument()
+    expect(screen.queryByText(/already represented/i)).toBeNull()
+  })
+
+  it('relinking a losing lane keeps its laneId and assignment mode', async () => {
+    const sent = installHost([
+      {
+        id: 'doctor-id',
+        name: 'Doctor',
+        capacity: 1,
+        laneRef: { blockId: 'sw-original', laneId: 'l0' },
+      },
+      { id: 'free-id', name: 'Porter', capacity: 1 },
+    ])
+
+    render(
+      <SwimLaneEditor
+        elementData={elementData([
+          {
+            laneId: 'l0',
+            titleSnapshot: 'Intake',
+            assignmentMode: 'explicit',
+            resourceId: 'doctor-id',
+          },
+          null,
+        ])}
+        onSave={() => {}}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: /Porter/ }))
+
+    await waitFor(() => expect(swimlaneUpdates(sent).length).toBe(1))
+    expect(swimlaneUpdates(sent)[0].data.swimlaneData.lanes[0]).toEqual({
+      laneId: 'l0',
+      titleSnapshot: 'Intake',
+      assignmentMode: 'explicit',
+      resourceId: 'free-id',
+    })
   })
 })
