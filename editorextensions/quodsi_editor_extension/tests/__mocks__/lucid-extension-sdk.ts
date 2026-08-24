@@ -38,13 +38,26 @@ export class DocumentProxy {
 // pulling in the real SDK's iframe/platform machinery.
 export class Modal {
   public readonly config: unknown;
+  // Mirrors the real SDK's Modal (node_modules/lucid-extension-sdk/ui/modal.js):
+  // `visible` starts false, `show()` flips it true, `hide()` only acts (and
+  // only flips it back false) when it is currently true. This is the seam
+  // RoutingModal.messageFromFrame's CLOSE_MODAL intercept depends on -- see
+  // tests/model/routingModal.closeModal.test.ts.
+  public visible = false;
   constructor(_client: unknown, config: unknown) {
     this.config = config;
   }
   // No-ops so a test can drive a RoutingModal subclass's real lifecycle
   // (show(), and the frameClosed() override that releases the pattern modal's
   // open-guard) without the SDK's iframe machinery.
-  public async show(): Promise<void> {}
+  public async show(): Promise<void> {
+    this.visible = true;
+  }
+  public hide(): void {
+    if (this.visible) {
+      this.visible = false;
+    }
+  }
   protected frameLoaded(): void {}
   protected frameClosed(): void {}
 }
