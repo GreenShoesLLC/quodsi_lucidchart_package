@@ -287,6 +287,18 @@ describe('ModelManager.validateModel — resource-link rejections surface as WAR
         expect(dangling!.elementId).toBe('blk-3');
         expect(dangling!.message).toContain('ghost');
 
+        // Reporting the rejection is only half the contract: the WINNER must
+        // actually carry the transient claim marker. The panel's claim-aware
+        // backstop (ResourceBlockEditor / SwimLaneEditor) decides "is this
+        // shape the claimant?" by comparing its own id against
+        // resource.shapeId, and its UNCLAIMED arm deliberately falls through
+        // to the shared editor -- so a builder that raised the duplicate
+        // WARNING but forgot to stamp blk-1 would quietly put BOTH blocks
+        // back in the editor, each rewriting the record the other owns, with
+        // nothing here failing.
+        const def = await manager.getModelDefinition();
+        expect((def!.resources.get('r1') as any).shapeId).toBe('blk-1');
+
         // The rules found nothing on this model, so ModelValidationService added
         // its "passed successfully" INFO. Appending a warning after the fact would
         // otherwise render both in the same panel: "validation passed
