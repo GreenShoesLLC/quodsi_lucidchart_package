@@ -10,11 +10,17 @@
 // envelope id generically via the `default:` branch below.
 //
 // Task 3 adds the Resource case (see normalizeResource).
+// Task 4 adds the swimlane-carrier case (see normalizeSwimlane). A swimlane
+// block carries `q_swimlane`, not `q_data`, so it never satisfies
+// `isPastedItem` and never enters the per-item loop below; it is detected and
+// normalized in its own pass instead, run first (see the ordering note in
+// the per-page loop).
 
 import { ItemProxy, PageProxy } from 'lucid-extension-sdk';
 import {
     SimulationObjectType,
     StoredResourceRecord,
+    SwimLaneLaneMapping,
     SwimLaneQuodsiData,
     generateUUID,
     generateUniqueName,
@@ -68,6 +74,23 @@ export function normalizePastedItems(
         byPage.get(page)!.push(item);
     }
     for (const [page, pageItems] of byPage) {
+        // Ordering ruling (Task 3 review): pasted swimlanes are normalized
+        // BEFORE the generic per-item loop -- and therefore before the
+        // Resource rule -- in the same page's batch. The swimlane rule always
+        // drops a claimed lane's `resourceId`; running it first means a
+        // Resource block pasted in the SAME gesture sees that drop as already
+        // settled reality when `hasOtherClaimant` walks the page, instead of
+        // a stale "still claimed" view a pass ordered the other way would
+        // leave it with.
+        const swimlaneCarriers = pageItems.filter(isSwimlaneCarrierItem);
+        for (const item of swimlaneCarriers) {
+            try {
+                normalizeSwimlane(item, page, result, opts);
+            } catch (error) {
+                log.error('Swimlane paste normalization failed for item; left as pasted', { itemId: item.id, error });
+            }
+        }
+
         // Task 8 inserts page-duplicate detection here, before per-item rules.
         for (const item of pageItems) {
             try {
@@ -280,4 +303,109 @@ function restampEnvelope(item: ItemProxy, sa: StorageAdapter): void {
     const data = sa.getElementData(item) as Record<string, unknown>;
     const { id: _old, type: _t, ...domain } = data;
     sa.setElementData(item, { id: item.id, ...domain } as { id: string }, typeInfo.type, { mappingSource: typeInfo.mappingSource });
+}
+
+/** A block whose SDK class marks it as a swimlane carrier -- the same gate `hasOtherClaimant`/`laneClaims` use. */
+type SwimlaneCarrier = ItemProxy & { getClassName(): string };
+
+/** True for an item that is (a) a block (has `getClassName`) and (b) an `AdvancedSwimLaneBlock`. `ItemProxy` itself has no `getClassName` -- only its `BlockProxy` subclass does -- so a line among the batch is safely excluded. */
+function isSwimlaneCarrierItem(item: ItemProxy): item is SwimlaneCarrier {
+    const maybeBlock = item as { getClassName?: unknown };
+    return typeof maybeBlock.getClassName === 'function' && (maybeBlock.getClassName as () => string)() === 'AdvancedSwimLaneBlock';
+}
+
+/**
+ * Swimlane rule (Task 4). A pasted swimlane block's `q_swimlane` is a
+ * byte-for-byte copy of the source's -- same lane `laneId`s, same
+ * `resourceId`s. Unlike the Resource rule there is no `q_data` envelope id to
+ * compare against; detection instead rests on the one thing a copy cannot
+ * avoid duplicating: `laneId`. Lane mappings mint a fresh UUID for `laneId`
+ * at authoring time (see `SwimLaneLaneMapping`), so two lanes sharing one
+ * cannot arise independently -- a collision IS the paste signal. A swimlane
+ * counts as "pasted" when at least one of its lanes' `laneId`s also appears
+ * on another `AdvancedSwimLaneBlock` in the document (same page, or any page
+ * `opts.allPages` enumerates when supplied -- same lazy, injected pattern as
+ * the Resource rule's cross-page pointer lookup). A swimlane whose laneIds
+ * are all globally unique is not a paste and is left untouched.
+ *
+ * Limitation: a collision that only exists on a page `opts.allPages` does not
+ * cover is invisible, exactly like the Resource rule's rule-3 lookup -- an
+ * unlisted page's copy is treated as if it does not exist.
+ *
+ * For a swimlane this predicate says IS pasted, each non-null lane is
+ * rebuilt keeping only `titleSnapshot` and `assignmentMode` and minting a
+ * fresh `laneId`; rebuilding from just those two fields is what drops
+ * `resourceId` and any legacy inline `resource` record in the same step. The
+ * write shape (`{ lanes, lastSyncedAt }`) matches `SwimLaneHandler.handleUpdate`.
+ * One notice per swimlane block. Fresh laneIds cannot collide with anything
+ * already in the document, so a second pass finds no collision and writes
+ * nothing -- idempotent.
+ */
+function normalizeSwimlane(
+    item: SwimlaneCarrier,
+    page: PageProxy,
+    result: PasteNormalizationResult,
+    opts: PasteNormalizerOptions
+): void {
+    const raw = item.shapeData.get(SWIMLANE_DATA_KEY);
+    if (typeof raw !== 'string' || !raw) return;
+    let swim: SwimLaneQuodsiData | null = null;
+    try {
+        swim = JSON.parse(raw) as SwimLaneQuodsiData;
+    } catch {
+        return;
+    }
+    if (!swim || !Array.isArray(swim.lanes)) return;
+
+    if (!isPastedSwimlaneBlock(item, page, swim, opts)) return;
+
+    const nextLanes: (SwimLaneLaneMapping | null)[] = swim.lanes.map((lane) => {
+        if (!lane) return null;
+        return {
+            laneId: generateUUID(),
+            titleSnapshot: lane.titleSnapshot,
+            assignmentMode: lane.assignmentMode,
+        };
+    });
+    const next: SwimLaneQuodsiData = { lanes: nextLanes, lastSyncedAt: new Date().toISOString() };
+    item.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(next));
+    result.changed = true;
+    result.notices.push('Pasted swimlane lanes are not linked to resources');
+}
+
+/** True when some OTHER `AdvancedSwimLaneBlock` in the document has a lane whose `laneId` matches one of `swim`'s. */
+function isPastedSwimlaneBlock(
+    item: SwimlaneCarrier,
+    page: PageProxy,
+    swim: SwimLaneQuodsiData,
+    opts: PasteNormalizerOptions
+): boolean {
+    const laneIds = new Set(swim.lanes.filter((lane): lane is SwimLaneLaneMapping => !!lane).map((lane) => lane.laneId));
+    if (laneIds.size === 0) return false;
+
+    const collidesOn = (candidatePage: PageProxy): boolean => {
+        for (const [, block] of candidatePage.allBlocks) {
+            if (block.id === item.id) continue;
+            if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
+            const otherRaw = block.shapeData.get(SWIMLANE_DATA_KEY);
+            if (typeof otherRaw !== 'string' || !otherRaw) continue;
+            let other: SwimLaneQuodsiData | null = null;
+            try {
+                other = JSON.parse(otherRaw) as SwimLaneQuodsiData;
+            } catch {
+                continue;
+            }
+            if (!other || !Array.isArray(other.lanes)) continue;
+            if (other.lanes.some((lane) => !!lane && laneIds.has(lane.laneId))) return true;
+        }
+        return false;
+    };
+
+    if (collidesOn(page)) return true;
+    if (!opts.allPages) return false;
+    for (const other of opts.allPages()) {
+        if (!other || other === page || other.id === page.id) continue;
+        if (collidesOn(other)) return true;
+    }
+    return false;
 }
