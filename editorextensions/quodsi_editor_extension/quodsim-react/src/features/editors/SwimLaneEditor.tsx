@@ -15,7 +15,16 @@
 //   - a resourceId that resolves -> <ResourceEditor> on that resource.
 //
 // Resolving the pointer against the snapshot (rather than trusting its mere
-// presence) is what keeps a DANGLING lane out of the shared editor. Deleting a
+// presence) is what keeps a DANGLING lane -- and a LOSING one -- out of the
+// shared editor. Lucid copies shapeData wholesale on paste, so a copied
+// swimlane brings q_swimlane's resourceId with it; resolveResourceLinks is
+// first-wins, so the ORIGINAL lane keeps the record and its projection row
+// carries the winner's transient marker (`laneRef` for a lane, `shapeId` for
+// a block) while the copy's claim is rejected. The pointer must therefore
+// resolve AND the row must not already belong to someone else: claimed by
+// THIS lane -> editor; unclaimed -> editor (the window between writing a
+// fresh link and the next snapshot stamping the claim); claimed by anyone
+// else -> notice + the same picker, so this lane can take another resource. Deleting a
 // resource from the Resources tab does not rewrite q_swimlane -- the cascade
 // leaves the pointer behind and the builder reports it as
 // `resource_link_dangling` -- and ResourceEditor's answer to an unknown id is
@@ -48,6 +57,18 @@ import {
 import { ResourceEditor, ResourceLinkPicker } from "quodsi_studio/platforms/shared";
 import { useMessaging } from "../../messaging/MessageContext";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
+
+/**
+ * The model-root projection's resource row. `shapeId` / `laneRef` are
+ * TRANSIENT claim markers stamped at build time by resolveResourceLinks --
+ * never persisted, and present only on the row the winning claimant owns.
+ */
+type ResourceRow = {
+  id: string;
+  name: string;
+  shapeId?: string;
+  laneRef?: { blockId: string; laneId: string };
+};
 
 interface LaneInfo {
   index: number;
@@ -101,11 +122,20 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
   // moment a MODEL_ROOT_SNAPSHOT lands.
   const snap = useSyncExternalStore(accessor.subscribe, accessor.getSnapshot);
   const resources =
-    (snap.modelDefinition as unknown as { resources?: Array<{ id: string }> } | null)?.resources ??
-    [];
+    (snap.modelDefinition as unknown as { resources?: ResourceRow[] } | null)?.resources ?? [];
   const linkedResource = activeMapping?.resourceId
     ? resources.find((r) => r.id === activeMapping.resourceId)
     : undefined;
+  // Does the resolved record actually belong to THIS lane? (See the header.)
+  const ownsClaim =
+    !!linkedResource?.laneRef &&
+    linkedResource.laneRef.blockId === elementData.blockId &&
+    linkedResource.laneRef.laneId === activeMapping?.laneId;
+  const unclaimed = !!linkedResource && !linkedResource.shapeId && !linkedResource.laneRef;
+  // The record this lane may edit in place -- undefined when the claim was
+  // lost to another claimant, which drops the lane into the picker branch.
+  const editableResource = ownsClaim || unclaimed ? linkedResource : undefined;
+  const losingClaim = !!linkedResource && !editableResource;
 
   // Reset confirmation state when switching lanes
   useEffect(() => {
@@ -184,14 +214,17 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
 
       {/* Lane Content */}
       <div className="flex-1 overflow-y-auto p-3">
-        {activeLane && !linkedResource && (
-          /* Unlinked -- or DANGLING -- lane: pick or create the model-level
-             resource it stands for. Either way the fix is the same picker. */
+        {activeLane && !editableResource && (
+          /* Unlinked, DANGLING, or LOSING lane: pick or create the
+             model-level resource it stands for. All three take the same
+             picker; only the copy above them differs. */
           <div className="space-y-2">
             <p className="text-xs text-gray-500">
-              {activeMapping?.resourceId
-                ? "This lane points at a Resource that no longer exists. Link it to an existing Resource or create a new one."
-                : "This lane is not linked to a Resource."}
+              {losingClaim
+                ? `Resource '${linkedResource?.name}' is already represented elsewhere. This lane is not linked.`
+                : activeMapping?.resourceId
+                  ? "This lane points at a Resource that no longer exists. Link it to an existing Resource or create a new one."
+                  : "This lane is not linked to a Resource."}
             </p>
             <ResourceLinkPicker
               accessor={accessor}
@@ -216,7 +249,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
           </div>
         )}
 
-        {activeLane && activeMapping?.resourceId && linkedResource && (
+        {activeLane && activeMapping?.resourceId && editableResource && (
           /* Linked lane -- assignment mode + the SHARED editor on the resource */
           <div className="space-y-4">
             {/* Assignment Mode */}

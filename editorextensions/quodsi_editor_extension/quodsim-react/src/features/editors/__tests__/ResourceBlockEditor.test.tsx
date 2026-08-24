@@ -31,6 +31,7 @@ type ResourceRow = {
   name: string
   capacity?: number
   shapeId?: string
+  laneRef?: { blockId: string; laneId: string }
 }
 
 /**
@@ -127,5 +128,60 @@ describe('ResourceBlockEditor', () => {
     expect(await screen.findByRole('button', { name: /Tech/ })).toBeInTheDocument()
     expect(screen.queryByDisplayValue('Tech')).not.toBeInTheDocument()
     expect(screen.getByText(/no longer exists/i)).toBeInTheDocument()
+  })
+
+  // Lucid copies shapeData wholesale on paste, so a pasted Resource block
+  // carries the ORIGINAL's resourceId. resolveResourceLinks is first-wins:
+  // the original keeps the row and stamps its `shapeId` on the projection,
+  // the copy's claim is rejected. Resolving the pointer by existence alone
+  // put the copy in the shared editor, so edits made "on the copy" silently
+  // rewrote the record the original owns.
+  it('a block whose resource is claimed by ANOTHER shape gets the notice and the picker, not the editor', async () => {
+    installHost([
+      { id: 'r1', name: 'Nurse', capacity: 2, shapeId: 'other-blk' },
+      { id: 'r9', name: 'Tech', capacity: 1 },
+    ])
+
+    render(<ResourceBlockEditor blockId="blk-1" resourceId="r1" />)
+
+    expect(
+      await screen.findByText(/already represented by another shape/i),
+    ).toBeInTheDocument()
+    // The shared editor's name input must NOT be what renders -- that is the
+    // surface that would have written through to the original's record.
+    expect(screen.queryByDisplayValue('Nurse')).not.toBeInTheDocument()
+    // ...and the picker is offered so the copy can take an unclaimed or new one.
+    expect(screen.getByRole('button', { name: /Tech/ })).toBeInTheDocument()
+  })
+
+  it('a block whose resource is claimed by a LANE gets the notice too', async () => {
+    installHost([
+      { id: 'r1', name: 'Nurse', capacity: 2, laneRef: { blockId: 'sw-1', laneId: 'l0' } },
+    ])
+
+    render(<ResourceBlockEditor blockId="blk-1" resourceId="r1" />)
+
+    expect(
+      await screen.findByText(/already represented by another shape/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Nurse')).not.toBeInTheDocument()
+  })
+
+  it('a block that OWNS the claim still gets the editor', async () => {
+    installHost([{ id: 'r1', name: 'Nurse', capacity: 2, shapeId: 'blk-1' }])
+
+    render(<ResourceBlockEditor blockId="blk-1" resourceId="r1" />)
+
+    expect(await screen.findByDisplayValue('Nurse')).toBeInTheDocument()
+    expect(screen.queryByText(/already represented/i)).toBeNull()
+  })
+
+  it('an UNCLAIMED row still gets the editor -- the freshly-linked window before the next snapshot stamps the claim', async () => {
+    installHost([{ id: 'r1', name: 'Nurse', capacity: 2 }])
+
+    render(<ResourceBlockEditor blockId="blk-1" resourceId="r1" />)
+
+    expect(await screen.findByDisplayValue('Nurse')).toBeInTheDocument()
+    expect(screen.queryByText(/already represented/i)).toBeNull()
   })
 })
