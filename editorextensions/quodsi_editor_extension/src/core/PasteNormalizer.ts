@@ -212,8 +212,9 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
  * True when something OTHER than `item` on this page still points at
  * `resourceId`: another Resource block's `q_data` pointer, or a swimlane lane
  * (`q_swimlane.lanes[n].resourceId`). Those are exactly the two claim sites
- * `resolveResourceLinks` reads, so this test agrees with the model builder's
- * notion of "claimed".
+ * `ModelDefinitionPageBuilder.linkResourceClaimants` collects -- including its
+ * `AdvancedSwimLaneBlock` class gate on the lane side (see `laneClaims`) -- so
+ * this test agrees with the model builder's notion of "claimed".
  */
 function hasOtherClaimant(page: PageProxy, item: ItemProxy, resourceId: string, sa: StorageAdapter): boolean {
     for (const [, block] of page.allBlocks) {
@@ -230,8 +231,21 @@ function hasOtherClaimant(page: PageProxy, item: ItemProxy, resourceId: string, 
     return false;
 }
 
-/** True when any lane on `block`'s q_swimlane is linked to `resourceId`. */
-function laneClaims(block: { shapeData: { get(key: string): unknown } }, resourceId: string): boolean {
+/**
+ * True when any lane on `block`'s q_swimlane is linked to `resourceId`.
+ *
+ * Gated on the SAME class predicate the builder claims lanes with
+ * (`ModelDefinitionPageBuilder.linkResourceClaimants`) and the migration lifts
+ * lanes with (`ResourceStorageMigration`): a `q_swimlane` blob on a block that
+ * is not an `AdvancedSwimLaneBlock` is never read as a claim by either pass,
+ * so it must not count as one here -- a stray blob would otherwise force a
+ * clone that nothing on the page actually needs.
+ */
+function laneClaims(
+    block: { getClassName(): string; shapeData: { get(key: string): unknown } },
+    resourceId: string
+): boolean {
+    if (block.getClassName() !== 'AdvancedSwimLaneBlock') return false;
     const raw = block.shapeData.get(SWIMLANE_DATA_KEY);
     if (typeof raw !== 'string' || !raw) return false;
     let swim: SwimLaneQuodsiData | null = null;

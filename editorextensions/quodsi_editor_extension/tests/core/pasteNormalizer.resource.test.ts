@@ -33,6 +33,7 @@ import {
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { normalizePastedItems } from '../../src/core/PasteNormalizer';
+import { migrateResourcesToModelLevel } from '../../src/core/ResourceStorageMigration';
 import { makeFakeBlock, makeFakePage, addBlock } from '../helpers/fakeProxies';
 
 /** A detached block whose q_data was written for a DIFFERENT id: a paste. */
@@ -54,9 +55,13 @@ function addResourcePointerBlock(sa: StorageAdapter, page: any, blockId: string,
     return block;
 }
 
-/** A swimlane block on `page` whose single lane claims `resourceId`. */
-function addSwimlaneClaiming(page: any, blockId: string, resourceId: string): any {
-    const block = addBlock(page, makeFakeBlock(blockId, { className: 'AdvancedSwimLaneBlock' }));
+/**
+ * A block on `page` carrying a q_swimlane blob whose single lane names
+ * `resourceId`. `className` decides whether the model builder (and therefore
+ * this normalizer) reads those lanes at all.
+ */
+function addSwimlaneClaiming(page: any, blockId: string, resourceId: string, className = 'AdvancedSwimLaneBlock'): any {
+    const block = addBlock(page, makeFakeBlock(blockId, { className }));
     const swim: SwimLaneQuodsiData = {
         lanes: [{ laneId: 'lane-1', titleSnapshot: 'Nurses', assignmentMode: 'runtime-derive', resourceId }],
         lastSyncedAt: '2026-08-24T00:00:00.000Z',
@@ -121,6 +126,26 @@ describe('PasteNormalizer — Resource blocks (Task 3)', () => {
         const clone = records.find((r) => r.id !== 'res-1')!;
         expect(sa.getElementData<{ resourceId: string }>(pasted)!.resourceId).toBe(clone.id);
         expect(result.notices).toEqual([`Pasted resource linked to new copy 'Nurse_2'`]);
+    });
+
+    it('a stray q_swimlane blob on a NON-swimlane block is not a claimant', () => {
+        // ModelDefinitionPageBuilder.linkResourceClaimants and
+        // ResourceStorageMigration both gate lane reads on
+        // getClassName() === 'AdvancedSwimLaneBlock'; the three passes must
+        // agree on what a swimlane is, or this one would clone against a claim
+        // the model never sees.
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        sa.setResources(page, [NURSE]);
+        addSwimlaneClaiming(page, 'block-not-a-swimlane', 'res-1', 'ProcessBlock');
+        const pasted = addBlock(page, makePastedResourceBlock(sa, 'block-new', 'block-orig', 'res-1'));
+
+        const result = normalizePastedItems([pasted], sa);
+
+        // No claimant -> rule 2: pointer kept, nothing cloned.
+        expect(sa.getResources(page)).toEqual([NURSE]);
+        expect(sa.getElementData<{ resourceId: string }>(pasted)!.resourceId).toBe('res-1');
+        expect(result.notices).toEqual([]);
     });
 
     it('rule 2: resolves on this page with no other claimant -> pointer kept, envelope re-stamped only', () => {
@@ -233,6 +258,29 @@ describe('PasteNormalizer — Resource blocks (Task 3)', () => {
         expect(second.notices).toEqual([]);
         expect(pasted.shapeData.get('q_data')).toBe(qDataAfterFirst);
         expect(page.shapeData.get('q_resources')).toBe(resourcesAfterFirst);
+    });
+
+    it('rule 4 survives the next model build: the migration does not re-classify the unlinked block', () => {
+        // migrateResourcesToModelLevel runs UNCONDITIONALLY on every model
+        // build, and this hook triggers one (invalidateModelCache). Its legacy
+        // detector must not read rule 4's empty envelope as a format-1 record:
+        // that would mint 'New Resource' into q_resources and re-point the
+        // block, undoing the normalization the user was just told about.
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        sa.setResources(page, []);
+        const pasted = addBlock(page, makePastedResourceBlock(sa, 'block-new', 'block-orig', 'res-gone'));
+
+        normalizePastedItems([pasted], sa, { allPages: () => [page] });
+        const afterNormalize = pasted.shapeData.get('q_data');
+
+        const migration = migrateResourcesToModelLevel(page, sa);
+
+        expect(migration.migrated).toBe(false);
+        expect(sa.getResources(page)).toEqual([]);
+        expect(sa.getResources(page).map((r) => r.name)).not.toContain('New Resource');
+        expect(pasted.shapeData.get('q_data')).toBe(afterNormalize);
+        expect(sa.getElementData<{ resourceId?: string }>(pasted)!.resourceId).toBeUndefined();
     });
 
     it('two pasted copies of the same original each get their own clone', () => {

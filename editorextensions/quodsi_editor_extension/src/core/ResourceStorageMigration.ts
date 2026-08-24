@@ -77,16 +77,36 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
             const typeInfo = sa.getElementType(block);
             if (typeInfo?.type === SimulationObjectType.Resource) {
                 const data = (sa.getElementData(block) ?? {}) as Record<string, unknown>;
-                // `resourceId` alone decides it: a format-1 record NEVER carries one,
-                // so this lifts exactly the same legacy set. Do NOT also require
-                // `name === undefined` -- StorageAdapter.updateElementData MERGES, so a
-                // panel edit on an already-migrated pointer block leaves `name`/`capacity`
-                // sitting next to `resourceId`, and the stricter test would re-classify
-                // that block as legacy: it would mint a fresh record under block.id and
-                // repoint the block, discarding the edit (resourceId === block.id) or
-                // forking a duplicate and orphaning the real link (resourceId !== block.id).
+                // Two conditions, and BOTH matter.
+                //
+                // `resourceId` present == already a pointer, full stop. Do NOT
+                // also require `name === undefined` there --
+                // StorageAdapter.updateElementData MERGES, so a panel edit on an
+                // already-migrated pointer block leaves `name`/`capacity` sitting
+                // next to `resourceId`, and the stricter test would re-classify
+                // that block as legacy: it would mint a fresh record under
+                // block.id and repoint the block, discarding the edit
+                // (resourceId === block.id) or forking a duplicate and orphaning
+                // the real link (resourceId !== block.id).
+                //
+                // But "no resourceId" alone is not enough to call a block legacy
+                // either: a format-1 record ALWAYS carried payload, whereas the
+                // paste normalizer's rule 4 (PasteNormalizer.normalizeResource)
+                // deliberately writes an EMPTY Resource envelope -- `{ id }`,
+                // unlinked -- when a pasted pointer resolves nowhere, leaving the
+                // panel's picker to re-link it. Treating that as legacy would
+                // mint a bogus 'New Resource' record and re-point the block,
+                // undoing the normalization the user was just notified about,
+                // on the very next model build (this migration runs
+                // unconditionally on every one).
                 const isPointer = data.resourceId !== undefined;
-                if (!isPointer) {
+                const hasLegacyPayload =
+                    data.name !== undefined ||
+                    data.capacity !== undefined ||
+                    data.description !== undefined ||
+                    data.financialProperties !== undefined ||
+                    data.levers !== undefined;
+                if (!isPointer && hasLegacyPayload) {
                     remember(block);
                     const record: StoredResourceRecord = {
                         id: block.id,
