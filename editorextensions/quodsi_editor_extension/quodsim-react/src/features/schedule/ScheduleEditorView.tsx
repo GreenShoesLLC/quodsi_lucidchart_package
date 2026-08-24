@@ -41,6 +41,11 @@
 //   - No lifecycle wiring here resembling ensurePatternForGenerator.
 //     ScheduleModal creates+links the schedule itself on first edit; adding
 //     an equivalent in this view would just race it.
+//   - `hideHeader` is set. Now that the Lucid modal has a real native title
+//     bar with a working X, ScheduleModal's own header row (the "Arrival
+//     Schedule" label plus its ✕) is a redundant second header, and that ✕'s
+//     close message never worked through Lucid's chrome anyway. Esc-to-close
+//     is untouched by this -- it isn't part of the header row.
 import { useEffect, useMemo } from 'react'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { ScheduleModal } from 'quodsi_studio/platforms/shared'
@@ -116,6 +121,7 @@ export function ScheduleEditorView() {
       <ScheduleModal
         open
         embedded
+        hideHeader
         onClose={() => sendMessage(EnvelopeMessageType.CLOSE_MODAL)}
         shapeId={shapeId}
         accessor={accessor}
