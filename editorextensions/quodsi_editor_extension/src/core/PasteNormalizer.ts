@@ -18,6 +18,12 @@
 // Task 5 adds the Activity case (see normalizeActivity): fresh action ids
 // (recursively, via remintActionIds), fresh lever ids with actionId repointed
 // through the resulting id map, and a unique stored name.
+// Task 6 adds the Generator case (see normalizeGenerator): fresh lever ids
+// (no actions on a Generator, so no id map to repoint through), a unique
+// stored name, `entityId` left byte-identical, and its linked
+// ArrivalPattern/ArrivalSchedule records CLONED (never shared) -- see the
+// doc comment on normalizeGenerator for why this differs from the Resource
+// rule's "no other claimant -> keep the pointer" branch.
 
 import { ItemProxy, PageProxy } from 'lucid-extension-sdk';
 import {
@@ -118,12 +124,15 @@ function normalizeOne(
 ): void {
     const typeInfo = sa.getElementType(item)!;
     switch (typeInfo.type) {
-        // Tasks 6-7 add Generator / Connector cases.
+        // Task 7 adds the Connector case.
         case SimulationObjectType.Resource:
             normalizeResource(item, page, sa, result, opts);
             break;
         case SimulationObjectType.Activity:
             normalizeActivity(item, page, sa, result);
+            break;
+        case SimulationObjectType.Generator:
+            normalizeGenerator(item, page, sa, result, opts);
             break;
         default:
             restampEnvelope(item, sa);
@@ -290,7 +299,7 @@ function normalizeActivity(item: ItemProxy, page: PageProxy, sa: StorageAdapter,
     }
 
     if (typeof domain.name === 'string' && domain.name) {
-        const takenNames = collectTakenActivityNames(page, sa, item.id);
+        const takenNames = collectTakenNames(page, sa, SimulationObjectType.Activity, item.id);
         const uniqueName = generateUniqueName(domain.name, (candidate) => takenNames.has(candidate));
         if (uniqueName !== domain.name) {
             domain.name = uniqueName;
@@ -337,17 +346,170 @@ function remintActionIds(actions: Action[]): { actions: Action[]; idMap: Map<str
     return { actions: remint(actions), idMap };
 }
 
-/** Every OTHER Activity block's stored `name` on `page`, for unique-name dedup. */
-function collectTakenActivityNames(page: PageProxy, sa: StorageAdapter, excludeItemId: string): Set<string> {
+/** Every OTHER block's stored `name` on `page`, of the given `type`, for unique-name dedup. */
+function collectTakenNames(page: PageProxy, sa: StorageAdapter, type: SimulationObjectType, excludeItemId: string): Set<string> {
     const taken = new Set<string>();
     for (const [, block] of page.allBlocks) {
         if (block.id === excludeItemId) continue;
         const typeInfo = sa.getElementType(block);
-        if (typeInfo?.type !== SimulationObjectType.Activity) continue;
+        if (typeInfo?.type !== type) continue;
         const blockData = sa.getElementData<{ name?: string }>(block);
         if (blockData?.name) taken.add(blockData.name);
     }
     return taken;
+}
+
+/**
+ * Generator rule (Task 6). A pasted Generator block's `q_data` domain
+ * carries the ORIGINAL block's `entityId`, `arrivalPatternId`/
+ * `arrivalScheduleId`, `levers`, and stored `name` verbatim. Four things
+ * need attention:
+ *
+ *   - `entityId` is left byte-identical -- it names an Entity, an identity
+ *     space this rule does not touch.
+ *   - every lever gets a fresh `leverId`. Unlike Activity, a Generator has
+ *     no `actions`, so there is no id map to repoint an `actionId` through
+ *     -- levers are simply re-minted in place.
+ *   - the stored `name`, when present, is deduped against every OTHER
+ *     Generator's stored name on this page; only on an actual collision
+ *     does the name change, and only then does the rename notice fire.
+ *   - `arrivalPatternId` / `arrivalScheduleId`, when present, are each
+ *     resolved against the linked list (`getArrivalPatterns`/
+ *     `getArrivalSchedules`) -- THIS page first, then (via `opts.allPages`)
+ *     every other page of the document. A resolved record is ALWAYS cloned
+ *     (fresh id, name deduped against THIS page's list) and appended to
+ *     THIS page's list, and the paste is repointed at the clone -- even
+ *     when the source lives on this same page. That is deliberately
+ *     different from the Resource rule's "resolves here with no other
+ *     claimant -> keep the pointer" branch: a pattern/schedule is 1:1-owned
+ *     by its generator (see the StorageAdapter doc comments -- "one
+ *     pattern/schedule per generator is enforced by the UI"), so a paste
+ *     must never leave two generators pointing at the same record. An id
+ *     that resolves nowhere is dropped from the domain entirely -- absence
+ *     is itself the meaningful "no pattern linked" value here (see
+ *     GeneratorLucid.ts's GENERATOR_CLEARABLE_KEYS note).
+ *
+ * Single write, same pattern as `normalizeActivity`/`normalizeResource`:
+ * this case never also calls `restampEnvelope`. Once written the stored id
+ * equals `item.id`, so a second pass sees `isPastedItem` false and is a
+ * no-op; a fresh pattern/schedule clone's id can never collide with
+ * anything already in either list, so a second pass also finds nothing left
+ * to clone.
+ */
+function normalizeGenerator(
+    item: ItemProxy,
+    page: PageProxy,
+    sa: StorageAdapter,
+    result: PasteNormalizationResult,
+    opts: PasteNormalizerOptions
+): void {
+    const typeInfo = sa.getElementType(item)!;
+    const data = (sa.getElementData(item) ?? {}) as Record<string, unknown>;
+    const { id: _old, type: _t, ...domain } = data;
+
+    if (Array.isArray(domain.levers)) {
+        domain.levers = (domain.levers as ScenarioLever[]).map((lever) => ({ ...lever, leverId: generateUUID() }));
+    }
+
+    let finalName: string | undefined = typeof domain.name === 'string' && domain.name ? domain.name : undefined;
+    if (finalName) {
+        const takenNames = collectTakenNames(page, sa, SimulationObjectType.Generator, item.id);
+        const uniqueName = generateUniqueName(finalName, (candidate) => takenNames.has(candidate));
+        if (uniqueName !== finalName) {
+            finalName = uniqueName;
+            domain.name = uniqueName;
+            result.notices.push(`Pasted generator renamed to '${uniqueName}'`);
+        }
+    }
+
+    if (typeof domain.arrivalPatternId === 'string' && domain.arrivalPatternId) {
+        const clone = cloneLinkedRecord(
+            page,
+            domain.arrivalPatternId,
+            (p) => sa.getArrivalPatterns(p),
+            (p, list) => sa.setArrivalPatterns(p, list),
+            opts,
+            finalName,
+            'Arrival Pattern'
+        );
+        if (clone) {
+            domain.arrivalPatternId = clone.id;
+            result.notices.push('Pasted generator uses a new copy of its arrival pattern');
+        } else {
+            delete domain.arrivalPatternId;
+        }
+    }
+
+    if (typeof domain.arrivalScheduleId === 'string' && domain.arrivalScheduleId) {
+        const clone = cloneLinkedRecord(
+            page,
+            domain.arrivalScheduleId,
+            (p) => sa.getArrivalSchedules(p),
+            (p, list) => sa.setArrivalSchedules(p, list),
+            opts,
+            finalName,
+            'Arrival Schedule'
+        );
+        if (clone) {
+            domain.arrivalScheduleId = clone.id;
+            result.notices.push('Pasted generator uses a new copy of its arrival schedule');
+        } else {
+            delete domain.arrivalScheduleId;
+        }
+    }
+
+    sa.setElementData(item, { id: item.id, ...domain } as { id: string }, SimulationObjectType.Generator, {
+        mappingSource: typeInfo.mappingSource,
+    });
+    result.changed = true;
+}
+
+/**
+ * Resolves `linkedId` against `getList(page)` (THIS page first, then every
+ * other page `opts.allPages` enumerates), and when found, clones it onto
+ * THIS page's list: fresh `id`, name deduped against `getList(page)` (via
+ * `generateUniqueName`, falling back to `generatorName` then `defaultName`
+ * when the source record itself has no usable name). Returns the clone, or
+ * `undefined` when `linkedId` resolves nowhere -- callers drop the pointer
+ * in that case, they never keep a dangling id.
+ */
+function cloneLinkedRecord<T extends { id: string; name?: string }>(
+    page: PageProxy,
+    linkedId: string,
+    getList: (p: PageProxy) => T[],
+    setList: (p: PageProxy, list: T[]) => void,
+    opts: PasteNormalizerOptions,
+    generatorName: string | undefined,
+    defaultName: string
+): T | undefined {
+    const pageRecords = getList(page);
+    const source = pageRecords.find((r) => String(r.id) === linkedId) ?? findLinkedOnOtherPages(page, linkedId, getList, opts);
+    if (!source) return undefined;
+
+    const takenNames = new Set(pageRecords.map((r) => r.name).filter((n): n is string => !!n));
+    const clone: T = {
+        ...source,
+        id: generateUUID(),
+        name: generateUniqueName(source.name ?? generatorName ?? defaultName, (candidate) => takenNames.has(candidate)),
+    };
+    setList(page, [...pageRecords, clone]);
+    return clone;
+}
+
+/** The record `linkedId` names on some OTHER page of the document, if any -- same lazy `opts.allPages` pattern as `findOnOtherPages` (Resource rule). */
+function findLinkedOnOtherPages<T extends { id: string }>(
+    page: PageProxy,
+    linkedId: string,
+    getList: (p: PageProxy) => T[],
+    opts: PasteNormalizerOptions
+): T | undefined {
+    if (!opts.allPages) return undefined;
+    for (const other of opts.allPages()) {
+        if (!other || other === page || other.id === page.id) continue;
+        const found = getList(other).find((r) => String(r.id) === linkedId);
+        if (found) return found;
+    }
+    return undefined;
 }
 
 /**
