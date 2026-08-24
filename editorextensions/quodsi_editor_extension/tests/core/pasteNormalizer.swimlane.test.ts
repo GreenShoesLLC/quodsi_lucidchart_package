@@ -154,15 +154,23 @@ describe('PasteNormalizer — swimlane blocks (Task 4)', () => {
 
     it('ordering (Task 3 review ruling): a pasted swimlane is normalized before a pasted Resource block in the same batch', () => {
         // Setup: res-1 is claimed by exactly one thing right now -- the
-        // pasted swimlane's lane. A second, untouched AdvancedSwimLaneBlock
-        // elsewhere in the document shares that lane's laneId (unlinked
-        // itself) purely to satisfy the detection predicate -- it is the
-        // "another block" the pasted lane's laneId collides with, standing in
-        // for the paste's true source. If the batch normalized the Resource
-        // block first, it would see the swimlane's lane as a second claimant
-        // and clone the resource; normalizing the swimlane first drops that
-        // claim before the Resource rule ever runs, so no clone is made and
-        // the pasted Resource block keeps pointing at res-1 (rule 2).
+        // pasted swimlane's lane. `collisionPartner` shares that lane's
+        // laneId but, unlike this file's other fixtures, is NOT a
+        // byte-identical copy: its lane carries no resourceId where the
+        // pasted lane carries `res-1`. This is a reachable pre-normalizer
+        // state, not a contrivance: a swimlane pasted BEFORE this normalizer
+        // shipped left two byte-identical q_swimlane blobs sharing a laneId;
+        // the user then linked a resource on only ONE of the two blocks
+        // (via the panel's picker), leaving exactly this pair -- same
+        // laneId, differing resourceId. It deliberately departs from this
+        // file's byte-identical fabrication convention because a
+        // byte-identical partner would itself carry `res-1` and remain a
+        // permanent second claimant, masking the ordering effect under test.
+        // If the batch normalized the Resource block first, it would see the
+        // swimlane's lane as a second claimant and clone the resource;
+        // normalizing the swimlane first drops that claim before the
+        // Resource rule ever runs, so no clone is made and the pasted
+        // Resource block keeps pointing at res-1 (rule 2).
         const sa = new StorageAdapter();
         const page = makeFakePage('page-1');
         sa.setResources(page, [{ id: 'res-1', name: 'Nurse', capacity: 3, description: '' }]);
