@@ -62,8 +62,7 @@ import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
-import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
-import { RequirementField, RequirementFieldContext } from "quodsi_studio/platforms/shared";
+import { RequirementField, RequirementFieldContext, ConnectorRoutingView } from "quodsi_studio/platforms/shared";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -410,7 +409,7 @@ type ActivityTab =
  *   repairResourceRequirementId, connectType): immediate save via
  *   useFlushOnChange — selects/checkboxes have no useful onBlur.
  * - Sub-component-driven changes (ActionEditor, EnhancedDurationEditor,
- *   RoutingConfigurationContent): debounced auto-save — sub-components fire
+ *   ConnectorRoutingView): debounced auto-save — sub-components fire
  *   onChange per keystroke, debounce coalesces.
  * - Validation: name uniqueness + 4 action validation checks (Split needs
  *   destination, Create needs entityTemplate+destination, Join needs
@@ -442,11 +441,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // Name validation state
   const [nameError, setNameError] = useState<string | null>(null);
 
-  // Get message sender for updating resource requirements and navigating to Model Editor
-  const { updateResourceRequirements, selectElement } = useModelOpsSender();
-  // Unconditional (hook order): backs every RequirementField rendered below,
-  // in the actions list and the Failure tab, via RequirementFieldContext.
-  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements });
+  // Get message sender for updating resource requirements, writing routing-
+  // tab edits, and navigating to Model Editor
+  const { updateResourceRequirements, updateElement, selectElement } = useModelOpsSender();
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -515,6 +512,29 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * Set to false: When save completes (via useSaveCompletionDetector)
    */
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
+
+  // Unconditional (hook order): backs every RequirementField rendered below,
+  // in the actions list and the Failure tab, via RequirementFieldContext,
+  // AND the Routing Configuration tab's ConnectorRoutingView. The
+  // shapeWriter is keyed on the draft's CURRENT id so a routing-tab edit
+  // (accessor.updateShape(localActivityDraft.id, 'Activity', patch)) lands
+  // on this component's own draft/autosave path (useFlushOnChange watches
+  // localActivityDraft.routing below) rather than round-tripping through
+  // updateElement for the shape this panel already owns.
+  const accessor = useReferenceDataAccessor(
+    referenceData,
+    { updateResourceRequirements, updateElement },
+    {
+      shapeWriters: {
+        [localActivityDraft.id]: (patch) => {
+          setLocalActivityDraft((prev) =>
+            updateActivityImmutably(prev, patch as Partial<Activity>)
+          );
+          setHasPendingChanges(true);
+        },
+      },
+    }
+  );
 
   /**
    * Redux-managed state for save operation tracking.
@@ -918,32 +938,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         [field]: value,
       });
       return updateActivityImmutably(prev, { failureProperties: updated });
-    });
-    setHasPendingChanges(true);
-  };
-
-  /**
-   * Handles changes to the activity's routing/connect type.
-   *
-   * Connect type determines how entities are routed to downstream activities:
-   * - Probability: Route based on connector probabilities
-   * - Conditional: Route based on state conditions
-   * - EntityType: Route based on entity template
-   *
-   * Updates are applied immediately to localActivityDraft for responsive UI,
-   * and marked as pending. Save fires immediately via useFlushOnChange watching
-   * connectType (selects have no useful onBlur).
-   *
-   * @param e - Change event from select or input element
-   */
-  const handleConnectTypeChange = (
-    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
-  ) => {
-    const newConnectType = e.target.value as ConnectType;
-    setLocalActivityDraft((prev) => {
-      return updateActivityImmutably(prev, {
-        routing: newConnectType,
-      });
     });
     setHasPendingChanges(true);
   };
@@ -1527,21 +1521,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           )}
 
           {activeTab === "connectors" && (
-            <RoutingConfigurationContent
-                localData={localActivityDraft}
-                handleChange={handleConnectTypeChange}
-                outgoingConnectors={outgoingConnectors}
-                referenceData={
-                  referenceData || {
-                    activities: [],
-                    resources: [],
-                    entities: [],
-                    resourceRequirements: [],
-                  }
-                }
-                states={states}
-                showHeader={false}
-              />
+            <ConnectorRoutingView
+              sourceId={localActivityDraft.id}
+              sourceType="Activity"
+              accessor={accessor}
+            />
           )}
 
           {/* Temporarily hidden - states managed at Model level

@@ -28,7 +28,7 @@ These new components integrate with existing editor components:
 - GeneratorEditor
 - ResourceEditor
 - EntityEditor
-- ConnectorsEditor
+- ConnectorRoutingView (shared with `quodsi_studio`; renders the line-selected Connector case)
 - ModelEditor
 
 ### Styling

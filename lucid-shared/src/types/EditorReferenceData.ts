@@ -1,6 +1,7 @@
 import { ResourceRequirement } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { ConnectType } from '@quodsi/shared';
+import { GeneratorType } from '@quodsi/shared';
 import { ISerializedDuration } from "../serialization/interfaces/ISerializedDuration";
 import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
 import { SwimLaneContainment } from "./swimlane/SwimLaneQuodsiData";
@@ -97,6 +98,12 @@ export interface EditorReferenceData {
          *  (`@quodsi/shared`'s `findExpressionsReferencingState` reads this key directly off
          *  this same summary object — see referenceDataBuilder's integration comment). */
         initialStates?: EditorReferenceStateModification[];
+        /** Routing mode (Probability / StateCondition / EntityTemplate / FirstAvailable) —
+         *  read by the shared ConnectorRoutingView. */
+        routing?: ConnectType;
+        /** Generator mode and entity, read by the routing view's single-entity hint. */
+        mode?: GeneratorType;
+        entityId?: string;
     }>;
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];
