@@ -43,8 +43,33 @@ export function makeFakeBlock(id: string, opts: FakeBlockOptions = {}) {
   return block;
 }
 
-export function makeFakeLine(id: string) {
-  return { id, shapeData: makeShapeData() } as any;
+export type FakeEndpoint = { x?: number; y?: number; connection?: { id: string } };
+
+export type FakeLineOptions = {
+  /** What the line is ACTUALLY attached to on the canvas right now.
+   *  `connection` left out means a detached endpoint -- which is exactly
+   *  what LineProxy reports for a dangling end. */
+  endpoint1?: FakeEndpoint;
+  endpoint2?: FakeEndpoint;
+  text?: string;               // line label, for name pickers
+};
+
+export function makeFakeLine(id: string, opts: FakeLineOptions = {}) {
+  const endpoint = (e: FakeEndpoint | undefined) => ({
+    x: e?.x ?? 0,
+    y: e?.y ?? 0,
+    connection: e?.connection,
+  });
+  const line: any = {
+    id,
+    shapeData: makeShapeData(),
+    getEndpoint1: () => endpoint(opts.endpoint1),
+    getEndpoint2: () => endpoint(opts.endpoint2),
+    textAreas: new Map<string, string>(opts.text !== undefined ? [['Text', opts.text]] : []),
+    page: null as any,
+    getPage: () => line.page,
+  };
+  return line;
 }
 
 export function makeFakePage(id: string) {

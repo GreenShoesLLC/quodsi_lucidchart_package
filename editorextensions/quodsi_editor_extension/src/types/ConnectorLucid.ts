@@ -82,8 +82,12 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const connector = new Connector(
             this.platformElementId,
             storedData?.name || this.getElementName('Connector'),
-            storedData?.sourceId || endpoint1.connection?.id || '',
-            storedData?.targetId || endpoint2.connection?.id || '',
+            // The LIVE line wins over storage for both endpoints -- see
+            // refreshEndpointIds. Storage is the fallback for a DETACHED end
+            // (connection === undefined), which is the one case the canvas
+            // cannot answer.
+            endpoint1.connection?.id || storedData?.sourceId || '',
+            endpoint2.connection?.id || storedData?.targetId || '',
             storedData?.weight ?? 1,
             storedData?.sourceX ?? endpoint1.x ?? 0,
             storedData?.sourceY ?? endpoint1.y ?? 0,
@@ -126,6 +130,31 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         return connector;
     }
 
+    /**
+     * The endpoints a connector reports must be the blocks the LINE is
+     * attached to right now, not the ones its stored blob remembers.
+     *
+     * Lucid copies shapeData wholesale on paste, so a pasted connector
+     * arrives carrying the ORIGINAL's sourceId/targetId while the pasted line
+     * is attached to the pasted blocks. Preferring storage meant the copy
+     * published routing into the ORIGINAL's activities, with the diagram and
+     * the model disagreeing silently. Re-attaching an endpoint by hand had
+     * the same failure from the other side.
+     *
+     * A DETACHED endpoint is the exception: LineProxy reports `connection ===
+     * undefined` and the canvas simply has no answer, so the stored id is
+     * left in place rather than blanked -- a line dragged loose must not lose
+     * the routing it was given.
+     */
+    private refreshEndpointIds(connector: Connector): void {
+        const line = this.element as LineProxy;
+        const liveSourceId = line.getEndpoint1().connection?.id;
+        const liveTargetId = line.getEndpoint2().connection?.id;
+
+        if (liveSourceId) connector.sourceId = liveSourceId;
+        if (liveTargetId) connector.targetId = liveTargetId;
+    }
+
     private updatePlatformSpecificFields(connector: Connector): void {
         const line = this.element as LineProxy;
         const endpoint1 = line.getEndpoint1();
@@ -134,6 +163,9 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         // Update source and target locations
         connector.setSourceLocation(endpoint1.x, endpoint1.y);
         connector.setTargetLocation(endpoint2.x, endpoint2.y);
+
+        // ...and the endpoints themselves, from the live line.
+        this.refreshEndpointIds(connector);
 
         // Update name if needed
         if (!connector.name || connector.name === 'New Connector') {
@@ -145,6 +177,8 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceY: connector.sourceY,
             targetX: connector.targetX,
             targetY: connector.targetY,
+            sourceId: connector.sourceId,
+            targetId: connector.targetId,
             name: connector.name
         });
     }
@@ -160,6 +194,12 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         // Update source and target locations
         this.simObject.setSourceLocation(endpoint1.x, endpoint1.y);
         this.simObject.setTargetLocation(endpoint2.x, endpoint2.y);
+
+        // ...and the endpoints, so the write-back below persists what the line
+        // is attached to NOW. This runs on a line that may have been
+        // re-attached since the simObject was constructed, so re-reading here
+        // is not redundant with createSimObject's own refresh.
+        this.refreshEndpointIds(this.simObject);
 
         // Update name if not already set
         if (!this.simObject.name) {
