@@ -24,8 +24,13 @@
 // ArrivalPattern/ArrivalSchedule records CLONED (never shared) -- see the
 // doc comment on normalizeGenerator for why this differs from the Resource
 // rule's "no other claimant -> keep the pointer" branch.
+// Task 7 adds the Connector case (see normalizeConnector): stored
+// sourceId/targetId overlaid with the live line's attached endpoints (via
+// the shared `liveEndpointIds` helper, also used by ConnectorLucid), and the
+// stored name regenerated from those endpoints' stored names ONLY when both
+// resolve to a named block.
 
-import { ItemProxy, PageProxy } from 'lucid-extension-sdk';
+import { ItemProxy, LineProxy, PageProxy } from 'lucid-extension-sdk';
 import {
     Action,
     ScenarioLever,
@@ -36,8 +41,11 @@ import {
     generateUUID,
     generateUniqueName,
     getLogger,
+    pickConnectorName,
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from './StorageAdapter';
+import { liveEndpointIds } from '../types/ConnectorLucid';
+import { lineToNameable } from '../types/nameableShape';
 
 const log = getLogger('PasteNormalizer');
 
@@ -124,7 +132,6 @@ function normalizeOne(
 ): void {
     const typeInfo = sa.getElementType(item)!;
     switch (typeInfo.type) {
-        // Task 7 adds the Connector case.
         case SimulationObjectType.Resource:
             normalizeResource(item, page, sa, result, opts);
             break;
@@ -133,6 +140,9 @@ function normalizeOne(
             break;
         case SimulationObjectType.Generator:
             normalizeGenerator(item, page, sa, result, opts);
+            break;
+        case SimulationObjectType.Connector:
+            normalizeConnector(item, page, sa, result);
             break;
         default:
             restampEnvelope(item, sa);
@@ -510,6 +520,67 @@ function findLinkedOnOtherPages<T extends { id: string }>(
         if (found) return found;
     }
     return undefined;
+}
+
+/**
+ * Connector rule (Task 7). A pasted line's `q_data` domain carries the
+ * ORIGINAL line's `sourceId`/`targetId`/`name` verbatim -- same as every
+ * other typed rule, Lucid copies shapeData wholesale. The pasted LINE itself
+ * is attached to fresh blocks though (paste clones connections along with
+ * shapeData), so the stored pointers name the wrong blocks until this rule
+ * overlays what the line is ACTUALLY attached to now.
+ *
+ * That overlay is `liveEndpointIds` -- the exact same "live line wins, a
+ * DETACHED endpoint keeps the stored value" rule
+ * `ConnectorLucid.refreshEndpointIds` applies at read/write-back time,
+ * pulled into a shared helper so this rule and that one can never drift
+ * apart (see the doc comment on `liveEndpointIds` in ConnectorLucid.ts).
+ *
+ * `name` is regenerated to the "A → B" form -- via `pickConnectorName`, the
+ * SAME function `ConnectorLucid.createFromConversion` uses -- ONLY when
+ * BOTH endpoints (after the overlay) resolve to a block on this page whose
+ * OWN stored `q_data` carries a `name`. An endpoint that doesn't resolve to
+ * a block, or resolves to one with no stored name, means there is no honest
+ * answer to derive from, so the inherited name is left exactly as pasted --
+ * the same posture `connectorLucid.liveEndpoints.test.ts` documents for
+ * `updateFromPlatform` (a name is user-editable text, not something a rule
+ * should fight over without a real reason).
+ *
+ * Single write, same pattern as the other typed rules: this case never also
+ * calls `restampEnvelope`. Once written, the stored ids agree with the live
+ * line and the stored name (when regenerated) agrees with the live
+ * endpoints' stored names, so a second pass computes the identical values
+ * and its write is a no-op read back -- idempotent.
+ */
+function normalizeConnector(item: ItemProxy, page: PageProxy, sa: StorageAdapter, result: PasteNormalizationResult): void {
+    const typeInfo = sa.getElementType(item)!;
+    const data = (sa.getElementData(item) ?? {}) as Record<string, unknown>;
+    const { id: _old, type: _t, ...domain } = data;
+
+    const line = item as LineProxy;
+    const overlay = liveEndpointIds(line);
+    if (overlay.sourceId) domain.sourceId = overlay.sourceId;
+    if (overlay.targetId) domain.targetId = overlay.targetId;
+
+    const sourceName = endpointStoredName(page, sa, domain.sourceId);
+    const targetName = endpointStoredName(page, sa, domain.targetId);
+    if (sourceName && targetName) {
+        domain.name = pickConnectorName(lineToNameable(line), { sourceName, targetName });
+    }
+
+    sa.setElementData(item, { id: item.id, ...domain } as { id: string }, SimulationObjectType.Connector, {
+        mappingSource: typeInfo.mappingSource,
+    });
+    result.changed = true;
+}
+
+/** The stored `name` of the block `id` names on `page`, when it resolves to a block AND that block has a stored name. */
+function endpointStoredName(page: PageProxy, sa: StorageAdapter, id: unknown): string | undefined {
+    if (typeof id !== 'string' || !id) return undefined;
+    const block = page.allBlocks.get(id);
+    if (!block) return undefined;
+    const blockData = sa.getElementData<{ name?: string }>(block);
+    return blockData?.name || undefined;
 }
 
 /**

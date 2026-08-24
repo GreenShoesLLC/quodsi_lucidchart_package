@@ -89,3 +89,10 @@ export function addBlock(page: any, block: any): any {
   page.allBlocks.set(block.id, block);
   return block;
 }
+
+/** Adds a line to a page and back-links line.page -- mirrors `addBlock`. */
+export function addLine(page: any, line: any): any {
+  line.page = page;
+  page.allLines.set(line.id, line);
+  return line;
+}

@@ -54,6 +54,27 @@ interface StoredConnectorData {
 }
 
 /**
+ * The endpoints a LINE is currently attached to, restricted to only the
+ * ATTACHED ends -- a detached endpoint (`connection === undefined`) is
+ * omitted entirely rather than reported as `undefined`, so a caller that
+ * overlays this onto stored data leaves a detached end's stored value
+ * untouched.
+ *
+ * Pulled out of `refreshEndpointIds` (below) so PasteNormalizer's Connector
+ * rule (Task 7) can apply the identical "live line wins, detached end keeps
+ * storage" semantics without duplicating the logic -- see the doc comment on
+ * `refreshEndpointIds` for why the live line wins.
+ */
+export function liveEndpointIds(line: LineProxy): { sourceId?: string; targetId?: string } {
+    const result: { sourceId?: string; targetId?: string } = {};
+    const liveSourceId = line.getEndpoint1().connection?.id;
+    const liveTargetId = line.getEndpoint2().connection?.id;
+    if (liveSourceId) result.sourceId = liveSourceId;
+    if (liveTargetId) result.targetId = liveTargetId;
+    return result;
+}
+
+/**
  * Lucid-specific implementation of a Connector.
  * Maps a Lucid Line element to a simulation Connector.
  */
@@ -148,11 +169,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
      */
     private refreshEndpointIds(connector: Connector): void {
         const line = this.element as LineProxy;
-        const liveSourceId = line.getEndpoint1().connection?.id;
-        const liveTargetId = line.getEndpoint2().connection?.id;
+        const { sourceId, targetId } = liveEndpointIds(line);
 
-        if (liveSourceId) connector.sourceId = liveSourceId;
-        if (liveTargetId) connector.targetId = liveTargetId;
+        if (sourceId) connector.sourceId = sourceId;
+        if (targetId) connector.targetId = targetId;
     }
 
     private updatePlatformSpecificFields(connector: Connector): void {
