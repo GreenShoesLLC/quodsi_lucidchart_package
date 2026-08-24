@@ -100,14 +100,22 @@ export function normalizePastedItems(
         // Task 8: a DUPLICATED PAGE is repaired wholesale and takes none of
         // the per-item rules -- not even the swimlane pass, which is why this
         // branch sits above it. See normalizeDuplicatedPage.
-        const duplicated = duplicatedPageEnvelope(page);
+        //
+        // There is deliberately NO fallback (review 1.1). Once detection has
+        // fired, the per-item rules are KNOWN-WRONG for this page: they would
+        // clone records the page already owns outright, re-mint ids that are
+        // already unique within it, and let the swimlane pass rewrite lanes
+        // whose laneIds legitimately collide with the source page's. A
+        // half-repaired duplicate is strictly better than a mangled one, so a
+        // throw is logged and the page is skipped either way.
+        const duplicated = duplicatedPageEnvelope(page, opts);
         if (duplicated) {
             try {
                 normalizeDuplicatedPage(page, pageItems, duplicated, sa, result);
-                continue;
             } catch (error) {
-                log.error('Duplicated-page normalization failed; falling back to per-item rules', { pageId: page.id, error });
+                log.error('Duplicated-page normalization failed; page left partially repaired', { pageId: page.id, error });
             }
+            continue;
         }
 
         // Ordering ruling (Task 3 review): pasted swimlanes are normalized
@@ -810,11 +818,26 @@ function readRawEnvelope(element: { shapeData: { get(key: string): unknown } }):
  * is the only witness. A page with no `q_data` (never converted) is never in
  * page mode.
  */
-function duplicatedPageEnvelope(page: PageProxy): RawEnvelopeBlob | null {
+function duplicatedPageEnvelope(page: PageProxy, opts: PasteNormalizerOptions): RawEnvelopeBlob | null {
     const blob = readRawEnvelope(page as unknown as { shapeData: { get(key: string): unknown } });
     if (!blob) return null;
     const storedId = blob.parsed.id;
     if (typeof storedId !== 'string' || !storedId || storedId === page.id) return null;
+
+    // Witness requirement (review 1.2). A stale envelope id is only evidence of
+    // a DUPLICATION when some other page actually carries that id -- the page
+    // the copy was made from. Without this, any page whose `q_data.id` went
+    // stale for an unrelated reason would be treated as a duplicate and have
+    // its run state wiped and its per-item rules suppressed. That is reachable:
+    // `modelOpsHandler`/`simulationHandler` used to initialize a page's Model
+    // with the DOCUMENT id, and a document id matches no page. The check needs
+    // the document's page list, so it only applies when `opts.allPages` is
+    // supplied (production always supplies it -- see pasteHookWiring); without
+    // it there is nothing to witness against and id-only detection stands.
+    if (opts.allPages) {
+        const witnessed = opts.allPages().some((other) => !!other && other.id !== page.id && other.id === storedId);
+        if (!witnessed) return null;
+    }
     return blob;
 }
 
@@ -851,14 +874,18 @@ function normalizeDuplicatedPage(
 ): void {
     restampPageEnvelope(page, envelope);
 
-    for (const item of pageItems) {
-        try {
-            if (!sa.getElementType(item)?.type) continue;      // never converted: nothing to re-stamp
-            restampEnvelope(item, sa);
-        } catch (error) {
-            log.error('Duplicated-page item re-stamp failed; left as duplicated', { itemId: item.id, error });
-        }
-    }
+    // Step 2 covers EVERY block on the page, not just the batch (review 1.3).
+    // Step 1 has just destroyed the only witness this detection has: the page
+    // envelope now names this page, so a block arriving in a LATER
+    // hookCreateItems callback would no longer be recognised as part of a
+    // duplication and would take the per-item rules -- cloning records this
+    // page already owns. Re-stamping every block now means a later callback
+    // finds nothing left to do. Same argument the brief makes for
+    // `page.allLines` in step 3.
+    for (const [, block] of page.allBlocks) restampIfStale(block, sa);
+    // Batch items that are not blocks of this page -- lines, chiefly -- still
+    // need their envelope id; `restampIfStale` makes the overlap a no-op.
+    for (const item of pageItems) restampIfStale(item, sa);
 
     for (const [, line] of page.allLines) {
         try {
@@ -873,6 +900,20 @@ function normalizeDuplicatedPage(
 
     result.changed = true;
     result.notices.push('Duplicated page normalized');
+}
+
+/**
+ * Re-stamps one item's envelope id, when it has an envelope and that envelope
+ * names something other than the item. A failure is logged and swallowed so
+ * one unreadable envelope cannot abort the rest of the page's repair.
+ */
+function restampIfStale(item: ItemProxy, sa: StorageAdapter): void {
+    try {
+        if (!isPastedItem(item, sa)) return;   // no envelope, or already ours
+        restampEnvelope(item, sa);
+    } catch (error) {
+        log.error('Duplicated-page item re-stamp failed; left as duplicated', { itemId: item.id, error });
+    }
 }
 
 /**
