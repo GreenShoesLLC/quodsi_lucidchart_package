@@ -22,7 +22,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Viewport, documentPagesForTests } from '../__mocks__/lucid-extension-sdk';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
-import { SimulationObjectType, ValidationSeverity } from '@quodsi/lucid-shared';
+import { SimulationObjectType, ValidationSeverity, configureLogger, resetLoggerForTests } from '@quodsi/lucid-shared';
 import { makeFakeBlock, makeFakePage, addBlock } from '../helpers/fakeProxies';
 
 let selectedItems: any[] = [];
@@ -98,12 +98,14 @@ describe('onItemsCreated', () => {
       client: clientStub as any,
     });
 
-    // Task 1's generic (default-branch) normalization doesn't itself produce
-    // a notice sentence yet -- typed per-element rules with notice text land
-    // in Tasks 3-7 -- so `result.notices` is currently always []; this pins
-    // that pushNotices is invoked exactly once with normalizePastedItems's
-    // notices mapped to paste_normalized INFO issues (an empty map of an
-    // empty array is still the correct call).
+    // Empty is correct FOR THIS FIXTURE, not in general: the typed rules of
+    // Tasks 3-7 do produce notice sentences (see the cross-page resource case
+    // below, which asserts one). This pasted Activity is named 'Original
+    // Activity' and it is the only block on the page, so its name collides
+    // with nothing and the Activity rule renames nothing -- no notice. What
+    // is pinned here is the WIRING: pushNotices invoked exactly once with
+    // normalizePastedItems's notices mapped to paste_normalized INFO issues
+    // (an empty map of an empty array is still the correct call).
     expect(modelManagerStub.pushNotices).toHaveBeenCalledTimes(1);
     const pushedIssues = modelManagerStub.pushNotices.mock.calls[0][0];
     expect(pushedIssues).toEqual([]);
@@ -158,6 +160,34 @@ describe('onItemsCreated', () => {
     expect(pushedIssues).toHaveLength(1);
     expect(pushedIssues[0].code).toBe('paste_normalized');
     expect(pushedIssues[0].severity).toBe(ValidationSeverity.INFO);
+  });
+
+  // Final-review fix A: extension.ts invokes this as `void onItemsCreated(...)`,
+  // so a rejected promise here is an UNHANDLED rejection in the live editor --
+  // and everything after the throw (cache invalidation, selection refresh) is
+  // skipped even though the normalization already wrote to the document. The
+  // whole body is guarded now: it logs and resolves.
+  it('a throwing collaborator of the wiring (pushNotices) never rejects: the void-invoked hook stays safe', async () => {
+    const pastedBlock = addBlock(page, makePastedBlock(sa, 'new-id', 'old-id'));
+    modelManagerStub.pushNotices = jest.fn(() => {
+      throw new Error('notices channel unavailable');
+    });
+    const records: { level: string }[] = [];
+    configureLogger({
+      level: 'error',
+      sinks: [{ write: (record: any) => { records.push({ level: record.level }); } }],
+    });
+
+    await expect(
+      onItemsCreated([pastedBlock], {
+        storageAdapter: sa,
+        modelManager: modelManagerStub,
+        client: clientStub as any,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(records.some((r) => r.level === 'error')).toBe(true);
+    resetLoggerForTests();
   });
 
   it('nothing pasted: pushes no notices, does not invalidate the cache, does not re-run the selection', async () => {

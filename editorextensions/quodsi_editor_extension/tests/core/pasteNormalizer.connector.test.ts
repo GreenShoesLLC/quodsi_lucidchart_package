@@ -156,3 +156,49 @@ describe('PasteNormalizer — Connector lines (Task 7)', () => {
         expect(pasted.shapeData.get('q_data')).toBe(qDataAfterFirst);
     });
 });
+
+// Final-review fix B: BLOCKS before LINES within one page's batch.
+//
+// A pasted connector names itself after its endpoints' STORED names, and a
+// pasted Activity's stored name is deduped by its own rule. Whichever runs
+// first wins, and Lucid hands `hookCreateItems` its items in no guaranteed
+// order -- so processing the batch in delivery order let a line that happened
+// to arrive first bake in the endpoint's PRE-rename name, permanently
+// disagreeing with the block it points at. Partitioning the batch (blocks
+// first, then lines) makes the connector's name derive from names that are
+// already final, whatever order Lucid delivered.
+describe('PasteNormalizer — blocks are normalized before lines in the same batch (fix B)', () => {
+    it('a connector delivered BEFORE its pasted endpoint still names itself after the RENAMED endpoint', () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        // The original the paste collides with, plus the far endpoint.
+        addNamedBlock(sa, page, 'block-triage', 'Triage');
+        addNamedBlock(sa, page, 'block-exit', 'Exit');
+
+        // A pasted Activity whose stored name collides -> renamed to 'Triage_2'.
+        const throwaway = makeFakeBlock('act-orig');
+        sa.setElementData(throwaway, { id: 'act-orig', name: 'Triage' }, SimulationObjectType.Activity, { mappingSource: 'user' });
+        const pastedActivity = addBlock(page, makeFakeBlock('act-new'));
+        pastedActivity.shapeData.set('q_data', throwaway.shapeData.get('q_data')!);
+
+        const pastedLine = addLine(
+            page,
+            makePastedConnectorLine(
+                sa,
+                'line-new',
+                'line-orig',
+                { name: 'Triage → Exit', sourceId: 'act-orig', targetId: 'block-exit', weight: 1 },
+                { endpoint1: { connection: { id: 'act-new' } }, endpoint2: { connection: { id: 'block-exit' } } }
+            )
+        );
+
+        // REVERSE delivery order: the line arrives first in the array.
+        normalizePastedItems([pastedLine, pastedActivity], sa);
+
+        expect(sa.getElementData<{ name: string }>(pastedActivity)!.name).toBe('Triage_2');
+        const connector = sa.getElementData<{ name: string; sourceId: string; targetId: string }>(pastedLine)!;
+        expect(connector.sourceId).toBe('act-new');
+        expect(connector.targetId).toBe('block-exit');
+        expect(connector.name).toBe('Triage_2 → Exit');
+    });
+});

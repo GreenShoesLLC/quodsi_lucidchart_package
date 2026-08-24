@@ -398,7 +398,15 @@ describe('PasteNormalizer — page mode never falls back to the per-item rules (
         });
 
         // No throw escapes: the caller's paste is never lost.
-        expect(() => normalizePastedItems(batchOf(dup), sa, pageModeOpts(source, dup))).not.toThrow();
+        let result!: ReturnType<typeof normalizePastedItems>;
+        expect(() => { result = normalizePastedItems(batchOf(dup), sa, pageModeOpts(source, dup)); }).not.toThrow();
+
+        // Fix C: `changed` is set after the FIRST successful write, not at the
+        // end of the rule. Writes DID land before the throw (the page envelope
+        // re-stamp, every item re-stamp, the laneId re-mint), so the caller
+        // must still invalidate its model cache and refresh -- otherwise the
+        // panel keeps serving a ModelDefinition built from pre-repair bytes.
+        expect(result.changed).toBe(true);
 
         // Nothing cloned -- the per-item Resource/Generator rules never ran.
         expect(dup.page.shapeData.get('q_resources')).toBe(source.page.shapeData.get('q_resources'));

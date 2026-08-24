@@ -91,60 +91,116 @@ export function normalizePastedItems(
     const result: PasteNormalizationResult = { changed: false, notices: [] };
     const byPage = new Map<PageProxy, ItemProxy[]>();
     for (const item of items) {
-        const page = item.getPage?.();
-        if (!page) continue;                       // groups / detached items: skip (R4)
-        if (!byPage.has(page)) byPage.set(page, []);
-        byPage.get(page)!.push(item);
+        // `getPage()` is a live SDK read on a proxy the caller handed us; a
+        // detached or otherwise broken one throws. One such item must cost
+        // only itself, never the whole gesture (final-review fix A).
+        try {
+            const page = item.getPage?.();
+            if (!page) continue;                   // groups / detached items: skip (R4)
+            if (!byPage.has(page)) byPage.set(page, []);
+            byPage.get(page)!.push(item);
+        } catch (error) {
+            log.error('Paste normalization could not resolve an item page; item skipped', { error });
+        }
     }
     for (const [page, pageItems] of byPage) {
-        // Task 8: a DUPLICATED PAGE is repaired wholesale and takes none of
-        // the per-item rules -- not even the swimlane pass, which is why this
-        // branch sits above it. See normalizeDuplicatedPage.
-        //
-        // There is deliberately NO fallback (review 1.1). Once detection has
-        // fired, the per-item rules are KNOWN-WRONG for this page: they would
-        // clone records the page already owns outright, re-mint ids that are
-        // already unique within it, and let the swimlane pass rewrite lanes
-        // whose laneIds legitimately collide with the source page's. A
-        // half-repaired duplicate is strictly better than a mangled one, so a
-        // throw is logged and the page is skipped either way.
-        const duplicated = duplicatedPageEnvelope(page, opts);
-        if (duplicated) {
-            try {
-                normalizeDuplicatedPage(page, pageItems, duplicated, sa, result);
-            } catch (error) {
-                log.error('Duplicated-page normalization failed; page left partially repaired', { pageId: page.id, error });
-            }
-            continue;
-        }
-
-        // Ordering ruling (Task 3 review): pasted swimlanes are normalized
-        // BEFORE the generic per-item loop -- and therefore before the
-        // Resource rule -- in the same page's batch. The swimlane rule always
-        // drops a claimed lane's `resourceId`; running it first means a
-        // Resource block pasted in the SAME gesture sees that drop as already
-        // settled reality when `hasOtherClaimant` walks the page, instead of
-        // a stale "still claimed" view a pass ordered the other way would
-        // leave it with.
-        const swimlaneCarriers = pageItems.filter(isSwimlaneCarrierItem);
-        for (const item of swimlaneCarriers) {
-            try {
-                normalizeSwimlane(item, page, result, opts);
-            } catch (error) {
-                log.error('Swimlane paste normalization failed for item; left as pasted', { itemId: item.id, error });
-            }
-        }
-
-        for (const item of pageItems) {
-            try {
-                if (!isPastedItem(item, sa)) continue;
-                normalizeOne(item, page, sa, result, opts);
-            } catch (error) {
-                log.error('Paste normalization failed for item; left as pasted', { itemId: item.id, error });
-            }
+        // Fix A: the per-page body is guarded AS A WHOLE, not only in its
+        // inner passes. The prologue below -- `duplicatedPageEnvelope`, which
+        // calls the injected `opts.allPages()` (production: a live
+        // `new DocumentProxy(client).pages` read) -- sits outside every inner
+        // catch, so a throw there used to escape this loop and abort every
+        // REMAINING page of the same paste. Now one bad page is logged and
+        // the loop moves on; the inner catches stay exactly as they were, so
+        // a failure keeps its narrower blast radius wherever one applies.
+        try {
+            normalizePageBatch(page, pageItems, sa, result, opts);
+        } catch (error) {
+            log.error('Paste normalization failed for page; remaining pages continue', { pageId: page.id, error });
         }
     }
     return result;
+}
+
+/** One page's share of a paste gesture: detection, page mode, swimlane pass, per-item loop. */
+function normalizePageBatch(
+    page: PageProxy,
+    pageItems: ItemProxy[],
+    sa: StorageAdapter,
+    result: PasteNormalizationResult,
+    opts: PasteNormalizerOptions
+): void {
+    // Task 8: a DUPLICATED PAGE is repaired wholesale and takes none of
+    // the per-item rules -- not even the swimlane pass, which is why this
+    // branch sits above it. See normalizeDuplicatedPage.
+    //
+    // There is deliberately NO fallback (review 1.1). Once detection has
+    // fired, the per-item rules are KNOWN-WRONG for this page: they would
+    // clone records the page already owns outright, re-mint ids that are
+    // already unique within it, and let the swimlane pass rewrite lanes
+    // whose laneIds legitimately collide with the source page's. A
+    // half-repaired duplicate is strictly better than a mangled one, so a
+    // throw is logged and the page is skipped either way.
+    const duplicated = duplicatedPageEnvelope(page, opts);
+    if (duplicated) {
+        try {
+            normalizeDuplicatedPage(page, pageItems, duplicated, sa, result);
+        } catch (error) {
+            log.error('Duplicated-page normalization failed; page left partially repaired', { pageId: page.id, error });
+        }
+        return;
+    }
+
+    // Ordering ruling (Task 3 review): pasted swimlanes are normalized
+    // BEFORE the generic per-item loop -- and therefore before the
+    // Resource rule -- in the same page's batch. The swimlane rule always
+    // drops a claimed lane's `resourceId`; running it first means a
+    // Resource block pasted in the SAME gesture sees that drop as already
+    // settled reality when `hasOtherClaimant` walks the page, instead of
+    // a stale "still claimed" view a pass ordered the other way would
+    // leave it with.
+    const swimlaneCarriers = pageItems.filter(isSwimlaneCarrierItem);
+    for (const item of swimlaneCarriers) {
+        try {
+            normalizeSwimlane(item, page, result, opts);
+        } catch (error) {
+            log.error('Swimlane paste normalization failed for item; left as pasted', { itemId: item.id, error });
+        }
+    }
+
+    // Fix B: BLOCKS before LINES, whatever order Lucid delivered them in.
+    // The Connector rule derives a pasted line's stored name from its
+    // endpoints' STORED names (see normalizeConnector), and the Activity /
+    // Generator rules are what make those names final -- a colliding name is
+    // deduped to `Triage_2`. Processing in delivery order therefore let a
+    // line that happened to arrive before its endpoint bake in the
+    // PRE-rename name, leaving the connector permanently disagreeing with
+    // the block it points at. `hookCreateItems` guarantees no ordering, so
+    // the partition is the only thing that makes the outcome deterministic.
+    for (const item of orderedForNaming(pageItems)) {
+        try {
+            if (!isPastedItem(item, sa)) continue;
+            normalizeOne(item, page, sa, result, opts);
+        } catch (error) {
+            log.error('Paste normalization failed for item; left as pasted', { itemId: item.id, error });
+        }
+    }
+}
+
+/** `pageItems` with every non-line first, preserving relative order within each group. */
+function orderedForNaming(pageItems: ItemProxy[]): ItemProxy[] {
+    const blocks: ItemProxy[] = [];
+    const lines: ItemProxy[] = [];
+    for (const item of pageItems) (isLineItem(item) ? lines : blocks).push(item);
+    return [...blocks, ...lines];
+}
+
+/**
+ * True for a line. `getEndpoint1` is declared on `LineProxy` and on no other
+ * `ItemProxy` subclass, so it is the same structural fact `normalizeConnector`
+ * already relies on when it casts an item to `LineProxy`.
+ */
+function isLineItem(item: ItemProxy): boolean {
+    return typeof (item as unknown as { getEndpoint1?: unknown }).getEndpoint1 === 'function';
 }
 
 function normalizeOne(
@@ -468,6 +524,11 @@ function normalizeGenerator(
         );
         if (clone) {
             domain.arrivalPatternId = clone.id;
+            // Fix C: the clone is ALREADY written to this page's
+            // `q_arrival_patterns` (cloneLinkedRecord calls setList). Raise the
+            // flag here so a throw in the schedule clone below -- or in the
+            // final setElementData -- still gets the model cache invalidated.
+            result.changed = true;
             result.notices.push('Pasted generator uses a new copy of its arrival pattern');
         } else {
             delete domain.arrivalPatternId;
@@ -486,6 +547,7 @@ function normalizeGenerator(
         );
         if (clone) {
             domain.arrivalScheduleId = clone.id;
+            result.changed = true;                 // fix C: already persisted -- see the pattern branch above
             result.notices.push('Pasted generator uses a new copy of its arrival schedule');
         } else {
             delete domain.arrivalScheduleId;
@@ -867,7 +929,7 @@ function duplicatedPageEnvelope(page: PageProxy, opts: PasteNormalizerOptions): 
  *
  * Idempotent: after step 1 the page envelope id equals `page.id`, so a second
  * pass is not in page mode at all; its items' envelopes already match, so the
- * per-item loop skips them; and `overlayLineEndpoints` would compute the
+ * per-item loop skips them; and `repairLineEnvelope` would compute the
  * identical bytes, which is why it skips the write when nothing changes.
  */
 function normalizeDuplicatedPage(
@@ -878,6 +940,14 @@ function normalizeDuplicatedPage(
     result: PasteNormalizationResult
 ): void {
     restampPageEnvelope(page, envelope);
+    // Fix C: `changed` is the caller's signal to invalidate the cached
+    // ModelDefinition and refresh the panel, so it must be raised by the FIRST
+    // successful write rather than at the end of the rule. The page envelope
+    // has just been rewritten; if anything below throws, the document is
+    // already different from what the cache holds and the caller still needs
+    // to know. (The notice at the tail stays where it is -- it claims a
+    // COMPLETED normalization, which a throw would make untrue.)
+    result.changed = true;
 
     // Step 2 covers EVERY block on the page, not just the batch (review 1.3).
     // Step 1 has just destroyed the only witness this detection has: the page
@@ -905,7 +975,6 @@ function normalizeDuplicatedPage(
     sa.clearSkippedElements(page);
     sa.clearSimulationStatus(page);
 
-    result.changed = true;
     result.notices.push('Duplicated page normalized');
 }
 
