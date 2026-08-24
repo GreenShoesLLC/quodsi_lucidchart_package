@@ -239,7 +239,10 @@ requirements and overrides. All resource writes go through
 renders Studio's shared `ResourcesEditor` / `ResourceEditor` /
 `ResourceLinkPicker` components. Un-classifying a block or unlinking a lane
 leaves its resource record unclaimed rather than deleting it — deletion
-only happens explicitly, from the Resources tab.
+only happens explicitly, from the Resources tab. Paste normalization is
+registered via `DocumentProxy.hookCreateItems` in `src/extension.ts` and
+implemented in `src/core/PasteNormalizer.ts`, which detects a pasted item
+whenever its stored envelope id no longer matches its live item id.
 
 ### Debugging Tips
 1. Enable console logging in browser developer tools

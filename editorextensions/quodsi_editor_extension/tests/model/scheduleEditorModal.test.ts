@@ -4,11 +4,11 @@
 // for the packaged extension's quodsim-react bundle, the size it derives
 // from the caller's ModalSize preference via MODAL_SIZE_DIMENSIONS /
 // DEFAULT_MODAL_SIZE (same @quodsi/lucid-shared config PatternEditorModal /
-// StudioEmbedModal already use), and -- the one deliberate difference from
-// PatternEditorModal -- that this modal is CHROMELESS: quodsi_studio's
-// ScheduleModal renders its own 900x640 card with its own header and close
-// button, so a titled Lucid modal would stack a second set of chrome around
-// it.
+// StudioEmbedModal already use), and that this modal carries a native Lucid
+// title bar -- same as PatternEditorModal, and for the same reason: it gives
+// the modal a close affordance (Lucid's own X) that needs no CLOSE_MODAL
+// round trip through the iframe to work. See ScheduleEditorModal.ts's module
+// header for why this replaced the earlier chromeless design.
 //
 // The real lucid-extension-sdk Modal is swapped for tests/__mocks__/lucid-extension-sdk.ts
 // via jest.config.ts's moduleNameMapper; that mock's Modal captures whatever
@@ -88,13 +88,13 @@ describe('ScheduleEditorModal', () => {
         expect(url).not.toContain('shapeId=gen/1 2');
     });
 
-    it('is chromeless and carries no title -- the deliberate difference from PatternEditorModal', () => {
-        // ScheduleModal (quodsim-react) renders its own 900x640 card with its
-        // own header and close button. A titled Lucid modal here would stack
-        // a second title bar and a second close button around it.
+    it('carries a title and is not chromeless -- same as PatternEditorModal', () => {
+        // Lucid's own title bar gives this modal a close affordance (the
+        // native X) that works with no CLOSE_MODAL round trip through the
+        // iframe. ScheduleModal's own in-view X stays as a second exit.
         const modal = new ScheduleEditorModal(FAKE_CLIENT, { shapeId: 'gen-1' });
-        expect(configOf(modal).chromeless).toBe(true);
-        expect(configOf(modal).title).toBeUndefined();
+        expect(configOf(modal).title).toBe('Arrival Schedule');
+        expect(configOf(modal).chromeless).toBeFalsy();
     });
 
     it('registers itself on the "schedule" channel, not "pattern" or any other role', () => {

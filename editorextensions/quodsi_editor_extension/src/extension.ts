@@ -31,7 +31,8 @@ installDebugGlobal();
 
 import {
     EditorClient,
-    Viewport
+    Viewport,
+    DocumentProxy
 } from 'lucid-extension-sdk';
 import { ModelManager } from './core/ModelManager';
 import { StorageAdapter } from './core/StorageAdapter';
@@ -39,6 +40,7 @@ import { RightDockPanel } from './panels/RightDockPanel';
 import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
 import { AnalyticsHandler } from './core/messaging/handlers/analyticsHandler';
+import { onItemsCreated } from './core/pasteHookWiring';
 
 const log = getLogger('extension');
 
@@ -69,4 +71,11 @@ SelectionHandler.setModelManager(modelManager);
 // Hook selection changes to SelectionHandler
 viewport.hookSelection((items) => {
     SelectionHandler.handleLucidSelectionEvent(client, items);
+});
+
+// Hook item creation (covers paste) to the paste normalizer, via
+// pasteHookWiring's onItemsCreated -- see src/core/PasteNormalizer.ts for
+// what "pasted" means and what gets normalized.
+new DocumentProxy(client).hookCreateItems((items) => {
+    void onItemsCreated(items, { storageAdapter, modelManager, client });
 });

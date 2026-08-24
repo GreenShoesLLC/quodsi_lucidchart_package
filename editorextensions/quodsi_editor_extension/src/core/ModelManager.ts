@@ -75,11 +75,15 @@ export class ModelManager {
      */
     private pageBuilder: ModelDefinitionPageBuilder | null = null;
     /**
-     * One-shot notices produced by migrate-on-open (currently: duplicate names
-     * the storage-format 1 -> 2 migration had to rename). Drained by the next
-     * validateModel(); a permanent nag for a one-time event would be noise.
+     * One-shot notices, consumed exactly once by the next validateModel().
+     * Originally migrate-on-open only (duplicate names the storage-format
+     * 1 -> 2 migration had to rename); Task 2 of the paste-normalizer plan
+     * generalized the channel so any host-side event that produces an
+     * informational notice (e.g. a pasted item silently re-stamped) can push
+     * onto it via pushNotices(). A permanent nag for a one-time event would
+     * be noise, hence drain-on-read rather than a standing list.
      */
-    private pendingMigrationNotices: ValidationIssue[] = [];
+    private pendingNotices: ValidationIssue[] = [];
 
     // Singleton instance and client reference
     private static instance: ModelManager | null = null;
@@ -198,7 +202,7 @@ export class ModelManager {
                         const migration = migrateResourcesToModelLevel(this.currentPage, this.storageAdapter);
                         if (migration.renames.length > 0) {
                             const pairs = migration.renames.map(r => `${r.from} -> ${r.to}`).join(', ');
-                            this.pendingMigrationNotices.push(ValidationMessages.createIssue(
+                            this.pendingNotices.push(ValidationMessages.createIssue(
                                 ValidationSeverity.WARNING,
                                 'resource_renamed_on_migration',
                                 `While moving resources to the model level, ${migration.renames.length} duplicate name(s) were renamed: ${pairs}. Review them on the Model Editor's Resources tab.`
@@ -632,7 +636,7 @@ export class ModelManager {
                 this.pageBuilder.getLastResourceLinkRejections(),
                 new Map(modelDef.resources.getAll().map(r => [r.id, r.name])))
             : [];
-        const extra = [...linkIssues, ...this.pendingMigrationNotices.splice(0)];
+        const extra = [...linkIssues, ...this.pendingNotices.splice(0)];
         if (extra.length > 0) {
             // ModelValidationService pushes its "Model validation passed
             // successfully" INFO when the RULES produce nothing (see its
@@ -725,6 +729,17 @@ export class ModelManager {
         this.markModelDirty();
     }
 
+    /**
+     * Appends to the one-shot notices channel drained by the next
+     * validateModel() (see pendingNotices' doc comment). Used by hosts
+     * outside the normal element CRUD flow that need to surface an
+     * informational notice without failing validation (e.g. the paste
+     * normalizer reporting a silently re-stamped item).
+     */
+    public pushNotices(issues: ValidationIssue[]): void {
+        this.pendingNotices.push(...issues);
+    }
+
     public async getModelDefinition(): Promise<ModelDefinition | null> {
         return await this.ensureModelDefinition();
     }
@@ -783,7 +798,7 @@ export class ModelManager {
         this.currentPage = null;
         this.currentValidationResult = null;
         this.pageBuilder = null;
-        this.pendingMigrationNotices = [];
+        this.pendingNotices = [];
         // Reset the once-per-page version/baseline gate. Without this, after a
         // model is removed and re-created on the SAME page in the same session,
         // the gate at ensureModelDefinition() still sees this page as "checked"

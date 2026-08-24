@@ -281,7 +281,12 @@ export class SimulationHandler {
           }
           
           // Try to initialize the model for the current page
-          const basicModel = Model.createDefault(documentProxy.id);
+          // The Model's id becomes the PAGE's q_data envelope id (initializeModel ->
+          // StorageAdapter.setElementData stamps `id` from the Model). It must be
+          // the page id, not the document id: ModelManager's own convert path uses
+          // `page.id`, and a document-id stamp leaves every page envelope naming
+          // something that is not a page.
+          const basicModel = Model.createDefault(activePageProxy.id);
           await modelManager.initializeModel(basicModel, activePageProxy);
         }
       } catch (error) {

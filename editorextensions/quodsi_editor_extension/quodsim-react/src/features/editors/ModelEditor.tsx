@@ -346,7 +346,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 title={tab.tooltip}
-                className={`px-3 py-2 border-b-2 ${
+                // flex-1 + centered icon: the strip shares the dock width
+                // across however many tabs exist (seven since the Resources
+                // and Arrivals tabs landed), instead of a fixed px-3 per tab
+                // that overflowed the 300px dock and forced a horizontal
+                // scrollbar.
+                className={`flex-1 flex justify-center px-1 py-2 border-b-2 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"

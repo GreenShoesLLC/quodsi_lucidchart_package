@@ -142,6 +142,29 @@ describe('migrateResourcesToModelLevel', () => {
         expect(sa.getResources(page)[0].name).toBe('Nurse');   // no second record minted from the edit
     });
 
+    it('leaves an EMPTY Resource envelope alone -- an unlinked block is not a legacy record', () => {
+        // The paste normalizer's rule 4 writes exactly this shape: a Resource
+        // block whose pointer resolved nowhere becomes `{ id }`, unlinked, for
+        // the panel's picker to re-link. A format-1 legacy record ALWAYS
+        // carried payload (name/capacity/description/financialProperties/
+        // levers), so "no resourceId" alone cannot mean legacy: it would mint a
+        // bogus 'New Resource' record here and re-point the block at it,
+        // immediately undoing the normalization the user was just told about.
+        const sa = new StorageAdapter();
+        const page = makeFakePage('p');
+        const blk = addBlock(page, makeFakeBlock('blk-unlinked'));
+        sa.setElementData(blk, { id: 'blk-unlinked' } as any, SimulationObjectType.Resource);
+        const before = { res: page.shapeData.get('q_resources'), data: blk.shapeData.get('q_data') };
+
+        const result = migrateResourcesToModelLevel(page, sa);
+
+        expect(result.migrated).toBe(false);
+        expect(sa.getResources(page)).toEqual([]);
+        expect(page.shapeData.get('q_resources')).toBe(before.res);
+        expect(blk.shapeData.get('q_data')).toBe(before.data);
+        expect((sa.getElementData(blk) as any).resourceId).toBeUndefined();
+    });
+
     it('drops stored PLAIN AUTO requirements for resources that exist, keeping customs', () => {
         // One-time seam. Format 1 persisted the auto-requirement a Resource
         // block minted alongside its record. Format 2 DERIVES that requirement

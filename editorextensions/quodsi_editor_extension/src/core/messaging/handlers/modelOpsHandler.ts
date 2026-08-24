@@ -598,7 +598,6 @@ export class ModelOpsHandler {
       const modelManager = ModelManager.getInstance();
       const client = ModelManager.getClient();
       const viewport = new Viewport(client);
-      const documentProxy = new DocumentProxy(client);
       const activePageProxy = viewport.getCurrentPage();
 
       // Verify we have an active page
@@ -651,7 +650,12 @@ export class ModelOpsHandler {
 
           // Try to initialize the model for the current page
           ModelOpsHandler.logger.debug('Initializing model for current page...');
-          const basicModel = Model.createDefault(documentProxy.id);
+          // The Model's id becomes the PAGE's q_data envelope id (initializeModel ->
+          // StorageAdapter.setElementData stamps `id` from the Model). It must be
+          // the page id, not the document id: ModelManager's own convert path uses
+          // `page.id`, and a document-id stamp leaves every page envelope naming
+          // something that is not a page.
+          const basicModel = Model.createDefault(activePageProxy.id);
           await modelManager.initializeModel(basicModel, activePageProxy);
 
           // Get the model definition again after initialization

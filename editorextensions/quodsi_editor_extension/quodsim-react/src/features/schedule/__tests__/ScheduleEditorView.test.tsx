@@ -110,6 +110,15 @@ describe('ScheduleEditorView', () => {
     expect(lastProps.open).toBe(true)
   })
 
+  it('passes hideHeader so ScheduleModal drops its own inner header under Lucid\'s native title bar', () => {
+    setSearch('view=schedule&shapeId=g1')
+    currentProjection = { generators: [], arrivalSchedules: [], model: {} }
+
+    render(<ScheduleEditorView />)
+
+    expect(lastProps.hideHeader).toBe(true)
+  })
+
   it('asks the host to CLOSE_MODAL when ScheduleModal calls onClose -- there is no in-view open toggle', () => {
     setSearch('view=schedule&shapeId=g1')
     currentProjection = { generators: [], arrivalSchedules: [], model: {} }
