@@ -112,15 +112,6 @@ export const referenceDataBuilder = {
             id: a.id,
             name: a.name,
             routing: a.routing,
-            // Extract requirement IDs from actions for usage counting
-            actionRequirementIds: (a.actions || [])
-              .map(action => {
-                if ('resourceRequirementId' in action) {
-                  return (action as any).resourceRequirementId;
-                }
-                return null;
-              })
-              .filter((id): id is string => id !== null),
             // Carry per-action summary so the change-request editor can offer an Action
             // picker and a resource-requirement dropdown, AND so the States delete
             // dialog can warn about expressions referencing the state being deleted
@@ -128,6 +119,9 @@ export const referenceDataBuilder = {
             // through BRANCH/LOOP — see summarizeAction above).
             actions: (a.actions || []).map(action => summarizeAction(action as any)),
             sourceConfig: sourceConfigMods ? { initialStates: sourceConfigMods } : undefined,
+            failureProperties: (a as any).failureProperties?.repairResourceRequirementId
+              ? { repairResourceRequirementId: (a as any).failureProperties.repairResourceRequirementId as string }
+              : undefined,
           };
         });
 

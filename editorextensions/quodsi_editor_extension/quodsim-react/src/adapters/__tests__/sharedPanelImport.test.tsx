@@ -4,6 +4,7 @@ import {
   summarizeArrivalPattern,
   ArrivalsEditor,
   findArrivalUsage,
+  RequirementField, RequirementFieldContext, ResourceRequirementsEditor, useRequirementCommit,
 } from 'quodsi_studio/platforms/shared'
 
 describe('shared panel import', () => {
@@ -15,6 +16,10 @@ describe('shared panel import', () => {
     // wrapper depends on.
     expect(typeof ArrivalsEditor).toBe('function')
     expect(typeof findArrivalUsage).toBe('function')
+    expect(typeof RequirementField).toBe('function')
+    expect(typeof ResourceRequirementsEditor).toBe('function')
+    expect(typeof useRequirementCommit).toBe('function')
+    expect(RequirementFieldContext).toBeDefined()
   })
 
   it('summarizes a pattern without a host', () => {

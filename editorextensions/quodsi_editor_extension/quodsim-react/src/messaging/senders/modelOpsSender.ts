@@ -1,7 +1,15 @@
 import { useCallback, useMemo } from 'react';
-import { EnvelopeMessageType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
+import { v4 as uuid } from 'uuid';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
+
+// Generous but bounded — a local ModelManager mutation + re-validate, not a
+// network call (same reasoning as useModelRootSource's MODEL_ROOT_UPDATE).
+// Module scope: it's a constant, not per-render state, and declaring it
+// inside the hook body allocated (and discarded) a fresh binding on every
+// render for no reason.
+const RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS = 30_000;
 
 /**
  * Custom hook that provides typed functions for sending model operations messages
@@ -140,16 +148,51 @@ export function useModelOpsSender() {
   }, [send]);
 
   /**
-   * Send a request to update the resource requirements array
-   *
-   * @param resourceRequirements Array of serialized resource requirement definitions
+   * Persist the custom resource-requirements list. Unlike the other senders
+   * here this is a confirmed round trip: it resolves only when the host
+   * replies RESOURCE_REQUIREMENTS_UPDATE_RESULT for this envelope id, so a
+   * caller can order a dependent write (e.g. repointing an action at a
+   * just-created requirement) after the list is durably stored. Mirrors the
+   * mint-your-own-correlation-id idiom in useModelRootSource.transport.send.
+   * The handler replies to target 'model-iframe' regardless of source; these
+   * editors only ever live in the model panel.
    */
-  const updateResourceRequirements = useCallback((resourceRequirements: ISerializedResourceRequirement[]) => {
-    // Use RESOURCE_REQUIREMENTS_UPDATE for updating resource requirements
-    send(EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE, {
-      resourceRequirements
-    });
-  }, [send]);
+  const updateResourceRequirements = useCallback(
+    (resourceRequirements: ISerializedResourceRequirement[]): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
+        if (!window.parent) {
+          reject(new Error('No parent window to send resource requirements to'));
+          return;
+        }
+        const correlationId = uuid();
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const handler = (event: MessageEvent) => {
+          const msg = event.data;
+          if (msg?.id === correlationId && msg?.type === EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT) {
+            window.removeEventListener('message', handler);
+            if (timeoutId !== undefined) clearTimeout(timeoutId);
+            const data = (msg.data || {}) as { success?: boolean; errorMessage?: string };
+            if (data.success) resolve();
+            else reject(new Error(data.errorMessage || 'Resource requirements update failed'));
+          }
+        };
+        window.addEventListener('message', handler);
+        timeoutId = setTimeout(() => {
+          window.removeEventListener('message', handler);
+          reject(new Error('Resource requirements update timed out'));
+        }, RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS);
+        const envelope: EnvelopeBase = {
+          id: correlationId,
+          type: EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE,
+          source: 'model-iframe',
+          target: 'host',
+          version: '1.0',
+          data: { resourceRequirements },
+        };
+        window.parent.postMessage(envelope, '*');
+      }),
+    [],
+  );
 
   /**
    * Send a request for the serialized model JSON

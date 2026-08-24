@@ -12,6 +12,22 @@ import { ExtendedModelItemData } from '../../types/ModelItemData';
 // Create component-specific logger
 const logger = getLogger('useModelPanel');
 
+// Module-level fallback: `selection.referenceData || { ... }` was creating a
+// NEW object every render whenever referenceData was falsy. useReferenceDataAccessor
+// notifies subscribers on prop-identity change, so a fresh literal every
+// render made it think the reference data changed every render too,
+// clearing its optimistic overlay each time. Frozen so nothing can
+// accidentally mutate the shared fallback.
+const EMPTY_REFERENCE_DATA: EditorReferenceData = Object.freeze({
+  activities: [],
+  generators: [],
+  entities: [],
+  resources: [],
+  resourceRequirements: [],
+  connectors: [],
+  states: []
+});
+
 /**
  * Custom hook that brings together all the data and actions needed for the ModelPanel component.
  * Transforms data from the messaging system format to the format expected by UI components.
@@ -232,15 +248,7 @@ export function useModelPanel() {
   };
   
   // Use reference data from selection state or provide empty default
-  const referenceData: EditorReferenceData = selection.referenceData || {
-    activities: [],
-    generators: [],
-    entities: [],
-    resources: [],
-    resourceRequirements: [],
-    connectors: [],
-    states: []
-  };
+  const referenceData: EditorReferenceData = selection.referenceData || EMPTY_REFERENCE_DATA;
   
   // Debug log the reference data to track the fix
   logger.debug('Reference data from selection state:', {

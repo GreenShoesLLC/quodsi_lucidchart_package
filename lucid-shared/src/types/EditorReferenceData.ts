@@ -68,7 +68,6 @@ export interface EditorReferenceData {
         id: string,
         name: string,
         routing?: ConnectType,
-        actionRequirementIds?: string[];  // Requirement IDs used by actions
         /** Per-action summary for the change-request editor (Action picker + resource-requirement dropdown). */
         actions?: EditorReferenceActionSummary[];
         /**
@@ -84,6 +83,8 @@ export interface EditorReferenceData {
         sourceConfig?: {
             initialStates?: EditorReferenceStateModification[];
         };
+        /** Failure-tab repair requirement, so usage counts include repair references. */
+        failureProperties?: { repairResourceRequirementId?: string };
     }>;
     generators?: Array<{
         id: string;
