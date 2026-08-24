@@ -6,6 +6,9 @@ import {
   findArrivalUsage,
   RequirementField, RequirementFieldContext, ResourceRequirementsEditor, useRequirementCommit,
   ConnectorRoutingView,
+  ResourcesEditor,
+  ResourceEditor,
+  ResourceLinkPicker,
 } from 'quodsi_studio/platforms/shared'
 
 describe('shared panel import', () => {
@@ -22,6 +25,13 @@ describe('shared panel import', () => {
     expect(typeof useRequirementCommit).toBe('function')
     expect(RequirementFieldContext).toBeDefined()
     expect(typeof ConnectorRoutingView).toBe('function')
+    // Plan 2b: the Resources tab body and BOTH halves of a Resource block's
+    // editor (linked -> ResourceEditor, unlinked/dangling -> ResourceLinkPicker)
+    // are shared, not reimplemented per host. Lucid deleted its own
+    // features/editors/ResourceEditor.tsx in favour of these.
+    expect(typeof ResourcesEditor).toBe('function')
+    expect(typeof ResourceEditor).toBe('function')
+    expect(typeof ResourceLinkPicker).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {

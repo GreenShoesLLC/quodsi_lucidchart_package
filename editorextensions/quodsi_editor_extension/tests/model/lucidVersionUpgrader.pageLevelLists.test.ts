@@ -91,7 +91,7 @@ describe('LucidVersionUpgrader page-level lists (review R3)', () => {
         const modelDefinition = new ModelDefinition(model);
 
         expect(() => {
-            (builder as any).loadAndMergeResourceRequirements(page, modelDefinition);
+            (builder as any).loadResourceRequirements(page, modelDefinition);
         }).not.toThrow();
 
         const loaded = modelDefinition.resourceRequirements.getAll();

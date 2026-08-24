@@ -13,12 +13,17 @@ import {
     UnitlessSample,
     Scenario,
     SwimLaneQuodsiData,
-    SwimLaneResourceData,
-    ResourceFinancialProperties
+    ResourceFinancialProperties,
+    ResourceClaim,
+    ResourceLaneRef,
+    ResourceLinkRejection,
+    resolveResourceLinks,
+    reconcileAutoRequirements
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelLucid } from '../types/ModelLucid';
+import { SimObjectLucid } from '../types/SimObjectLucid';
 import { getLogger } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
@@ -29,6 +34,10 @@ const moduleLog = getLogger('ModelDefinitionPageBuilder');
 
 export class ModelDefinitionPageBuilder {
     private loggingEnabled: boolean = false;
+
+    private lastResourceLinkRejections: ResourceLinkRejection[] = [];
+    /** Claims the last build rejected (dangling / duplicate). ModelManager.validateModel turns these into WARNINGs. */
+    public getLastResourceLinkRejections(): ResourceLinkRejection[] { return this.lastResourceLinkRejections; }
 
     constructor(
         private storageAdapter: StorageAdapter,
@@ -145,11 +154,17 @@ export class ModelDefinitionPageBuilder {
                     return null;
                 }
             }
+            // Resources come from the page-level q_resources list, ahead of every
+            // block, so the claim walk below has something to link blocks and lanes to.
+            this.loadResources(page, modelDefinition);
+
             // NOTE: Entity is intentionally NOT in this list. Entities are no longer
             // shape-mapped; they are stored as a page-level list (q_entities) and loaded
             // via loadEntities() below — mirroring States / Resource Requirements.
+            // Resource is NOT in this list either (storage format 2): a Resource block
+            // is a POINTER at a model-level record, never the record itself, so it is
+            // handled by linkResourceClaimants() instead of being minted here.
             const processingOrder: SimulationObjectType[] = [
-                SimulationObjectType.Resource,        // Process resources first to create requirements
                 SimulationObjectType.Activity,        // Activities that use resources and entities
                 SimulationObjectType.Generator        // Generators that reference entities
             ];
@@ -181,13 +196,6 @@ export class ModelDefinitionPageBuilder {
                         const simObject = platformObject.getSimulationObject();
 
                         switch (type) {
-                            case SimulationObjectType.Resource:
-                                modelDefinition.resources.add(simObject);
-                                const requirement = ResourceRequirement.createForSingleResource(simObject);
-                                modelDefinition.resourceRequirements.add(requirement);
-                                this.log(`Added resource and requirement: ${simObject.name}`);
-                                break;
-
                             case SimulationObjectType.Activity:
                                 modelDefinition.activities.add(simObject);
                                 this.log(`Added activity: ${simObject.name}`);
@@ -204,8 +212,14 @@ export class ModelDefinitionPageBuilder {
                 }
             }
 
-            // Load and merge custom resource requirements from storage
-            this.loadAndMergeResourceRequirements(page, modelDefinition);
+            // Link blocks and swimlane lanes to the resources they claim. Must
+            // run after loadResources (needs the Resource objects); its position
+            // relative to the block pass is incidental -- claims are read from
+            // shapeData, not from anything that pass builds.
+            this.linkResourceClaimants(page, modelDefinition);
+
+            // Derive/reconcile resource requirements against those resources
+            this.loadResourceRequirements(page, modelDefinition);
 
             // Load states from storage
             this.loadStates(page, modelDefinition);
@@ -221,9 +235,6 @@ export class ModelDefinitionPageBuilder {
 
             // Load scenarios from storage
             this.loadScenarios(page, modelDefinition);
-
-            // Load swimlane-derived resources
-            this.loadSwimLaneResources(page, modelDefinition);
 
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
@@ -281,72 +292,142 @@ export class ModelDefinitionPageBuilder {
     }
 
     /**
-     * Loads custom resource requirements from storage and merges with automatic ones.
+     * Loads the page-level Resource list (`q_resources`, storage format 2).
      *
-     * Strategy:
-     * - Automatic requirements (from Resource blocks) are generated on-the-fly, never persisted
-     * - Custom requirements (from q_res_requirements) are persisted and can be:
-     *   1. Pure custom (multi-resource like "Mixed Team Options")
-     *   2. Overrides of automatic requirements (if user customizes a single-resource requirement)
-     *
-     * Merge logic:
-     * - Custom requirements by ID override automatic ones
-     * - Remaining custom requirements are added (pure custom)
-     * - Result: no duplicates, custom takes precedence
+     * Resources are model-level records, not shape data: they exist whether or
+     * not anything on the canvas draws them. Geometry is deliberately NOT read
+     * here - it follows whichever block claims the resource, stamped by
+     * linkResourceClaimants() below. A resource nothing claims (a lane
+     * resource, or one authored from the Resources tab) simply stays at 0/0
+     * with no width/height, which Resource.toJSON() omits.
      */
-    private loadAndMergeResourceRequirements(
-        page: PageProxy,
-        modelDefinition: ModelDefinition
-    ): void {
-        this.log('Loading and merging resource requirements');
+    private loadResources(page: PageProxy, modelDefinition: ModelDefinition): void {
+        for (const stored of this.storageAdapter.getResources(page)) {
+            try {
+                const resource = new Resource(String(stored.id), stored.name || 'New Resource', stored.capacity ?? 1);
+                resource.description = stored.description ?? '';
+                if (stored.financialProperties) {
+                    resource.financialProperties = new ResourceFinancialProperties({
+                        enabled: stored.financialProperties.enabled,
+                        costPerSeize: stored.financialProperties.costPerSeize,
+                        costPerHourUtilized: stored.financialProperties.costPerHourUtilized,
+                        costPerHourIdle: stored.financialProperties.costPerHourIdle,
+                    });
+                }
+                if (Array.isArray(stored.levers)) resource.levers = stored.levers;
+                modelDefinition.resources.add(resource);
+            } catch (error) {
+                this.log(`Error deserializing resource ${stored?.id}: ${error}`, 'error');
+            }
+        }
+        this.log(`Final resources count: ${modelDefinition.resources.size()}`);
+    }
 
-        // Get automatic requirements already added (one per Resource block)
-        const autoRequirements = modelDefinition.resourceRequirements.getAll();
-        this.log(`Automatic requirements from Resource blocks: ${autoRequirements.length}`);
-
-        // Load custom requirements from storage
-        const customRequirements = this.storageAdapter.getResourceRequirements(page);
-        this.log(`Custom requirements from storage: ${customRequirements.length}`);
-
-        // Create a map of custom requirements by ID for fast lookup
-        const customById = new Map(customRequirements.map(r => [r.id, r]));
-
-        // Merge: custom overrides auto by matching ID
-        const mergedRequirements: ResourceRequirement[] = [];
-
-        for (const autoReq of autoRequirements) {
-            const customReq = customById.get(autoReq.id);
-            if (customReq) {
-                // Custom requirement overrides automatic one - deserialize the root clause
-                const deserializedRootClause = this.deserializeClause(customReq.rootClause);
-                mergedRequirements.push(
-                    new ResourceRequirement(customReq.id, customReq.name, deserializedRootClause)
-                );
-                customById.delete(autoReq.id); // Mark as processed
-                this.log(`Using custom requirement for resource: ${customReq.name} (ID: ${autoReq.id})`);
+    /**
+     * Stamps the TRANSIENT claimant markers (`shapeId` / `shapeLabel` /
+     * `laneRef`) and the geometry onto the resources something on the canvas
+     * claims.
+     *
+     * Claims are collected in DOCUMENT ORDER - `page.allBlocks` order, and
+     * within a swimlane block, lane order - because that order is
+     * resolveResourceLinks' tie-break when two claimants name one resource,
+     * and it is the only thing that makes the winner stable across reloads.
+     *
+     * Rejections are not errors: the claimant just renders unlinked. They are
+     * kept on `lastResourceLinkRejections` for validation to surface.
+     */
+    private linkResourceClaimants(page: PageProxy, modelDefinition: ModelDefinition): void {
+        type Claimant = { claim: ResourceClaim; block: BlockProxy };
+        const claimants: Claimant[] = [];
+        for (const [blockId, block] of page.allBlocks) {
+            const typeInfo = this.storageAdapter.getElementType(block);
+            if (typeInfo?.type === SimulationObjectType.Resource) {
+                const ptr = this.storageAdapter.getElementData(block) as { resourceId?: string } | null;
+                if (ptr?.resourceId) {
+                    claimants.push({ block, claim: { kind: 'shape', claimantId: blockId, resourceId: String(ptr.resourceId) } });
+                }
+            }
+            if (block.getClassName() === 'AdvancedSwimLaneBlock') {
+                const str = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
+                if (str) {
+                    try {
+                        const swim = JSON.parse(str) as SwimLaneQuodsiData;
+                        for (const lane of swim.lanes ?? []) {
+                            if (lane?.resourceId) {
+                                claimants.push({
+                                    block,
+                                    claim: {
+                                        kind: 'lane',
+                                        claimantId: `${blockId}:${lane.laneId}`,
+                                        resourceId: String(lane.resourceId),
+                                        laneRef: { blockId, laneId: lane.laneId }
+                                    }
+                                });
+                            }
+                        }
+                    } catch (error) { this.log(`Bad q_swimlane on ${blockId}: ${error}`, 'warn'); }
+                }
+            }
+        }
+        const resolution = resolveResourceLinks(
+            modelDefinition.resources.getAll().map(r => r.id),
+            claimants.map(c => c.claim)
+        );
+        const byClaimantId = new Map(claimants.map(c => [c.claim.claimantId, c]));
+        for (const [resourceId, claim] of resolution.claimByResourceId) {
+            const resource = modelDefinition.resources.get(resourceId) as (Resource & { shapeId?: string; shapeLabel?: string; laneRef?: ResourceLaneRef }) | undefined;
+            const claimant = byClaimantId.get(claim.claimantId);
+            if (!resource || !claimant) continue;
+            if (claim.kind === 'shape') {
+                const box = claimant.block.getBoundingBox();
+                resource.setLocation(box.x ?? 0, box.y ?? 0);
+                resource.width = box.w;
+                resource.height = box.h;
+                resource.shapeId = claim.claimantId;
+                resource.shapeLabel = SimObjectLucid.blockLabel(claimant.block);
             } else {
-                // Keep automatic requirement
-                mergedRequirements.push(autoReq);
+                resource.laneRef = claim.laneRef;
+            }
+        }
+        this.lastResourceLinkRejections = resolution.rejected;
+        if (resolution.rejected.length) {
+            this.log(`Rejected ${resolution.rejected.length} resource claim(s)`, 'warn');
+        }
+    }
+
+    /**
+     * Builds the requirement list from storage through the SHARED reconcile
+     * chokepoint (`reconcileAutoRequirements`).
+     *
+     * It keeps every stored entry - pure custom ones, and user overrides
+     * stored under an auto id - drops an auto-shaped entry whose resource is
+     * gone, renames an auto-shaped entry to its resource's current name, and
+     * appends a fresh auto for every resource still lacking one. That is the
+     * old block-pass mint + lane-pass mint + custom merge, in one place that
+     * drawio and Visio run too.
+     */
+    private loadResourceRequirements(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading resource requirements');
+
+        const stored = this.storageAdapter.getResourceRequirements(page) as unknown as Array<Record<string, unknown>>;
+        const reconciled = reconcileAutoRequirements(modelDefinition.resources.getAll(), stored);
+
+        modelDefinition.resourceRequirements.clear();
+        for (const raw of reconciled) {
+            try {
+                // The same deserializer the old merge used: a stored rootClause
+                // is plain JSON and must become a RequirementClause instance
+                // (recursively) before it enters the model.
+                const rootClause = this.deserializeClause(raw.rootClause);
+                modelDefinition.resourceRequirements.add(
+                    new ResourceRequirement(String(raw.id), String(raw.name ?? ''), rootClause)
+                );
+            } catch (error) {
+                this.log(`Error deserializing resource requirement ${raw?.id}: ${error}`, 'error');
             }
         }
 
-        // Add remaining custom requirements (pure custom, not tied to a single resource)
-        for (const [id, customReq] of customById) {
-            // Deserialize the root clause for pure custom requirements
-            const deserializedRootClause = this.deserializeClause(customReq.rootClause);
-            mergedRequirements.push(
-                new ResourceRequirement(customReq.id, customReq.name, deserializedRootClause)
-            );
-            this.log(`Adding pure custom requirement: ${customReq.name} (ID: ${id})`);
-        }
-
-        // Clear and repopulate the requirements manager with merged result
-        modelDefinition.resourceRequirements.clear();
-        for (const req of mergedRequirements) {
-            modelDefinition.resourceRequirements.add(req);
-        }
-
-        this.log(`Final merged requirements count: ${mergedRequirements.length}`);
+        this.log(`Final requirements count: ${modelDefinition.resourceRequirements.size()}`);
     }
 
     /**
@@ -516,75 +597,6 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final scenarios count: ${modelDefinition.scenarios.size()}`);
-    }
-
-    /**
-     * Loads Resources defined inline in swimlane lane mappings.
-     */
-    private loadSwimLaneResources(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading swimlane-derived resources');
-        let addedCount = 0;
-
-        for (const [blockId, block] of page.allBlocks) {
-            if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
-
-            const dataStr = block.shapeData.get(SWIMLANE_DATA_KEY);
-            if (!dataStr) {
-                this.log(`Swimlane ${blockId} has no q_swimlane data`);
-                continue;
-            }
-
-            let swimlaneData: SwimLaneQuodsiData;
-            try {
-                swimlaneData = JSON.parse(dataStr as string);
-            } catch (error) {
-                this.log(`Error parsing q_swimlane for block ${blockId}: ${error}`, 'error');
-                continue;
-            }
-
-            for (const mapping of swimlaneData.lanes) {
-                if (!mapping) continue;
-
-                const resData: SwimLaneResourceData = mapping.resource;
-
-                // Skip if a Resource with this ID already exists
-                const existing = modelDefinition.resources.getAll().find(r => r.id === resData.id);
-                if (existing) {
-                    this.log(`Swimlane resource ${resData.id} already exists in model, skipping`);
-                    continue;
-                }
-
-                // Create Resource from inline data
-                const resource = new Resource(
-                    resData.id,
-                    resData.name,
-                    resData.capacity,
-                    0, // x — no canvas position for lane-derived resources
-                    0  // y
-                );
-                resource.description = resData.description || '';
-
-                if (resData.financialProperties) {
-                    resource.financialProperties = new ResourceFinancialProperties({
-                        enabled: resData.financialProperties.enabled,
-                        costPerSeize: resData.financialProperties.costPerSeize,
-                        costPerHourUtilized: resData.financialProperties.costPerHourUtilized,
-                        costPerHourIdle: resData.financialProperties.costPerHourIdle,
-                    });
-                }
-
-                modelDefinition.resources.add(resource);
-
-                // Create a default single-resource requirement
-                const requirement = ResourceRequirement.createForSingleResource(resource);
-                modelDefinition.resourceRequirements.add(requirement);
-
-                this.log(`Added swimlane resource: ${resource.name} (lane: ${mapping.titleSnapshot})`);
-                addedCount++;
-            }
-        }
-
-        this.log(`Loaded ${addedCount} swimlane-derived resources`);
     }
 
     /**

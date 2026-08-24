@@ -48,6 +48,61 @@ describe('ModelManager.buildModelRootProjection', () => {
         arrivalSchedules: { getAll: () => [{ id: 'as-a', name: 'Schedule A', toJSON: () => ({ id: 'as-a', name: 'Schedule A' }) }] },
         entities: { getAll: () => [{ id: 'ent-a', name: 'Patient', description: 'noise' }] },
         states: { getAll: () => [{ id: 'st-a', name: 'Priority', dataType: 'NUMBER' }] },
+        // Plan 2b, Task 7: a shape-linked resource (shapeId + shapeLabel
+        // stamped the way the builder stamps them), a lane-linked one
+        // (laneRef, no shapeId), and an unclaimed one (neither) -- proves
+        // the projection carries exactly the link markers each resource
+        // actually has, not a fixed shape. financialProperties mimics the
+        // real Resource.financialProperties contract (a toJSON()-bearing
+        // object), matching Step 2's `fp?.toJSON ? fp.toJSON() : fp`.
+        resources: {
+          getAll: () => [
+            {
+              id: 'res-nurse',
+              name: 'Nurse',
+              capacity: 2,
+              description: 'RN staff',
+              financialProperties: {
+                toJSON: () => ({ enabled: true, costPerSeize: 5, costPerHourUtilized: 40, costPerHourIdle: 0 }),
+              },
+              levers: [],
+              shapeId: 'blk-1',
+              shapeLabel: 'Nurse Station',
+            },
+            {
+              id: 'res-doctor',
+              name: 'Doctor',
+              capacity: 1,
+              laneRef: { blockId: 'blk-2', laneId: 'lane-1' },
+            },
+            {
+              id: 'res-tech',
+              name: 'Tech',
+              capacity: 1,
+            },
+          ],
+        },
+        // One custom requirement (references res-nurse) plus one
+        // auto-derived requirement (id === resource id, res-tech) -- proves
+        // resourceRequirements carries both kinds, serialized via toJSON.
+        resourceRequirements: {
+          getAll: () => [
+            {
+              toJSON: () => ({
+                id: 'req-custom',
+                name: 'Nurse or Doctor',
+                rootClause: { id: 'clause-1', mode: 'require_any', requests: [{ resourceId: 'res-nurse' }, { resourceId: 'res-doctor' }], clauses: [] },
+              }),
+            },
+            {
+              toJSON: () => ({
+                id: 'res-tech',
+                name: 'Tech',
+                rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'res-tech' }], clauses: [] },
+              }),
+            },
+          ],
+        },
         model: {},
       },
       'page-B': {
@@ -56,6 +111,8 @@ describe('ModelManager.buildModelRootProjection', () => {
         arrivalSchedules: { getAll: () => [] },
         entities: { getAll: () => [] },
         states: { getAll: () => [] },
+        resources: { getAll: () => [] },
+        resourceRequirements: { getAll: () => [] },
         model: {},
       },
     };
@@ -112,7 +169,63 @@ describe('ModelManager.buildModelRootProjection', () => {
     expect(projection.states).toEqual([{ id: 'st-a', name: 'Priority' }]);
   });
 
-  it('returns an empty projection -- entities and states included -- when the page has no model', async () => {
+  // Plan 2b, Task 7: projectModelRoot maps def.resources.getAll() to rows
+  // carrying id/name/capacity/description/financialProperties/levers plus
+  // the transient shapeId/shapeLabel/laneRef markers -- present ONLY on the
+  // resource that actually has them. The consuming half (ResourcesEditor
+  // reading these markers for its status column) is covered by the REAL
+  // render in quodsim-react/src/features/editors/__tests__/
+  // ResourcesTab.projection.test.tsx; this pins the producing half.
+  it('projects resources with exactly the link markers each one carries', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.resources).toHaveLength(3);
+
+    const nurse = projection.resources.find((r: any) => r.id === 'res-nurse');
+    expect(nurse).toMatchObject({
+      id: 'res-nurse',
+      name: 'Nurse',
+      capacity: 2,
+      description: 'RN staff',
+      financialProperties: { enabled: true, costPerSeize: 5, costPerHourUtilized: 40, costPerHourIdle: 0 },
+      shapeId: 'blk-1',
+      shapeLabel: 'Nurse Station',
+    });
+    expect(nurse.laneRef).toBeUndefined();
+
+    const doctor = projection.resources.find((r: any) => r.id === 'res-doctor');
+    expect(doctor).toMatchObject({ id: 'res-doctor', name: 'Doctor', laneRef: { blockId: 'blk-2', laneId: 'lane-1' } });
+    expect(doctor.shapeId).toBeUndefined();
+    expect(doctor.shapeLabel).toBeUndefined();
+
+    const tech = projection.resources.find((r: any) => r.id === 'res-tech');
+    expect(tech).toMatchObject({ id: 'res-tech', name: 'Tech' });
+    expect(tech.shapeId).toBeUndefined();
+    expect(tech.laneRef).toBeUndefined();
+  });
+
+  it('projects resourceRequirements -- the custom requirement plus the derived auto -- serialized via toJSON', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.resourceRequirements).toEqual([
+      {
+        id: 'req-custom',
+        name: 'Nurse or Doctor',
+        rootClause: { id: 'clause-1', mode: 'require_any', requests: [{ resourceId: 'res-nurse' }, { resourceId: 'res-doctor' }], clauses: [] },
+      },
+      {
+        id: 'res-tech',
+        name: 'Tech',
+        rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'res-tech' }], clauses: [] },
+      },
+    ]);
+  });
+
+  it('returns an empty projection -- entities, states, resources and resourceRequirements included -- when the page has no model', async () => {
     const { mm } = harness();
     mm.getModelDefinition = async () => null;
 
@@ -124,6 +237,8 @@ describe('ModelManager.buildModelRootProjection', () => {
       arrivalSchedules: [],
       entities: [],
       states: [],
+      resources: [],
+      resourceRequirements: [],
       model: {},
     });
   });

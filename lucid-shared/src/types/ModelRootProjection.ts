@@ -1,5 +1,6 @@
 import { ISerializedArrivalPattern } from '../serialization/interfaces/ISerializedArrivalPattern';
 import { ISerializedArrivalSchedule } from '../serialization/interfaces/ISerializedArrivalSchedule';
+import { ISerializedResourceRequirement } from '../serialization/interfaces/ISerializedResourceRequirement';
 
 /**
  * Plain-data projection of the model root read by shared cross-platform
@@ -64,6 +65,28 @@ export type ModelRootProjection = {
     // scheduled arrivals have none.
     entities?: Array<{ id: string; name: string }>;
     states?: Array<{ id: string; name: string }>;
+    // Lucid global resources (Plan 2b). Optional for the same fixture-churn
+    // reason as arrivalSchedules; projectModelRoot populates both on every
+    // path. shapeId/shapeLabel/laneRef are TRANSIENT link markers stamped at
+    // build time for the Resources tab's status column -- this projection is
+    // a panel view, not the engine wire, which drops them by construction.
+    resources?: Array<{
+        id: string;
+        name: string;
+        capacity?: number;
+        description?: string;
+        financialProperties?: {
+            enabled: boolean;
+            costPerSeize: number;
+            costPerHourUtilized: number;
+            costPerHourIdle: number;
+        };
+        levers?: unknown[];
+        shapeId?: string;
+        shapeLabel?: string;
+        laneRef?: { blockId: string; laneId: string };
+    }>;
+    resourceRequirements?: ISerializedResourceRequirement[];
     model: {
         timeMode?: string;
         startDateTime?: string | null;

@@ -28,6 +28,7 @@ export * from './types/SelectionState';
 export * from './types/SelectionType';
 export * from './types/simComponentType';
 export * from './types/ElementTypeInfo';
+export * from './types/StoredResourceRecord';
 
 // Element types — sourced from monorepo core (Phase 3 slice 2)
 export { RunState } from '@quodsi/shared';
@@ -306,6 +307,28 @@ export type {
   AutoResourceLayout,
   PlannedAutoResource,
 } from '@quodsi/shared';
+
+// Resource claim resolution + auto-requirement reconciliation — re-exported
+// from @quodsi/shared so drawio, Visio and Lucid resolve a shape/lane claim
+// on a model-level Resource, and derive the implicit one-per-resource
+// requirement, with ONE implementation. Lucid reaches them through
+// ModelDefinitionPageBuilder (Plan 2b, storage format 2).
+export { resolveResourceLinks, stripTransientResourceMarkers } from '@quodsi/shared';
+export type {
+  ResourceClaim,
+  ResourceClaimantKind,
+  ResourceLaneRef,
+  ResourceLinkRejection,
+  ResourceLinkResolution,
+} from '@quodsi/shared';
+export { deriveAutoResourceRequirements, reconcileAutoRequirements } from '@quodsi/shared';
+// Validation copy for pointers resolveResourceLinks refused (dangling /
+// duplicate). Not a ValidationRule -- a dangling pointer is by definition
+// absent from the model, so hosts append these at model-build time. Lucid's
+// ModelManager.validateModel() appends them from the page builder's
+// getLastResourceLinkRejections().
+export { resourceLinkIssues } from '@quodsi/shared';
+export type { AutoRequirementResourceLike } from '@quodsi/shared';
 
 // Topology classification rule — re-exported from @quodsi/shared. The SAME
 // rule drawio and Visio reach through PageAnalyzer; LucidPageAnalyzer used to

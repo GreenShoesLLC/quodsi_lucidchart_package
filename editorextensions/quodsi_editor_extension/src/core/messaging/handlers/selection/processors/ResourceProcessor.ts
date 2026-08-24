@@ -14,7 +14,16 @@ import { referenceDataBuilder } from '../utils/referenceDataBuilder';
 const log = getLogger('ResourceProcessor');
 
 /**
- * Processor for resource selection
+ * Processor for resource selection.
+ *
+ * The payload a Resource block sends the panel is the FLATTENED POINTER:
+ * `{ id: <block id>, type: 'Resource', resourceId? }`. That falls out of
+ * itemDataBuilder.buildModelItemData, which serializes the block's own q_data
+ * (`{ id, resourceId }` under storage format 2) rather than a domain Resource
+ * looked up by id -- deliberately, because since Plan 2b the block does not
+ * own a resource: the record lives in the page's q_resources and the panel
+ * resolves the pointer against the model root. A block whose pointer has not
+ * been set yet simply has no `resourceId` key; nothing here throws on it.
  */
 export class ResourceProcessor extends BaseSelectionProcessor {
   /**

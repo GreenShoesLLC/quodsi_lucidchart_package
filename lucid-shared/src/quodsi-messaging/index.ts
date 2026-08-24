@@ -172,8 +172,6 @@ export interface EnvelopMessagePayloads {
 
   [EnvelopeMessageType.SWIMLANE_UPDATE]: { swimlaneBlockId: string; swimlaneData: import('../types/swimlane/SwimLaneQuodsiData').SwimLaneQuodsiData };
   [EnvelopeMessageType.SWIMLANE_UPDATE_RESULT]: { success: boolean; errorMessage?: string };
-  [EnvelopeMessageType.SWIMLANE_CONVERT_LANE]: { swimlaneBlockId: string; laneIndex: number; resourceName: string };
-  [EnvelopeMessageType.SWIMLANE_CONVERT_LANE_RESULT]: { success: boolean; swimlaneBlockId: string; swimlaneData?: import('../types/swimlane/SwimLaneQuodsiData').SwimLaneQuodsiData; error?: string };
 
   [EnvelopeMessageType.ENTITLEMENTS_STATUS]: EntitlementsStatusMessage['data'];
 

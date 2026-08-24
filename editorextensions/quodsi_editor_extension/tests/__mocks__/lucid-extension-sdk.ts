@@ -1,9 +1,14 @@
 // editorextensions/quodsi_editor_extension/tests/__mocks__/lucid-extension-sdk.ts
 // Minimal stand-ins so importing modules don't pull the real SDK at test time.
 export class ElementProxy {}
-export class BlockProxy {}
-export class LineProxy {}
-export class PageProxy {}
+// Mirrors the SDK's own hierarchy (ElementProxy -> ItemProxy -> Block/Line),
+// because production code branches on `instanceof` across all three -- e.g.
+// itemDataBuilder picks a name by BlockProxy and gates the unconverted flag
+// by ItemProxy, so a mock that flattened them would throw on the second check.
+export class ItemProxy extends ElementProxy {}
+export class BlockProxy extends ItemProxy {}
+export class LineProxy extends ItemProxy {}
+export class PageProxy extends ElementProxy {}
 export class Viewport {}
 export class DocumentProxy {}
 // Captures the config a subclass passes to `super(client, config)` on

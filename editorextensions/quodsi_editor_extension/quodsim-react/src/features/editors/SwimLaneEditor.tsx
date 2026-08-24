@@ -1,17 +1,53 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Layers, Plus, Loader2, Trash2 } from "lucide-react";
+// quodsim-react/src/features/editors/SwimLaneEditor.tsx
+//
+// A swimlane LANE is a POINTER at a model-level resource, exactly like a
+// Resource block (Plan 2b). Its q_swimlane mapping carries laneId /
+// titleSnapshot / assignmentMode / resourceId and nothing else -- the record
+// itself lives in the page's q_resources and outlives every claimant.
+//
+// So this editor owns no resource state. It chooses between the two SHARED
+// Studio panels the Resource block also uses:
+//   - no resourceId, or a resourceId that resolves to NOTHING in the
+//     model-root snapshot -> <ResourceLinkPicker claimantNoun="lane">, whose
+//     onLink writes ONLY the pointer into the lane. The create -> confirmed
+//     model-root write -> link ordering lives inside the picker; do not
+//     reimplement it here.
+//   - a resourceId that resolves -> <ResourceEditor> on that resource.
+//
+// Resolving the pointer against the snapshot (rather than trusting its mere
+// presence) is what keeps a DANGLING lane out of the shared editor. Deleting a
+// resource from the Resources tab does not rewrite q_swimlane -- the cascade
+// leaves the pointer behind and the builder reports it as
+// `resource_link_dangling` -- and ResourceEditor's answer to an unknown id is
+// a "Resource ... not found ... Re-bootstrap" dead end that no gesture in this
+// panel can clear. Same posture, same copy, as ResourceBlockEditor next door.
+//
+// Two consequences worth stating, because both were true the other way round
+// until this task:
+//   - There is no lane-side resource CREATION message any more. The
+//     extension's convert route (and its result envelope) is gone; the only
+//     message this editor sends is SWIMLANE_UPDATE, which persists the blob
+//     composed here.
+//   - "Remove Resource" is now "Unlink lane". Unlinking a lane unlinks a
+//     lane; the resource stays in the model, unclaimed, and can be re-linked
+//     here or from any other claimant.
+//
+// Storage format 1's inline mapping.resource copy is read by nothing here.
+// It exists on the type for ResourceStorageMigration alone, and this file
+// must never write it back.
+
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import { Layers, Unlink } from "lucide-react";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
   SwimLaneQuodsiData,
-  SwimLaneResourceData,
+  SwimLaneLaneMapping,
   EnvelopeMessageType,
-  EditorReferenceData,
-  Resource,
-  ResourceFinancialProperties,
-  StateListManager,
+  generateUUID,
 } from "@quodsi/lucid-shared";
+import { ResourceEditor, ResourceLinkPicker } from "quodsi_studio/platforms/shared";
 import { useMessaging } from "../../messaging/MessageContext";
-import ResourceEditor from "./ResourceEditor";
+import { useModelRootSource } from "../../adapters/useModelRootSource";
 
 interface LaneInfo {
   index: number;
@@ -31,17 +67,13 @@ interface SwimLaneEditorProps {
     swimlaneData: SwimLaneQuodsiData | null;
   };
   onSave: (data: any) => void;
-  referenceData?: EditorReferenceData;
 }
 
-const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
-  elementData,
-  onSave,
-  referenceData,
-}) => {
+const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
   const { sendMessage } = useMessaging();
+  const { accessor } = useModelRootSource();
   const [activeLaneIndex, setActiveLaneIndex] = useState(0);
-  const [converting, setConverting] = useState(false);
+  const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(true);
   const [swimlaneData, setSwimlaneData] = useState<SwimLaneQuodsiData>(
     elementData.swimlaneData || {
@@ -62,155 +94,60 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
     }
   }, [elementData.lanes.length]);
 
-  // Listen for SWIMLANE_CONVERT_LANE_RESULT from extension
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      try {
-        const msg = event.data;
-        if (msg?.type === EnvelopeMessageType.SWIMLANE_CONVERT_LANE_RESULT) {
-          const result = msg.data as {
-            success: boolean;
-            swimlaneBlockId: string;
-            swimlaneData?: SwimLaneQuodsiData;
-            error?: string;
-          };
-          if (result.swimlaneBlockId === elementData.blockId && result.success && result.swimlaneData) {
-            setSwimlaneData(result.swimlaneData);
-          }
-          setConverting(false);
-        }
-      } catch {
-        // Ignore non-matching messages
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [elementData.blockId]);
-
   const activeMapping = swimlaneData.lanes[activeLaneIndex] || null;
   const activeLane = elementData.lanes[activeLaneIndex];
 
+  // Same subscription idiom every shared panel uses, so this re-renders the
+  // moment a MODEL_ROOT_SNAPSHOT lands.
+  const snap = useSyncExternalStore(accessor.subscribe, accessor.getSnapshot);
+  const resources =
+    (snap.modelDefinition as unknown as { resources?: Array<{ id: string }> } | null)?.resources ??
+    [];
+  const linkedResource = activeMapping?.resourceId
+    ? resources.find((r) => r.id === activeMapping.resourceId)
+    : undefined;
+
   // Reset confirmation state when switching lanes
   useEffect(() => {
-    setConfirmingRemove(false);
+    setConfirmingUnlink(false);
   }, [activeLaneIndex]);
 
-  // Resource data is stored inline in the lane mapping
-  const activeResource = activeMapping?.resource || null;
-
-  const handleConvertLane = useCallback(() => {
-    if (!activeLane || converting) return;
-
-    setConverting(true);
-
-    // Send request to extension — it handles Resource creation in ModelDefinition
-    // and q_swimlane persistence, then returns the updated swimlaneData
-    sendMessage(EnvelopeMessageType.SWIMLANE_CONVERT_LANE, {
-      swimlaneBlockId: elementData.blockId,
-      laneIndex: activeLaneIndex,
-      resourceName: activeLane.title || `Lane ${activeLane.index} Resource`,
-    });
-  }, [activeLane, activeLaneIndex, converting, elementData.blockId, sendMessage]);
-
-  const [confirmingRemove, setConfirmingRemove] = useState(false);
-
-  const handleUnconvertLane = useCallback(() => {
-    if (!activeMapping) return;
-
-    const updatedLanes = [...swimlaneData.lanes];
-    updatedLanes[activeLaneIndex] = null;
-    const updatedData: SwimLaneQuodsiData = {
-      lanes: updatedLanes,
-      lastSyncedAt: new Date().toISOString(),
-    };
-    setSwimlaneData(updatedData);
-    setConfirmingRemove(false);
-
-    sendMessage(EnvelopeMessageType.SWIMLANE_UPDATE, {
-      swimlaneBlockId: elementData.blockId,
-      swimlaneData: updatedData,
-    });
-  }, [activeMapping, activeLaneIndex, swimlaneData, elementData.blockId, sendMessage]);
-
-  const handleAssignmentModeChange = useCallback((mode: "runtime-derive" | "explicit") => {
-    const updatedLanes = [...swimlaneData.lanes];
-    const current = updatedLanes[activeLaneIndex];
-    if (!current) return;
-
-    updatedLanes[activeLaneIndex] = { ...current, assignmentMode: mode };
-    const updatedData: SwimLaneQuodsiData = {
-      lanes: updatedLanes,
-      lastSyncedAt: new Date().toISOString(),
-    };
-    setSwimlaneData(updatedData);
-
-    sendMessage(EnvelopeMessageType.SWIMLANE_UPDATE, {
-      swimlaneBlockId: elementData.blockId,
-      swimlaneData: updatedData,
-    });
-  }, [activeLaneIndex, swimlaneData, elementData.blockId, sendMessage]);
-
-  // ---- ResourceEditor adapter ----
-
-  // Convert SwimLaneResourceData → Resource for ResourceEditor
-  const resourceFromMapping = useMemo((): Resource => {
-    if (!activeMapping?.resource) {
-      return new Resource("", "New Resource", 1, 0, 0);
-    }
-    const r = activeMapping.resource;
-    const resource = new Resource(r.id, r.name, r.capacity, 0, 0);
-    resource.description = r.description || "";
-    if (r.financialProperties) {
-      resource.financialProperties = new ResourceFinancialProperties({
-        enabled: r.financialProperties.enabled,
-        costPerSeize: r.financialProperties.costPerSeize,
-        costPerHourUtilized: r.financialProperties.costPerHourUtilized,
-        costPerHourIdle: r.financialProperties.costPerHourIdle,
-      });
-    }
-    return resource;
-  }, [activeMapping]);
-
-  // Convert Resource back → SwimLaneResourceData and send SWIMLANE_UPDATE
-  const handleResourceSave = useCallback((updatedResource: Resource) => {
-    if (!activeMapping) return;
-
-    const updatedInline: SwimLaneResourceData = {
-      id: updatedResource.id,
-      name: updatedResource.name,
-      capacity: updatedResource.capacity,
-      description: updatedResource.description || "",
-    };
-    if (updatedResource.financialProperties?.enabled) {
-      updatedInline.financialProperties = {
-        enabled: true,
-        costPerSeize: updatedResource.financialProperties.costPerSeize,
-        costPerHourUtilized: updatedResource.financialProperties.costPerHourUtilized,
-        costPerHourIdle: updatedResource.financialProperties.costPerHourIdle,
+  /**
+   * The ONE write path for lane state: replaces the mapping at `index` (or
+   * clears it with null), keeps local state in step, and persists the whole
+   * q_swimlane blob through SWIMLANE_UPDATE. The blob is positional and
+   * complete every time -- the handler overwrites, it does not merge.
+   */
+  const writeLane = useCallback(
+    (index: number, mapping: SwimLaneLaneMapping | null) => {
+      const updatedLanes = [...swimlaneData.lanes];
+      updatedLanes[index] = mapping;
+      const updatedData: SwimLaneQuodsiData = {
+        lanes: updatedLanes,
+        lastSyncedAt: new Date().toISOString(),
       };
-    }
+      setSwimlaneData(updatedData);
 
-    const updatedLanes = [...swimlaneData.lanes];
-    updatedLanes[activeLaneIndex] = {
-      ...activeMapping,
-      resource: updatedInline,
-      titleSnapshot: updatedResource.name, // keep in sync
-    };
-    const updatedData: SwimLaneQuodsiData = {
-      lanes: updatedLanes,
-      lastSyncedAt: new Date().toISOString(),
-    };
-    setSwimlaneData(updatedData);
+      sendMessage(EnvelopeMessageType.SWIMLANE_UPDATE, {
+        swimlaneBlockId: elementData.blockId,
+        swimlaneData: updatedData,
+      });
+    },
+    [swimlaneData, elementData.blockId, sendMessage]
+  );
 
-    sendMessage(EnvelopeMessageType.SWIMLANE_UPDATE, {
-      swimlaneBlockId: elementData.blockId,
-      swimlaneData: updatedData,
-    });
-  }, [activeMapping, activeLaneIndex, swimlaneData, elementData.blockId, sendMessage]);
+  const handleUnlinkLane = useCallback(() => {
+    setConfirmingUnlink(false);
+    writeLane(activeLaneIndex, null);
+  }, [activeLaneIndex, writeLane]);
 
-  // Empty states — lane resources don't support custom state variables
-  const emptyStates = useMemo(() => new StateListManager(), []);
-  const noopStatesChange = useCallback((_states: StateListManager) => {}, []);
+  const handleAssignmentModeChange = useCallback(
+    (mode: "runtime-derive" | "explicit") => {
+      if (!activeMapping) return;
+      writeLane(activeLaneIndex, { ...activeMapping, assignmentMode: mode });
+    },
+    [activeMapping, activeLaneIndex, writeLane]
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -247,30 +184,40 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
 
       {/* Lane Content */}
       <div className="flex-1 overflow-y-auto p-3">
-        {activeLane && !activeMapping && (
-          /* Unmapped lane */
-          <div className="text-center py-8">
-            <Layers className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 mb-3">
-              "{activeLane.title || `Lane ${activeLane.index}`}" is not mapped to a resource
+        {activeLane && !linkedResource && (
+          /* Unlinked -- or DANGLING -- lane: pick or create the model-level
+             resource it stands for. Either way the fix is the same picker. */
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              {activeMapping?.resourceId
+                ? "This lane points at a Resource that no longer exists. Link it to an existing Resource or create a new one."
+                : "This lane is not linked to a Resource."}
             </p>
-            <button
-              onClick={handleConvertLane}
-              disabled={converting}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded transition-colors"
-            >
-              {converting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Plus className="w-3.5 h-3.5" />
-              )}
-              {converting ? "Converting..." : "Convert to Resource"}
-            </button>
+            <ResourceLinkPicker
+              accessor={accessor}
+              claimantNoun="lane"
+              onLink={async (resourceId) => {
+                writeLane(activeLaneIndex, {
+                  laneId: activeMapping?.laneId ?? generateUUID(),
+                  // `||`, NOT `??`: an untitled Lucid lane returns '' from
+                  // getTitle(), and '' is not a lane name. ActivityProcessor
+                  // reports titleSnapshot as the banner's `laneName` and reuses
+                  // it as the resourceName fallback for a pointer that no
+                  // longer resolves, so an empty one shows up as a blank where
+                  // a lane identity belongs.
+                  titleSnapshot:
+                    activeMapping?.titleSnapshot || activeLane.title || `Lane ${activeLane.index}`,
+                  assignmentMode: activeMapping?.assignmentMode ?? "runtime-derive",
+                  resourceId,
+                });
+              }}
+              onLinked={() => {}}
+            />
           </div>
         )}
 
-        {activeLane && activeMapping && (
-          /* Mapped lane — embed ResourceEditor + assignment mode toggle */
+        {activeLane && activeMapping?.resourceId && linkedResource && (
+          /* Linked lane -- assignment mode + the SHARED editor on the resource */
           <div className="space-y-4">
             {/* Assignment Mode */}
             <AccordionSection
@@ -314,48 +261,43 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
               </div>
             </AccordionSection>
 
-            {/* Embedded ResourceEditor */}
+            {/* The model-level record this lane points at, edited in place. */}
             <div className="border-t border-gray-200 pt-3">
-              <ResourceEditor
-                resource={resourceFromMapping}
-                onSave={handleResourceSave}
-                states={emptyStates}
-                onStatesChange={noopStatesChange}
-                referenceData={referenceData}
-              />
+              <ResourceEditor resourceId={activeMapping.resourceId} accessor={accessor} />
             </div>
 
             {/* Lane Info */}
             <div className="text-xs text-gray-500 border-t border-gray-100 pt-3">
               <div>Lane index: {activeLane.index}</div>
               <div>Size: {activeLane.size}px</div>
-              <div>Resource ID: <code className="text-xs">{activeMapping.resource.id}</code></div>
+              <div>Resource ID: <code className="text-xs">{activeMapping.resourceId}</code></div>
             </div>
 
-            {/* Remove Resource */}
+            {/* Unlink */}
             <div className="border-t border-gray-100 pt-3">
-              {!confirmingRemove ? (
+              {!confirmingUnlink ? (
                 <button
-                  onClick={() => setConfirmingRemove(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded transition-colors"
+                  onClick={() => setConfirmingUnlink(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 rounded transition-colors"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Remove Resource
+                  <Unlink className="w-3.5 h-3.5" />
+                  Unlink lane
                 </button>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-xs text-red-600">
-                    Remove resource mapping from this lane? The resource will be deleted from the model.
+                  <p className="text-xs text-gray-600">
+                    Unlink this lane from its Resource? The Resource stays in the
+                    model&apos;s Resources list; only the lane&apos;s link is removed.
                   </p>
                   <div className="flex gap-2">
                     <button
-                      onClick={handleUnconvertLane}
-                      className="px-2.5 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-colors"
+                      onClick={handleUnlinkLane}
+                      className="px-2.5 py-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
                     >
-                      Confirm Remove
+                      Confirm unlink
                     </button>
                     <button
-                      onClick={() => setConfirmingRemove(false)}
+                      onClick={() => setConfirmingUnlink(false)}
                       className="px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded transition-colors"
                     >
                       Cancel

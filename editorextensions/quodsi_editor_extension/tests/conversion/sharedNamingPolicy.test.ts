@@ -56,9 +56,16 @@ function makePage() {
   } as any;
 }
 
-async function convert(page: any, mappings: Map<string, SimulationObjectType | null>) {
+async function convert(
+  page: any,
+  mappings: Map<string, SimulationObjectType | null>,
+  /** Optional handle on the adapter, for names that land in storage rather
+   *  than on the registered sim object (see the Resource case below). */
+  out?: { storageAdapter?: StorageAdapter },
+) {
   const registered: any[] = [];
   const storageAdapter = new StorageAdapter();
+  if (out) out.storageAdapter = storageAdapter;
   const svc = new LucidPageConversionService(
     {
       registerElement: async (el: any) => { registered.push(el); },
@@ -140,10 +147,20 @@ describe('Lucid conversion on the shared naming policy', () => {
 
   it('names resources without the block class ("Resource 1", not "Resource ProcessBlock")', async () => {
     const page = makePage();
-    page.allBlocks.set('r1', makeBlock('r1', null, page));
+    const block = makeBlock('r1', null, page);
+    page.allBlocks.set('r1', block);
 
-    const registered = await convert(page, new Map([['r1', SimulationObjectType.Resource]]));
-    expect(registered[0].name).toBe('Resource 1');
+    // Asserted on STORAGE, not on the registered sim object: since Plan 2b
+    // Task 5 a Resource block is a POINTER, and ResourceLucid's sim object is
+    // a deliberate placeholder ('Unlinked Resource') that exists only for type
+    // dispatch -- the record's name is model-level data. Since Task 6 that
+    // record lives in the page's q_resources and the block holds only
+    // `{ resourceId }`. Either way the policy under test is the same one:
+    // "Resource 1", never "Resource ProcessBlock".
+    const out: { storageAdapter?: StorageAdapter } = {};
+    await convert(page, new Map([['r1', SimulationObjectType.Resource]]), out);
+    expect(out.storageAdapter!.getResources(page).map((r) => r.name)).toEqual(['Resource 1']);
+    expect(out.storageAdapter!.getElementData<any>(block).resourceId).toBe('r1');
   });
 });
 

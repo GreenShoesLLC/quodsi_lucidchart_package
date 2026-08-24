@@ -4,7 +4,6 @@ import {
     RequirementClause,
     RequirementMode,
     SimulationObjectType,
-    Resource,
     MappingSource
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
@@ -52,19 +51,6 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
             this.getElementName('Resource Requirement'),
             emptyRootClause()
         );
-    }
-
-    /**
-     * Creates a ResourceRequirement from a specific Resource
-     */
-    public static createFromResource(
-        block: BlockProxy,
-        storageAdapter: StorageAdapter,
-        resource: Resource
-    ): ResourceRequirementLucid {
-        const instance = new ResourceRequirementLucid(block, storageAdapter);
-        instance.simObject = ResourceRequirement.createForSingleResource(resource);
-        return instance;
     }
 
     public updateFromPlatform(): void {

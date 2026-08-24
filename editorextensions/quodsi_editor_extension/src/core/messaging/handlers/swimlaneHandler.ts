@@ -2,8 +2,6 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   SwimLaneQuodsiData,
-  SwimLaneLaneMapping,
-  generateUUID,
 } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
@@ -12,20 +10,18 @@ import { getLogger } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 
-/** Extract resource IDs from swimlane data for diffing. */
-function extractResourceIds(data: SwimLaneQuodsiData): string[] {
-  return data.lanes
-    .filter((lane): lane is SwimLaneLaneMapping => lane !== null)
-    .map(lane => lane.resource.id);
-}
-
 /**
  * Handler for swimlane lane-resource mapping operations.
  *
- * Resource creation is handled extension-side (not in React) because:
- * - Lanes are not BlockProxy instances, so ResourceLucid.createFromConversion() can't be used
- * - The extension has authoritative access to ModelDefinition via ModelManager
- * - This follows the pattern where the extension owns all model mutations
+ * ONE message reaches here now: SWIMLANE_UPDATE, which persists the
+ * q_swimlane blob the panel composed. There is no longer a lane-side
+ * resource-CREATION route -- the lane-convert message and its result were
+ * retired wholesale (Plan 2b, Task 9). Under storage format 2 a lane is a
+ * POINTER at a model-level record in the page's q_resources, and the panel
+ * mints that record through the shared ResourceLinkPicker (create ->
+ * confirmed model-root write -> link) exactly as a Resource BLOCK does.
+ * Reinstating an extension-side creation path would give lanes a second,
+ * divergent way to make a resource.
  */
 export class SwimLaneHandler {
   private static logger = getLogger('SwimLaneHandler');
@@ -36,12 +32,7 @@ export class SwimLaneHandler {
         SwimLaneHandler.handleUpdate(msg)
           .catch(err => SwimLaneHandler.logger.error('Error in SWIMLANE_UPDATE:', err));
         return true;
-      case EnvelopeMessageType.SWIMLANE_CONVERT_LANE:
-        SwimLaneHandler.handleConvertLane(msg)
-          .catch(err => SwimLaneHandler.logger.error('Error in SWIMLANE_CONVERT_LANE:', err));
-        return true;
       case EnvelopeMessageType.SWIMLANE_UPDATE_RESULT:
-      case EnvelopeMessageType.SWIMLANE_CONVERT_LANE_RESULT:
         return true; // Sent by extension, not received
       default:
         return false;
@@ -49,9 +40,13 @@ export class SwimLaneHandler {
   }
 
   /**
-   * Handle SWIMLANE_UPDATE: save q_swimlane data (e.g., assignment mode changes,
-   * lane unconverts). When a lane is unconverted, cascades cleanup of
-   * ResourceRequirements and actions that referenced the removed resource.
+   * Handle SWIMLANE_UPDATE: save q_swimlane data (e.g., assignment mode
+   * changes, lane unconverts).
+   *
+   * Unlinking a lane does NOT delete a resource. Under storage format 2 the
+   * record lives in the page's q_resources and outlives every claimant, so a
+   * lane that lets go of one simply leaves it unclaimed -- cascading a delete
+   * from here would destroy model-level data the user never asked to remove.
    */
   private static async handleUpdate(msg: EnvelopeBase): Promise<void> {
     try {
@@ -75,137 +70,23 @@ export class SwimLaneHandler {
         return;
       }
 
-      // Read OLD swimlane data before overwriting so we can detect removed resources
-      const oldDataStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
-      let oldResourceIds: string[] = [];
-      if (oldDataStr) {
-        try {
-          const oldData: SwimLaneQuodsiData = JSON.parse(oldDataStr);
-          oldResourceIds = extractResourceIds(oldData);
-        } catch { /* ignore parse errors on old data */ }
-      }
-
       // Write new data
       block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(data.swimlaneData));
 
-      // Detect removed resources and cascade cleanup
-      const newResourceIds = new Set(extractResourceIds(data.swimlaneData));
-      const removedResourceIds = oldResourceIds.filter(id => !newResourceIds.has(id));
-
+      // Invalidate model cache so the next rebuild re-reads the lane claims
       const modelManager = ModelManager.getInstance();
-
-      for (const resourceId of removedResourceIds) {
-        SwimLaneHandler.logger.debug('Lane unconverted, cleaning up resource:', resourceId);
-        await modelManager.cleanupDeletedResource(resourceId);
-      }
-
-      // Invalidate model cache so changes (resource edits, unconverts) are
-      // picked up by loadSwimLaneResources() on next rebuild
       modelManager.invalidateModelCache();
 
       SwimLaneHandler.logger.debug('Saved swimlane data', {
         blockId: data.swimlaneBlockId,
         laneCount: data.swimlaneData.lanes.length,
         mappedLanes: data.swimlaneData.lanes.filter(l => l !== null).length,
-        removedResources: removedResourceIds.length,
       });
 
       SwimLaneHandler.sendUpdateResult(msg.id, true);
     } catch (error) {
       SwimLaneHandler.logger.error('Error updating swimlane:', error);
       SwimLaneHandler.sendUpdateResult(msg.id, false, error instanceof Error ? error.message : String(error));
-    }
-  }
-
-  /**
-   * Handle SWIMLANE_CONVERT_LANE: create a Resource for a lane.
-   */
-  private static async handleConvertLane(msg: EnvelopeBase): Promise<void> {
-    try {
-      const data = msg.data as {
-        swimlaneBlockId: string;
-        laneIndex: number;
-        resourceName: string;
-      };
-
-      const client = ModelManager.getClient();
-      const viewport = new Viewport(client);
-      const currentPage = viewport.getCurrentPage();
-
-      if (!currentPage) {
-        SwimLaneHandler.sendConvertResult(msg.id, data.swimlaneBlockId, data.laneIndex, false, 'No current page');
-        return;
-      }
-
-      const block = currentPage.allBlocks.get(data.swimlaneBlockId);
-      if (!block) {
-        SwimLaneHandler.sendConvertResult(msg.id, data.swimlaneBlockId, data.laneIndex, false, 'Swimlane block not found');
-        return;
-      }
-
-      // Generate resource identity — the full Resource object will be created
-      // during the next model rebuild via loadSwimLaneResources()
-      const resourceId = generateUUID();
-
-      // Read existing q_swimlane data or create new
-      const existingStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
-      let swimlaneData: SwimLaneQuodsiData;
-      if (existingStr) {
-        swimlaneData = JSON.parse(existingStr);
-      } else {
-        const swimlaneProxy = block as any;
-        const laneCount = swimlaneProxy.getPrimaryLanes().length;
-        swimlaneData = {
-          lanes: new Array(laneCount).fill(null),
-          lastSyncedAt: new Date().toISOString(),
-        };
-      }
-
-      // Ensure lanes array is large enough
-      while (swimlaneData.lanes.length <= data.laneIndex) {
-        swimlaneData.lanes.push(null);
-      }
-
-      // Create the lane mapping with inline Resource data
-      const laneId = generateUUID();
-      swimlaneData.lanes[data.laneIndex] = {
-        laneId,
-        titleSnapshot: data.resourceName,
-        assignmentMode: 'runtime-derive',
-        resource: {
-          id: resourceId,
-          name: data.resourceName,
-          capacity: 1,
-          description: '',
-        },
-      };
-      swimlaneData.lastSyncedAt = new Date().toISOString();
-
-      // Persist q_swimlane
-      block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(swimlaneData));
-
-      // Invalidate model cache so loadSwimLaneResources picks up the new resource
-      const modelManager = ModelManager.getInstance();
-      modelManager.invalidateModelCache();
-
-      SwimLaneHandler.logger.debug('Created Resource for lane', {
-        resourceId,
-        resourceName: data.resourceName,
-        laneIndex: data.laneIndex,
-      });
-
-      // Send success result with updated swimlaneData so React can update its state
-      SwimLaneHandler.sendConvertResult(
-        msg.id, data.swimlaneBlockId, data.laneIndex, true,
-        undefined, swimlaneData
-      );
-    } catch (error) {
-      SwimLaneHandler.logger.error('Error converting lane:', error);
-      const data = msg.data as { swimlaneBlockId: string; laneIndex: number };
-      SwimLaneHandler.sendConvertResult(
-        msg.id, data?.swimlaneBlockId || '', data?.laneIndex || 0, false,
-        error instanceof Error ? error.message : String(error)
-      );
     }
   }
 
@@ -217,24 +98,6 @@ export class SwimLaneHandler {
       target: 'model-iframe',
       version: '1.0',
       data: { success, error },
-    });
-  }
-
-  private static sendConvertResult(
-    correlationId: string,
-    swimlaneBlockId: string,
-    laneIndex: number,
-    success: boolean,
-    error?: string,
-    swimlaneData?: SwimLaneQuodsiData
-  ): void {
-    router.send('model', {
-      id: correlationId,
-      type: EnvelopeMessageType.SWIMLANE_CONVERT_LANE_RESULT,
-      source: 'host',
-      target: 'model-iframe',
-      version: '1.0',
-      data: { success, swimlaneBlockId, laneIndex, swimlaneData, error },
     });
   }
 }

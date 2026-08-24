@@ -5,6 +5,7 @@ import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
+import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('ModelRootHandler');
 
@@ -264,6 +265,19 @@ export class ModelRootHandler {
           errorMessage: error instanceof Error ? error.message : String(error),
         },
       });
+
+      // Push a fresh snapshot behind the failure result. React's
+      // createModelRootSource.saveModel merges the patch into its cached
+      // projection OPTIMISTICALLY before sending, so a write the host
+      // rejected would otherwise leave the echoed (never-persisted) value on
+      // screen until some unrelated event happened to refresh the cache.
+      // Deliberately AFTER the result send, so the panel's saveModel promise
+      // rejects first and the corrective snapshot lands behind it; and with
+      // its own independent error log, same posture as the success path's
+      // snapshot below. No selection re-process here -- see handleUpdate's
+      // tail: there is nothing new to reflect after a rejected write.
+      ModelRootHandler.sendSnapshot(msg.id)
+        .catch(err => log.error('Error sending model-root snapshot after failed update:', err));
       return;
     }
 
@@ -275,5 +289,17 @@ export class ModelRootHandler {
     // didn't save). It gets its own independent error log instead.
     ModelRootHandler.sendSnapshot(msg.id)
       .catch(err => log.error('Error sending post-update model-root snapshot:', err));
+
+    // Re-process the current selection so the Activity/Generator panel's
+    // referenceData (the Requirements picker's Resources group) reflects a
+    // resource created or renamed on the Resources tab. Same refresh
+    // handleElementConvert performs after a convert.
+    try {
+      const client = ModelManager.getClient();
+      const viewport = new Viewport(client);
+      await SelectionHandler.handleLucidSelectionEvent(client, viewport.getSelectedItems(), ModelManager.getInstance());
+    } catch (err) {
+      log.error('Error refreshing selection after model-root update:', err);
+    }
   }
 }

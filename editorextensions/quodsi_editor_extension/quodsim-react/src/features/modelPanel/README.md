@@ -26,7 +26,6 @@ This directory contains the reimplemented components for the Quodsi Model Panel,
 These new components integrate with existing editor components:
 - ActivityEditor
 - GeneratorEditor
-- ResourceEditor
 - EntityEditor
 - ConnectorRoutingView (shared with `quodsi_studio`; renders the line-selected Connector case)
 - ModelEditor

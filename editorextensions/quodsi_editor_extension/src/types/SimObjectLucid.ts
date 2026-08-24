@@ -135,6 +135,19 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
     }
 
     /**
+     * The block's visible canvas text, or '' when it has none.
+     *
+     * This is `pickBlockName`'s FIRST step and nothing more: no type-label
+     * and no sequence fallback, because callers here want "what the user
+     * typed on this shape" as a display hint, not a name to store. Reads
+     * through the same `blockToNameable` adapter the naming policy uses, so
+     * the two never disagree about which text area counts.
+     */
+    public static blockLabel(block: BlockProxy): string {
+        return blockToNameable(block).text ?? '';
+    }
+
+    /**
      * Static utility method to update a block's displayed text
      * Used to clean up structured names after parsing (e.g., "name: Triage | duration: 5" -> "Triage")
      */

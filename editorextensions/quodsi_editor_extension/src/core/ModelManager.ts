@@ -8,7 +8,6 @@ import {
     Entity,
     Model,
     ModelDefinition,
-    Resource,
     SimulationObject,
     SimulationObjectType,
     ValidationResult,
@@ -16,7 +15,6 @@ import {
     ModelStructure,
     ModelElement,
     ActivityListManager,
-    ResourceRequirement,
     ValidationMessages,
     ISerializedState,
     ISerializedEntity,
@@ -31,6 +29,9 @@ import {
     ensureBaselineScenario,
     takeClearedFields,
     ModelRootProjection,
+    stripTransientResourceMarkers,
+    StoredResourceRecord,
+    resourceLinkIssues,
 } from "@quodsi/lucid-shared";
 import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
@@ -44,6 +45,9 @@ import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
+import { isPlainAutoRequirement } from "./autoRequirements";
+import { LUCID_STORAGE_FORMAT, StorageFormatTooNewError } from "./storageFormat";
+import { migrateResourcesToModelLevel } from "./ResourceStorageMigration";
 
 
 
@@ -63,6 +67,19 @@ export class ModelManager {
     private currentValidationResult: ValidationResult | null = null;
     private versionManager: LucidVersionManager;
     private versionCheckedPageId: string | null = null;
+    /**
+     * The builder that produced `modelDefinition`. Kept so validateModel() can
+     * read the resource-link rejections that build recorded -- a dangling or
+     * duplicate pointer is by definition absent from the model, so no
+     * ValidationRule can find it after the fact.
+     */
+    private pageBuilder: ModelDefinitionPageBuilder | null = null;
+    /**
+     * One-shot notices produced by migrate-on-open (currently: duplicate names
+     * the storage-format 1 -> 2 migration had to rename). Drained by the next
+     * validateModel(); a permanent nag for a one-time event would be noise.
+     */
+    private pendingMigrationNotices: ValidationIssue[] = [];
 
     // Singleton instance and client reference
     private static instance: ModelManager | null = null;
@@ -163,6 +180,30 @@ export class ModelManager {
                 if (this.storageAdapter.isQuodsiModel(this.currentPage)) {
                     let upgradeResult = { upgraded: false, sourceVersion: '', targetVersion: '' };
                     try {
+                        // FORWARD guard (Plan 2b): a document stamped higher than
+                        // this build understands was written by a newer extension.
+                        // The clean-only readers would silently default away
+                        // whatever they don't recognize, so refuse to build at all
+                        // -- same posture as the upgrade-failure catch below.
+                        const format = this.storageAdapter.getStorageFormat(this.currentPage);
+                        if (format !== null && format > LUCID_STORAGE_FORMAT) {
+                            throw new StorageFormatTooNewError(format);
+                        }
+                        // Lucid storage format 1 -> 2: lift shape-owned and
+                        // lane-owned resources into page-level q_resources.
+                        // UNCONDITIONAL, and ahead of handlePageLoad: the schema
+                        // upgrade only runs when versions differ, so a
+                        // current-schema document still holding shape-owned
+                        // resources would otherwise never migrate. Idempotent.
+                        const migration = migrateResourcesToModelLevel(this.currentPage, this.storageAdapter);
+                        if (migration.renames.length > 0) {
+                            const pairs = migration.renames.map(r => `${r.from} -> ${r.to}`).join(', ');
+                            this.pendingMigrationNotices.push(ValidationMessages.createIssue(
+                                ValidationSeverity.WARNING,
+                                'resource_renamed_on_migration',
+                                `While moving resources to the model level, ${migration.renames.length} duplicate name(s) were renamed: ${pairs}. Review them on the Model Editor's Resources tab.`
+                            ));
+                        }
                         upgradeResult = await this.versionManager.handlePageLoad(this.currentPage);
                     } catch (error) {
                         // Wire-cleanup Phase B2 Task 11 (carry item 4, sanctioned edit):
@@ -187,12 +228,19 @@ export class ModelManager {
                         this.debug.error('Version check failed:', error);
                         const message = error instanceof Error ? error.message : String(error);
                         this.modelDefinition = null;
+                        // A too-new document is not a failed upgrade: reloading
+                        // cannot help, only updating the extension can, so it
+                        // carries its own code and its own (already complete)
+                        // message rather than the retry advice below.
+                        const tooNew = error instanceof StorageFormatTooNewError;
                         this.currentValidationResult = {
                             isValid: false,
                             issues: [ValidationMessages.createIssue(
                                 ValidationSeverity.ERROR,
-                                'upgrade_failed',
-                                `Model upgrade failed, so the model could not be loaded: ${message}. Reload the page to retry.`
+                                tooNew ? 'extension_outdated' : 'upgrade_failed',
+                                tooNew
+                                    ? message
+                                    : `Model upgrade failed, so the model could not be loaded: ${message}. Reload the page to retry.`
                             )],
                             summary: {
                                 errorCount: 1,
@@ -220,6 +268,7 @@ export class ModelManager {
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
             lucidElementFactory.setLogging(false);
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter, lucidElementFactory);
+            this.pageBuilder = builder;
             try {
                 const newModelDefinition = builder.buildFromConvertedPage(this.currentPage);
 
@@ -322,13 +371,9 @@ export class ModelManager {
                 modelDef.generators.add(element as Generator);
                 break;
             case SimulationObjectType.Resource:
-                if (element.name === defaultName) {
-                    element.name = modelDef.resources.getNextName();
-                }
-                const resource = element as Resource
-                modelDef.resources.add(resource);
-                const requirement = ResourceRequirement.createForSingleResource(resource)
-                modelDef.resourceRequirements.add(requirement)
+                // model-level; the record was written to q_resources at
+                // conversion (ResourceLucid.createFromConversion); the rebuild
+                // derives its auto-requirement
                 break;
             case SimulationObjectType.Entity:
                 if (element.name === defaultName) {
@@ -370,18 +415,24 @@ export class ModelManager {
                 modelDef.generators.add(element as Generator);
                 break;
             case SimulationObjectType.Resource:
-                const resource = element as Resource
-                const requirement = ResourceRequirement.createForSingleResource(resource)
-                modelDef.resources.add(resource);
-                modelDef.resourceRequirements.add(requirement)
+                // model-level; the record was written to q_resources at
+                // conversion (ResourceLucid.createFromConversion); the rebuild
+                // derives its auto-requirement
                 break;
             case SimulationObjectType.Entity:
                 modelDef.entities.add(element as Entity);
                 break;
         }
 
-        // Update storage
-        this.storageAdapter.updateElementData(elementProxy, element);
+        // Update storage. NOT for a Resource: its block is a POINTER, and the
+        // pointer is written only by conversion or by an ELEMENT_UPDATE that
+        // carries `resourceId` (handleDataUpdate). Writing a domain Resource
+        // here would put name/capacity/geometry back onto q_data, which the
+        // migration's own docblock calls out as the shape that resurrects a
+        // shape-owned record.
+        if (element.type !== SimulationObjectType.Resource) {
+            this.storageAdapter.updateElementData(elementProxy, element);
+        }
 
         this.markModelDirty(element.id);
         await this.validateModelIfNeeded();
@@ -406,23 +457,16 @@ export class ModelManager {
             return;
         }
 
-        // Check if this is a Resource - if so, perform cascading cleanup
-        const existingResource = modelDef.resources.get(elementId);
-        if (existingResource) {
-            this.debug.debug('Resource deletion detected, performing cascading cleanup:', elementId);
-
-            // Step 1: Clean up ResourceRequirements that reference this resource
-            const deletedReqIds = await this.cleanupResourceReferences(elementId, this.currentPage);
-
-            // Step 2: For each deleted requirement, clean up action references
-            for (const reqId of deletedReqIds) {
-                const affectedCount = await this.cleanupRequirementReferences(reqId, this.currentPage);
-                this.debug.debug('Cleaned up actions for requirement:', { reqId, affectedCount });
-            }
-
-            // Also remove the auto-generated requirement from the model definition
-            modelDef.resourceRequirements.remove(elementId);
-        }
+        // NO Resource cascade here (Plan 2b): a Resource BLOCK is a pointer at a
+        // model-level record, so removing the block un-links it and nothing
+        // more. The record and every requirement that requests it survive -- a
+        // resource is deleted only from the Resources tab, through
+        // updateModelRoot({ resources }), which runs the cascade itself.
+        // Deleting a shape used to delete the resource because the shape WAS
+        // the resource; under format 2 that would destroy model data the user
+        // never asked to lose (and, for the common migrated case where
+        // resourceId === blockId, it fired on exactly the ids the migration
+        // produced).
 
         // Check if this is an Entity - if so, perform cascading cleanup
         const existingEntity = modelDef.entities.get(elementId);
@@ -518,7 +562,8 @@ export class ModelManager {
         modelDef.activities.remove(elementId);
         modelDef.connectors.remove(elementId);
         modelDef.generators.remove(elementId);
-        modelDef.resources.remove(elementId);
+        // modelDef.resources deliberately NOT touched: resources are model-level
+        // records keyed independently of the shape that draws them (see above).
         modelDef.entities.remove(elementId);
         modelDef.resourceRequirements.remove(elementId);
 
@@ -571,7 +616,45 @@ export class ModelManager {
         const gate = evaluateValidationGate(modelDef);
 
         // gate.result is a ValidationResult — same shape the dashboard already consumes
-        this.currentValidationResult = gate.result;
+        const result = gate.result;
+
+        // Two classes of issue no ValidationRule can produce, appended here:
+        //
+        //  1. Resource-link rejections. A rule receives the built model and
+        //     inspects it; a dangling pointer names a resource that is by
+        //     definition NOT in the model, and a duplicate claim leaves no
+        //     trace on the winner. Both are recorded by the page builder at
+        //     build time. Message text and severity live in @quodsi/shared's
+        //     resourceLinkIssues so the three hosts cannot drift.
+        //  2. Migrate-on-open notices, drained (spliced) so they show once.
+        const linkIssues = this.pageBuilder
+            ? resourceLinkIssues(
+                this.pageBuilder.getLastResourceLinkRejections(),
+                new Map(modelDef.resources.getAll().map(r => [r.id, r.name])))
+            : [];
+        const extra = [...linkIssues, ...this.pendingMigrationNotices.splice(0)];
+        if (extra.length > 0) {
+            // ModelValidationService pushes its "Model validation passed
+            // successfully" INFO when the RULES produce nothing (see its
+            // validate(): `if (issues.length === 0) issues.push(...)`). It
+            // cannot know about the issues appended here, so an otherwise-clean
+            // model with a dangling pointer would render "passed successfully"
+            // and a warning side by side in the same panel. Drop the success
+            // note whenever we are about to add something; a clean model with
+            // no appended issues keeps it.
+            result.issues = [
+                ...result.issues.filter(i => i.code !== 'validation_success'),
+                ...extra,
+            ];
+            result.summary = {
+                errorCount: result.issues.filter(i => i.severity === ValidationSeverity.ERROR).length,
+                warningCount: result.issues.filter(i => i.severity === ValidationSeverity.WARNING).length,
+                infoCount: result.issues.filter(i => i.severity === ValidationSeverity.INFO).length,
+            };
+            result.isValid = result.summary.errorCount === 0;
+        }
+
+        this.currentValidationResult = result;
 
         this.changeTracker.validationDirty = false;
         this.changeTracker.lastValidationUpdate = Date.now();
@@ -642,33 +725,6 @@ export class ModelManager {
         this.markModelDirty();
     }
 
-    /**
-     * Cleans up ResourceRequirements and actions referencing a deleted resource.
-     * Used for swimlane-derived resources that have no canvas block and cannot
-     * go through removeElement().
-     */
-    public async cleanupDeletedResource(resourceId: string): Promise<void> {
-        if (!this.currentPage) return;
-
-        this.debug.debug('Cleaning up deleted swimlane resource:', resourceId);
-
-        // Step 1: Clean up ResourceRequirements referencing this resource
-        const deletedReqIds = await this.cleanupResourceReferences(resourceId, this.currentPage);
-
-        // Step 2: Clean up actions referencing those requirements
-        for (const reqId of deletedReqIds) {
-            await this.cleanupRequirementReferences(reqId, this.currentPage);
-        }
-
-        // Remove from cached model definition if present
-        if (this.modelDefinition) {
-            this.modelDefinition.resources.remove(resourceId);
-            this.modelDefinition.resourceRequirements.remove(resourceId);
-        }
-
-        this.markModelDirty(resourceId);
-    }
-
     public async getModelDefinition(): Promise<ModelDefinition | null> {
         return await this.ensureModelDefinition();
     }
@@ -726,6 +782,8 @@ export class ModelManager {
         this.modelDefinition = null;
         this.currentPage = null;
         this.currentValidationResult = null;
+        this.pageBuilder = null;
+        this.pendingMigrationNotices = [];
         // Reset the once-per-page version/baseline gate. Without this, after a
         // model is removed and re-created on the SAME page in the same session,
         // the gate at ensureModelDefinition() still sees this page as "checked"
@@ -1625,17 +1683,11 @@ export class ModelManager {
             }
         }
 
-        // Detect deleted Resources → clean requirements and action references
-        const newResourceIds = new Set(newModel.resources.getAll().map(r => r.id));
-        for (const oldResource of oldModel.resources.getAll()) {
-            if (!newResourceIds.has(oldResource.id)) {
-                this.debug.debug('Detected deleted resource during rebuild:', oldResource.id);
-                const deletedReqIds = await this.cleanupResourceReferences(oldResource.id, page);
-                for (const reqId of deletedReqIds) {
-                    await this.cleanupRequirementReferences(reqId, page);
-                }
-            }
-        }
+        // NO deleted-Resource branch (Plan 2b): resources no longer come from
+        // the canvas, so a rebuild diff cannot mean "the user deleted a
+        // resource" -- it means a block stopped claiming one. The only path
+        // that removes a resource is updateModelRoot({ resources }), which runs
+        // the requirement/action cascade itself before writing q_resources.
 
         // Detect deleted Generators → remove an orphaned ArrivalPattern.
         //
@@ -1859,7 +1911,7 @@ export class ModelManager {
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const knownKeys = ['arrivalPatterns', 'arrivalSchedules'];
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'resources', 'resourceRequirements'];
         const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
@@ -1879,6 +1931,40 @@ export class ModelManager {
             this.storageAdapter.setArrivalSchedules(
                 page,
                 patch.arrivalSchedules as ISerializedArrivalSchedule[]
+            );
+        }
+
+        // `resources` before `resourceRequirements`: a delete patch's cascade
+        // (below) removes the deleted resource's auto/custom requirements
+        // from storage first, so if the same patch also carries
+        // `resourceRequirements`, updateResourceRequirements's own
+        // before/after diff has nothing further to clean up.
+        if ('resources' in patch) {
+            const next = (patch.resources as Array<Record<string, unknown>>)
+                .map(stripTransientResourceMarkers)
+                .map(({ shapeLabel: _label, ...rest }) => rest) as unknown as StoredResourceRecord[];
+            const before = this.storageAdapter.getResources(page);
+            const nextIds = new Set(next.map(r => String(r.id)));
+            const removed = before.filter(r => !nextIds.has(String(r.id))).map(r => String(r.id));
+            this.storageAdapter.setResources(page, next);
+            // Host-side cascade, and the ONLY one: since Plan 2b Task 5 neither
+            // removeElement nor the rebuild diff cascades on a resource (a
+            // Resource block is just a pointer), so deleting a resource from the
+            // shared Resources tab is the single path that has to clean up the
+            // requirements and actions that referenced it.
+            for (const id of removed) {
+                const deletedReqIds = await this.cleanupResourceReferences(id, page);
+                for (const reqId of deletedReqIds) {
+                    await this.cleanupRequirementReferences(reqId, page);
+                }
+            }
+        }
+
+        if ('resourceRequirements' in patch) {
+            const incoming = patch.resourceRequirements as ISerializedResourceRequirement[];
+            await this.updateResourceRequirements(
+                incoming.filter(r => !isPlainAutoRequirement(r as any)),
+                page
             );
         }
 
@@ -2362,13 +2448,31 @@ export class ModelManager {
                 ? ((updateData as { name?: string }).name || elementName)
                 : (existingElementData?.name || elementName);
 
-            // Prepare element data
-            let elementData = {
-                id: element.id,
-                type: type,
-                ...updateData,
-                name: resolvedName
-            };
+            // Prepare element data.
+            //
+            // A Resource BLOCK is a POINTER (Plan 2b storage format 2), not the
+            // resource: the record lives in the page-level q_resources list and
+            // is edited through updateModelRoot({ resources }). The only domain
+            // key the block owns is `resourceId`, so a Resource-typed update
+            // writes exactly that and nothing else -- no synthesized `name`, no
+            // capacity, no geometry. (Left to the generic path below, the name
+            // resolution alone would put a `name` back next to `resourceId`,
+            // which is the merge shape ResourceStorageMigration's docblock
+            // warns re-classifies a pointer block as a legacy record.)
+            let elementData: any = type === SimulationObjectType.Resource
+                ? {
+                    id: element.id,
+                    type: type,
+                    ...(updateData && (updateData as any).resourceId !== undefined
+                        ? { resourceId: (updateData as any).resourceId }
+                        : {})
+                }
+                : {
+                    id: element.id,
+                    type: type,
+                    ...updateData,
+                    name: resolvedName
+                };
 
             this.debug.debug('Prepared Element Data:', {
                 id: elementData.id,
