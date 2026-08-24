@@ -11,15 +11,35 @@ vi.mock('../../../messaging/MessageProvider', () => ({
   }),
 }));
 
+let mockAuthState: any = { isAuthenticated: false };
+vi.mock('../../../messaging/MessageContext', () => ({
+  useAuth: () => mockAuthState,
+}));
+
 import { StudiesLaunchButton } from '../StudiesLaunchButton';
 
 describe('StudiesLaunchButton', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthState = { isAuthenticated: false };
+  });
 
-  it('renders a Studies button and launches the studies modal', () => {
+  it('is disabled and does not launch the studies modal when signed out', () => {
+    mockAuthState = { isAuthenticated: false };
+    render(<StudiesLaunchButton />);
+    const btn = screen.getByTestId('open-studies-modal');
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('title', 'Sign in to use Studies');
+    fireEvent.click(btn);
+    expect(mockOpenStudiesModal).not.toHaveBeenCalled();
+  });
+
+  it('renders an enabled Studies button and launches the studies modal when signed in', () => {
+    mockAuthState = { isAuthenticated: true };
     render(<StudiesLaunchButton />);
     const btn = screen.getByTestId('open-studies-modal');
     expect(btn).toHaveTextContent(/studies/i);
+    expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
     expect(mockOpenStudiesModal).toHaveBeenCalledWith('doc1', 'pg1');
   });

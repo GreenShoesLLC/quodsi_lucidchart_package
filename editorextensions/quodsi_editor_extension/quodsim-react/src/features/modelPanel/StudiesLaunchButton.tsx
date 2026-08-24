@@ -2,6 +2,7 @@ import React from "react";
 import { PlaySquare } from "lucide-react";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useMessaging } from "../../messaging/MessageProvider";
+import { useAuth } from "../../messaging/MessageContext";
 
 /**
  * Primary action button that launches the embedded-Studio studies modal.
@@ -18,6 +19,7 @@ import { useMessaging } from "../../messaging/MessageProvider";
 export function StudiesLaunchButton() {
   const { openStudiesModal } = useSimulationRunSender();
   const { selection } = useMessaging();
+  const auth = useAuth();
   const documentId = selection.documentContext?.documentId ?? "";
   const pageId = selection.documentContext?.pageId ?? "";
 
@@ -25,9 +27,10 @@ export function StudiesLaunchButton() {
     <button
       type="button"
       data-testid="open-studies-modal"
-      title="Open the studies editor"
+      title={auth.isAuthenticated ? "Open the studies editor" : "Sign in to use Studies"}
+      disabled={!auth.isAuthenticated}
       onClick={() => openStudiesModal(documentId, pageId)}
-      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <PlaySquare className="w-4 h-4" />
       Studies
