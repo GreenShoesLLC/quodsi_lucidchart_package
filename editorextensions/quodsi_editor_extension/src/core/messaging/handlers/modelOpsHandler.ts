@@ -598,7 +598,6 @@ export class ModelOpsHandler {
       const modelManager = ModelManager.getInstance();
       const client = ModelManager.getClient();
       const viewport = new Viewport(client);
-      const documentProxy = new DocumentProxy(client);
       const activePageProxy = viewport.getCurrentPage();
 
       // Verify we have an active page

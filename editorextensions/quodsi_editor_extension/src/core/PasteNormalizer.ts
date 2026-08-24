@@ -853,11 +853,16 @@ function duplicatedPageEnvelope(page: PageProxy, opts: PasteNormalizerOptions): 
  *   1. the page envelope's stored `id` (ruling R2: edited in the RAW JSON,
  *      never through `setElementData` -- see `restampPageEnvelope`);
  *   2. every batch item's envelope id, via the generic `restampEnvelope`;
- *   3. every LINE on the page -- `page.allLines`, not just the batch, since
+ *   3. every swimlane lane's `laneId`, which arrives as a copy of the SOURCE
+ *      page's and would otherwise read as a paste to the swimlane rule later
+ *      on -- identity only, the lane's `resourceId` link is preserved (see
+ *      `remintDuplicatedLanes`);
+ *   4. every LINE on the page -- `page.allLines`, not just the batch, since
  *      Lucid need not hand us every item in one callback -- whose stored
  *      endpoints still name the SOURCE page's blocks while the live line is
- *      attached to the new ones (see `overlayLineEndpoints`);
- *   4. the copied run state, which describes a run that never happened on
+ *      attached to the new ones, and whose envelope id an off-batch line
+ *      would otherwise keep from the source (see `repairLineEnvelope`);
+ *   5. the copied run state, which describes a run that never happened on
  *      this page (ruling R3: `clearSimulationStatus`).
  *
  * Idempotent: after step 1 the page envelope id equals `page.id`, so a second
@@ -887,9 +892,11 @@ function normalizeDuplicatedPage(
     // need their envelope id; `restampIfStale` makes the overlap a no-op.
     for (const item of pageItems) restampIfStale(item, sa);
 
+    remintDuplicatedLanes(page);
+
     for (const [, line] of page.allLines) {
         try {
-            overlayLineEndpoints(line);
+            repairLineEnvelope(line);
         } catch (error) {
             log.error('Duplicated-page line endpoint repair failed; left as duplicated', { lineId: line.id, error });
         }
@@ -939,36 +946,85 @@ function restampPageEnvelope(page: PageProxy, envelope: RawEnvelopeBlob): void {
 }
 
 /**
- * Overlays a line's LIVE attached endpoints onto its stored
- * `sourceId`/`targetId`, editing the raw `q_data` JSON so `type`,
- * `platform.mappingSource`, `schemaVersion` and every other domain field are
- * carried through verbatim.
+ * Repairs one line's stored envelope on a duplicated page, editing the raw
+ * `q_data` JSON so `type`, `platform.mappingSource`, `schemaVersion` and every
+ * other domain field are carried through verbatim. Two repairs, one write:
  *
- * Runs over EVERY line on a duplicated page, including lines whose envelope
- * id already matches: a duplicated line's stored endpoints name the SOURCE
- * page's blocks regardless of whose id the envelope carries, and only the
- * live line knows the new ones. Detached ends (no live connection) keep their
- * stored value -- the same `liveEndpointIds` rule the Connector paste rule and
- * `ConnectorLucid.refreshEndpointIds` share.
+ *   - the LIVE attached endpoints are overlaid onto the stored
+ *     `sourceId`/`targetId`. A detached end (no live connection) keeps its
+ *     stored value -- the same `liveEndpointIds` rule the Connector paste rule
+ *     and `ConnectorLucid.refreshEndpointIds` share.
+ *   - the envelope `id` is re-stamped to the line's own id. Batch lines get
+ *     that from step 2 anyway; this is what leaves an OFF-BATCH line fully
+ *     normalized instead of still naming the source page's line (round 2).
+ *
+ * Runs over EVERY line on a duplicated page, including lines whose envelope id
+ * already matches: a duplicated line's stored endpoints name the SOURCE page's
+ * blocks regardless of whose id the envelope carries, and only the live line
+ * knows the new ones.
  *
  * Writes only when the serialized result actually differs, so a second pass
  * over an already-repaired page writes nothing at all.
  */
-function overlayLineEndpoints(line: LineProxy): void {
+function repairLineEnvelope(line: LineProxy): void {
     const blob = readRawEnvelope(line as unknown as { shapeData: { get(key: string): unknown } });
     if (!blob) return;
-
-    const overlay = liveEndpointIds(line);
-    if (!overlay.sourceId && !overlay.targetId) return;
 
     const parsed = blob.parsed;
     const domain = (parsed.domain && typeof parsed.domain === 'object' && !Array.isArray(parsed.domain))
         ? (parsed.domain as Record<string, unknown>)   // envelope
         : parsed;                                       // legacy flat blob
+
+    const overlay = liveEndpointIds(line);
     if (overlay.sourceId) domain.sourceId = overlay.sourceId;
     if (overlay.targetId) domain.targetId = overlay.targetId;
+
+    if (typeof parsed.id === 'string' && parsed.id !== line.id) {
+        parsed.id = line.id;
+        if (domain !== parsed && domain.id !== undefined) domain.id = line.id;
+    }
 
     const next = JSON.stringify(parsed);
     if (next === blob.raw) return;
     line.shapeData.set(MODEL_DATA_KEY, next);
+}
+
+/**
+ * Re-mints every swimlane lane's `laneId` on a duplicated page -- identity
+ * only. `titleSnapshot`, `assignmentMode` and above all `resourceId` are
+ * preserved exactly: the duplicated page's `q_resources` came across intact,
+ * so those links still resolve and unlinking them would destroy working state.
+ *
+ * The re-mint is what makes that preservation last. A duplicated lane arrives
+ * carrying the SOURCE page's `laneId`, and a laneId collision is precisely
+ * what `isPastedSwimlaneBlock` reads as "this is a paste" -- so a lane left
+ * with the source's id would be rewritten, and unlinked, by the first later
+ * pass that happened to carry this swimlane in its batch. Fresh laneIds remove
+ * the collision, so that later pass correctly sees a non-paste. Write shape
+ * (`{ lanes, lastSyncedAt }`) matches `normalizeSwimlane` and
+ * `SwimLaneHandler.handleUpdate`.
+ */
+function remintDuplicatedLanes(page: PageProxy): void {
+    for (const [, block] of page.allBlocks) {
+        try {
+            if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
+            const raw = block.shapeData.get(SWIMLANE_DATA_KEY);
+            if (typeof raw !== 'string' || !raw) continue;
+            let swim: SwimLaneQuodsiData | null = null;
+            try {
+                swim = JSON.parse(raw) as SwimLaneQuodsiData;
+            } catch {
+                continue;
+            }
+            if (!swim || !Array.isArray(swim.lanes) || swim.lanes.length === 0) continue;
+
+            const lanes: (SwimLaneLaneMapping | null)[] = swim.lanes.map((lane) =>
+                lane ? { ...lane, laneId: generateUUID() } : null
+            );
+            const next: SwimLaneQuodsiData = { lanes, lastSyncedAt: new Date().toISOString() };
+            block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(next));
+        } catch (error) {
+            log.error('Duplicated-page lane re-mint failed; lanes left as duplicated', { blockId: block.id, error });
+        }
+    }
 }

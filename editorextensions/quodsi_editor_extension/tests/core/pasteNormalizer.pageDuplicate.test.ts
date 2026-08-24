@@ -234,11 +234,10 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
         expect(sa.getElementData<{ arrivalPatternId: string }>(dup.genBlock)!.arrivalPatternId).toBe('pattern-1');
     });
 
-    it('does NOT re-mint activity action or lever ids, does not rename, and does not rewrite swimlane lanes', () => {
+    it('does NOT re-mint activity action or lever ids, does not rename, and does not UNLINK swimlane lanes', () => {
         const sa = new StorageAdapter();
         const source = buildSourcePage(sa);
         const dup = duplicatePage(source);
-        const swimlaneBefore = dup.swimlane.shapeData.get('q_swimlane');
 
         normalizePastedItems(batchOf(dup), sa, pageModeOpts(source, dup));
 
@@ -246,9 +245,12 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
         expect(data.actions.map((a) => a.id)).toEqual(['action-1']);
         expect(data.levers).toEqual([{ leverId: 'lever-1', actionId: 'action-1' }]);
         expect(data.name).toBe('Triage');
-        // The swimlane pass WOULD have fired here: `lane-1` collides with the
-        // source page's swimlane, which `allPages` makes visible.
-        expect(dup.swimlane.shapeData.get('q_swimlane')).toBe(swimlaneBefore);
+        // The swimlane RULE would have dropped the lane's resourceId here
+        // (`lane-1` collides with the source page's swimlane, which `allPages`
+        // makes visible). Page mode re-mints the laneId instead and keeps the
+        // link -- see the dedicated lane test below.
+        const swim: SwimLaneQuodsiData = JSON.parse(dup.swimlane.shapeData.get('q_swimlane')!);
+        expect(swim.lanes[0]!.resourceId).toBe('res-1');
     });
 
     it('rewrites every line on the page from its live endpoints — batch member or not', () => {
@@ -264,9 +266,13 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
 
         // dup.otherLine was NOT in the batch; its stored endpoints still pointed
         // at the SOURCE page's blocks until the allLines walk repaired them.
-        const offBatch = sa.getElementData<{ sourceId: string; targetId: string }>(dup.otherLine)!;
+        const offBatch = sa.getElementData<{ id: string; sourceId: string; targetId: string }>(dup.otherLine)!;
         expect(offBatch.sourceId).toBe('dup-act');
         expect(offBatch.targetId).toBe('dup-act-2');
+        // ...and the same walk re-stamps its envelope id, so an off-batch line
+        // ends FULLY normalized rather than still naming the source's line
+        // (round 2 ruling).
+        expect(offBatch.id).toBe('dup-line-2');
     });
 
     it('clears the copied run state and emits exactly one notice', () => {
@@ -304,10 +310,7 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
             otherLine: dup.otherLine.shapeData.get('q_data'),
         };
 
-        // The swimlane is left out of the re-delivery here; see the KNOWN
-        // LIMITATION test below for why it is the one item a second pass is
-        // not yet inert for.
-        const second = normalizePastedItems(batchOf(dup).filter((item) => item !== dup.swimlane), sa, opts);
+        const second = normalizePastedItems(batchOf(dup), sa, opts);
 
         expect(second.changed).toBe(false);
         expect(second.notices).toEqual([]);
@@ -321,23 +324,15 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
         expect(dup.otherLine.shapeData.get('q_data')).toBe(after.otherLine);
     });
 
-    // KNOWN LIMITATION (raised in review round 1, not yet ruled on).
-    //
-    // Page mode deliberately does NOT touch swimlane lanes: a duplicated
-    // page's `q_resources` came across intact, so its lanes' `resourceId`s
-    // still resolve, and rewriting them would DESTROY working links. But the
-    // duplicated lanes keep the SOURCE page's `laneId`s, and a laneId
-    // collision is exactly what the swimlane paste rule reads as "this is a
-    // paste". So the FIRST later pass that happens to carry this swimlane in
-    // its batch -- an ordinary paste onto the duplicated page -- rewrites the
-    // lanes and drops the `resourceId` links page mode was careful to keep.
-    //
-    // This test pins the current behaviour so the loss cannot happen
-    // silently. The candidate fix is for page mode to re-mint each lane's
-    // `laneId` while PRESERVING `resourceId` (removing the collision without
-    // breaking the links); that is a behaviour change beyond this task's
-    // brief, which says page mode performs no lane rewrite at all.
-    it('KNOWN LIMITATION: a later pass carrying the duplicated swimlane still rewrites its lanes', () => {
+    // Round 2 ruling. A duplicated page's lanes must keep their `resourceId`
+    // links -- `q_resources` came across intact, so those links still resolve
+    // and unlinking them would destroy working state. But the lanes also
+    // arrive carrying the SOURCE page's `laneId`s, and a laneId collision is
+    // precisely what the swimlane paste rule reads as "this is a paste": left
+    // alone, the first later pass carrying this swimlane would rewrite the
+    // lanes and drop exactly the links page mode preserved. So page mode
+    // re-mints the laneIds -- identity only -- and keeps everything else.
+    it('re-mints every swimlane laneId while preserving titleSnapshot, assignmentMode and resourceId', () => {
         const sa = new StorageAdapter();
         const source = buildSourcePage(sa);
         const dup = duplicatePage(source);
@@ -345,18 +340,30 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
 
         normalizePastedItems(batchOf(dup), sa, opts);
 
-        // Page mode kept the lane exactly as duplicated -- link intact.
-        const afterPageMode: SwimLaneQuodsiData = JSON.parse(dup.swimlane.shapeData.get('q_swimlane')!);
-        expect(afterPageMode.lanes[0]).toEqual({ laneId: 'lane-1', titleSnapshot: 'Nurses', assignmentMode: 'explicit', resourceId: 'res-1' });
+        const after: SwimLaneQuodsiData = JSON.parse(dup.swimlane.shapeData.get('q_swimlane')!);
+        expect(after.lanes).toHaveLength(1);
+        expect(after.lanes[0]!.laneId).not.toBe('lane-1');            // fresh identity: collision gone
+        expect(after.lanes[0]!.titleSnapshot).toBe('Nurses');
+        expect(after.lanes[0]!.assignmentMode).toBe('explicit');
+        expect(after.lanes[0]!.resourceId).toBe('res-1');              // link PRESERVED
+        // the source page's swimlane is untouched
+        expect(source.swimlane.shapeData.get('q_swimlane')).toBe(JSON.stringify(SWIMLANE));
+    });
 
-        // A later ordinary pass sees `lane-1` colliding with the SOURCE page's
-        // swimlane and rewrites the lane, losing the resource link.
+    it('a later batch carrying the duplicated swimlane is a no-op: the laneId collision is gone', () => {
+        const sa = new StorageAdapter();
+        const source = buildSourcePage(sa);
+        const dup = duplicatePage(source);
+        const opts = pageModeOpts(source, dup);
+
+        normalizePastedItems(batchOf(dup), sa, opts);
+        const captured = dup.swimlane.shapeData.get('q_swimlane');
+
         const second = normalizePastedItems([dup.swimlane], sa, opts);
 
-        expect(second.notices).toEqual(['Pasted swimlane lanes are not linked to resources']);
-        const afterSecond: SwimLaneQuodsiData = JSON.parse(dup.swimlane.shapeData.get('q_swimlane')!);
-        expect(afterSecond.lanes[0]!.laneId).not.toBe('lane-1');
-        expect(afterSecond.lanes[0]!.resourceId).toBeUndefined();
+        expect(second.changed).toBe(false);
+        expect(second.notices).toEqual([]);
+        expect(dup.swimlane.shapeData.get('q_swimlane')).toBe(captured);
     });
 
     it('page mode is NOT entered when the page envelope id already matches: per-item rules apply', () => {
@@ -386,7 +393,6 @@ describe('PasteNormalizer — page mode never falls back to the per-item rules (
         const sa = new StorageAdapter();
         const source = buildSourcePage(sa);
         const dup = duplicatePage(source);
-        const swimlaneBefore = dup.swimlane.shapeData.get('q_swimlane');
         jest.spyOn(sa, 'clearSkippedElements').mockImplementation(() => {
             throw new Error('storage unavailable');
         });
@@ -399,9 +405,12 @@ describe('PasteNormalizer — page mode never falls back to the per-item rules (
         expect(dup.page.shapeData.get('q_arrival_patterns')).toBe(source.page.shapeData.get('q_arrival_patterns'));
         // No action re-mint -- the per-item Activity rule never ran.
         expect(sa.getElementData<{ actions: { id: string }[] }>(dup.actBlock)!.actions.map((a) => a.id)).toEqual(['action-1']);
-        // Lanes untouched -- the swimlane pass never ran (it WOULD have fired:
-        // `lane-1` collides with the source page's swimlane).
-        expect(dup.swimlane.shapeData.get('q_swimlane')).toBe(swimlaneBefore);
+        // The lane keeps its resource link -- the swimlane RULE, which always
+        // unlinks, never ran (it WOULD have fired: `lane-1` collides with the
+        // source page's swimlane). Page mode's own laneId re-mint is what ran.
+        const swim: SwimLaneQuodsiData = JSON.parse(dup.swimlane.shapeData.get('q_swimlane')!);
+        expect(swim.lanes[0]!.resourceId).toBe('res-1');
+        expect(swim.lanes[0]!.laneId).not.toBe('lane-1');
 
         jest.restoreAllMocks();
     });
