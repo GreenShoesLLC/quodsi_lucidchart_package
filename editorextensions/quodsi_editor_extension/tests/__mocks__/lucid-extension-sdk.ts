@@ -10,7 +10,17 @@ export class BlockProxy extends ItemProxy {}
 export class LineProxy extends ItemProxy {}
 export class PageProxy extends ElementProxy {}
 export class Viewport {}
-export class DocumentProxy {}
+export class DocumentProxy {
+  // Real signature returns a handle string (see documentproxy.d.ts); no test
+  // currently drives this hook through a real DocumentProxy instance (the
+  // extension.ts registration is exercised only via a source-level text
+  // check -- booting extension.ts under Jest is impractical), so this is a
+  // no-op stub kept in shape with the SDK for anything that does construct
+  // one.
+  public hookCreateItems(_callback: (items: ItemProxy[]) => void): string {
+    return 'create-items-hook-handle';
+  }
+}
 // Captures the config a subclass passes to `super(client, config)` on
 // `.config` so tests can assert on the url/size/title a RoutingModal
 // subclass (e.g. PatternEditorModal, StudioEmbedModal) computed, without
