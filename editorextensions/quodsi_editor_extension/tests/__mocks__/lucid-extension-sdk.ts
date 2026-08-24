@@ -10,7 +10,18 @@ export class BlockProxy extends ItemProxy {}
 export class LineProxy extends ItemProxy {}
 export class PageProxy extends ElementProxy {}
 export class Viewport {}
+/**
+ * Test seam for `DocumentProxy.pages`: the pages a constructed mock
+ * DocumentProxy reports. The real `pages` is a MapProxy served by the Lucid
+ * app; a plain Map matches the slice production code uses (`.values()`).
+ * Tests push their fake pages here (and clear it in beforeEach) --
+ * pasteHookWiring builds the paste normalizer's cross-page enumeration from
+ * `new DocumentProxy(client).pages`.
+ */
+export const documentPagesForTests: any[] = [];
+
 export class DocumentProxy {
+  public readonly pages = new Map<string, any>(documentPagesForTests.map((p) => [p.id, p]));
   // Real signature returns a handle string (see documentproxy.d.ts); no test
   // currently drives this hook through a real DocumentProxy instance (the
   // extension.ts registration is exercised only via a source-level text

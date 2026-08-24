@@ -9,7 +9,7 @@
 // document).
 
 import type { ItemProxy, EditorClient } from 'lucid-extension-sdk';
-import { Viewport } from 'lucid-extension-sdk';
+import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { ValidationMessages, ValidationSeverity, getLogger } from '@quodsi/lucid-shared';
 import { StorageAdapter } from './StorageAdapter';
 import type { ModelManager } from './ModelManager';
@@ -38,7 +38,13 @@ export interface PasteHookDeps {
 export async function onItemsCreated(items: ItemProxy[], deps: PasteHookDeps): Promise<void> {
     const { storageAdapter, modelManager, client } = deps;
 
-    const result = normalizePastedItems(items, storageAdapter);
+    // The cross-page pointer lookup (Resource rule 3) needs the document's other
+    // pages; PageProxy has no back-reference to its document, so the normalizer
+    // takes the enumeration as an option. Lazy: the callback only runs when a
+    // pasted pointer failed to resolve on its own page.
+    const result = normalizePastedItems(items, storageAdapter, {
+        allPages: () => [...new DocumentProxy(client).pages.values()],
+    });
     if (!result.changed) {
         return;
     }

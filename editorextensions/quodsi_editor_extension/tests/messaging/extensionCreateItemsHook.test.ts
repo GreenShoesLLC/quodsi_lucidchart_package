@@ -20,7 +20,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { Viewport } from '../__mocks__/lucid-extension-sdk';
+import { Viewport, documentPagesForTests } from '../__mocks__/lucid-extension-sdk';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { SimulationObjectType, ValidationSeverity } from '@quodsi/lucid-shared';
 import { makeFakeBlock, makeFakePage, addBlock } from '../helpers/fakeProxies';
@@ -82,6 +82,7 @@ describe('onItemsCreated', () => {
     page = makeFakePage('page-1');
     selectedItems = [{ id: 'shape-9' }];
     handleLucidSelectionEventMock.mockClear();
+    documentPagesForTests.length = 0;
     modelManagerStub = {
       pushNotices: jest.fn(),
       invalidateModelCache: jest.fn(),
@@ -119,6 +120,44 @@ describe('onItemsCreated', () => {
       selectedItems,
       modelManagerStub
     );
+  });
+
+  // Task 3: the Resource rule's cross-page lookup needs the document's other
+  // pages, and PageProxy carries no back-reference to its document -- so
+  // normalizePastedItems takes an `allPages` enumerator and THIS module is
+  // where the real one is built (`new DocumentProxy(client).pages`). Pinned
+  // end-to-end rather than by asserting on the option object: a paste whose
+  // resource lives only on ANOTHER page can only be cloned if the enumeration
+  // actually reached the normalizer.
+  it('passes the document page enumeration through: a resource that lives only on another page is cloned into this one', async () => {
+    const otherPage = makeFakePage('page-other');
+    sa.setResources(otherPage, [{ id: 'res-1', name: 'Nurse', capacity: 3, description: 'Floor nurse' }]);
+    sa.setResources(page, []);
+    documentPagesForTests.push(otherPage, page);
+
+    const throwaway = makeFakeBlock('block-orig');
+    sa.setElementData(throwaway, { id: 'block-orig', resourceId: 'res-1' }, SimulationObjectType.Resource);
+    const pastedResource = addBlock(page, makeFakeBlock('block-new'));
+    pastedResource.shapeData.set('q_data', throwaway.shapeData.get('q_data')!);
+
+    await onItemsCreated([pastedResource], {
+      storageAdapter: sa,
+      modelManager: modelManagerStub,
+      client: clientStub as any,
+    });
+
+    const cloned = sa.getResources(page);
+    expect(cloned).toHaveLength(1);
+    expect(cloned[0].name).toBe('Nurse');
+    expect(cloned[0].id).not.toBe('res-1');
+    expect(sa.getElementData<{ resourceId: string }>(pastedResource)!.resourceId).toBe(cloned[0].id);
+    // Source page untouched.
+    expect(sa.getResources(otherPage).map((r) => r.id)).toEqual(['res-1']);
+
+    const pushedIssues = modelManagerStub.pushNotices.mock.calls[0][0];
+    expect(pushedIssues).toHaveLength(1);
+    expect(pushedIssues[0].code).toBe('paste_normalized');
+    expect(pushedIssues[0].severity).toBe(ValidationSeverity.INFO);
   });
 
   it('nothing pasted: pushes no notices, does not invalidate the cache, does not re-run the selection', async () => {
