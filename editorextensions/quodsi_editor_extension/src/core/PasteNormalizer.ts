@@ -15,9 +15,14 @@
 // `isPastedItem` and never enters the per-item loop below; it is detected and
 // normalized in its own pass instead, run first (see the ordering note in
 // the per-page loop).
+// Task 5 adds the Activity case (see normalizeActivity): fresh action ids
+// (recursively, via remintActionIds), fresh lever ids with actionId repointed
+// through the resulting id map, and a unique stored name.
 
 import { ItemProxy, PageProxy } from 'lucid-extension-sdk';
 import {
+    Action,
+    ScenarioLever,
     SimulationObjectType,
     StoredResourceRecord,
     SwimLaneLaneMapping,
@@ -113,9 +118,12 @@ function normalizeOne(
 ): void {
     const typeInfo = sa.getElementType(item)!;
     switch (typeInfo.type) {
-        // Tasks 4-7 add swimlane-carrier / Activity / Generator / Connector cases.
+        // Tasks 6-7 add Generator / Connector cases.
         case SimulationObjectType.Resource:
             normalizeResource(item, page, sa, result, opts);
+            break;
+        case SimulationObjectType.Activity:
+            normalizeActivity(item, page, sa, result);
             break;
         default:
             restampEnvelope(item, sa);
@@ -229,6 +237,117 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
     if (source.financialProperties) clone.financialProperties = { ...source.financialProperties };
     if (source.levers) clone.levers = source.levers.map((lever) => ({ ...lever, leverId: generateUUID() }));
     return clone;
+}
+
+/**
+ * Activity rule (Task 5). A pasted Activity block's `q_data` domain carries
+ * the ORIGINAL block's actions, levers, and stored name verbatim -- same
+ * action ids (`actions[].id`, including nested branch actions), same lever
+ * ids (`levers[].leverId`), same `name`. All three need fresh identity so
+ * the pasted copy stops sharing authoring metadata with the original:
+ *
+ *   - every action gets a fresh `id`, recursively through BranchAction's
+ *     `ifTrue`/`ifFalse` and LoopAction's `actions` (see `remintActionIds`).
+ *   - every lever gets a fresh `leverId`; a lever whose `actionId` pointed at
+ *     one of the re-minted actions is repointed to that action's NEW id via
+ *     the id map `remintActionIds` builds -- a lever whose `actionId` does
+ *     not resolve (dangling) is left unchanged.
+ *   - the stored `name`, when present, is deduped against every OTHER
+ *     Activity's stored name on this page; only on an actual collision does
+ *     the name change, and only then does the notice fire.
+ *
+ * `resourceRequirementId` (on Seize/DelayWithResource actions) and
+ * `failureProperties.repairResourceRequirementId` are left byte-identical --
+ * they name a Resource requirement, an identity space this rule does not
+ * touch.
+ *
+ * Single write, same pattern as `normalizeResource`: this case never also
+ * calls `restampEnvelope`. Once written the stored id equals `item.id`, so a
+ * second pass sees `isPastedItem` false and is a no-op.
+ */
+function normalizeActivity(item: ItemProxy, page: PageProxy, sa: StorageAdapter, result: PasteNormalizationResult): void {
+    const typeInfo = sa.getElementType(item)!;
+    const data = (sa.getElementData(item) ?? {}) as Record<string, unknown>;
+    const { id: _old, type: _t, ...domain } = data;
+
+    if (Array.isArray(domain.actions)) {
+        const { actions: remintedActions, idMap } = remintActionIds(domain.actions as Action[]);
+        domain.actions = remintedActions;
+
+        if (Array.isArray(domain.levers)) {
+            domain.levers = (domain.levers as ScenarioLever[]).map((lever) => {
+                const next: ScenarioLever = { ...lever, leverId: generateUUID() };
+                if (lever.actionId !== undefined && idMap.has(lever.actionId)) {
+                    next.actionId = idMap.get(lever.actionId)!;
+                }
+                return next;
+            });
+        }
+    } else if (Array.isArray(domain.levers)) {
+        // No actions to re-mint (so no id map), but levers still need fresh
+        // identity; any actionId they carry is necessarily dangling here.
+        domain.levers = (domain.levers as ScenarioLever[]).map((lever) => ({ ...lever, leverId: generateUUID() }));
+    }
+
+    if (typeof domain.name === 'string' && domain.name) {
+        const takenNames = collectTakenActivityNames(page, sa, item.id);
+        const uniqueName = generateUniqueName(domain.name, (candidate) => takenNames.has(candidate));
+        if (uniqueName !== domain.name) {
+            domain.name = uniqueName;
+            result.notices.push(`Pasted activity renamed to '${uniqueName}'`);
+        }
+    }
+
+    sa.setElementData(item, { id: item.id, ...domain } as { id: string }, SimulationObjectType.Activity, {
+        mappingSource: typeInfo.mappingSource,
+    });
+    result.changed = true;
+}
+
+/**
+ * Mints a fresh `id` for every action in `actions`, recursing into
+ * BranchAction's `ifTrue`/`ifFalse` and LoopAction's `actions` -- the only
+ * nested-action branches the shared Action union has (confirmed by grepping
+ * `quodsi_shared/src/types/elements/actions` for `ifTrue`/`ifFalse`/`actions:`
+ * -- see the Task 5 report). Returns the rebuilt array alongside an
+ * `idMap` from every OLD action id to its NEW one (top-level and nested
+ * alike), which the lever-repoint step uses to follow a lever's `actionId`
+ * to the same logical action under its new identity.
+ */
+function remintActionIds(actions: Action[]): { actions: Action[]; idMap: Map<string, string> } {
+    const idMap = new Map<string, string>();
+
+    const remint = (list: Action[]): Action[] =>
+        list.map((action) => {
+            const newId = generateUUID();
+            if (action.id) idMap.set(action.id, newId);
+            const next: Record<string, unknown> = { ...(action as unknown as Record<string, unknown>), id: newId };
+            if (Array.isArray((action as unknown as { ifTrue?: unknown }).ifTrue)) {
+                next.ifTrue = remint((action as unknown as { ifTrue: Action[] }).ifTrue);
+            }
+            if (Array.isArray((action as unknown as { ifFalse?: unknown }).ifFalse)) {
+                next.ifFalse = remint((action as unknown as { ifFalse: Action[] }).ifFalse);
+            }
+            if (Array.isArray((action as unknown as { actions?: unknown }).actions)) {
+                next.actions = remint((action as unknown as { actions: Action[] }).actions);
+            }
+            return next as unknown as Action;
+        });
+
+    return { actions: remint(actions), idMap };
+}
+
+/** Every OTHER Activity block's stored `name` on `page`, for unique-name dedup. */
+function collectTakenActivityNames(page: PageProxy, sa: StorageAdapter, excludeItemId: string): Set<string> {
+    const taken = new Set<string>();
+    for (const [, block] of page.allBlocks) {
+        if (block.id === excludeItemId) continue;
+        const typeInfo = sa.getElementType(block);
+        if (typeInfo?.type !== SimulationObjectType.Activity) continue;
+        const blockData = sa.getElementData<{ name?: string }>(block);
+        if (blockData?.name) taken.add(blockData.name);
+    }
+    return taken;
 }
 
 /**
