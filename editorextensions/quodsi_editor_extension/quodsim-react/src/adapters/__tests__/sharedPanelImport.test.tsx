@@ -6,6 +6,7 @@ import {
   findArrivalUsage,
   RequirementField, RequirementFieldContext, ResourceRequirementsEditor, useRequirementCommit,
   ConnectorRoutingView,
+  ConnectorMoveTimeSection,
   ResourcesEditor,
   ResourceEditor,
   ResourceLinkPicker,
@@ -25,6 +26,7 @@ describe('shared panel import', () => {
     expect(typeof useRequirementCommit).toBe('function')
     expect(RequirementFieldContext).toBeDefined()
     expect(typeof ConnectorRoutingView).toBe('function')
+    expect(typeof ConnectorMoveTimeSection).toBe('function')
     // Plan 2b: the Resources tab body and BOTH halves of a Resource block's
     // editor (linked -> ResourceEditor, unlinked/dangling -> ResourceLinkPicker)
     // are shared, not reimplemented per host. Lucid deleted its own
