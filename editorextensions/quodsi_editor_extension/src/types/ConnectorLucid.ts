@@ -7,12 +7,14 @@ import {
     StateModification,
     MappingSource,
     ScenarioLever,
+    Action,
     pickConnectorName,
     pickName
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { blockToNameable, lineToNameable } from './nameableShape';
+import { hydrateActions } from './hydrateActions';
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[ConnectorLucid]';
@@ -45,12 +47,12 @@ interface StoredConnectorData {
     // `entityId` (matches `Connector.entityId`); `stateCondition` renamed to
     // `condition`; the old standalone `stateModifications` array has no
     // `Connector` field any more — connector-level state changes are
-    // expressed as an ASSIGN action inside `actions` now (never executed by
-    // the engine as a separate field even before this rename, per
-    // `stateReferences.ts`'s own note), so it is read/written nowhere here.
+    // expressed as an ASSIGN action inside `actions` now.
     entityId?: string;
     condition?: any;
     levers?: ScenarioLever[];
+    // Connector-level behavior lives in actions (move time / departure / arrival assigns).
+    actions?: Action[];
 }
 
 /**
@@ -144,6 +146,12 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         if (storedData?.levers) {
             connector.levers = storedData.levers;
         }
+
+        // Connector actions (move time + departure/arrival assigns). Like
+        // `levers`, `actions` is a class field defaulting to [], so it must
+        // be copied explicitly; hydrate so StateModification instances are
+        // real class instances (same as ActivityLucid).
+        connector.actions = hydrateActions(storedData?.actions);
 
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(connector);
@@ -244,7 +252,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             entityId: this.simObject.entityId,
             condition: this.simObject.condition?.toJSON(),
             // Levers survive the write-back (conditional — see ActivityLucid).
-            levers: this.simObject.levers?.length ? this.simObject.levers : undefined
+            levers: this.simObject.levers?.length ? this.simObject.levers : undefined,
+            // ALWAYS an array: updateElementData merges and skips undefined,
+            // so `[]` is the only way a cleared move time reaches storage.
+            actions: this.simObject.actions ?? []
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
