@@ -35,11 +35,18 @@ function renderView(referenceData: any, updateElement: UpdateElementMock = vi.fn
   return { updateElement }
 }
 
+/** Cards are an accordion (Studio, 2026-08-26): Lever authoring renders only
+ *  on the EXPANDED card, and nothing is expanded until a header is clicked
+ *  (or the view is given a selectedConnectorId). */
+const expandCard = (id: string) => fireEvent.click(screen.getByTestId(`connector-header-${id}`))
+
 describe('ConnectorRoutingView — CONNECTOR-scoped scenario-lever authoring (seam)', () => {
-  it('lever section is collapsed by default — toggle present per connector, inner WEIGHT checkbox hidden', () => {
+  it('lever section is absent while cards are collapsed, and collapsed itself once a card opens', () => {
     renderView(makeReferenceData())
-    // One disclosure toggle per outgoing connector (c1, c2).
-    expect(screen.getAllByRole('button', { name: /scenario levers/i }).length).toBe(2)
+    expect(screen.queryByTestId('lever-authoring')).toBeNull()
+    expandCard('c1')
+    // One disclosure toggle: the open card's.
+    expect(screen.getAllByRole('button', { name: /scenario levers/i }).length).toBe(1)
     // Collapsed: the inner WEIGHT checkbox is not rendered.
     expect(screen.queryByLabelText(/use Weight as a scenario lever/i)).toBeNull()
   })
@@ -49,25 +56,31 @@ describe('ConnectorRoutingView — CONNECTOR-scoped scenario-lever authoring (se
       createScenarioLever({ propertyName: ScenarioPropertyName.WEIGHT, label: 'Conn One — Weight', enabled: true }),
     ]
     renderView(makeReferenceData(c1Levers))
+    expandCard('c1')
     // Still collapsed (no inner checkbox)...
     expect(screen.queryByLabelText(/use Weight as a scenario lever/i)).toBeNull()
     // ...but the badge surfaces the one enabled lever on c1.
     expect(screen.getByTestId('lever-count')).toHaveTextContent('1')
   })
 
-  it('renders one lever-authoring section per connector (2+ connectors)', () => {
+  it('each connector gets its own lever-authoring section, one open at a time', () => {
     renderView(makeReferenceData())
-    expect(screen.getAllByTestId('lever-authoring').length).toBe(2)
-    // Expand both sections to reveal the inner WEIGHT checkbox.
-    screen.getAllByRole('button', { name: /scenario levers/i }).forEach((btn) => fireEvent.click(btn))
-    expect(screen.getAllByLabelText(/use Weight as a scenario lever/i).length).toBe(2)
+    expandCard('c1')
+    expect(screen.getAllByTestId('lever-authoring').length).toBe(1)
+    fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }))
+    expect(screen.getAllByLabelText(/use Weight as a scenario lever/i).length).toBe(1)
+    // Opening c2 closes c1: still exactly one section, now c2's.
+    expandCard('c2')
+    expect(screen.getAllByTestId('lever-authoring').length).toBe(1)
+    expect(screen.getByTestId('connector-routing-card-c2')).toContainElement(screen.getByTestId('lever-authoring'))
   })
 
   it('enabling the WEIGHT lever dispatches updateElement(c1, Connector, { levers: [non-empty] })', async () => {
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
     renderView(makeReferenceData(), updateElement)
-    screen.getAllByRole('button', { name: /scenario levers/i }).forEach((btn) => fireEvent.click(btn))
-    const checkbox = screen.getAllByLabelText(/use Weight as a scenario lever/i)[0] as HTMLInputElement
+    expandCard('c1')
+    fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }))
+    const checkbox = screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement
     expect(checkbox.checked).toBe(false)
 
     fireEvent.click(checkbox)
