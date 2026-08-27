@@ -23,6 +23,7 @@ import { AuthHandler } from '../core/messaging/handlers/authHandler';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { getLogger } from '@quodsi/lucid-shared';
 import { upsertModel } from '../core/sync/scenarioSync';
+import { planInitSync } from './initSyncPolicy';
 
 /**
  * RightDockPanel is responsible for displaying the model editor UI.
@@ -302,8 +303,23 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 // beats UpsertModel's commit, sync 404s on
                 // "Model not found for this document/page" and the
                 // scenario rows are never written.
-                if (isQuodsiModel) {
+                // Never before Kinde auth: an unauthenticated data action fails
+                // AND leaves Lucid's OAuth consent modal on the dialog stack, so
+                // the Sign-in click that follows is rejected as a stacked
+                // dialog (ClickUp 86e304r34). Deferred syncs run from the
+                // auth-ready listener registered in the constructor, which
+                // reads lastSyncContext — so record it either way.
+                const plan = planInitSync({
+                    isQuodsiModel,
+                    isAuthenticated: AuthHandler.getIsAuthenticated(),
+                });
+                if (plan !== 'skip') {
+                    this.lastSyncContext = { document, currentPage };
+                }
+                if (plan === 'sync') {
                     void this.upsertAndSyncOnPanelInit(document, currentPage);
+                } else if (plan === 'defer') {
+                    this.debug.debug('Panel-init model sync deferred until Kinde auth is established');
                 }
 
                 // Get the current selection and update it
