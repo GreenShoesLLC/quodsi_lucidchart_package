@@ -77,6 +77,8 @@ export class AuthHandler {
   private static currentUser: QuodsiUserInfo | undefined;
   private static currentToken: string | undefined;
   private static authReadyListeners: Array<() => void> = [];
+  /** In-flight checkCachedAuth, shared by concurrent callers (single-flight). */
+  private static cachedAuthInFlight: Promise<void> | null = null;
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
@@ -127,23 +129,32 @@ export class AuthHandler {
    * Called after REACT_APP_READY to set initial auth state.
    */
   public static async checkCachedAuth(): Promise<void> {
-    try {
-      const client = ModelManager.getClient();
-      AuthHandler.logger.debug('Checking for cached Kinde token...');
-
-      const token = await client.getOAuthToken('kinde');
-
-      if (token) {
-        AuthHandler.logger.debug('Cached Kinde token found, fetching user profile...');
-        await AuthHandler.processToken(token);
-      } else {
-        AuthHandler.logger.debug('No cached Kinde token');
+    // Runs on EVERY panel/iframe REACT_APP_READY (dock panel, each Studies /
+    // pattern / schedule modal). Single-flight so concurrent readies share one
+    // getOAuthToken round-trip; processToken then skips the profile fetch
+    // when the token is the one already processed.
+    if (AuthHandler.cachedAuthInFlight) return AuthHandler.cachedAuthInFlight;
+    AuthHandler.cachedAuthInFlight = (async () => {
+      try {
+        const client = ModelManager.getClient();
+        AuthHandler.logger.debug('Checking for cached Kinde token...');
+        const t0 = Date.now();
+        const token = await client.getOAuthToken('kinde');
+        AuthHandler.logger.debug('getOAuthToken(kinde) took', { ms: Date.now() - t0, hasToken: !!token });
+        if (token) {
+          await AuthHandler.processToken(token);
+        } else {
+          AuthHandler.logger.debug('No cached Kinde token');
+          AuthHandler.broadcastAuthStatus(false);
+        }
+      } catch (error) {
+        AuthHandler.logger.error('Error checking cached auth:', error);
         AuthHandler.broadcastAuthStatus(false);
+      } finally {
+        AuthHandler.cachedAuthInFlight = null;
       }
-    } catch (error) {
-      AuthHandler.logger.error('Error checking cached auth:', error);
-      AuthHandler.broadcastAuthStatus(false);
-    }
+    })();
+    return AuthHandler.cachedAuthInFlight;
   }
 
   /**
@@ -243,6 +254,16 @@ export class AuthHandler {
       AuthHandler.broadcastAuthStatus(false);
       return;
     }
+    // Same token as last time: the profile cannot have changed, and the
+    // user_profile call goes through Lucid's OAuth proxy (slow). Re-broadcast
+    // the cached user and fire auth-ready for any late registrants.
+    if (token === AuthHandler.currentToken && AuthHandler.currentUser) {
+      AuthHandler.logger.debug('Token unchanged; re-broadcasting cached user');
+      AuthHandler.isAuthenticated = true;
+      AuthHandler.broadcastAuthStatus(true, AuthHandler.currentUser);
+      AuthHandler.notifyAuthReady();
+      return;
+    }
 
     // Fetch user profile for email and display name. Derive the URL from the
     // token's `iss` claim so the same build works against any Kinde tenant
@@ -257,12 +278,14 @@ export class AuthHandler {
         AuthHandler.logger.debug('Token missing iss claim; skipping user profile fetch');
       } else {
         const client = ModelManager.getClient();
+        const tProfile = Date.now();
         const profileResponse = await client.oauthXhr('kinde', {
           url: `${issuer.replace(/\/$/, '')}/oauth2/v2/user_profile`,
           method: 'GET',
           responseFormat: 'utf8',
         });
 
+        AuthHandler.logger.debug('Kinde user_profile fetch took', { ms: Date.now() - tProfile });
         if (profileResponse) {
           const profile = JSON.parse(profileResponse.responseText);
           email = profile.email || '';
@@ -568,5 +591,18 @@ export class AuthHandler {
   /** Check if user is currently authenticated */
   public static getIsAuthenticated(): boolean {
     return AuthHandler.isAuthenticated;
+  }
+
+  public static getCurrentUser(): QuodsiUserInfo | undefined {
+    return AuthHandler.currentUser;
+  }
+
+  /** Test-only: clear all static auth state between cases. */
+  public static resetForTests(): void {
+    AuthHandler.isAuthenticated = false;
+    AuthHandler.currentUser = undefined;
+    AuthHandler.currentToken = undefined;
+    AuthHandler.authReadyListeners = [];
+    AuthHandler.cachedAuthInFlight = null;
   }
 }
