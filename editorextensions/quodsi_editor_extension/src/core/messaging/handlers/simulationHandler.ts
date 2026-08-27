@@ -24,6 +24,7 @@ import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
 import { upsertModel, canonicalModelName } from '../../sync/scenarioSync';
+import { sampleConnectorPaths } from '../../sync/connectorPathSampling';
 
 const log = getLogger('SimulationHandler');
 
@@ -330,6 +331,11 @@ export class SimulationHandler {
 
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
       let scenarioId = data.scenarioDefinitionId || generateUUID();
+
+      // Sampled connector paths for the animation (connectorPathSampling.ts),
+      // BEFORE the SVG-frame offset below so `path` shifts with the endpoints.
+      const pathStats = sampleConnectorPaths(serializedModel.connectors, (id) => activePageProxy.allLines.get(id));
+      log.debug('Sampled connector paths', pathStats);
 
       // Get SVG representation of the current page
       const diagramSvg = await activePageProxy.getSvg(undefined, true);

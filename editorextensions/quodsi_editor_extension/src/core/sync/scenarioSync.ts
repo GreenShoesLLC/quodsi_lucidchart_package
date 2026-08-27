@@ -8,6 +8,7 @@ import {
 } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
 import { ModelManager } from '../ModelManager';
+import { sampleConnectorPaths } from './connectorPathSampling';
 
 /** The canonical model name to sync to the DB: the model-definition name
  *  (domain.name) run through resolveModelName (generic/empty → timestamp). */
@@ -72,7 +73,13 @@ export async function pushModelDefinitionSnapshot(
   let modelDiagramSvg: string | undefined;
   try {
     const page = new Viewport(client).getCurrentPage();
-    if (page) modelDiagramSvg = await page.getSvg(undefined, true);
+    if (page) {
+      // Sampled connector paths for the animation (connectorPathSampling.ts),
+      // BEFORE the SVG-frame offset below so `path` shifts with the endpoints.
+      // Best-effort, like the SVG itself.
+      sampleConnectorPaths(snapshot.connectors, (id) => page.allLines.get(id));
+      modelDiagramSvg = await page.getSvg(undefined, true);
+    }
   } catch {
     modelDiagramSvg = undefined;
   }
