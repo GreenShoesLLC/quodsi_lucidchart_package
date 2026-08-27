@@ -34,6 +34,8 @@ export interface ISerializedConnector {
     sourceY?: number;
     targetX?: number;
     targetY?: number;
+    // Host-drawn polyline, model coordinates. Set by drawio only today; declared for wire parity.
+    path?: number[][];
 
     // Action-based system
     actions?: ISerializedAction[];

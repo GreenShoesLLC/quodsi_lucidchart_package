@@ -58,7 +58,7 @@ function makeModel(): ISerializedModel {
     generators: [{ x: 280, y: 160 }],
     resources: [{ x: -40, y: 260 }],
     connectors: [
-      { sourceX: 100, sourceY: 20, targetX: 300, targetY: 60 },
+      { sourceX: 100, sourceY: 20, targetX: 300, targetY: 60, path: [[100, 20], [200, 20], [300, 60]] },
       {},
     ],
     entities: [{ x: 0, y: 0 }],
@@ -102,6 +102,15 @@ describe('offsetSerializedModelCoordinates', () => {
     expect(c.targetX).toBeUndefined();
     expect(c.targetY).toBeUndefined();
     expect('sourceX' in c).toBe(false);
+  });
+
+  it('shifts every path point by (dx, dy) and leaves a connector without path alone', () => {
+    const m = makeModel();
+    offsetSerializedModelCoordinates(m, 500, 10);
+    const withPath = m.connectors[0]! as { path?: number[][] };
+    expect(withPath.path).toEqual([[600, 30], [700, 30], [800, 70]]);
+    const withoutPath = m.connectors[1]! as { path?: number[][] };
+    expect('path' in withoutPath).toBe(false);
   });
 
   it('leaves entities untouched (they are not laid-out shapes)', () => {

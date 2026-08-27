@@ -64,6 +64,11 @@ export function parsePageTranslate(svg: string): PageTranslate {
  *     coordinate from nothing — only keys already present are shifted, so a
  *     sparse-omitted 0 stays sparse-omitted (`omit@0` is preserved, not
  *     silently turned into an explicit `dx`).
+ *
+ * `path` (host-drawn polyline, Connector.ts/`ISerializedConnector`) is
+ * additive-optional and follows the same "only shift what's present" rule
+ * as sourceX/Y and targetX/Y — a connector without `path` is left alone
+ * rather than gaining one.
  */
 export function offsetSerializedModelCoordinates(
   model: ISerializedModel,
@@ -88,5 +93,6 @@ export function offsetSerializedModelCoordinates(
     if (c.sourceY !== undefined) c.sourceY += dy;
     if (c.targetX !== undefined) c.targetX += dx;
     if (c.targetY !== undefined) c.targetY += dy;
+    if (Array.isArray(c.path)) c.path = c.path.map(([x, y]) => [x + dx, y + dy]);
   }
 }
