@@ -1,4 +1,5 @@
 import { getLogger } from '@quodsi/lucid-shared';
+import { AuthHandler } from '../core/messaging/handlers/authHandler';
 
 /**
  * LucidDataActionUtility
@@ -36,8 +37,13 @@ export class LucidDataActionUtility {
         client: any,
         params: DataActionParams
     ): Promise<any> {
-        // Check if we need to trigger OAuth first
-        if (!this.hasTriggeredOauth) {
+        // Lucid support (see _docs/Lucid Questions.md): oauthXhr must be called
+        // once before performDataAction works. Only once Kinde auth is
+        // established, though — before that the lucid-provider flow competes
+        // with the sign-in dialog and, for a local package, fails and makes
+        // Lucid suppress the Kinde prompt (2026-08-27). Callers that need a
+        // token wait for auth-ready anyway (RightDockPanel, AnalyticsHandler).
+        if (!this.hasTriggeredOauth && AuthHandler.getIsAuthenticated()) {
             try {
                 await client.oauthXhr("lucid", {
                     url: "https://api.lucid.co/folders/search",
