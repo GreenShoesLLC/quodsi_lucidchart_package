@@ -3,6 +3,7 @@ import { PlaySquare } from "lucide-react";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { useAuth } from "../../messaging/MessageContext";
+import { useValidationState } from "../../messaging/hooks/useValidationState";
 
 /**
  * Primary action button that launches the embedded-Studio studies modal.
@@ -20,15 +21,25 @@ export function StudiesLaunchButton() {
   const { openStudiesModal } = useSimulationRunSender();
   const { selection } = useMessaging();
   const auth = useAuth();
+  // Live host validation (MODEL_VALIDATION_RESULT). ERROR-level issues mean
+  // the engine precheck would reject the run anyway, so the launch is gated
+  // here with the count, pointing at the Validation tab (smoke 2026-08-27).
+  const validation = useValidationState();
+  const blocked = validation.hasErrors;
   const documentId = selection.documentContext?.documentId ?? "";
   const pageId = selection.documentContext?.pageId ?? "";
+  const title = !auth.isAuthenticated
+    ? "Sign in to use Studies"
+    : blocked
+      ? `Fix ${validation.errorCount} validation error${validation.errorCount === 1 ? "" : "s"} before opening Studies — see the Validation tab`
+      : "Open the studies editor";
 
   return (
     <button
       type="button"
       data-testid="open-studies-modal"
-      title={auth.isAuthenticated ? "Open the studies editor" : "Sign in to use Studies"}
-      disabled={!auth.isAuthenticated}
+      title={title}
+      disabled={!auth.isAuthenticated || blocked}
       onClick={() => openStudiesModal(documentId, pageId)}
       className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
