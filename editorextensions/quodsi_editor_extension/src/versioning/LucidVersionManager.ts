@@ -57,6 +57,16 @@ export class LucidVersionManager {
                 return noUpgrade;
             }
 
+            // Already current. preflight() reports canUpgrade = !hasErrors and
+            // never compares source to target, so without this guard every
+            // page load ran a no-op "upgrade" — notifying "upgrade required
+            // from X to X" and writing to the document while Lucid was still
+            // loading ("Document Actions should not run before the
+            // application has loaded", 2026-08-27).
+            if (preflightResult.sourceVersion === preflightResult.targetVersion) {
+                return { ...noUpgrade, sourceVersion: preflightResult.sourceVersion, targetVersion: preflightResult.targetVersion };
+            }
+
             // Show upgrade needed notification
             this.notificationService.showMessage(
                 `Model upgrade required from ${preflightResult.sourceVersion} to ${preflightResult.targetVersion}`
