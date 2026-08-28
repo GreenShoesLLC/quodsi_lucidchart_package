@@ -238,6 +238,7 @@ const SOURCE_BY_PANEL: Record<string, MessageSource> = {
   results: 'results-iframe',
   pattern: 'pattern-iframe',
   schedule: 'schedule-iframe',
+  'work-schedule': 'work-schedule-iframe',
 }
 
 // Generous but bounded: a model-root write is a local ModelManager mutation

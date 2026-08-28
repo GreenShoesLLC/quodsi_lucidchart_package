@@ -23,6 +23,12 @@ export const MESSAGE_SOURCES = [
   'studio-embed-iframe',
   'pattern-iframe',
   'schedule-iframe',
+  // Work-schedule editor modal (spec 2026-08-27 §6). RUNTIME list, not just
+  // a type union -- see this constant's own header for the bug that taught us
+  // the difference: a source in the type but not in the list has every one of
+  // its messages dropped as "Invalid message format", and the modal hangs on
+  // its loading state forever because its REACT_APP_READY never lands.
+  'work-schedule-iframe',
 ] as const;
 
 /**

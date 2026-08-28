@@ -54,6 +54,10 @@ interface StoredActivityData {
     resourceName?: string;  // Resource name to auto-create during conversion
     levers?: ScenarioLever[];
     queueRanking?: QueueRanking;
+    /** Opt-in link to a model-level `workSchedules` record (spec 2026-08-27
+     *  §3.2). Absence IS the value ("fixed capacity"), which is why it is in
+     *  ACTIVITY_CLEARABLE_KEYS below. */
+    workScheduleId?: string;
 }
 
 /**
@@ -61,6 +65,10 @@ interface StoredActivityData {
  *
  * queueRanking is one of the few fields where ABSENCE is the value — no key
  * means "first come, first served" — and the generic merge cannot express that.
+ * `workScheduleId` (work schedules, spec 2026-08-27 §3.2) is the second: no
+ * key means "fixed capacity", and switching CapacitySourcePicker back to
+ * Fixed emits `{ workScheduleId: undefined }`, which is invisible by the time
+ * it arrives here.
  * StorageAdapter.updateElementData reads the stored q_data, strips
  * undefined-valued keys from the incoming update (deliberately: a partial
  * update must not clobber stored width/height) and merges the rest, so a
@@ -72,7 +80,7 @@ interface StoredActivityData {
  * and a global null-means-delete sentinel was rejected as too broad.
  * (86e2qwvf2, final-review finding 1.)
  */
-const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking'];
+const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking', 'workScheduleId'];
 
 /**
  * Storage keys to delete, given what the writer EXPLICITLY declared cleared.
@@ -112,9 +120,17 @@ export function activityStorageRemoveKeys(
  * such a writer, "no ranking on the object" really does mean FIFO.
  */
 export function activityAuthoritativeClearedFields(
-    activity: { queueRanking?: QueueRanking | null } | null | undefined
+    activity: { queueRanking?: QueueRanking | null; workScheduleId?: string | null } | null | undefined
 ): readonly string[] {
-    return activity?.queueRanking ? [] : ['queueRanking'];
+    const cleared: string[] = [];
+    if (!activity?.queueRanking) cleared.push('queueRanking');
+    // Same rule for the work-schedule link: an authoritative write-back
+    // hydrated every optional field off storage, so an absent link on the
+    // object really does mean "fixed capacity" rather than "this writer has
+    // nothing to say". A PANEL payload must never make this declaration --
+    // that is what activityStorageRemoveKeys' filtering is for.
+    if (!activity?.workScheduleId) cleared.push('workScheduleId');
+    return cleared;
 }
 
 /**
@@ -183,6 +199,15 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         // Carry forward queue ranking (engine 2026-08-08). Same drop risk as
         // levers: field-by-field hydration loses it unless copied here
         // (86e2qd9np).
+        // The work-schedule link (spec 2026-08-27 §3.2). Carried through on
+        // every rebuild: an activity linked in Studio, drawio or the embedded
+        // Studio surface must keep following its schedule when Lucid rebuilds
+        // the model from shape data, and must reach the engine wire (which it
+        // does for free -- Activity.toJSON() emits it, omit@absent).
+        if (storedData?.workScheduleId) {
+            activity.workScheduleId = storedData.workScheduleId;
+        }
+
         if (storedData?.queueRanking) {
             activity.queueRanking = storedData.queueRanking;
         }
@@ -255,6 +280,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             failureProperties: this.simObject.failureProperties?.toJSON(),
             routing: this.simObject.routing,
             queueRanking: this.simObject.queueRanking,
+            workScheduleId: this.simObject.workScheduleId,
             // Levers survive the write-back (conditional — see ActivityLucid).
             levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
@@ -263,7 +289,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         // removeKeys, not just the undefined above: see activityStorageRemoveKeys.
         // This write-back may declare the clear itself — dataToStore is built
         // from this.simObject, which createSimObject hydrated from storage with
-        // every optional field (including queueRanking) carried forward. Unlike
+        // every optional field (including queueRanking and workScheduleId)
+        // carried forward. Unlike
         // a panel payload, its silence about a field is genuine absence.
         this.storageAdapter.updateElementData(this.element, dataToStore, {
             removeKeys: activityStorageRemoveKeys(

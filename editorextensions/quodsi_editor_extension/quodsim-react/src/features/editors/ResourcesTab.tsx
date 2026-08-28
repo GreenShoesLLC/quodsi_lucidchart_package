@@ -17,6 +17,14 @@
 // updateModelRoot's `knownKeys` on the extension side (core/ModelManager.ts),
 // which THROWS on a key it cannot persist rather than dropping it silently.
 //
+// THE `onEditWorkSchedule` SEAM. A resource that follows a work schedule gets
+// an "Edit schedule" button from the shared CapacitySourcePicker, and without
+// a handler the shared control opens its OWN WorkScheduleModal -- correct for
+// Studio and drawio, trapped inside the 300px right dock here. Supplying the
+// handler means "I will present the editor", exactly as SchedulesTab does for
+// WorkSchedulesEditor (see its header) and ActivityEditor does for the
+// activity-side picker. The id is a SCHEDULE id, not a shape id.
+//
 // Link status (which shape or lane represents each resource) is resolved
 // through accessor.getShapeInfo, which useModelRootSource serves from the
 // same projection -- see its own comment for why that lookup is a pure
@@ -24,11 +32,21 @@
 
 import React from 'react'
 import { ResourcesEditor } from 'quodsi_studio/platforms/shared'
+import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { useModelRootSource } from '../../adapters/useModelRootSource'
+import { useMessaging } from '../../messaging/MessageProvider'
 
 export const ResourcesTab: React.FC = () => {
   const { accessor } = useModelRootSource()
-  return <ResourcesEditor accessor={accessor} />
+  const { sendMessage } = useMessaging()
+  return (
+    <ResourcesEditor
+      accessor={accessor}
+      onEditWorkSchedule={(id) =>
+        sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, { scheduleId: id })
+      }
+    />
+  )
 }
 
 export default ResourcesTab

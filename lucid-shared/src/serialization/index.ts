@@ -44,6 +44,7 @@ export type { ISerializedScenarioChangeRequest } from './interfaces/ISerializedS
 export type { ISerializedScenario } from './interfaces/ISerializedScenario';
 export type { ISerializedArrivalPattern } from './interfaces/ISerializedArrivalPattern';
 export type { ISerializedArrivalSchedule } from './interfaces/ISerializedArrivalSchedule';
+export type { ISerializedWorkSchedule } from './interfaces/ISerializedWorkSchedule';
 // Errors
 export { SerializerError } from './errors/SerializerError';
 export { InvalidModelError } from './errors/InvalidModelError';

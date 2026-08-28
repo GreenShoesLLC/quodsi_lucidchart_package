@@ -20,6 +20,7 @@ import {
     ISerializedEntity,
     ISerializedArrivalPattern,
     ISerializedArrivalSchedule,
+    ISerializedWorkSchedule,
     ModelDefaults,
     ISerializedResourceRequirement,
     ISerializedScenario,
@@ -41,6 +42,7 @@ import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { activityStorageRemoveKeys } from "../types/ActivityLucid";
+import { resourceStorageRemoveKeys } from "../types/ResourceLucid";
 import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
@@ -1926,7 +1928,7 @@ export class ModelManager {
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'resources', 'resourceRequirements'];
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'resources', 'resourceRequirements'];
         const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
@@ -1946,6 +1948,17 @@ export class ModelManager {
             this.storageAdapter.setArrivalSchedules(
                 page,
                 patch.arrivalSchedules as ISerializedArrivalSchedule[]
+            );
+        }
+
+        // Work schedules (spec 2026-08-27 §3.1). Written whole, exactly like
+        // the two lists above: WorkSchedulesEditor, WorkScheduleModal and
+        // CapacitySourcePicker's "New schedule" all send the ENTIRE
+        // `workSchedules` list, never a delta.
+        if ('workSchedules' in patch) {
+            this.storageAdapter.setWorkSchedules(
+                page,
+                patch.workSchedules as ISerializedWorkSchedule[]
             );
         }
 
@@ -2534,6 +2547,8 @@ export class ModelManager {
                 ? activityStorageRemoveKeys(clearedFields)
                 : type === SimulationObjectType.Generator
                 ? generatorStorageRemoveKeys(clearedFields)
+                : type === SimulationObjectType.Resource
+                ? resourceStorageRemoveKeys(clearedFields)
                 : undefined;
 
             if (existingElementData != null) {

@@ -14,6 +14,14 @@
 //     (ELEMENT_UPDATE). The create -> durable flush -> link ordering lives
 //     inside the picker; do not reimplement it here.
 //
+// THE `onEditWorkSchedule` SEAM. A resource that follows a work schedule gets
+// an "Edit schedule" button from the shared CapacitySourcePicker, and without
+// a handler the shared control opens its OWN WorkScheduleModal -- correct for
+// Studio and drawio, trapped inside the 300px right dock here. Supplying the
+// handler means "I will present the editor", exactly as SchedulesTab does for
+// WorkSchedulesEditor (see its header) and ActivityEditor does for the
+// activity-side picker. The id is a SCHEDULE id, not a shape id.
+//
 // A dangling pointer is deliberately NOT auto-cleared: resolveResourceLinks
 // already reports it, ValidationPanel surfaces the warning, and the picker
 // below is the fix the user is offered.
@@ -36,7 +44,9 @@
 
 import React, { useSyncExternalStore } from 'react'
 import { ResourceEditor, ResourceLinkPicker } from 'quodsi_studio/platforms/shared'
+import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { useModelRootSource } from '../../adapters/useModelRootSource'
+import { useMessaging } from '../../messaging/MessageProvider'
 
 /**
  * The model-root projection's resource row. `shapeId` / `laneRef` are
@@ -58,6 +68,7 @@ interface Props {
 
 export const ResourceBlockEditor: React.FC<Props> = ({ blockId, resourceId }) => {
   const { accessor } = useModelRootSource()
+  const { sendMessage } = useMessaging()
   // Same subscription idiom every shared panel uses, so this re-renders the
   // moment a MODEL_ROOT_SNAPSHOT lands -- which is what swaps the picker for
   // the editor after a link is written (saveShape re-requests the projection
@@ -70,7 +81,15 @@ export const ResourceBlockEditor: React.FC<Props> = ({ blockId, resourceId }) =>
   const unclaimed = !!linked && !linked.shapeId && !linked.laneRef
 
   if (linked && (ownsClaim || unclaimed)) {
-    return <ResourceEditor resourceId={linked.id} accessor={accessor} />
+    return (
+      <ResourceEditor
+        resourceId={linked.id}
+        accessor={accessor}
+        onEditWorkSchedule={(id) =>
+          sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, { scheduleId: id })
+        }
+      />
+    )
   }
 
   return (

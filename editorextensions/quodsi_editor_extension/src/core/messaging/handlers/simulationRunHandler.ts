@@ -454,6 +454,12 @@ export class SimulationRunHandler {
         inboundCapacity: a.inboundCapacity,
         outboundCapacity: a.outboundCapacity,
         routing: a.routing,
+        // Work-schedule link (spec 2026-08-27 §3.2). The embed's compiled
+        // CapacitySourcePicker derives its "Fixed capacity" / "Follow a
+        // schedule" state from this alone -- omitting it would show an
+        // already-scheduled activity as fixed, and the author's next edit
+        // would read as a brand-new link.
+        workScheduleId: a.workScheduleId,
         actions: (a.actions ?? []).map((ac) => {
           const base: {
             id: string;
@@ -473,6 +479,8 @@ export class SimulationRunHandler {
         id: r.id,
         name: r.name,
         capacity: r.capacity,
+        // Same reason as the activity link above -- see its comment.
+        workScheduleId: r.workScheduleId,
       })),
       resourceRequirements: (model.resourceRequirements ?? []).map((rq) => ({
         id: rq.id,
@@ -493,6 +501,13 @@ export class SimulationRunHandler {
       })),
       connectors,
       entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
+      // Model-level work schedules (spec 2026-08-27 §3.1). Relayed WHOLE --
+      // the embed's WorkSchedulesEditor and WorkScheduleModal both read every
+      // field, so there is nothing to trim, and the records are already the
+      // sparse wire shape `WorkSchedule.toJSON()` produced. Always an array,
+      // even when the serializer sparse-omitted the key, so the catalog's own
+      // shape stays stable across models.
+      workSchedules: model.workSchedules ?? [],
     };
   }
 

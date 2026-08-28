@@ -19,6 +19,7 @@ import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField } from "quodsi_studio/platforms/shared";
 import { ArrivalsTab } from "./ArrivalsTab";
+import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
@@ -54,7 +55,7 @@ interface Props {
   onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
-export type EditorTab = "basic" | "states" | "entities" | "resources" | "requirements" | "arrivals" | "scenarios" | "validation";
+export type EditorTab = "basic" | "states" | "entities" | "resources" | "requirements" | "arrivals" | "schedules" | "scenarios" | "validation";
 
 /**
  * Tab navigation configuration for ModelEditor.
@@ -96,6 +97,12 @@ const TAB_CONFIG = [
     title: "Arrivals",
     icon: CalendarClock,
     tooltip: "Review the arrival patterns and schedules this model carries, and remove any no longer used by a generator"
+  },
+  {
+    id: "schedules" as const,
+    title: "Schedules",
+    icon: CalendarClock,
+    tooltip: "Define work schedules — recurring weekly capacity plus dated exceptions — that resources and activities can follow"
   },
   {
     id: "validation" as const,
@@ -765,6 +772,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       )}
       {activeTab === "resources" && <ResourcesTab />}
       {activeTab === "arrivals" && <ArrivalsTab />}
+      {activeTab === "schedules" && <SchedulesTab />}
       {activeTab === "requirements" && (
         <ResourceRequirementsEditor accessor={accessor} referenceCleanup="host" />
       )}

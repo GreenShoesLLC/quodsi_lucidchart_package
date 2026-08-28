@@ -1,5 +1,6 @@
 import { ISerializedArrivalPattern } from '../serialization/interfaces/ISerializedArrivalPattern';
 import { ISerializedArrivalSchedule } from '../serialization/interfaces/ISerializedArrivalSchedule';
+import { ISerializedWorkSchedule } from '../serialization/interfaces/ISerializedWorkSchedule';
 import { ISerializedResourceRequirement } from '../serialization/interfaces/ISerializedResourceRequirement';
 
 /**
@@ -82,11 +83,36 @@ export type ModelRootProjection = {
             costPerHourIdle: number;
         };
         levers?: unknown[];
+        // The resource half of the work-schedule link. Read by
+        // CapacitySourcePicker (via ResourceBasicTab) to decide between
+        // "Fixed capacity" and "Follow a schedule", and by
+        // `workScheduleUsage` for the Schedules tab's usage/delete guard.
+        // Omitting it would put the picker permanently in the Fixed state
+        // for an already-linked resource -- and the first edit would then
+        // look like a brand-new link. That is exactly the duplicate-schedule
+        // trap `generators[].arrivalScheduleId` above documents.
+        workScheduleId?: string;
         shapeId?: string;
         shapeLabel?: string;
         laneRef?: { blockId: string; laneId: string };
     }>;
     resourceRequirements?: ISerializedResourceRequirement[];
+    // Model-level work schedules (spec 2026-08-27 §3.1), read by Studio's
+    // WorkSchedulesEditor / WorkScheduleModal / CapacitySourcePicker off
+    // `modelDefinition.workSchedules`. Optional for the same fixture-churn
+    // reason as arrivalSchedules; projectModelRoot populates it on every path.
+    workSchedules?: ISerializedWorkSchedule[];
+    // Activity rows exist in this projection for ONE reason: a WorkSchedule
+    // can be followed by an Activity as well as a Resource, and
+    // `workScheduleUsage` (quodsi_studio) counts BOTH collections to produce
+    // the Schedules tab's usage line and its delete guard. Projecting only
+    // resources would under-report usage and offer Delete on a schedule an
+    // activity still follows -- leaving that activity with a dangling
+    // `workScheduleId`, an ERROR-severity `work_schedule_reference` that
+    // blocks simulate. id + name + workScheduleId is everything the shared
+    // consumers read; deliberately NOT `.toJSON()` (see `entities`/`states`
+    // above for the same reasoning).
+    activities?: Array<{ id: string; name: string; workScheduleId?: string }>;
     model: {
         timeMode?: string;
         startDateTime?: string | null;

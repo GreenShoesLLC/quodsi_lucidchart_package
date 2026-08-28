@@ -9,6 +9,7 @@ import {
     Entity,
     ArrivalPattern,
     ArrivalSchedule,
+    WorkSchedule,
     SeasonMode,
     UnitlessSample,
     Scenario,
@@ -233,6 +234,11 @@ export class ModelDefinitionPageBuilder {
             // Load arrival schedules from storage
             this.loadArrivalSchedules(page, modelDefinition);
 
+            // Load work schedules from storage. Order relative to the
+            // resource/activity passes is incidental -- the link is an id on
+            // the target, resolved by validation, not by construction here.
+            this.loadWorkSchedules(page, modelDefinition);
+
             // Load scenarios from storage
             this.loadScenarios(page, modelDefinition);
 
@@ -314,6 +320,13 @@ export class ModelDefinitionPageBuilder {
                         costPerHourIdle: stored.financialProperties.costPerHourIdle,
                     });
                 }
+                // The work-schedule link (spec 2026-08-27 §3.2). Carried
+                // through so a scheduled resource keeps following its
+                // schedule across a rebuild and reaches the engine wire --
+                // Resource.toJSON() emits it, omit@absent, so nothing else
+                // is needed downstream. An empty string is treated as absent,
+                // matching the shared class's own "omit@absent/''" rule.
+                if (stored.workScheduleId) resource.workScheduleId = stored.workScheduleId;
                 if (Array.isArray(stored.levers)) resource.levers = stored.levers;
                 modelDefinition.resources.add(resource);
             } catch (error) {
@@ -575,6 +588,57 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final arrival schedules count: ${modelDefinition.arrivalSchedules.size()}`);
+    }
+
+    /**
+     * Loads work schedules from storage and adds them to the model definition
+     * (spec 2026-08-27 §3.1).
+     *
+     * Page-level list (`q_work_schedules`), mirroring loadArrivalSchedules
+     * above. Fields absent from storage are left at the WorkSchedule
+     * constructor's defaults, and those defaults ARE the values `toJSON()`
+     * omits at (`offShiftCapacity` 0, `offShiftRule` 'finish',
+     * `pattern`/`exceptions` []), so an absent key means "still default" and
+     * the record round-trips byte-identically. There is no class-default /
+     * wire-omit divergence to override the way ArrivalPattern's `seasonMode`
+     * has.
+     *
+     * Rows and exceptions are assigned by reference from the parsed JSON:
+     * they are plain data on both sides (`WorkScheduleRow` /
+     * `WorkScheduleException` are interfaces, not classes), and
+     * `WorkSchedule.toJSON()` rebuilds each one key-by-key on the way out --
+     * which is what keeps a stray stored key off the engine's
+     * `extra="forbid"` parser.
+     */
+    private loadWorkSchedules(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading work schedules from storage');
+
+        const serializedSchedules = this.storageAdapter.getWorkSchedules(page);
+        this.log(`Found ${serializedSchedules.length} work schedules in storage`);
+
+        for (const serialized of serializedSchedules) {
+            try {
+                const schedule = new WorkSchedule(serialized.id, serialized.name);
+                if (serialized.offShiftCapacity !== undefined) {
+                    schedule.offShiftCapacity = serialized.offShiftCapacity;
+                }
+                if (serialized.offShiftRule !== undefined) {
+                    schedule.offShiftRule = serialized.offShiftRule as typeof schedule.offShiftRule;
+                }
+                if (serialized.pattern !== undefined) {
+                    schedule.pattern = serialized.pattern as typeof schedule.pattern;
+                }
+                if (serialized.exceptions !== undefined) {
+                    schedule.exceptions = serialized.exceptions as typeof schedule.exceptions;
+                }
+                modelDefinition.workSchedules.add(schedule);
+                this.log(`Added work schedule: ${schedule.name}`);
+            } catch (error) {
+                this.log(`Error deserializing work schedule: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final work schedules count: ${modelDefinition.workSchedules.size()}`);
     }
 
     /**

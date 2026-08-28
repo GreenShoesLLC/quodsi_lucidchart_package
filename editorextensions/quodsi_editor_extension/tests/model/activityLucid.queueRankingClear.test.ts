@@ -124,9 +124,17 @@ describe('clearing a queue ranking persists (finding 1)', () => {
     });
 
     it('an authoritative write-back declares the clear from the hydrated object', () => {
-        expect(activityAuthoritativeClearedFields(RANKED_ACTIVITY as any)).toEqual([]);
-        expect(activityAuthoritativeClearedFields({} as any)).toEqual(['queueRanking']);
-        expect(activityAuthoritativeClearedFields(undefined)).toEqual(['queueRanking']);
+        // RANKED_ACTIVITY has a ranking and no work-schedule link, so exactly
+        // one field is declared cleared. `workScheduleId` joined the
+        // authoritative declaration with the work-schedules feature (spec
+        // 2026-08-27 §3.2) -- same rule, second field: a writer built from a
+        // FULLY HYDRATED Activity (ActivityLucid.createSimObject carries every
+        // optional field forward) genuinely means absence when it says
+        // nothing. A panel payload still cannot make this declaration.
+        expect(activityAuthoritativeClearedFields(RANKED_ACTIVITY as any)).toEqual(['workScheduleId']);
+        expect(activityAuthoritativeClearedFields({ queueRanking: { stateId: 's', order: 'ascending' }, workScheduleId: 'ws-1' } as any)).toEqual([]);
+        expect(activityAuthoritativeClearedFields({} as any)).toEqual(['queueRanking', 'workScheduleId']);
+        expect(activityAuthoritativeClearedFields(undefined)).toEqual(['queueRanking', 'workScheduleId']);
     });
 
     it('drops the stored ranking on the panel save path (ModelManager.saveElementData)', async () => {

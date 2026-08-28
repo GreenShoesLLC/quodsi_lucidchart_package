@@ -333,6 +333,13 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
         capacity: source.capacity,
         description: source.description,
     };
+    // The work-schedule link (spec 2026-08-27 §3.2) rides along. A schedule is
+    // a SHARED model-level record (spec R5, "one schedule may be shared"), so
+    // it is NOT cloned the way a generator's 1:1-owned arrival pattern/
+    // schedule is -- the copy simply follows the same schedule, exactly as it
+    // keeps the same capacity. Set conditionally so an unscheduled resource's
+    // clone carries no key at all: absence IS "fixed capacity".
+    if (source.workScheduleId) clone.workScheduleId = source.workScheduleId;
     if (source.financialProperties) clone.financialProperties = { ...source.financialProperties };
     if (source.levers) clone.levers = source.levers.map((lever) => ({ ...lever, leverId: generateUUID() }));
     return clone;
@@ -358,7 +365,15 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
  * `resourceRequirementId` (on Seize/DelayWithResource actions) and
  * `failureProperties.repairResourceRequirementId` are left byte-identical --
  * they name a Resource requirement, an identity space this rule does not
- * touch.
+ * touch. `workScheduleId` (work schedules, spec 2026-08-27 §3.2) joins them,
+ * and the ruling is worth stating because the obvious precedent points the
+ * other way: `normalizeGenerator` ALWAYS clones a linked arrival pattern or
+ * schedule, because those are 1:1-owned by their generator (the
+ * StorageAdapter doc comments say so) and a paste must never leave two
+ * generators sharing one. A work schedule is the opposite by design -- spec
+ * R5, "one schedule may be shared" -- so it behaves like a Resource or a
+ * requirement: the pasted copy follows the SAME schedule, and cloning would
+ * mint one duplicate "Nursing team" per paste.
  *
  * Single write, same pattern as `normalizeResource`: this case never also
  * calls `restampEnvelope`. Once written the stored id equals `item.id`, so a

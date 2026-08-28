@@ -305,3 +305,56 @@ describe('PasteNormalizer — Resource blocks (Task 3)', () => {
         ]);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Work schedules (spec 2026-08-27 §3.2) — the paste ruling, stated in tests.
+//
+// A `workScheduleId` names a SHARED, model-level record: spec R5 says "one
+// schedule may be shared", exactly like a Resource or a resource requirement
+// and unlike an ArrivalPattern/ArrivalSchedule, which the StorageAdapter's own
+// doc comments describe as 1:1-owned by their generator. So the arrival-link
+// rule (ALWAYS clone the linked record, so two generators can never point at
+// one) does NOT transfer: cloning here would multiply a schedule the model
+// deliberately shares, and a document with four pasted nurses would carry four
+// identical "Nursing team" schedules nobody asked for.
+//
+// The rule that DOES transfer is normalizeActivity's for
+// `resourceRequirementId` — "left byte-identical: it names an identity space
+// this rule does not touch". Two cases follow from that:
+//   - the RECORD clone (a resource claimed by another block on this page)
+//     carries its link over, because the clone is the same resource under a
+//     new identity and must staff the same way;
+//   - a pasted ACTIVITY keeps its link verbatim.
+describe('PasteNormalizer — work-schedule links are shared, never cloned', () => {
+    const SCHEDULED_NURSE: StoredResourceRecord = { ...NURSE, workScheduleId: 'ws-1' };
+
+    it('carries workScheduleId onto a cloned resource record', () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        sa.setResources(page, [SCHEDULED_NURSE]);
+        addResourcePointerBlock(sa, page, 'block-orig', 'res-1');
+        const pasted = addBlock(page, makePastedResourceBlock(sa, 'block-new', 'block-orig', 'res-1'));
+
+        normalizePastedItems([pasted], sa);
+
+        const records = sa.getResources(page);
+        expect(records).toHaveLength(2);
+        const clone = records.find((r) => r.id !== 'res-1')!;
+        // The clone follows the SAME schedule -- shared, not duplicated.
+        expect(clone.workScheduleId).toBe('ws-1');
+        expect(sa.getWorkSchedules(page)).toEqual([]);
+    });
+
+    it('leaves an unscheduled resource clone without the key at all', () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        sa.setResources(page, [NURSE]);
+        addResourcePointerBlock(sa, page, 'block-orig', 'res-1');
+        const pasted = addBlock(page, makePastedResourceBlock(sa, 'block-new', 'block-orig', 'res-1'));
+
+        normalizePastedItems([pasted], sa);
+
+        const clone = sa.getResources(page).find((r) => r.id !== 'res-1')!;
+        expect('workScheduleId' in clone).toBe(false);
+    });
+});

@@ -46,6 +46,32 @@ describe('ModelManager.buildModelRootProjection', () => {
         },
         arrivalPatterns: { getAll: () => [] },
         arrivalSchedules: { getAll: () => [{ id: 'as-a', name: 'Schedule A', toJSON: () => ({ id: 'as-a', name: 'Schedule A' }) }] },
+        // Work schedules (spec 2026-08-27). Serialized via toJSON like every
+        // other model-level list -- the class carries a `type` field the
+        // wire has no slot for, and toJSON() is what drops it.
+        workSchedules: {
+          getAll: () => [
+            {
+              id: 'ws-a',
+              name: 'Nursing team',
+              type: 'None',
+              toJSON: () => ({
+                id: 'ws-a',
+                name: 'Nursing team',
+                pattern: [{ days: ['mon'], start: '07:00', end: '15:00', capacity: 3 }],
+              }),
+            },
+          ],
+        },
+        // Activities exist in the projection ONLY so workScheduleUsage can
+        // count the activity half of a schedule's referrers -- id, name and
+        // the link, nothing else.
+        activities: {
+          getAll: () => [
+            { id: 'act-triage', name: 'Triage', workScheduleId: 'ws-a', capacity: 3, actions: ['noise'] },
+            { id: 'act-xray', name: 'X-ray' },
+          ],
+        },
         entities: { getAll: () => [{ id: 'ent-a', name: 'Patient', description: 'noise' }] },
         states: { getAll: () => [{ id: 'st-a', name: 'Priority', dataType: 'NUMBER' }] },
         // Plan 2b, Task 7: a shape-linked resource (shapeId + shapeLabel
@@ -61,6 +87,7 @@ describe('ModelManager.buildModelRootProjection', () => {
               id: 'res-nurse',
               name: 'Nurse',
               capacity: 2,
+              workScheduleId: 'ws-a',
               description: 'RN staff',
               financialProperties: {
                 toJSON: () => ({ enabled: true, costPerSeize: 5, costPerHourUtilized: 40, costPerHourIdle: 0 }),
@@ -109,6 +136,8 @@ describe('ModelManager.buildModelRootProjection', () => {
         generators: { getAll: () => [{ id: 'gen-b', name: 'B', levers: [], entityId: 'e', mode: 'FREQUENCY' }] },
         arrivalPatterns: { getAll: () => [] },
         arrivalSchedules: { getAll: () => [] },
+        workSchedules: { getAll: () => [] },
+        activities: { getAll: () => [] },
         entities: { getAll: () => [] },
         states: { getAll: () => [] },
         resources: { getAll: () => [] },
@@ -130,6 +159,53 @@ describe('ModelManager.buildModelRootProjection', () => {
       expect.objectContaining({ id: 'gen-b' }),
     ]);
     expect(mm.currentPage.id).toBe('page-B');
+  });
+
+  // Work schedules (spec 2026-08-27 §3.1 / §6). The consuming end is Studio's
+  // WorkSchedulesEditor / WorkScheduleModal / CapacitySourcePicker, every one
+  // of which reads `modelDefinition.workSchedules` defensively (`?? []`) --
+  // so an omission here renders an EMPTY Schedules tab and a picker stuck on
+  // "Fixed capacity" rather than throwing. That is the same silent shape as
+  // the duplicate-schedule trap `arrivalScheduleId` documents below.
+  it('includes workSchedules in the projection, serialized via toJSON', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.workSchedules).toEqual([
+      {
+        id: 'ws-a',
+        name: 'Nursing team',
+        pattern: [{ days: ['mon'], start: '07:00', end: '15:00', capacity: 3 }],
+      },
+    ]);
+    // toJSON() is what drops the class `type` tag the engine's extra="forbid"
+    // parser has no slot for -- projecting the live object would leak it.
+    expect('type' in (projection.workSchedules as any[])[0]).toBe(false);
+  });
+
+  it('projects workScheduleId on resource rows', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.resources).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'res-nurse', workScheduleId: 'ws-a' })]),
+    );
+    // An unlinked resource carries no link -- absence IS "fixed capacity".
+    const tech = (projection.resources as any[]).find(r => r.id === 'res-tech');
+    expect(tech.workScheduleId).toBeUndefined();
+  });
+
+  it('projects activities as id + name + workScheduleId, for the usage count', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.activities).toEqual([
+      { id: 'act-triage', name: 'Triage', workScheduleId: 'ws-a' },
+      { id: 'act-xray', name: 'X-ray', workScheduleId: undefined },
+    ]);
   });
 
   it('includes arrivalSchedules in the projection, serialized via toJSON', async () => {
@@ -235,6 +311,8 @@ describe('ModelManager.buildModelRootProjection', () => {
       generators: [],
       arrivalPatterns: [],
       arrivalSchedules: [],
+      workSchedules: [],
+      activities: [],
       entities: [],
       states: [],
       resources: [],

@@ -11,6 +11,11 @@ export interface StoredResourceRecord {
     id: string;
     name: string;
     capacity?: number;
+    /** Opt-in link to a model-level `workSchedules` record (spec 2026-08-27
+     *  §3.2). Present only when the resource follows a schedule; the record
+     *  is written whole on every model-root patch, so a cleared link is
+     *  simply a record without the key. */
+    workScheduleId?: string;
     description?: string;
     financialProperties?: {
         enabled: boolean;

@@ -8,7 +8,7 @@ const logger = getLogger('useSendMessage');
  * Hook for sending messages to the host application
  */
 export function useSendMessage(
-  state: { app: { panelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' } },
+  state: { app: { panelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' } },
   dispatch: React.Dispatch<any>
 ) {
   return useCallback(
@@ -21,6 +21,7 @@ export function useSendMessage(
         'studio-embed': 'studio-embed-iframe',
         pattern: 'pattern-iframe',
         schedule: 'schedule-iframe',
+        'work-schedule': 'work-schedule-iframe',
       };
       const envelope: EnvelopeBase = {
         id: uuid(),

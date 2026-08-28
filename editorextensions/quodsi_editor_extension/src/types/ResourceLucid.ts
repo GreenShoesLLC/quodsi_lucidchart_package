@@ -41,6 +41,48 @@ interface StoredResourceData {
 }
 
 /**
+ * The only storage key a Resource write-back is ever allowed to DELETE.
+ *
+ * `workScheduleId` (work schedules, spec 2026-08-27 §3.2) is a field where
+ * ABSENCE is the value: no key means "fixed capacity". Switching Studio's
+ * CapacitySourcePicker back to Fixed emits `{ workScheduleId: undefined }`,
+ * which is invisible twice over by the time it reaches storage -- the
+ * panel->extension JSON transport drops undefined-valued keys, and
+ * StorageAdapter.updateElementData strips them again before merging.
+ *
+ * WHERE THIS DOES AND DOES NOT APPLY. Under Lucid storage format 2 a
+ * Resource is a model-level record in `q_resources` and a Resource BLOCK's
+ * q_data is only a pointer, so the link a modeller actually clears travels
+ * the MODEL-ROOT path (`accessor.updateModel({ resources })` ->
+ * ModelManager.updateModelRoot -> StorageAdapter.setResources), which
+ * replaces the whole list and therefore needs no declaration at all --
+ * ResourceBasicTab's own header spells out why `updateShape` is wrong for a
+ * Resource. This list exists so that a Resource-typed SHAPE payload which
+ * ever does carry the link clears it the same declared way Activity and
+ * Generator do, rather than inventing a second convention; it is scoped to
+ * Resource for the same reason theirs are scoped (86e2qwvf2, final-review
+ * finding 1: a global null-means-delete sentinel was rejected as too broad).
+ */
+const RESOURCE_CLEARABLE_KEYS: readonly string[] = ['workScheduleId'];
+
+/**
+ * Storage keys to delete, given what the writer EXPLICITLY declared cleared.
+ *
+ * Mirrors activityStorageRemoveKeys / generatorStorageRemoveKeys exactly:
+ * deletion is opt-in from the writer, never inferred from a missing key. The
+ * declaration is filtered here rather than trusted -- a payload cannot talk
+ * the extension into deleting arbitrary stored keys.
+ */
+export function resourceStorageRemoveKeys(
+    clearedFields: readonly string[] | undefined
+): readonly string[] {
+    if (!clearedFields?.length) {
+        return [];
+    }
+    return RESOURCE_CLEARABLE_KEYS.filter(key => clearedFields.includes(key));
+}
+
+/**
  * Lucid-specific implementation of a Resource.
  * Maps a Lucid Block element to a simulation Resource.
  */

@@ -93,4 +93,80 @@ describe('SimulationRunHandler.buildStudioCatalog (review F4)', () => {
       { id: 'c1', name: 'C1', sourceId: 'a1', targetId: 'a2', weight: 1 },
     ]);
   });
+
+  // Work schedules (spec 2026-08-27). The receiving end is the Studio-in-Lucid
+  // EMBED: quodsi_studio's LucidEmbedModelAccessor reads `workSchedules` off
+  // the relayed catalog and hands it to the compiled CapacitySourcePicker /
+  // WorkSchedulesEditor. All three reads are defensive, so an omission here
+  // is silent -- the picker just shows "Fixed capacity" for a resource that
+  // IS following a schedule, and the Schedules tab shows nothing. That is
+  // wrong, not merely empty, which is why the collection AND both link fields
+  // are pinned here rather than left to a manual smoke.
+  it('relays workSchedules and the workScheduleId link on resources and activities', () => {
+    const model: Partial<ISerializedModel> = {
+      name: 'Scheduled Model',
+      timeUnit: 'minutes' as any,
+      replications: 1,
+      runTime: { value: 24, unit: 'hours' } as any,
+      activities: [
+        { id: 'a1', name: 'Triage', capacity: 3, workScheduleId: 'ws-1' } as any,
+        { id: 'a2', name: 'X-ray', capacity: 1 } as any,
+      ],
+      generators: [],
+      resources: [
+        { id: 'r1', name: 'Nurses', capacity: 3, workScheduleId: 'ws-1' } as any,
+        { id: 'r2', name: 'Techs', capacity: 1 } as any,
+      ],
+      resourceRequirements: [],
+      connectors: [],
+      entities: [],
+      states: [],
+      workSchedules: [
+        {
+          id: 'ws-1',
+          name: 'Nursing team',
+          pattern: [{ days: ['mon'], start: '07:00', end: '15:00', capacity: 3 }],
+        },
+      ],
+    };
+
+    const catalog = buildCatalog(model, 'page-1', null);
+
+    expect(catalog.workSchedules).toEqual([
+      {
+        id: 'ws-1',
+        name: 'Nursing team',
+        pattern: [{ days: ['mon'], start: '07:00', end: '15:00', capacity: 3 }],
+      },
+    ]);
+    expect(catalog.resources).toEqual([
+      { id: 'r1', name: 'Nurses', capacity: 3, workScheduleId: 'ws-1' },
+      { id: 'r2', name: 'Techs', capacity: 1, workScheduleId: undefined },
+    ]);
+    expect(catalog.activities[0]).toMatchObject({ id: 'a1', workScheduleId: 'ws-1' });
+    expect(catalog.activities[1].workScheduleId).toBeUndefined();
+  });
+
+  it('relays an empty workSchedules array for a model that has none', () => {
+    const model: Partial<ISerializedModel> = {
+      name: 'Plain Model',
+      timeUnit: 'minutes' as any,
+      replications: 1,
+      runTime: { value: 24, unit: 'hours' } as any,
+      activities: [],
+      generators: [],
+      resources: [],
+      resourceRequirements: [],
+      connectors: [],
+      entities: [],
+      states: [],
+    };
+
+    const catalog = buildCatalog(model, 'page-1', null);
+
+    // `[]`, not `undefined`: the serializer sparse-omits the key when empty,
+    // and the receiver's `?? []` would cope -- but relaying a real empty
+    // array keeps the catalog's own shape stable across models.
+    expect(catalog.workSchedules).toEqual([]);
+  });
 });

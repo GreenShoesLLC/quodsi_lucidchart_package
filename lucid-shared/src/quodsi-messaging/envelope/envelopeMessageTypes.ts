@@ -92,6 +92,14 @@ export enum EnvelopeMessageType {
   // panel iframe it used to be trapped in.
   OPEN_SCHEDULE_MODAL = "OPEN_SCHEDULE_MODAL",
 
+  // Work Schedule editor (time-varying capacity, spec 2026-08-27) -- the
+  // third member of the same family as the two above, and wired the same
+  // way: a RoutingModal loading ?view=work-schedule on the 'work-schedule'
+  // channel. Its payload carries a WORK-SCHEDULE ID, not a shape id: a work
+  // schedule is a model-level record and the shape that FOLLOWS it is edited
+  // elsewhere (the Resource/Activity capacity control).
+  OPEN_WORK_SCHEDULE_MODAL = "OPEN_WORK_SCHEDULE_MODAL",
+
   // Diagram Mapping (Phase 2B)
   ANALYZE_PAGE = "ANALYZE_PAGE",
   PAGE_ANALYSIS_RESULT = "PAGE_ANALYSIS_RESULT",

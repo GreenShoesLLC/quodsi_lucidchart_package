@@ -246,3 +246,33 @@ describe('PasteNormalizer — Activity blocks (Task 5)', () => {
         expect(pasted.shapeData.get('q_data')).toBe(qDataAfterFirst);
     });
 });
+
+// A pasted activity's `workScheduleId` (spec 2026-08-27 §3.2) names a SHARED,
+// model-level record -- spec R5, "one schedule may be shared" -- so it belongs
+// with `resourceRequirementId` in the "identity space this rule does not
+// touch" list, NOT with the generator's `arrivalPatternId`/`arrivalScheduleId`
+// (1:1-owned by their generator, and therefore always cloned). Cloning here
+// would mint one duplicate "Nursing team" per pasted activity.
+describe('PasteNormalizer — Activity work-schedule link', () => {
+    it('leaves workScheduleId byte-identical on a pasted activity', () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const pasted = addBlock(
+            page,
+            makePastedActivityBlock(sa, 'block-new', 'block-orig', {
+                name: 'Triage',
+                capacity: 3,
+                workScheduleId: 'ws-1',
+                actions: [],
+            })
+        );
+
+        normalizePastedItems([pasted], sa);
+
+        const data = sa.getElementData<{ id: string; workScheduleId?: string }>(pasted)!;
+        expect(data.id).toBe('block-new');
+        expect(data.workScheduleId).toBe('ws-1');
+        // Nothing was cloned into the model-level list either.
+        expect(sa.getWorkSchedules(page)).toEqual([]);
+    });
+});
