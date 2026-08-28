@@ -296,7 +296,17 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
 
             {/* The model-level record this lane points at, edited in place. */}
             <div className="border-t border-gray-200 pt-3">
-              <ResourceEditor resourceId={activeMapping.resourceId} accessor={accessor} />
+              <ResourceEditor
+                resourceId={activeMapping.resourceId}
+                accessor={accessor}
+                // Same seam as the Resources tab and the Resource block:
+                // schedule editing is presented by a real Lucid modal, not by
+                // the shared in-panel one, which would be trapped inside the
+                // 300px right dock. The id is a SCHEDULE id, not a lane id.
+                onEditWorkSchedule={(id) =>
+                  sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, { scheduleId: id })
+                }
+              />
             </div>
 
             {/* Lane Info */}

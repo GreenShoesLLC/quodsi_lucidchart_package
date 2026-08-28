@@ -2,10 +2,12 @@
 // (?view=work-schedule&scheduleId=...), for the work-schedule editor (spec
 // 2026-08-27 §6).
 //
-// ScheduleEditorView's direct sibling; that file's module header carries the
-// full "why buffering", "why both unmount AND pagehide/beforeunload", and
-// "why embedded + hideHeader" story, which is identical here and is not
-// repeated. Only the two real differences are recorded:
+// Modelled on `features/schedule/ScheduleEditorView.tsx` (its own folder,
+// because an ARRIVAL schedule and a WORK schedule are unrelated records);
+// that file's module header carries the full "why buffering", "why both
+// unmount AND pagehide/beforeunload", and "why embedded + hideHeader" story,
+// which is identical here and is not repeated. Only the two real differences
+// are recorded:
 //
 //   - ADDRESSED BY SCHEDULE ID, NOT SHAPE ID. WorkScheduleModal's prop is
 //     `scheduleId`, because a work schedule is a model-level record that any

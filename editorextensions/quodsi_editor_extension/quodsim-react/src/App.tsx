@@ -5,7 +5,7 @@ import LucidApp from "./features/LucidApp";
 import { StudioEmbedView } from "./features/embed/StudioEmbedView";
 import { PatternEditorView } from "./features/pattern/PatternEditorView";
 import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
-import { WorkScheduleEditorView } from "./features/schedule/WorkScheduleEditorView";
+import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
 
 interface AppProps {
   panelType?: "model";
