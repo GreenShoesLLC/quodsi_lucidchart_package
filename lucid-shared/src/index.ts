@@ -124,6 +124,15 @@ export {
 export { GeneratorType } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
+// Calendar-window derivation. The clean wire carries ONE calendar anchor
+// (`startDateTime`) plus two LENGTHS (`warmupTime`/`runTime`); the warmup and
+// finish instants are arithmetic the engine redoes itself in
+// `_translate_model_block`. Anything that renders or decides on those two
+// instants must derive them here rather than read the host-local
+// `warmupDateTime`/`finishDateTime` fields, which the serializer drops.
+export { resolveCalendarWindow, isCalendarMode, warmupLengthMs, runLengthMs } from '@quodsi/shared';
+export type { CalendarWindow, CalendarWindowModelLike } from '@quodsi/shared';
+
 // State management types — already covered in named block above
 
 // Action system types — now sourced from the core (Phase 3 slice 4)

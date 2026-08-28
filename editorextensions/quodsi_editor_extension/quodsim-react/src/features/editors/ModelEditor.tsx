@@ -8,6 +8,7 @@ import {
   StateListManager,
   ValidationResult,
   ScenarioObjectType,
+  resolveCalendarWindow,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock } from "lucide-react";
@@ -15,7 +16,7 @@ import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import StatesEditor from "./StatesEditor";
 import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
-import { ResourceRequirementsEditor } from "quodsi_studio/platforms/shared";
+import { CalendarDateTimeField, ResourceRequirementsEditor } from "quodsi_studio/platforms/shared";
 import { ArrivalsTab } from "./ArrivalsTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
@@ -116,6 +117,59 @@ const DEFAULT_RANDOM_SEED = ModelDefaults.DEFAULT_SEED;
 const MAX_REPS = ModelDefaults.MAX_REPS;
 
 /**
+ * Canonical run-time default — 24 hours, mirroring `Model.createDefault` and
+ * Studio's `BasicSettingsTab`. It used to be 0 hours here, which silently
+ * produced an empty run for any model that reached this panel without a
+ * `runTime`; in calendar mode there is not even a Run Time input on screen to
+ * notice it with.
+ */
+const DEFAULT_RUN_TIME = Duration.constant(24, PeriodUnit.HOURS);
+
+// ---------------------------------------------------------------------------
+// Calendar-date help text
+// ---------------------------------------------------------------------------
+// The engine's actual calendar semantics (`document/clean/translate.py`,
+// `_translate_model_block`): the run OPENS at the warmup date, statistics begin
+// at the start date (the end of warmup), and the run closes at the finish date.
+// The copy this panel shipped had start and warmup SWAPPED — Start Date claimed
+// "the simulation begins" (that is the warmup date) while Warmup Date claimed
+// "warmup ends and statistics collection begins" (that is the start date).
+// Text kept verbatim in sync with Studio's BasicSettingsTab.
+const START_DATE_HELP =
+  "Wall-clock date and time at which warmup ends and statistics collection begins. The anchor for Calendar mode: events before this date run, but are excluded from output statistics.";
+
+const FINISH_DATE_HELP =
+  "Wall-clock date and time at which the simulation ends. Sets the run length measured from the Start Date.";
+
+const WARMUP_DATE_HELP =
+  "Wall-clock date and time at which the simulation begins running. Sets the warmup length measured back from the Start Date; leave it equal to the Start Date, or clear the date, for no warmup.";
+
+const START_DATE_HINT = "Set the start date first";
+
+const MS_PER_UNIT: Record<PeriodUnit, number> = {
+  [PeriodUnit.SECONDS]: 1000,
+  [PeriodUnit.MINUTES]: 60_000,
+  [PeriodUnit.HOURS]: 3_600_000,
+  [PeriodUnit.DAYS]: 86_400_000,
+};
+
+/**
+ * Express a span as the COARSEST unit that divides it exactly, so a date the
+ * user picked reads back as "7 Days" rather than "10080 Minutes" in the
+ * clock-mode Run Time / Warmup Time inputs that share these same fields.
+ *
+ * Copied (not imported) from Studio's `BasicSettingsTab`, which keeps it
+ * module-private and exports no equivalent helper. Keep the two in sync.
+ */
+function msToDuration(ms: number): Duration {
+  const clamped = Math.max(0, Math.round(ms));
+  for (const unit of [PeriodUnit.DAYS, PeriodUnit.HOURS, PeriodUnit.MINUTES] as const) {
+    if (clamped % MS_PER_UNIT[unit] === 0) return Duration.constant(clamped / MS_PER_UNIT[unit], unit);
+  }
+  return Duration.constant(clamped / MS_PER_UNIT[PeriodUnit.SECONDS], PeriodUnit.SECONDS);
+}
+
+/**
  * ModelEditor - Component for editing model-level simulation settings
  *
  * The ModelEditor orchestrates the configuration of simulation model settings across
@@ -141,9 +195,12 @@ const MAX_REPS = ModelDefaults.MAX_REPS;
  * - Single save path: all Basic-tab field changes route through useAutoSave (debounced)
  *
  * Save Behavior:
- * - Basic tab — Typed inputs (name, reps, runClockPeriod, warmupClockPeriod,
- *   startDateTime, finishDateTime, warmupDateTime): debounced auto-save on edit;
- *   immediate save on blur or element switch.
+ * - Basic tab — Typed inputs (name, reps, runClockPeriod, warmupClockPeriod):
+ *   debounced auto-save on edit; immediate save on blur or element switch.
+ * - Basic tab — Calendar dates (Warmup/Start/Finish): each pick commits at
+ *   once through CalendarDateTimeField and rides the same debounce. Only the
+ *   Start Date is stored; Warmup and Finish write `warmupTime`/`runTime`,
+ *   which is what the clean wire and the engine actually carry.
  * - Basic tab — Selects (simulationTimeType, runClockPeriodUnit, oneClockUnit,
  *   warmupClockPeriodUnit): immediate save via useFlushOnChange (selects have no
  *   useful onBlur).
@@ -179,6 +236,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // Direct form state management
   const [localModelDraft, setLocalModelDraft] = useState<Model>(() => extractModelData(model));
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
+
+  // Why an out-of-order calendar pick needs somewhere to report itself: a
+  // warmup after the start, or a finish at/before it, cannot be expressed as a
+  // duration at all. Silently writing nothing left the rejected date sitting in
+  // the field with the user believing it had saved.
+  const [warmupDateError, setWarmupDateError] = useState<string | null>(null);
+  const [finishDateError, setFinishDateError] = useState<string | null>(null);
 
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
@@ -217,7 +281,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
         draft.timeUnit || PeriodUnit.HOURS,
         draft.timeMode || SimulationTimeType.Clock,
         draft.warmupTime ?? Duration.constant(0, PeriodUnit.HOURS),
-        draft.runTime ?? Duration.constant(0, PeriodUnit.HOURS),
+        draft.runTime ?? DEFAULT_RUN_TIME,
         draft.warmupDateTime || null,
         draft.startDateTime || null,
         draft.finishDateTime || null
@@ -307,6 +371,26 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       return;
     }
 
+    // Switching back to Clock must CLEAR the calendar dates in the same draft
+    // update. The clean-era engine's `CleanModelDocument` makes an explicit
+    // `startDateTime` a HARD ERROR under `timeMode: "clock"`
+    // (`document/clean/root.py`'s `_collect_time_mode_errors`), and all three
+    // date fields are carried unconditionally by the flush path, never gated on
+    // `timeMode` — so a Calendar→Clock→submit round trip failed that validator.
+    // Mirrors the same clear Studio's BasicSettingsTab does at its own switch.
+    if (name === 'simulationTimeType' && value === SimulationTimeType.Clock) {
+      setWarmupDateError(null);
+      setFinishDateError(null);
+      setLocalModelDraft(prev => updateModelImmutably(prev, {
+        timeMode: SimulationTimeType.Clock,
+        startDateTime: null,
+        warmupDateTime: null,
+        finishDateTime: null,
+      }));
+      setHasPendingChanges(true);
+      return;
+    }
+
     // Map the panel's stable input `name`s to the clean field names.
     const fieldName = name === 'reps' ? 'replications'
       : name === 'simulationTimeType' ? 'timeMode'
@@ -327,6 +411,34 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     }
 
     setLocalModelDraft(prev => updateModelImmutably(prev, { [fieldName]: convertedValue } as Partial<Model>));
+    setHasPendingChanges(true);
+  };
+
+  // ============================================================================
+  // DERIVED CALENDAR WINDOW
+  // ============================================================================
+
+  // Calendar mode stores ONE anchor (`startDateTime`) plus two LENGTHS
+  // (`warmupTime`/`runTime`); the warmup and finish instants are arithmetic on
+  // those, exactly as the engine reconstructs them in `_translate_model_block`
+  // before a calendar run. Deriving them here rather than storing them keeps a
+  // single source of truth — the stored `warmupDateTime`/`finishDateTime`
+  // fields are host-local, dropped by the serializer, and could only ever
+  // disagree with the durations the engine actually runs.
+  const calendarWindow = resolveCalendarWindow({
+    timeMode: SimulationTimeType.CalendarDate,
+    startDateTime: localModelDraft.startDateTime,
+    warmupTime: localModelDraft.warmupTime,
+    runTime: localModelDraft.runTime ?? DEFAULT_RUN_TIME,
+  });
+  const startMs = calendarWindow?.startMs;
+  const hasStart = startMs !== undefined;
+  const warmupDateDerived = calendarWindow ? new Date(calendarWindow.warmupMs).toISOString() : null;
+  const finishDateDerived = calendarWindow ? new Date(calendarWindow.finishMs).toISOString() : null;
+
+  /** Apply a calendar-derived duration/anchor edit to the draft. */
+  const commitCalendar = (updates: Partial<Model>) => {
+    setLocalModelDraft(prev => updateModelImmutably(prev, updates));
     setHasPendingChanges(true);
   };
 
@@ -543,25 +655,90 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                       </>
                     )}
 
-                    {/* Calendar Date Mode Fields - Conditional */}
+                    {/* Calendar Date Mode Fields - Conditional.
+                        Chronological order: warmup precedes start precedes
+                        finish. The engine reads the run's opening bound as
+                        `warmup_date_time or start_date_time`
+                        (PatternGeneratorSim._generate), so warmup is the
+                        EARLIEST of the three, not an afterthought appended
+                        below them.
+
+                        Each field writes what is actually ON THE WIRE: the
+                        start date is the stored anchor, while the warmup and
+                        finish dates write `warmupTime`/`runTime`. The previous
+                        `datetime-local` inputs wrote stored
+                        `warmupDateTime`/`finishDateTime` Dates that the
+                        serializer drops, so those picks never reached a run —
+                        and they rendered `toISOString().slice(0,16)`, feeding a
+                        UTC instant into a LOCAL-time input, which skewed the
+                        value by the viewer's offset on every open/save. */}
                     {localModelDraft.timeMode === SimulationTimeType.CalendarDate && (
                       <>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <label className="text-xs font-medium text-gray-700">
-                              Start Date
+                              Warmup Date
                             </label>
-                            <span title="The calendar date and time when the simulation begins in Calendar Date mode. Use this to model processes that align with specific real-world dates.">
+                            <span title={WARMUP_DATE_HELP}>
                               <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                             </span>
                           </div>
-                          <input
-                            type="datetime-local"
-                            name="startDateTime"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localModelDraft.startDateTime?.toISOString().slice(0, 16) || ""}
-                            onChange={handleChange}
-                            onBlur={saveNow}
+                          <CalendarDateTimeField
+                            label="Warmup Date"
+                            value={warmupDateDerived}
+                            disabled={!hasStart}
+                            hint={START_DATE_HINT}
+                            error={warmupDateError}
+                            onCommit={(iso) => {
+                              if (startMs === undefined) return;
+                              if (iso === null) {
+                                // Clearing means NO warmup, and a zero-length
+                                // `warmupTime` is the only way to say that on
+                                // the wire.
+                                setWarmupDateError(null);
+                                commitCalendar({
+                                  warmupTime: Duration.constant(
+                                    0,
+                                    localModelDraft.warmupTime?.unit ?? PeriodUnit.HOURS
+                                  ),
+                                });
+                                return;
+                              }
+                              const picked = Date.parse(iso);
+                              if (Number.isNaN(picked)) return;
+                              if (picked > startMs) {
+                                setWarmupDateError("Warmup must be at or before the start date");
+                                return;
+                              }
+                              setWarmupDateError(null);
+                              commitCalendar({ warmupTime: msToDuration(startMs - picked) });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Start Date
+                            </label>
+                            <span title={START_DATE_HELP}>
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
+                          <CalendarDateTimeField
+                            label="Start Date"
+                            value={
+                              localModelDraft.startDateTime
+                                ? localModelDraft.startDateTime.toISOString()
+                                : null
+                            }
+                            onCommit={(iso) => {
+                              // The anchor both other fields are measured
+                              // against moved, so whatever they were
+                              // complaining about no longer applies.
+                              setWarmupDateError(null);
+                              setFinishDateError(null);
+                              commitCalendar({ startDateTime: iso ? new Date(iso) : null });
+                            }}
                           />
                         </div>
                         <div>
@@ -569,35 +746,33 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                             <label className="text-xs font-medium text-gray-700">
                               Finish Date
                             </label>
-                            <span title="The calendar date and time when the simulation ends in Calendar Date mode. The simulation will run from Start Date to this Finish Date.">
+                            <span title={FINISH_DATE_HELP}>
                               <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                             </span>
                           </div>
-                          <input
-                            type="datetime-local"
-                            name="finishDateTime"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localModelDraft.finishDateTime?.toISOString().slice(0, 16) || ""}
-                            onChange={handleChange}
-                            onBlur={saveNow}
-                          />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <label className="text-xs font-medium text-gray-700">
-                              Warmup Date
-                            </label>
-                            <span title="The calendar date and time when the warmup period ends and statistics collection begins in Calendar Date mode. Set this between Start Date and Finish Date.">
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <input
-                            type="datetime-local"
-                            name="warmupDateTime"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localModelDraft.warmupDateTime?.toISOString().slice(0, 16) || ""}
-                            onChange={handleChange}
-                            onBlur={saveNow}
+                          <CalendarDateTimeField
+                            label="Finish Date"
+                            value={finishDateDerived}
+                            disabled={!hasStart}
+                            hint={START_DATE_HINT}
+                            error={finishDateError}
+                            onCommit={(iso) => {
+                              if (startMs === undefined) return;
+                              if (iso === null) {
+                                setFinishDateError("A run needs a finish date");
+                                return;
+                              }
+                              const picked = Date.parse(iso);
+                              if (Number.isNaN(picked)) return;
+                              if (picked <= startMs) {
+                                // A finish at or before the start is a
+                                // zero/negative run, which the engine rejects.
+                                setFinishDateError("Finish must be after the start date");
+                                return;
+                              }
+                              setFinishDateError(null);
+                              commitCalendar({ runTime: msToDuration(picked - startMs) });
+                            }}
                           />
                         </div>
                       </>

@@ -42,7 +42,11 @@ export const extractModelData = (mod: ModelInput): Model => {
     data.timeUnit || PeriodUnit.HOURS,
     data.timeMode || SimulationTimeType.Clock,
     data.warmupTime ?? Duration.constant(0, PeriodUnit.HOURS),
-    data.runTime ?? Duration.constant(0, PeriodUnit.HOURS),
+    // 24h, not 0h: this mirrors `Model.createDefault`. A 0-hour fallback
+    // silently produced an EMPTY run for any model that reached the panel
+    // without a `runTime` — and in calendar mode there is no Run Time input on
+    // screen to notice it with, since the Finish Date drives `runTime` instead.
+    data.runTime ?? Duration.constant(24, PeriodUnit.HOURS),
     data.warmupDateTime || null,
     data.startDateTime || null,
     data.finishDateTime || null
