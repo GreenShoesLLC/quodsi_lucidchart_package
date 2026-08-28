@@ -262,7 +262,21 @@ and folding it in would stamp the synthetic `type` back on). The panel's
 Schedules tab mounts Studio's `WorkSchedulesEditor`, which hands an id to
 `OPEN_WORK_SCHEDULE_MODAL` → `WorkScheduleEditorModal` (the `work-schedule`
 channel, `?view=work-schedule&scheduleId=…`) rather than opening its own
-modal inside the 300px dock.
+modal inside the 300px dock. The per-target "Fixed capacity | Follow a
+schedule" control is Studio's `CapacitySourcePicker`: `ResourceBasicTab`
+mounts it for a Resource, and `ActivityEditor`'s Basic tab mounts it directly
+for an Activity (it replaced the bare capacity input). Both read the schedule
+list off the model-root projection -- NOT `referenceData`, which is rebuilt
+only when the host re-processes a SELECTION, so a just-created schedule would
+render as "Missing schedule". The Activity mount passes `onEdit`, the same
+host-presenter seam `WorkSchedulesEditor` uses, so its "Edit/New schedule"
+opens the Lucid modal; the Resource mount does NOT yet (ResourcesTab ->
+ResourcesEditor -> ResourceBasicTab never threads one through), so on that
+path the picker still opens its own dialog inside the 300px dock -- worth
+closing when the Resources tab is next touched. In `ActivityEditor` the link
+is written into that editor's own DRAFT (never `accessor.updateShape`, which
+the next autosave would clobber) and a clear rides out as
+`CLEARED_FIELDS_KEY: ['workScheduleId']`.
 
 ### Debugging Tips
 1. Enable console logging in browser developer tools

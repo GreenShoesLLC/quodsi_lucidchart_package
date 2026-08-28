@@ -53,6 +53,7 @@ import {
   isDelayAction,
   isDelayWithResourceAction,
   declareClearedFields,
+  EnvelopeMessageType,
   type ScenarioLever,
   type QueueRanking,
 } from "@quodsi/lucid-shared";
@@ -62,8 +63,10 @@ import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
-import { RequirementField, RequirementFieldContext, ConnectorRoutingView } from "quodsi_studio/platforms/shared";
+import { RequirementField, RequirementFieldContext, ConnectorRoutingView, CapacitySourcePicker } from "quodsi_studio/platforms/shared";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
+import { useModelRootSource } from "../../adapters/useModelRootSource";
+import { useMessaging } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
@@ -287,6 +290,15 @@ export const extractActivityData = (act: any): Activity => {
   // ranking on every edit — ClickUp 86e2qwv7y.
   activity.queueRanking = data.queueRanking;
 
+  // Preserve the work-schedule link (additive optional field, not a
+  // constructor param). Dropping it here would silently unfollow a scheduled
+  // activity on the very next unrelated edit -- the exact trap queueRanking
+  // fell into (ClickUp 86e2qwv7y). Worse than queueRanking's version: the
+  // autosave path below DECLARES workScheduleId cleared whenever the draft
+  // does not carry one, so a link lost here would also be deleted from
+  // storage rather than merely omitted.
+  activity.workScheduleId = data.workScheduleId;
+
   return activity;
 };
 
@@ -316,6 +328,7 @@ export const updateActivityImmutably = (
     failureProperties: FailureProperties;
     levers: ScenarioLever[];
     queueRanking: QueueRanking | undefined;
+    workScheduleId: string | undefined;
   }>
 ): Activity => {
   const updated = new Activity(
@@ -343,6 +356,11 @@ export const updateActivityImmutably = (
   // value is [] rather than undefined.
   updated.queueRanking =
     'queueRanking' in updates ? updates.queueRanking : base.queueRanking;
+  // Key-presence for the same reason as queueRanking directly above:
+  // switching back to "Fixed capacity" passes `workScheduleId: undefined`
+  // deliberately, and `??` would resurrect the link the author just removed.
+  updated.workScheduleId =
+    'workScheduleId' in updates ? updates.workScheduleId : base.workScheduleId;
 
   return updated;
 };
@@ -521,6 +539,19 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // on this component's own draft/autosave path (useFlushOnChange watches
   // localActivityDraft.routing below) rather than round-tripping through
   // updateElement for the shape this panel already owns.
+  // Work schedules are MODEL-LEVEL records, so neither the schedule list the
+  // capacity picker offers nor the "New schedule" write can come off
+  // `referenceData` (which is rebuilt only when the host re-processes a
+  // SELECTION -- a schedule created here would not appear in the dropdown
+  // until the next selection change, and the freshly linked id would render
+  // as "Missing schedule"). The model-root projection is the collection's
+  // real source and refreshes on every model-root write, so the picker reads
+  // and creates through it. GeneratorEditor calls this same hook from a shape
+  // editor for the same reason; the cost is one MODEL_ROOT_REQUEST per
+  // activity selection.
+  const { accessor: modelRootAccessor } = useModelRootSource();
+  const { sendMessage } = useMessaging();
+
   const accessor = useReferenceDataAccessor(
     referenceData,
     { updateResourceRequirements, updateElement },
@@ -630,7 +661,21 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const handleAutoSave = useCallback(
     (draft: Activity) =>
-      onSave(declareClearedFields(draft, draft.queueRanking ? [] : ["queueRanking"])),
+      onSave(
+        declareClearedFields(draft, [
+          ...(draft.queueRanking ? [] : ["queueRanking"]),
+          // Same argument, second field (Task D3). The capacity picker below
+          // is the only surface that links or unlinks an activity's work
+          // schedule, so it is the only one entitled to say the link was
+          // removed -- and it has to SAY it: JSON transport drops the
+          // undefined-valued key and StorageAdapter strips it again before
+          // merging, so silence is indistinguishable from a partial payload
+          // that never mentioned the field. `workScheduleId` is in
+          // ACTIVITY_CLEARABLE_KEYS (src/types/ActivityLucid.ts), which is
+          // what makes the declaration actionable on the host side.
+          ...(draft.workScheduleId ? [] : ["workScheduleId"]),
+        ])
+      ),
     [onSave]
   );
 
@@ -649,13 +694,22 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   useFlushOnChange(localActivityDraft.failureProperties?.failureClockMode, saveNow);
   useFlushOnChange(localActivityDraft.failureProperties?.repairResourceRequirementId, saveNow);
   useFlushOnChange(localActivityDraft.routing, saveNow);
+  // Decisive control: the capacity source is a radio, not a typed field, so
+  // there is no blur to flush on and a 500ms debounce would let a link (or a
+  // clear) sit unsaved while the author moves on.
+  useFlushOnChange(localActivityDraft.workScheduleId, saveNow);
 
   // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
 
   /**
-   * Handles changes to basic input fields (name, capacity, queue capacities).
+   * Handles changes to basic input fields (name, queue capacities).
+   *
+   * NOT capacity: that field is owned by CapacitySourcePicker below, which
+   * hands back a number through its own `onCapacityChange` rather than a
+   * change event, and whose "Follow a schedule" state has no number input at
+   * all. A `name="capacity"` branch here would be unreachable.
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
    * validates the name, and marks the draft as pending. Auto-save fires after
@@ -671,7 +725,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       // Build updates object based on which field changed
       const updates: Partial<{
         name: string;
-        capacity: number;
         inboundCapacity: number;
         outboundCapacity: number;
       }> = {};
@@ -681,8 +734,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         // Validate name uniqueness
         const error = validateName(value);
         setNameError(error);
-      } else if (name === "capacity") {
-        updates.capacity = parseInt(value) || 1;
       } else if (name === "inboundQueueCapacity") {
         updates.inboundCapacity = parseInt(value) || 0;
       } else if (name === "outboundQueueCapacity") {
@@ -1027,24 +1078,68 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   )}
                 </div>
 
-                {/* Activity Capacity */}
+                {/* Activity Capacity -- the SHARED "Fixed capacity | Follow a
+                    schedule" control (spec 2026-08-27 §6, case E6), replacing
+                    the bare number input that used to live here.
+
+                    THREE ROUTES, DELIBERATELY DIFFERENT (Task D3):
+
+                    - The LINK (and the nominal capacity the picker seeds
+                      alongside it) goes into THIS EDITOR'S DRAFT, not through
+                      accessor.updateShape. A shape write behind the draft's
+                      back would be clobbered by the next autosave of a draft
+                      that never learned about it. `useFlushOnChange` on
+                      `workScheduleId` above then persists it immediately --
+                      a radio has no blur to flush on.
+
+                    - CREATING a schedule is a MODEL-ROOT write: a work
+                      schedule is a model-level record, so the picker's own
+                      `accessor.updateModel({ workSchedules })` must land on
+                      the model-root accessor, never on the reference-data one
+                      (whose updateModel handles `resourceRequirements` alone
+                      and THROWS on anything else).
+
+                    - EDITING a schedule is the host's job. Supplying `onEdit`
+                      tells the shared control not to present its own modal;
+                      Lucid presents WorkScheduleEditorModal instead, because
+                      the in-panel one would be trapped inside this 300px
+                      right-dock panel. */}
                 <div className="pt-2 border-t">
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs font-medium text-gray-700">
-                      Activity Capacity
-                    </label>
-                    <span title="Maximum entities processed simultaneously in this activity.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    name="capacity"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={localActivityDraft.capacity}
-                    onChange={handleInputChange}
-                    min="1"
-                    onBlur={saveNow}
+                  <CapacitySourcePicker
+                    accessor={modelRootAccessor}
+                    idPrefix={`activity-${localActivityDraft.id}`}
+                    label="Activity Capacity"
+                    help="Maximum entities processed simultaneously in this activity. Follow a schedule instead to vary it by shift."
+                    min={1}
+                    capacity={localActivityDraft.capacity}
+                    workScheduleId={localActivityDraft.workScheduleId}
+                    onCapacityChange={(n) => {
+                      setLocalActivityDraft((prev) =>
+                        updateActivityImmutably(prev, { capacity: n })
+                      );
+                      setHasPendingChanges(true);
+                    }}
+                    onWorkScheduleIdChange={(id, nominal) => {
+                      setLocalActivityDraft((prev) =>
+                        updateActivityImmutably(
+                          prev,
+                          // The key is ALWAYS present, `undefined` when
+                          // cleared -- updateActivityImmutably reads it by
+                          // key presence, and handleAutoSave turns a missing
+                          // link into the CLEARED_FIELDS_KEY declaration the
+                          // extension needs.
+                          nominal === undefined
+                            ? { workScheduleId: id }
+                            : { workScheduleId: id, capacity: nominal }
+                        )
+                      );
+                      setHasPendingChanges(true);
+                    }}
+                    onEdit={(scheduleId) =>
+                      sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, {
+                        scheduleId,
+                      })
+                    }
                   />
                 </div>
 

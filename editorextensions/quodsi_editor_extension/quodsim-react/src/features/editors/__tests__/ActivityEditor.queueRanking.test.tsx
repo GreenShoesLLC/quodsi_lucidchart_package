@@ -129,15 +129,22 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
     return lastCall![0];
   }
 
+  // MEMBERSHIP, not equality: Task D3 gave this editor a second clearable
+  // field (workScheduleId, declared by the same handleAutoSave whenever the
+  // draft carries no work-schedule link -- see
+  // ActivityEditor.workSchedule.test.tsx). These two tests are about
+  // queueRanking, so they assert only about queueRanking; an exact-array
+  // assertion here would fail every time a THIRD clearable field is added,
+  // without saying anything about the one under test.
   it("declares queueRanking cleared when it saves an activity with no ranking", async () => {
     const saved = await saveAfterRename(unranked);
-    expect(saved[CLEARED_FIELDS_KEY]).toEqual(["queueRanking"]);
+    expect(saved[CLEARED_FIELDS_KEY]).toContain("queueRanking");
   });
 
-  it("declares nothing while a ranking is set", async () => {
+  it("declares nothing about queueRanking while a ranking is set", async () => {
     const saved = await saveAfterRename(ranked);
     expect(saved.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
-    expect(CLEARED_FIELDS_KEY in saved).toBe(false);
+    expect(saved[CLEARED_FIELDS_KEY] ?? []).not.toContain("queueRanking");
   });
 });
 
