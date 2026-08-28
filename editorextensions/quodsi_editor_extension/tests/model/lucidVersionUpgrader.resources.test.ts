@@ -24,6 +24,7 @@
 
 import { LucidVersionUpgrader } from '../../src/versioning/LucidVersionUpgrader';
 import { makeFakePage } from '../helpers/fakeProxies';
+import { MODEL_SCHEMA_VERSION } from '@quodsi/lucid-shared';
 
 function makeUpgradePage(id: string): any {
     const page = makeFakePage(id);
@@ -63,7 +64,7 @@ describe('LucidVersionUpgrader q_resources (Plan 2b polish P1)', () => {
             { id: 'res-1', name: 'Nurse', capacity: 2 },
         ]));
 
-        const upgrader = new LucidVersionUpgrader('2026.11.01');
+        const upgrader = new LucidVersionUpgrader(MODEL_SCHEMA_VERSION);
         await upgrader.upgrade(page);
 
         const stored = JSON.parse(page.shapeData.get('q_resources'));
@@ -76,7 +77,7 @@ describe('LucidVersionUpgrader q_resources (Plan 2b polish P1)', () => {
         expect('type' in stored[0]).toBe(false);
 
         // The page came out stamped at the current version.
-        expect(JSON.parse(page.shapeData.get('q_data')).version).toBe('2026.11.01');
+        expect(JSON.parse(page.shapeData.get('q_data')).version).toBe(MODEL_SCHEMA_VERSION);
     });
 
     it('restores q_resources byte-identically when a later upgrade step throws', async () => {
@@ -86,7 +87,7 @@ describe('LucidVersionUpgrader q_resources (Plan 2b polish P1)', () => {
         const originalRaw = JSON.stringify([{ id: 'res-2', name: 'Tech', capacity: 1 }]);
         page.shapeData.set('q_resources', originalRaw);
 
-        const upgrader = new LucidVersionUpgrader('2026.11.01');
+        const upgrader = new LucidVersionUpgrader(MODEL_SCHEMA_VERSION);
         // Fail AFTER performUpgrade has already rewritten q_resources.
         // q_resources is the LAST write performUpgrade makes, so the only
         // genuinely-later step is finalizeUpgrade -- overridden here rather
@@ -105,7 +106,7 @@ describe('LucidVersionUpgrader q_resources (Plan 2b polish P1)', () => {
         const page = makeUpgradePage('page-3');
         setOldShapeModelBlob(page, '2026.10.11');
 
-        const upgrader = new LucidVersionUpgrader('2026.11.01');
+        const upgrader = new LucidVersionUpgrader(MODEL_SCHEMA_VERSION);
         await upgrader.upgrade(page);
 
         expect(page.shapeData.get('q_resources')).toBeUndefined();
@@ -127,7 +128,7 @@ describe('LucidVersionUpgrader q_resources (Plan 2b polish P1)', () => {
             { id: 'res-1', name: 'Nurse', capacity: 2, description: '' },
         ]));
 
-        const upgrader = new LucidVersionUpgrader('2026.11.01');
+        const upgrader = new LucidVersionUpgrader(MODEL_SCHEMA_VERSION);
         await upgrader.upgrade(page);
 
         const storedSchedules = JSON.parse(page.shapeData.get('q_arrival_schedules'));
