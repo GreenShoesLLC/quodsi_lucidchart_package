@@ -133,6 +133,12 @@ export { SimulationRun } from '@quodsi/shared';
 export { resolveCalendarWindow, isCalendarMode, warmupLengthMs, runLengthMs } from '@quodsi/shared';
 export type { CalendarWindow, CalendarWindowModelLike } from '@quodsi/shared';
 
+// The coarsest-unit inverse of the above: turn a picked date's distance from
+// the anchor back into a `Duration` for the wire. Shared with Studio's
+// `WarmupDateField`/Finish-date write path so both hosts turn the same pick
+// into the same stored length.
+export { msToCoarsestDuration } from '@quodsi/shared';
+
 // State management types — already covered in named block above
 
 // Action system types — now sourced from the core (Phase 3 slice 4)

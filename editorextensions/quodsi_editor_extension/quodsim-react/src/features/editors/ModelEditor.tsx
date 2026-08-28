@@ -9,6 +9,7 @@ import {
   ValidationResult,
   ScenarioObjectType,
   resolveCalendarWindow,
+  msToCoarsestDuration,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock } from "lucide-react";
@@ -16,7 +17,7 @@ import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import StatesEditor from "./StatesEditor";
 import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
-import { CalendarDateTimeField, ResourceRequirementsEditor } from "quodsi_studio/platforms/shared";
+import { CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField } from "quodsi_studio/platforms/shared";
 import { ArrivalsTab } from "./ArrivalsTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
@@ -141,33 +142,7 @@ const START_DATE_HELP =
 const FINISH_DATE_HELP =
   "Wall-clock date and time at which the simulation ends. Sets the run length measured from the Start Date.";
 
-const WARMUP_DATE_HELP =
-  "Wall-clock date and time at which the simulation begins running. Sets the warmup length measured back from the Start Date; leave it equal to the Start Date, or clear the date, for no warmup.";
-
 const START_DATE_HINT = "Set the start date first";
-
-const MS_PER_UNIT: Record<PeriodUnit, number> = {
-  [PeriodUnit.SECONDS]: 1000,
-  [PeriodUnit.MINUTES]: 60_000,
-  [PeriodUnit.HOURS]: 3_600_000,
-  [PeriodUnit.DAYS]: 86_400_000,
-};
-
-/**
- * Express a span as the COARSEST unit that divides it exactly, so a date the
- * user picked reads back as "7 Days" rather than "10080 Minutes" in the
- * clock-mode Run Time / Warmup Time inputs that share these same fields.
- *
- * Copied (not imported) from Studio's `BasicSettingsTab`, which keeps it
- * module-private and exports no equivalent helper. Keep the two in sync.
- */
-function msToDuration(ms: number): Duration {
-  const clamped = Math.max(0, Math.round(ms));
-  for (const unit of [PeriodUnit.DAYS, PeriodUnit.HOURS, PeriodUnit.MINUTES] as const) {
-    if (clamped % MS_PER_UNIT[unit] === 0) return Duration.constant(clamped / MS_PER_UNIT[unit], unit);
-  }
-  return Duration.constant(clamped / MS_PER_UNIT[PeriodUnit.SECONDS], PeriodUnit.SECONDS);
-}
 
 /**
  * ModelEditor - Component for editing model-level simulation settings
@@ -238,10 +213,11 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
   // Why an out-of-order calendar pick needs somewhere to report itself: a
-  // warmup after the start, or a finish at/before it, cannot be expressed as a
-  // duration at all. Silently writing nothing left the rejected date sitting in
-  // the field with the user believing it had saved.
-  const [warmupDateError, setWarmupDateError] = useState<string | null>(null);
+  // finish at/before the start cannot be expressed as a duration at all.
+  // Silently writing nothing left the rejected date sitting in the field with
+  // the user believing it had saved.
+  // (WarmupDateField reports its own refused pick; only Finish still needs a
+  // slot here.)
   const [finishDateError, setFinishDateError] = useState<string | null>(null);
 
   // Get element operations state from Redux
@@ -379,7 +355,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     // `timeMode` — so a Calendar→Clock→submit round trip failed that validator.
     // Mirrors the same clear Studio's BasicSettingsTab does at its own switch.
     if (name === 'simulationTimeType' && value === SimulationTimeType.Clock) {
-      setWarmupDateError(null);
       setFinishDateError(null);
       setLocalModelDraft(prev => updateModelImmutably(prev, {
         timeMode: SimulationTimeType.Clock,
@@ -433,7 +408,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   });
   const startMs = calendarWindow?.startMs;
   const hasStart = startMs !== undefined;
-  const warmupDateDerived = calendarWindow ? new Date(calendarWindow.warmupMs).toISOString() : null;
   const finishDateDerived = calendarWindow ? new Date(calendarWindow.finishMs).toISOString() : null;
 
   /** Apply a calendar-derived duration/anchor edit to the draft. */
@@ -675,44 +649,20 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                     {localModelDraft.timeMode === SimulationTimeType.CalendarDate && (
                       <>
                         <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <label className="text-xs font-medium text-gray-700">
-                              Warmup Date
-                            </label>
-                            <span title={WARMUP_DATE_HELP}>
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <CalendarDateTimeField
-                            label="Warmup Date"
-                            value={warmupDateDerived}
+                          {/* The checkbox, the picker and the "warmup date is
+                              a LENGTH on the wire" inversion all live in
+                              WarmupDateField -- Studio mounts the same
+                              component, so the semantics cannot drift. */}
+                          <WarmupDateField
+                            startIso={
+                              localModelDraft.startDateTime
+                                ? localModelDraft.startDateTime.toISOString()
+                                : null
+                            }
+                            warmupTime={localModelDraft.warmupTime}
                             disabled={!hasStart}
                             hint={START_DATE_HINT}
-                            error={warmupDateError}
-                            onCommit={(iso) => {
-                              if (startMs === undefined) return;
-                              if (iso === null) {
-                                // Clearing means NO warmup, and a zero-length
-                                // `warmupTime` is the only way to say that on
-                                // the wire.
-                                setWarmupDateError(null);
-                                commitCalendar({
-                                  warmupTime: Duration.constant(
-                                    0,
-                                    localModelDraft.warmupTime?.unit ?? PeriodUnit.HOURS
-                                  ),
-                                });
-                                return;
-                              }
-                              const picked = Date.parse(iso);
-                              if (Number.isNaN(picked)) return;
-                              if (picked > startMs) {
-                                setWarmupDateError("Warmup must be at or before the start date");
-                                return;
-                              }
-                              setWarmupDateError(null);
-                              commitCalendar({ warmupTime: msToDuration(startMs - picked) });
-                            }}
+                            onWarmupTimeChange={(warmupTime) => commitCalendar({ warmupTime })}
                           />
                         </div>
                         <div>
@@ -733,9 +683,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                             }
                             onCommit={(iso) => {
                               // The anchor both other fields are measured
-                              // against moved, so whatever they were
-                              // complaining about no longer applies.
-                              setWarmupDateError(null);
+                              // against moved, so whatever Finish was
+                              // complaining about no longer applies
+                              // (WarmupDateField clears its own on the same
+                              // grounds, off its `startIso` prop).
                               setFinishDateError(null);
                               commitCalendar({ startDateTime: iso ? new Date(iso) : null });
                             }}
@@ -771,7 +722,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                                 return;
                               }
                               setFinishDateError(null);
-                              commitCalendar({ runTime: msToDuration(picked - startMs) });
+                              commitCalendar({ runTime: msToCoarsestDuration(picked - startMs) });
                             }}
                           />
                         </div>
