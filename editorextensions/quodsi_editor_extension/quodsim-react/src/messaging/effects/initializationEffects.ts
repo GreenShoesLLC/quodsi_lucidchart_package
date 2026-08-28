@@ -23,7 +23,7 @@ const logger = getLogger('InitializationEffects');
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
   dispatch: React.Dispatch<any>,
-  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule'
+  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule'
 ) {
   useEffect(() => {
     if (!state.app.initialized) {
@@ -32,12 +32,20 @@ export function usePanelTypeDetectionEffect(
       const panelParam = urlParams.get("panel");
       const viewParam = urlParams.get("view");
 
-      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | undefined = initialPanelType;
+      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | undefined = initialPanelType;
 
       if (viewParam === "pattern") {
         detectedType = "pattern";
       } else if (viewParam === "schedule") {
         detectedType = "schedule";
+      } else if (viewParam === "work-schedule") {
+        // The work-schedule editor modal. Listed explicitly rather than left
+        // to the `initialPanelType` fallthrough: App already passes it, so
+        // omitting this branch happens to work -- and would silently stop
+        // working the day anything reorders the chain or reaches this hook
+        // without the prop. The panel type it settles on IS the REACT_APP_READY
+        // `panel` value, i.e. which channel the host marks ready.
+        detectedType = "work-schedule";
       } else if (viewParam === "studio-embed") {
         detectedType = "studio-embed";
       } else if (viewParam === "results") {

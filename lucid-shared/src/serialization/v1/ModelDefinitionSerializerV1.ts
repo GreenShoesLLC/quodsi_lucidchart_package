@@ -58,6 +58,13 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 .map(pattern => pattern.toJSON());
             const arrivalSchedules = modelDefinition.arrivalSchedules.getAll()
                 .map(schedule => schedule.toJSON());
+            // Work schedules (spec 2026-08-27 §3.1). Same sparse-omit-at-empty
+            // posture as `arrivalSchedules` above: the engine declares the
+            // collection optional with an empty default, so a model that has
+            // none stays byte-identical to what it serialized before this
+            // collection existed.
+            const workSchedules = modelDefinition.workSchedules.getAll()
+                .map(schedule => schedule.toJSON());
 
             const document = {
                 schemaVersion: MODEL_SCHEMA_VERSION,
@@ -86,7 +93,8 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 ),
                 scenarios: scenarios.length ? scenarios : undefined,
                 arrivalPatterns: arrivalPatterns.length ? arrivalPatterns : undefined,
-                arrivalSchedules: arrivalSchedules.length ? arrivalSchedules : undefined
+                arrivalSchedules: arrivalSchedules.length ? arrivalSchedules : undefined,
+                workSchedules: workSchedules.length ? workSchedules : undefined
             };
 
             return JSON.parse(JSON.stringify(document)) as ISerializedModelV1;

@@ -30,6 +30,7 @@
 import {
     ISerializedArrivalPattern,
     ISerializedArrivalSchedule,
+    ISerializedWorkSchedule,
     ISerializedResourceRequirement,
     ModelDefinition,
     ModelRootProjection,
@@ -50,6 +51,8 @@ export function emptyModelRootProjection(): ModelRootProjection {
         generators: [],
         arrivalPatterns: [],
         arrivalSchedules: [],
+        workSchedules: [],
+        activities: [],
         entities: [],
         states: [],
         resources: [],
@@ -96,6 +99,36 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
             .map(p => p.toJSON()) as ISerializedArrivalPattern[],
         arrivalSchedules: def.arrivalSchedules.getAll()
             .map(s => s.toJSON()) as ISerializedArrivalSchedule[],
+        // Work schedules (spec 2026-08-27 §3.1). `.toJSON()`, never the live
+        // object: WorkSchedule carries a `type` field
+        // (SimulationObjectType.None -- the same quirk State/ArrivalPattern/
+        // ArrivalSchedule carry) that the engine's extra="forbid" clean doc
+        // has no slot for, and toJSON() is what drops it.
+        //
+        // Read by THREE shared panels -- WorkSchedulesEditor (the Schedules
+        // tab), WorkScheduleModal (the editor), and CapacitySourcePicker
+        // (the Resource/Activity capacity control) -- all off
+        // `modelDefinition.workSchedules`, and all defensively (`?? []`). So
+        // omitting this renders an empty Schedules tab and a picker stuck on
+        // "Fixed capacity" instead of throwing: the same silent failure the
+        // `arrivalScheduleId` note above describes.
+        workSchedules: def.workSchedules.getAll()
+            .map(w => w.toJSON()) as ISerializedWorkSchedule[],
+        // id + name + the schedule link ONLY. `workScheduleUsage`
+        // (quodsi_studio) counts BOTH resources and activities to produce the
+        // Schedules tab's usage line and its delete guard; without the
+        // activity half, a schedule an activity still follows would offer
+        // Delete, and deleting it leaves that activity holding a dangling
+        // `workScheduleId` -- an ERROR-severity `work_schedule_reference`
+        // that blocks simulate. Deliberately NOT `.toJSON()` (see the
+        // entities/states note below for the same reasoning: whole domain
+        // objects would put every future Activity field, actions included,
+        // onto the MODEL_ROOT_SNAPSHOT wire for no consumer).
+        activities: def.activities.getAll().map(a => ({
+            id: a.id,
+            name: a.name,
+            workScheduleId: a.workScheduleId,
+        })),
         // id + name ONLY -- exactly what ScheduleModal.tsx:111-114 reads and
         // forwards to ScheduleTable/SchedulePasteImport, whose props are typed
         // `{ id: string; name: string }[]` (ScheduleTable.tsx:42-43). NOT
@@ -123,6 +156,12 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
                 id: r.id,
                 name: r.name,
                 capacity: r.capacity,
+                // The resource half of the work-schedule link. Absent means
+                // "Fixed capacity"; present puts CapacitySourcePicker in its
+                // "Follow a schedule" state. Omitting it would show an
+                // already-linked resource as unlinked, and the author's next
+                // edit would then read as a brand-new link.
+                workScheduleId: r.workScheduleId,
                 description: r.description,
                 financialProperties: fp?.toJSON ? fp.toJSON() : (fp as ProjectedResource['financialProperties']),
                 levers: r.levers,

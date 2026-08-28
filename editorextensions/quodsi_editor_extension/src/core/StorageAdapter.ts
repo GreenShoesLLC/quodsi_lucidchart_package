@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger, StoredResourceRecord } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedWorkSchedule, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger, StoredResourceRecord } from '@quodsi/lucid-shared';
 
 const log = getLogger('StorageAdapter');
 
@@ -15,6 +15,7 @@ export class StorageAdapter {
     private static readonly ENTITIES_KEY = 'q_entities';
     private static readonly ARRIVAL_PATTERNS_KEY = 'q_arrival_patterns';
     private static readonly ARRIVAL_SCHEDULES_KEY = 'q_arrival_schedules';
+    private static readonly WORK_SCHEDULES_KEY = 'q_work_schedules';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
     private static readonly SCENARIOS_KEY = 'q_scenarios';
@@ -383,6 +384,76 @@ export class StorageAdapter {
             this.log('Successfully cleared arrival schedules');
         } catch (error) {
             this.logError('Error clearing arrival schedules:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the work-schedule list for a page (spec 2026-08-27 §3.1).
+     *
+     * Model-level list, sibling of q_entities/q_arrival_schedules -- NOT
+     * shape-mapped. Unlike an arrival schedule, a work schedule is SHARED:
+     * any number of Resources and Activities may follow one, so there is no
+     * one-owner rule for the UI to enforce.
+     *
+     * The class `type` tag is STRIPPED before storing. WorkSchedule.type is
+     * SimulationObjectType.None (the same pre-existing quirk State /
+     * ArrivalPattern / ArrivalSchedule carry) and the engine's
+     * CleanWorkScheduleDoc -- an `extra="forbid"` parser -- has no slot for
+     * it, so a leaked tag makes the whole document unparseable. `toJSON()`
+     * already omits it, but a record can also arrive here straight off a
+     * panel patch (`updateModel({ workSchedules })` forwards whole plain
+     * objects verbatim), and drawio demonstrably does leak it that way. One
+     * cheap strip at the storage boundary closes the whole class of leak.
+     */
+    public setWorkSchedules(page: ElementProxy, schedules: ISerializedWorkSchedule[]): void {
+        try {
+            this.log('Setting work schedules for page:', {
+                pageId: page.id,
+                schedulesCount: schedules.length
+            });
+            const clean = (schedules ?? []).map(schedule => {
+                const { type: _type, ...rest } = schedule as ISerializedWorkSchedule & { type?: unknown };
+                return rest;
+            });
+            page.shapeData.set(StorageAdapter.WORK_SCHEDULES_KEY, JSON.stringify(clean));
+            this.log('Successfully set work schedules');
+        } catch (error) {
+            this.logError('Error setting work schedules:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the work-schedule list for a page. Returns [] rather than throwing
+     * on corrupt data -- an unreadable schedule list must not stop the whole
+     * page from loading.
+     */
+    public getWorkSchedules(page: ElementProxy): ISerializedWorkSchedule[] {
+        try {
+            const raw = page.shapeData.get(StorageAdapter.WORK_SCHEDULES_KEY);
+            if (!raw || typeof raw !== 'string') {
+                this.log('No work schedules found, returning empty array');
+                return [];
+            }
+            const schedules = JSON.parse(raw) as ISerializedWorkSchedule[];
+            this.log('Retrieved work schedules:', { count: schedules.length });
+            return schedules;
+        } catch (error) {
+            this.logError('Error getting work schedules:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the work-schedule list for a page.
+     */
+    public clearWorkSchedules(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.WORK_SCHEDULES_KEY);
+            this.log('Successfully cleared work schedules');
+        } catch (error) {
+            this.logError('Error clearing work schedules:', error);
             throw error;
         }
     }
@@ -783,6 +854,7 @@ export class StorageAdapter {
             this.clearEntities(page);
             this.clearArrivalPatterns(page);
             this.clearArrivalSchedules(page);
+            this.clearWorkSchedules(page);
             this.clearResourceRequirements(page);
             // NOTE: q_time_patterns / q_time_distributed_configs are intentionally
             // NOT cleared here. The time-distributed generator feature was retired

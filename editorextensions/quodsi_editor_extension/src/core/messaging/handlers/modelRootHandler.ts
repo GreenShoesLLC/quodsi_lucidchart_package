@@ -5,6 +5,7 @@ import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
+import { WorkScheduleEditorModal } from '../../../panels/WorkScheduleEditorModal';
 import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('ModelRootHandler');
@@ -32,6 +33,13 @@ export class ModelRootHandler {
    */
   private static openScheduleModal: ScheduleEditorModal | null = null;
 
+  /**
+   * The work-schedule-editor modal currently open, if any. Same guard shape
+   * as the two above, and a SEPARATE holder on purpose: the three are
+   * separate singleton channels, so one being open must not block another.
+   */
+  private static openWorkScheduleModal: WorkScheduleEditorModal | null = null;
+
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.MODEL_ROOT_REQUEST:
@@ -50,6 +58,10 @@ export class ModelRootHandler {
 
       case EnvelopeMessageType.OPEN_SCHEDULE_MODAL:
         ModelRootHandler.handleOpenScheduleModal(msg);
+        return true;
+
+      case EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL:
+        ModelRootHandler.handleOpenWorkScheduleModal(msg);
         return true;
 
       default:
@@ -140,6 +152,46 @@ export class ModelRootHandler {
   }
 
   /**
+   * Handle OPEN_WORK_SCHEDULE_MODAL: open the work-schedule editor (spec
+   * 2026-08-27 §6) in a real Lucid modal over the whole application. Mirrors
+   * handleOpenScheduleModal above -- see handleOpenPatternModal's comment for
+   * why this lives here and why the guard exists.
+   *
+   * The payload carries a SCHEDULE id, not a shape id. A work schedule is a
+   * model-level record shared by any number of Resources and Activities; the
+   * shape that FOLLOWS one is edited by the Resource/Activity capacity
+   * control, not by this modal. A message without one opens nothing and does
+   * NOT take the guard -- a malformed message must not lock the surface.
+   */
+  private static handleOpenWorkScheduleModal(msg: EnvelopeBase): void {
+    const data = msg.data as { scheduleId?: string; modalSize?: ModalSize };
+    if (!data?.scheduleId) {
+      log.error('OPEN_WORK_SCHEDULE_MODAL: missing scheduleId');
+      return;
+    }
+
+    // SINGLETON GUARD -- see handleOpenPatternModal's comment for the full
+    // rationale (same hazard, same fix: hold the open modal, refuse a second
+    // open, release on frameClosed, identity-checked).
+    if (ModelRootHandler.openWorkScheduleModal) {
+      log.debug('OPEN_WORK_SCHEDULE_MODAL: a work-schedule modal is already open; ignoring');
+      return;
+    }
+
+    const modal = new WorkScheduleEditorModal(ModelManager.getClient(), {
+      scheduleId: data.scheduleId,
+      modalSize: data.modalSize,
+      onClosed: () => {
+        if (ModelRootHandler.openWorkScheduleModal === modal) {
+          ModelRootHandler.openWorkScheduleModal = null;
+        }
+      },
+    });
+    ModelRootHandler.openWorkScheduleModal = modal;
+    modal.show();
+  }
+
+  /**
    * Determine which channel to send a response to based on the message
    * source. Mirrors SimulationRunHandler.getResponseChannel /
    * DiagramMappingRelayHandler.getResponseChannel: a message that
@@ -153,6 +205,7 @@ export class ModelRootHandler {
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'pattern-iframe') return 'pattern';
     if (msg.source === 'schedule-iframe') return 'schedule';
+    if (msg.source === 'work-schedule-iframe') return 'work-schedule';
     return 'model';
   }
 
@@ -204,6 +257,12 @@ export class ModelRootHandler {
     }
     if (channelManager.getChannel('schedule')?.panel) {
       targets.push('schedule');
+    }
+    // Same skip-when-closed rule as 'pattern'/'schedule' above: a closed
+    // modal's queue is never drained by anyone, and a modal that opens later
+    // asks for its own snapshot on mount via MODEL_ROOT_REQUEST.
+    if (channelManager.getChannel('work-schedule')?.panel) {
+      targets.push('work-schedule');
     }
 
     for (const target of targets) {

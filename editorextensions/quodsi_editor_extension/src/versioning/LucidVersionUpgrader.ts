@@ -53,6 +53,18 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     // block. The registry key is the HOST-STORED type string 'Resource',
     // which here happens to match the block's own SimulationObjectType too.
     private static readonly RESOURCES_KEY = 'q_resources';
+    // Mirrors StorageAdapter.WORK_SCHEDULES_KEY (work schedules, spec
+    // 2026-08-27). BACKED UP AND RESTORED like the page-level lists above,
+    // but deliberately NOT folded into the `upgradeElements` call: this
+    // collection is born in the clean era, so there is no older shape to
+    // upgrade FROM and no transform registered under a 'WorkSchedule'
+    // registry key. Folding it in regardless would stamp the SYNTHETIC
+    // registry `type` onto every stored record on the way back out -- the
+    // exact leak StorageAdapter.setWorkSchedules strips, and the one the
+    // engine's `extra="forbid"` CleanWorkScheduleDoc rejects a whole
+    // document over. Add the segment when a real transform exists (and mind
+    // the slice bounds -- the resources segment is currently last).
+    private static readonly WORK_SCHEDULES_KEY = 'q_work_schedules';
 
     private preflightChecker: LucidPreflightChecker;
     private backupData: Map<string, ShapeDataBackup>;
@@ -62,6 +74,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     private arrivalPatternsBackup: { existed: boolean; data?: string } = { existed: false };
     private arrivalSchedulesBackup: { existed: boolean; data?: string } = { existed: false };
     private resourcesBackup: { existed: boolean; data?: string } = { existed: false };
+    private workSchedulesBackup: { existed: boolean; data?: string } = { existed: false };
 
     constructor(currentVersion: string, options?: UpgradeOptions) {
         super(currentVersion, options);
@@ -136,6 +149,18 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const resourcesData = page.shapeData.get(LucidVersionUpgrader.RESOURCES_KEY);
         this.resourcesBackup = typeof resourcesData === 'string'
             ? { existed: true, data: resourcesData }
+            : { existed: false };
+
+        // Backup the page-level work-schedules list (spec 2026-08-27) -- same
+        // treatment as resources, so a failed upgrade rolls the schedules
+        // back too instead of leaving a torn document. Nothing UPGRADES this
+        // list (see WORK_SCHEDULES_KEY's own note); it is backed up anyway
+        // because rollback restores the whole page, and a list left at
+        // whatever a half-finished attempt wrote is exactly the torn state
+        // rollback exists to prevent.
+        const workSchedulesData = page.shapeData.get(LucidVersionUpgrader.WORK_SCHEDULES_KEY);
+        this.workSchedulesBackup = typeof workSchedulesData === 'string'
+            ? { existed: true, data: workSchedulesData }
             : { existed: false };
 
         // Backup blocks. `allBlocks`, not `blocks` — the latter is
@@ -518,6 +543,14 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             page.shapeData.set(LucidVersionUpgrader.RESOURCES_KEY, this.resourcesBackup.data!);
         } else {
             page.shapeData.delete(LucidVersionUpgrader.RESOURCES_KEY);
+        }
+
+        // Restore the page-level work-schedules list (spec 2026-08-27), same
+        // delete-if-didn't-exist posture as every list above.
+        if (this.workSchedulesBackup.existed) {
+            page.shapeData.set(LucidVersionUpgrader.WORK_SCHEDULES_KEY, this.workSchedulesBackup.data!);
+        } else {
+            page.shapeData.delete(LucidVersionUpgrader.WORK_SCHEDULES_KEY);
         }
 
         // Restore blocks. `allBlocks`/`allLines` — matches `beginUpgrade`'s

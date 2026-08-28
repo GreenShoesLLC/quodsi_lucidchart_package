@@ -84,6 +84,13 @@ export class ElementOpsHandler {
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'pattern-iframe') return 'pattern';
     if (msg.source === 'schedule-iframe') return 'schedule';
+    // The work-schedule modal never sends ELEMENT_UPDATE today --
+    // WorkScheduleModal's only write path is
+    // accessor.updateModel({ workSchedules }), a MODEL_ROOT_UPDATE -- but the
+    // branch is here for the same reason the 'schedule' one is: the day it
+    // does, the RESULT must come back to its own channel rather than hang for
+    // the full 30s ELEMENT_UPDATE timeout on 'model'.
+    if (msg.source === 'work-schedule-iframe') return 'work-schedule';
     return 'model';
   }
 

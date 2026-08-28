@@ -10,6 +10,10 @@ import {
   ResourcesEditor,
   ResourceEditor,
   ResourceLinkPicker,
+  WorkSchedulesEditor,
+  WorkScheduleModal,
+  CapacitySourcePicker,
+  workScheduleUsage,
 } from 'quodsi_studio/platforms/shared'
 
 describe('shared panel import', () => {
@@ -34,6 +38,15 @@ describe('shared panel import', () => {
     expect(typeof ResourcesEditor).toBe('function')
     expect(typeof ResourceEditor).toBe('function')
     expect(typeof ResourceLinkPicker).toBe('function')
+    // Work schedules (spec 2026-08-27 §6). Lucid mounts the Schedules tab
+    // body (WorkSchedulesEditor) and the editor (WorkScheduleModal) itself;
+    // CapacitySourcePicker reaches Lucid INDIRECTLY, compiled inside
+    // ResourceEditor's own basic tab, and is named here so the barrel export
+    // it travels on is guarded like every other shared panel.
+    expect(typeof WorkSchedulesEditor).toBe('function')
+    expect(typeof WorkScheduleModal).toBe('function')
+    expect(typeof CapacitySourcePicker).toBe('function')
+    expect(typeof workScheduleUsage).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {

@@ -244,6 +244,26 @@ registered via `DocumentProxy.hookCreateItems` in `src/extension.ts` and
 implemented in `src/core/PasteNormalizer.ts`, which detects a pasted item
 whenever its stored envelope id no longer matches its live item id.
 
+**Work schedules (2026-08-27, spec `docs/superpowers/specs/2026-08-27-work-schedules-design.md`).**
+Time-varying capacity lives in a page-level `q_work_schedules` shapeData key
+(`ISerializedWorkSchedule[]`), a sibling of `q_arrival_schedules` — additive,
+so `LUCID_STORAGE_FORMAT` is unchanged and an absent key reads as `[]`.
+Records are stored WITHOUT the class `type` tag (`StorageAdapter.setWorkSchedules`
+strips it: `WorkSchedule.type` is `SimulationObjectType.None` and the engine's
+`extra="forbid"` `CleanWorkScheduleDoc` rejects a whole document over one
+stray key). A Resource or Activity opts in through its own `workScheduleId`
+— on the Resource's `q_resources` record, on the Activity's `q_data` — and
+because absence IS the value ("fixed capacity"), clearing an Activity's link
+needs the cleared-field signal (`ACTIVITY_CLEARABLE_KEYS`), while a Resource's
+clear rides the whole-list replace `updateModelRoot({ resources })` already
+performs. `LucidVersionUpgrader` backs up and restores the key but does not
+run it through `upgradeElements` (no pre-clean shape exists to upgrade from,
+and folding it in would stamp the synthetic `type` back on). The panel's
+Schedules tab mounts Studio's `WorkSchedulesEditor`, which hands an id to
+`OPEN_WORK_SCHEDULE_MODAL` → `WorkScheduleEditorModal` (the `work-schedule`
+channel, `?view=work-schedule&scheduleId=…`) rather than opening its own
+modal inside the 300px dock.
+
 ### Debugging Tips
 1. Enable console logging in browser developer tools
 2. Use the test extension mode (`npm start`) for faster iteration

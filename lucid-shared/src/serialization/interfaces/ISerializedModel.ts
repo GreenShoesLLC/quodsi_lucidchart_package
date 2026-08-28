@@ -13,6 +13,7 @@ import { ISerializedScenarioChangeRequest } from './ISerializedScenarioChangeReq
 import { ISerializedScenario } from './ISerializedScenario';
 import { ISerializedArrivalPattern } from './ISerializedArrivalPattern';
 import { ISerializedArrivalSchedule } from './ISerializedArrivalSchedule';
+import { ISerializedWorkSchedule } from './ISerializedWorkSchedule';
 
 export interface ISerializedMetadata {
     /** Model-definition schema version the model was written under (MODEL_SCHEMA_VERSION). */
@@ -72,5 +73,18 @@ export interface ISerializedModel {
     arrivalPatterns?: ISerializedArrivalPattern[];
     /** Model-level schedule list. Sparse-omitted when empty, like `arrivalPatterns`. */
     arrivalSchedules?: ISerializedArrivalSchedule[];
+    /**
+     * Model-level work-schedule (time-varying capacity) list. Sparse-omitted
+     * when empty, exactly like `arrivalSchedules` above.
+     *
+     * The engine's `CleanModelDocument` declares this optional with an empty
+     * default, and `defToCleanDocument` (the OTHER producer of that document,
+     * in `@quodsi/shared`) always emits it — even empty. This serializer
+     * deliberately does NOT: omitting at empty is the convention every
+     * auxiliary collection here already follows, and it is what keeps every
+     * existing serialization snapshot byte-identical for a model that has no
+     * work schedules.
+     */
+    workSchedules?: ISerializedWorkSchedule[];
     scenarioChangeRequests?: ISerializedScenarioChangeRequest[];
 }

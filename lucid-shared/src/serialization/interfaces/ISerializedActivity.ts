@@ -25,6 +25,12 @@ export interface ISerializedActivity {
     capacity?: number;
     inboundCapacity?: number;
     outboundCapacity?: number;
+    /**
+     * Opt-in link to a model-level `workSchedules` record (spec §3.2), the
+     * Activity twin of `ISerializedResource.workScheduleId`. When present the
+     * activity's own `capacity` above is NOMINAL only.
+     */
+    workScheduleId?: string;
     routing?: ConnectType;
 
     // Action-based system

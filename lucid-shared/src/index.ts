@@ -139,6 +139,14 @@ export type { CalendarWindow, CalendarWindowModelLike } from '@quodsi/shared';
 // into the same stored length.
 export { msToCoarsestDuration } from '@quodsi/shared';
 
+// Work schedules (time-varying capacity, spec 2026-08-27). The class and its
+// list manager come straight from the core -- Lucid adds only storage
+// (`q_work_schedules`), the projection, and the clearable `workScheduleId`
+// link on Resource/Activity. `createDefaultWorkSchedule` is re-exported for
+// the same reason `createDefaultAction` is: hosts mint records.
+export { WorkSchedule, WorkScheduleListManager, createDefaultWorkSchedule } from '@quodsi/shared';
+export type { WorkScheduleRow, WorkScheduleException, WeekdayCode, OffShiftRule } from '@quodsi/shared';
+
 // State management types — already covered in named block above
 
 // Action system types — now sourced from the core (Phase 3 slice 4)
