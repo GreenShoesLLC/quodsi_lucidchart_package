@@ -93,6 +93,12 @@ const dateInput = (label: string) =>
 const timeInput = (label: string) =>
   screen.getByLabelText(`${label} time`) as HTMLInputElement;
 
+/** Feedback 8b: warmup is behind an explicit checkbox now, so the Warmup Date
+ *  field only exists once the box is ticked. Shared with Studio's
+ *  BasicSettingsTab — WarmupDateField is the same component. */
+const warmupCheckbox = () =>
+  screen.getByRole("checkbox", { name: /use a warm-up period/i });
+
 describe("ModelEditor — calendar dates", () => {
   beforeEach(() => {
     h.drafts.length = 0;
@@ -152,10 +158,29 @@ describe("ModelEditor — calendar dates", () => {
     expect(draft.warmupDateTime).toBeNull();
   });
 
-  it("clearing the warmup date writes a zero warmupTime", () => {
+  it("loads unchecked with no Warmup Date field when the stored warmup is zero (8b)", () => {
+    renderCalendar({ warmupTime: { value: 0, unit: PeriodUnit.HOURS } });
+    expect(warmupCheckbox()).not.toBeChecked();
+    expect(screen.queryByLabelText("Warmup Date date")).not.toBeInTheDocument();
+  });
+
+  it("ticking the warmup checkbox opens an EMPTY field and writes nothing (8b)", () => {
+    renderCalendar({ warmupTime: { value: 0, unit: PeriodUnit.HOURS } });
+    const draftsBefore = h.drafts.length;
+    fireEvent.click(warmupCheckbox());
+    expect(dateInput("Warmup Date").value).toBe("");
+    // Ticking alone commits nothing -- otherwise ticking the box would
+    // silently write a zero-length warmup.
+    expect(h.drafts.length).toBe(draftsBefore);
+  });
+
+  it("unticking the warmup checkbox writes a zero warmupTime (8b)", () => {
+    // Default model carries a nonzero warmup, so the box loads ticked.
     renderCalendar();
-    fireEvent.change(dateInput("Warmup Date"), { target: { value: "" } });
+    expect(warmupCheckbox()).toBeChecked();
+    fireEvent.click(warmupCheckbox());
     expect(latestDraft().warmupTime).toMatchObject({ value: 0 });
+    expect(screen.queryByLabelText("Warmup Date date")).not.toBeInTheDocument();
   });
 
   it("reports an out-of-order warmup pick instead of silently dropping it", () => {
