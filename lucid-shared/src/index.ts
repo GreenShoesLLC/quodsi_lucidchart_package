@@ -404,6 +404,9 @@ export {
   setRankingState,
   setRankingOrder,
   QUEUE_RANKING_COPY,
+  validateLeverRange,
+  boundsFor,
+  MAX_LEVER_LEVELS,
 } from '@quodsi/shared';
 export type { ScenarioLever, LeverRange } from '@quodsi/shared';
 export type { QueueRanking, QueueRankingOrder } from '@quodsi/shared';
