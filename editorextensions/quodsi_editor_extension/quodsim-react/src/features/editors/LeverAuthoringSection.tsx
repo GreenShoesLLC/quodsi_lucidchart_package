@@ -3,6 +3,7 @@ import { ChevronDown, Info } from 'lucide-react';
 import {
   ScenarioObjectType, ScenarioPropertyName, NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
   PROPERTY_DISPLAY_LABELS, isRateScaleProperty, type ScenarioLever,
+  validateLeverRange, boundsFor,
 } from '@quodsi/lucid-shared';
 import {
   leverFor, toggleLever, patchLever, patchRange, leverForAction, toggleActionLever, patchActionLever, patchActionRange,
@@ -56,6 +57,8 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
       {eligible.map((pn: ScenarioPropertyName) => {
         const lever = leverFor(levers, pn);
         const isRate = isRateScaleProperty(objectType, pn);
+        const bounds = boundsFor(pn);
+        const rangeErrors = lever?.range ? validateLeverRange(lever.range, pn) : [];
         return (
           <div key={pn} className="mb-2">
             <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
@@ -83,7 +86,8 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                     <label key={k} className="flex flex-col text-xs">
                       {k}
                       <input
-                        type="number" aria-label={k} step={isRate ? 0.1 : undefined}
+                        type="number" aria-label={k} step={bounds?.integer ? 1 : (isRate ? 0.1 : undefined)}
+                        min={k === 'min' ? bounds?.min : undefined} max={k === 'max' ? bounds?.max : undefined}
                         className="border rounded px-2 py-1 text-sm w-16"
                         value={lever.range?.[k] ?? ''}
                         onChange={(e) => onChange(patchRange(levers, pn, k, parseFloat(e.target.value)))}
@@ -91,6 +95,9 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                     </label>
                   ))}
                 </div>
+                {rangeErrors.map((msg) => (
+                  <div key={msg} className="text-xs text-red-600 mt-1">{msg}</div>
+                ))}
                 {isRate && currentDistributionType && !RATE_SCALABLE.has(currentDistributionType.toLowerCase()) && (
                   <div className="text-xs text-amber-600 mt-1">
                     This generator's “{currentDistributionType}” distribution can't be rate-scaled — these runs won't change. Use a swappable distribution (e.g. exponential) or a distribution-swap change.
@@ -107,6 +114,8 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
           {actions.map((a) => {
             const lever = leverForAction(levers, a.id);
             const notScalable = !!a.distributionType && !RATE_SCALABLE.has(a.distributionType.toLowerCase());
+            const durationBounds = boundsFor(ScenarioPropertyName.DURATION);
+            const durationErrors = lever?.range ? validateLeverRange(lever.range, ScenarioPropertyName.DURATION) : [];
             return (
               <div key={a.id} className="mb-2">
                 <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
@@ -133,6 +142,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                           {k}
                           <input
                             type="number" aria-label={k} step={0.1}
+                            min={k === 'min' ? durationBounds?.min : undefined} max={k === 'max' ? durationBounds?.max : undefined}
                             className="border rounded px-2 py-1 text-sm w-16"
                             value={lever.range?.[k] ?? ''}
                             onChange={(e) => onChange(patchActionRange(levers, a.id, k, parseFloat(e.target.value)))}
@@ -140,6 +150,9 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                         </label>
                       ))}
                     </div>
+                    {durationErrors.map((msg) => (
+                      <div key={msg} className="text-xs text-red-600 mt-1">{msg}</div>
+                    ))}
                     {notScalable && (
                       <div className="text-xs text-amber-600 mt-1">
                         This action's "{a.distributionType}" distribution can't be rate-scaled — these runs won't change. Use a swappable distribution (e.g. exponential).
@@ -157,6 +170,8 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
           <div className="text-xs font-medium text-gray-600 mb-1">Seize priorities</div>
           {seizeActions.map((a) => {
             const lever = priorityLeverForAction(levers, a.id);
+            const priorityBounds = boundsFor(ScenarioPropertyName.SEIZE_PRIORITY);
+            const priorityErrors = lever?.range ? validateLeverRange(lever.range, ScenarioPropertyName.SEIZE_PRIORITY) : [];
             return (
               <div key={a.id} className="mb-2">
                 <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
@@ -182,7 +197,8 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                         <label key={k} className="flex flex-col text-xs">
                           {k}
                           <input
-                            type="number" aria-label={k} step={1} min={0} max={900}
+                            type="number" aria-label={k} step={1}
+                            min={k === 'min' ? priorityBounds?.min : undefined} max={k === 'max' ? priorityBounds?.max : undefined}
                             className="border rounded px-2 py-1 text-sm w-16"
                             value={lever.range?.[k] ?? ''}
                             onChange={(e) => onChange(patchActionPriorityRange(levers, a.id, k, parseInt(e.target.value, 10)))}
@@ -190,6 +206,9 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                         </label>
                       ))}
                     </div>
+                    {priorityErrors.map((msg) => (
+                      <div key={msg} className="text-xs text-red-600 mt-1">{msg}</div>
+                    ))}
                   </div>
                 )}
               </div>
