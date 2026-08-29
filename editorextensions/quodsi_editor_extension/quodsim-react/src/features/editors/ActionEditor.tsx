@@ -189,6 +189,7 @@ function getActionSummary(
     case ActionType.SEIZE: {
       const seizeAction = action as SeizeAction;
       resourceText = getRequirementName(seizeAction.resourceRequirementId || null);
+      if ((seizeAction.priority ?? 0) > 0) resourceText += ` · priority ${seizeAction.priority}`;
       break;
     }
     case ActionType.RELEASE: {
@@ -208,6 +209,7 @@ function getActionSummary(
       if (dwrAction.keepResource) {
         resourceText += " (keep)";
       }
+      if ((dwrAction.priority ?? 0) > 0) resourceText += ` · priority ${dwrAction.priority}`;
       break;
     }
     case ActionType.SPLIT: {
@@ -474,6 +476,23 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               placeholder="(none selected)"
               ariaLabel="Resource requirement"
             />
+            <label className="block text-xs text-gray-600 mt-2 mb-0.5">
+              Priority
+              <span title="Higher wins when the resource is contended. Ties go to the request that has waited longest.">
+                <Info className="inline w-3 h-3 ml-1 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </label>
+            <input
+              type="number" min={0} max={900} step={1}
+              aria-label="Seize priority"
+              className="w-20 text-xs border rounded px-1"
+              value={seizeAction.priority ?? 0}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                const priority = Number.isFinite(n) && n > 0 ? Math.min(n, 900) : 0;
+                onChange({ ...seizeAction, priority });
+              }}
+            />
           </div>
         );
       }
@@ -543,6 +562,23 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                     <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                   </span>
                 </label>
+                <label className="block text-xs text-gray-600 mt-2 mb-0.5">
+                  Priority
+                  <span title="Higher wins when the resource is contended. Ties go to the request that has waited longest.">
+                    <Info className="inline w-3 h-3 ml-1 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </label>
+                <input
+                  type="number" min={0} max={900} step={1}
+                  aria-label="Seize priority"
+                  className="w-20 text-xs border rounded px-1"
+                  value={dwrAction.priority ?? 0}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    const priority = Number.isFinite(n) && n > 0 ? Math.min(n, 900) : 0;
+                    onChange({ ...dwrAction, priority });
+                  }}
+                />
               </div>
             )}
           </div>
