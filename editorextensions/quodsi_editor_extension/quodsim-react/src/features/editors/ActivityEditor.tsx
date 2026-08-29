@@ -59,7 +59,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { QueueRankingSection } from "./QueueRankingSection";
-import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
+import { actionDurationLeverLabel, actionPriorityLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -1228,12 +1228,17 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         ? a.duration?.distribution
                         : undefined,
                     }));
+                  const seizeActions = localActivityDraft.actions
+                    .filter((a) => (a.type === ActionType.SEIZE || a.type === ActionType.DELAY_WITH_RESOURCE)
+                      && !!(a as { resourceRequirementId?: string | null }).resourceRequirementId)
+                    .map((a) => ({ id: a.id, label: actionPriorityLeverLabel(a) }));
                   return (
                     <LeverAuthoringSection
                       objectType={ScenarioObjectType.ACTIVITY}
                       componentName={localActivityDraft.name}
                       levers={localActivityDraft.levers ?? []}
                       actions={durationActions}
+                      seizeActions={seizeActions}
                       onChange={(next) => {
                         setLocalActivityDraft((prev) =>
                           updateActivityImmutably(prev, { levers: next })
