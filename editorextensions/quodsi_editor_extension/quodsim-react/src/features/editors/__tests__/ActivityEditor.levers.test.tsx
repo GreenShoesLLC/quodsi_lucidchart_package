@@ -49,4 +49,23 @@ describe("ActivityEditor — scenario lever authoring", () => {
       screen.getByLabelText(/use Outbound Queue Capacity as a scenario lever/i)
     ).toBeInTheDocument();
   });
+
+  it("offers a Seize-priority lever for a SEIZE action with a resource requirement", () => {
+    render(
+      <ActivityEditor
+        {...baseProps}
+        activity={{
+          id: "a1",
+          name: "Triage",
+          capacity: 1,
+          levers: [],
+          actions: [
+            { id: "act-seize-1", type: "seize", name: "Seize Nurse", resourceRequirementId: "req-nurse" },
+          ],
+        } as any}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
+    expect(screen.getByLabelText(/use seize nurse's priority as a scenario lever/i)).toBeInTheDocument();
+  });
 });

@@ -59,7 +59,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { QueueRankingSection } from "./QueueRankingSection";
-import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
+import { actionDurationLeverLabel, actionPriorityLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -1219,14 +1219,33 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 </div>
 
                 {(() => {
-                  const durationActions = localActivityDraft.actions
-                    .filter((a) => a.type === ActionType.DELAY || a.type === ActionType.DELAY_WITH_RESOURCE)
-                    .map((a) => ({
+                  // Unnamed-action lever labels carry step position + requirement
+                  // name so sibling steps don't collide (mirrors Studio ActivityBasicTab).
+                  const requirementsById = new Map(
+                    (referenceData?.resourceRequirements ?? []).map((r) => [r.id, r.name] as const)
+                  );
+                  const requirementIdOf = (a: unknown): string | null =>
+                    (a as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
+                  const requirementNameOf = (a: unknown): string | undefined => {
+                    const id = requirementIdOf(a);
+                    return id ? requirementsById.get(id) : undefined;
+                  };
+                  const indexedActions = localActivityDraft.actions.map((action, index) => ({ action, index }));
+                  const durationActions = indexedActions
+                    .filter(({ action: a }) => a.type === ActionType.DELAY || a.type === ActionType.DELAY_WITH_RESOURCE)
+                    .map(({ action: a, index }) => ({
                       id: a.id,
-                      label: actionDurationLeverLabel(a),
+                      label: actionDurationLeverLabel(a, { index, requirementName: requirementNameOf(a) }),
                       distributionType: (isDelayAction(a) || isDelayWithResourceAction(a))
                         ? a.duration?.distribution
                         : undefined,
+                    }));
+                  const seizeActions = indexedActions
+                    .filter(({ action: a }) => (a.type === ActionType.SEIZE || a.type === ActionType.DELAY_WITH_RESOURCE)
+                      && !!requirementIdOf(a))
+                    .map(({ action: a, index }) => ({
+                      id: a.id,
+                      label: actionPriorityLeverLabel(a, { index, requirementName: requirementNameOf(a) }),
                     }));
                   return (
                     <LeverAuthoringSection
@@ -1234,6 +1253,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       componentName={localActivityDraft.name}
                       levers={localActivityDraft.levers ?? []}
                       actions={durationActions}
+                      seizeActions={seizeActions}
                       onChange={(next) => {
                         setLocalActivityDraft((prev) =>
                           updateActivityImmutably(prev, { levers: next })
