@@ -87,7 +87,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                       {k}
                       <input
                         type="number" aria-label={k} step={bounds?.integer ? 1 : (isRate ? 0.1 : undefined)}
-                        min={k !== 'step' ? bounds?.min : undefined} max={k !== 'step' ? bounds?.max : undefined}
+                        min={k === 'min' ? bounds?.min : undefined} max={k === 'max' ? bounds?.max : undefined}
                         className="border rounded px-2 py-1 text-sm w-16"
                         value={lever.range?.[k] ?? ''}
                         onChange={(e) => onChange(patchRange(levers, pn, k, parseFloat(e.target.value)))}
@@ -142,7 +142,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                           {k}
                           <input
                             type="number" aria-label={k} step={0.1}
-                            min={k !== 'step' ? durationBounds?.min : undefined} max={k !== 'step' ? durationBounds?.max : undefined}
+                            min={k === 'min' ? durationBounds?.min : undefined} max={k === 'max' ? durationBounds?.max : undefined}
                             className="border rounded px-2 py-1 text-sm w-16"
                             value={lever.range?.[k] ?? ''}
                             onChange={(e) => onChange(patchActionRange(levers, a.id, k, parseFloat(e.target.value)))}
@@ -198,7 +198,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                           {k}
                           <input
                             type="number" aria-label={k} step={1}
-                            min={k !== 'step' ? priorityBounds?.min : undefined} max={k !== 'step' ? priorityBounds?.max : undefined}
+                            min={k === 'min' ? priorityBounds?.min : undefined} max={k === 'max' ? priorityBounds?.max : undefined}
                             className="border rounded px-2 py-1 text-sm w-16"
                             value={lever.range?.[k] ?? ''}
                             onChange={(e) => onChange(patchActionPriorityRange(levers, a.id, k, parseInt(e.target.value, 10)))}
