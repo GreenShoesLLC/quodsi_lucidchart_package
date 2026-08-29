@@ -20,9 +20,7 @@
 
 ## Simulation engine (Azure Batch)
 
-- [ ] Run `python make_zip.py` in `quodsim/` to create `quodsim_v{VERSION}.zip`
-- [ ] Upload zip to the Azure Batch application
-- [ ] Update Batch pool to use the new application version
+- [ ] Ensure the engine image tag pinned by the target env's `batchAppVersion` exists in ACR (`crquodsim/quodsim-runner`)
 
 ## Backend API (FastAPI)
 

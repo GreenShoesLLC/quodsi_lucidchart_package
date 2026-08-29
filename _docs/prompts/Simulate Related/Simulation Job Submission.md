@@ -34,18 +34,16 @@ string taskCommandLine = $"/bin/bash -c \"source $AZ_BATCH_NODE_STARTUP_DIR/wd/b
 For details about the configuration of the Batch resource, please read this document:
 C:\_source\quodsi\quodsi_dotnet_api\quodsi_dotnet_api\_docs\SimulationRelated\_4_batch_azure_overview.md
 
-The Batch resource has an "Application" that contains the zip file created from the following code:
-C:\_source\quodsi\quodsim\make_zip.py
+Batch jobs now run as container images instead of application packages. The container image is hosted in Azure Container Registry (ACR):
+- **Image**: `crquodsim.azurecr.io/quodsim-runner:<appVersion>`
+- **Image version** (`<appVersion>`) is pinned per environment via the `batchAppVersion` bicepparam (see `infrastructure/docs/042-quodsim-runner-container-operations.md`)
 
-The zip file created has been uploaded as the "quodsim" application.  The zip file contains /quodsim_runner/lucidchart/cli.py.
-C:\_source\quodsi\quodsim\quodsim_runner\lucidchart\cli.py
+The container image contains `/quodsim_runner/lucidchart/cli.py`, which will be executed within Azure Batch for simulation jobs (both production and development when using Batch).
 
-cli.py will be executed within Azure Batch for the production deployment of Quodsi.  While in development, cli.py is ran locally.
-
-cli.py is primarily leveraging the dataclass AzureBatchSimulationRunner which can be found here:
+The `cli.py` script is primarily leveraging the dataclass `AzureBatchSimulationRunner` found here:
 C:\_source\quodsi\quodsim\quodsim_runner\lucidchart\azure_batch_simulation_runner.py
 
-As its name suggests, AzureBatchSimulationRunner is the code that manages running a simulation from files stored in Azure Blob Storage and applications uploaded to Azure Batch.
+`AzureBatchSimulationRunner` manages running a simulation from files stored in Azure Blob Storage and executing within the Batch container environment.
 
 I would like to request a code review of AzureBatchSimulationRunner.
 
