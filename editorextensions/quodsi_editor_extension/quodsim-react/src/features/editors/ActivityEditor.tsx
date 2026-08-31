@@ -5,6 +5,7 @@ import {
   Layers,
   DollarSign,
   ArrowRightLeft,
+  SlidersHorizontal,
   Info,
   ChevronDown,
   AlertTriangle,
@@ -50,20 +51,23 @@ import {
   ResourceRequirement,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
-  isDelayAction,
-  isDelayWithResourceAction,
   declareClearedFields,
   EnvelopeMessageType,
   type ScenarioLever,
   type QueueRanking,
 } from "@quodsi/lucid-shared";
-import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { QueueRankingSection } from "./QueueRankingSection";
-import { actionDurationLeverLabel, actionPriorityLeverLabel } from "@quodsi/lucid-shared";
+import { eligibleLeverProperties, countActiveLevers } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
-import { RequirementField, RequirementFieldContext, ConnectorRoutingView, CapacitySourcePicker } from "quodsi_studio/platforms/shared";
+import {
+  RequirementField, RequirementFieldContext, ConnectorRoutingView, CapacitySourcePicker,
+  // Levers moved onto their own tab (2026-08-31) and Lucid dropped its near-verbatim
+  // fork of the section at the same time -- these are the monorepo originals, which
+  // carry the hiddenProperties rule and the theme tokens the fork never had.
+  LeverAuthoringSection, activityLeverTargets, activityHiddenLeverProperties,
+} from "quodsi_studio/platforms/shared";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useMessaging } from "../../messaging/MessageProvider";
@@ -192,6 +196,13 @@ const TAB_CONFIG = [
     icon: ArrowRightLeft,
     tooltip:
       "Configure how entities are routed to downstream activities using probability, state conditions, or entity templates",
+  },
+  {
+    id: "levers" as const,
+    title: "Scenario levers",
+    icon: SlidersHorizontal,
+    tooltip:
+      "Mark a property as a scenario lever -- a value range a Study can sweep across its design points to compare what-if scenarios",
   },
   // Temporarily hidden - states managed at Model level
   // {
@@ -401,6 +412,7 @@ type ActivityTab =
   | "financial"
   | "failure"
   | "connectors"
+  | "levers"
   | "states";
 
 /**
@@ -997,6 +1009,21 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // RENDER
   // ============================================================================
 
+  // What the Levers tab offers, derived once so the tab body and the tab strip's
+  // badge cannot disagree. Both helpers are the monorepo originals (shared with
+  // drawio/Studio/Visio) rather than a Lucid re-derivation.
+  const leverTargets = activityLeverTargets(
+    localActivityDraft?.actions,
+    referenceData?.resourceRequirements
+  );
+  const leverCount = countActiveLevers(
+    localActivityDraft?.levers,
+    eligibleLeverProperties(
+      ScenarioObjectType.ACTIVITY,
+      activityHiddenLeverProperties(localActivityDraft)
+    )
+  );
+
   // Guard against invalid activity data
   if (!localActivityDraft?.id) {
     return (
@@ -1036,14 +1063,28 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  title={tab.tooltip}
-                  className={`px-3 py-2 border-b-2 ${
+                  // These buttons are icon-only, so `title` IS the accessible name --
+                  // existing tests select tabs by their tooltip text. Hence no
+                  // aria-label (it would rename every tab), and hence the badge pill
+                  // below is aria-hidden: unhidden, a bare number would be the only
+                  // text content and would become the button's whole accessible name.
+                  title={tab.id === "levers" && leverCount > 0 ? `${tab.tooltip} (${leverCount})` : tab.tooltip}
+                  className={`relative px-3 py-2 border-b-2 ${
                     activeTab === tab.id
                       ? "border-blue-600 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
+                  {tab.id === "levers" && leverCount > 0 && (
+                    <span
+                      aria-hidden="true"
+                      data-testid="tab-badge-levers"
+                      className="absolute top-0.5 right-0.5 min-w-[14px] px-1 rounded-full bg-info-soft text-info-soft-fg text-[10px] leading-[14px] text-center"
+                    >
+                      {leverCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -1218,51 +1259,26 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   )}
                 </div>
 
-                {(() => {
-                  // Unnamed-action lever labels carry step position + requirement
-                  // name so sibling steps don't collide (mirrors Studio ActivityBasicTab).
-                  const requirementsById = new Map(
-                    (referenceData?.resourceRequirements ?? []).map((r) => [r.id, r.name] as const)
+            </div>
+          )}
+
+          {activeTab === "levers" && (
+            <div className="space-y-2">
+              <LeverAuthoringSection
+                variant="flat"
+                objectType={ScenarioObjectType.ACTIVITY}
+                componentName={localActivityDraft.name}
+                levers={localActivityDraft.levers ?? []}
+                actions={leverTargets.actions}
+                seizeActions={leverTargets.seizeActions}
+                onChange={(next) => {
+                  setLocalActivityDraft((prev) =>
+                    updateActivityImmutably(prev, { levers: next })
                   );
-                  const requirementIdOf = (a: unknown): string | null =>
-                    (a as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
-                  const requirementNameOf = (a: unknown): string | undefined => {
-                    const id = requirementIdOf(a);
-                    return id ? requirementsById.get(id) : undefined;
-                  };
-                  const indexedActions = localActivityDraft.actions.map((action, index) => ({ action, index }));
-                  const durationActions = indexedActions
-                    .filter(({ action: a }) => a.type === ActionType.DELAY || a.type === ActionType.DELAY_WITH_RESOURCE)
-                    .map(({ action: a, index }) => ({
-                      id: a.id,
-                      label: actionDurationLeverLabel(a, { index, requirementName: requirementNameOf(a) }),
-                      distributionType: (isDelayAction(a) || isDelayWithResourceAction(a))
-                        ? a.duration?.distribution
-                        : undefined,
-                    }));
-                  const seizeActions = indexedActions
-                    .filter(({ action: a }) => (a.type === ActionType.SEIZE || a.type === ActionType.DELAY_WITH_RESOURCE)
-                      && !!requirementIdOf(a))
-                    .map(({ action: a, index }) => ({
-                      id: a.id,
-                      label: actionPriorityLeverLabel(a, { index, requirementName: requirementNameOf(a) }),
-                    }));
-                  return (
-                    <LeverAuthoringSection
-                      objectType={ScenarioObjectType.ACTIVITY}
-                      componentName={localActivityDraft.name}
-                      levers={localActivityDraft.levers ?? []}
-                      actions={durationActions}
-                      seizeActions={seizeActions}
-                      onChange={(next) => {
-                        setLocalActivityDraft((prev) =>
-                          updateActivityImmutably(prev, { levers: next })
-                        );
-                        setHasPendingChanges(true);
-                      }}
-                    />
-                  );
-                })()}
+                  setHasPendingChanges(true);
+                }}
+                hiddenProperties={activityHiddenLeverProperties(localActivityDraft)}
+              />
             </div>
           )}
 

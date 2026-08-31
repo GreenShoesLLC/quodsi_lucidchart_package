@@ -16,9 +16,10 @@ import {
   getLogger,
   type ScenarioLever,
   type ConnectType,
+  eligibleLeverProperties,
+  countActiveLevers,
 } from "@quodsi/lucid-shared";
-import { LeverAuthoringSection } from "./LeverAuthoringSection";
-import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight, GitBranch } from "lucide-react";
+import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
@@ -36,6 +37,11 @@ import {
   renamePatternForGenerator,
   ConnectorRoutingView,
   type LifecycleModel,
+  // Levers moved onto their own tab (2026-08-31) and Lucid dropped its
+  // near-verbatim fork of the section at the same time -- these are the monorepo
+  // originals, shared with drawio/Studio/Visio.
+  LeverAuthoringSection,
+  generatorHasLevers,
 } from "quodsi_studio/platforms/shared";
 
 const log = getLogger("GeneratorEditor");
@@ -120,6 +126,12 @@ const TAB_CONFIG = [
     icon: GitBranch,
     tooltip: "Choose how entities pick a target when this generator has several outgoing connectors"
   },
+  {
+    id: "levers" as const,
+    title: "Scenario levers",
+    icon: SlidersHorizontal,
+    tooltip: "Mark a property as a scenario lever -- a value range a Study can sweep across its design points to compare what-if scenarios"
+  },
   // Temporarily hidden - states managed at Model level
   // {
   //   id: "states" as const,
@@ -153,7 +165,7 @@ interface Props {
 /**
  * Available tabs in the generator editor
  */
-type GeneratorTab = "settings" | "events" | "routing" | "states";
+type GeneratorTab = "settings" | "events" | "routing" | "levers" | "states";
 
 /**
  * GeneratorEditor - Comprehensive editor for Generator simulation objects
@@ -951,26 +963,52 @@ const GeneratorEditor: React.FC<Props> = ({
   // RENDER
   // ============================================================================
 
+  // A SCHEDULED generator gets no Levers tab: every property the section offers a
+  // GENERATOR is FREQUENCY-only or PATTERN-only, so each checkbox would author a
+  // lever the engine ignores when a Study sweeps it. See `generatorHasLevers`.
+  const showLeverTab = generatorHasLevers(localGeneratorDraft);
+  const tabs = TAB_CONFIG.filter((t) => t.id !== "levers" || showLeverTab);
+  const leverCount = countActiveLevers(
+    localGeneratorDraft?.levers,
+    eligibleLeverProperties(ScenarioObjectType.GENERATOR)
+  );
+  // Switching a generator to Schedule while its Levers tab is open would otherwise
+  // strand the active tab on a tab that no longer renders.
+  const activeOrFallback = activeTab === "levers" && !showLeverTab ? "settings" : activeTab;
+
   return (
     <div className="space-y-2">
       {/* Tab Navigation */}
       <div className="border-b bg-gray-50">
         <div className="flex">
-          {TAB_CONFIG.map((tab) => {
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                title={tab.tooltip}
-                className={`px-3 py-2 border-b-2 ${
-                  activeTab === tab.id
+                // Icon-only buttons, so `title` IS the accessible name -- existing
+                // tests select tabs by their tooltip text. The badge pill is
+                // aria-hidden for the same reason: unhidden, a bare number would be
+                // the only text content and would become the whole accessible name.
+                title={tab.id === "levers" && leverCount > 0 ? `${tab.tooltip} (${leverCount})` : tab.tooltip}
+                className={`relative px-3 py-2 border-b-2 ${
+                  activeOrFallback === tab.id
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 <Icon className="w-4 h-4" />
+                {tab.id === "levers" && leverCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    data-testid="tab-badge-levers"
+                    className="absolute top-0.5 right-0.5 min-w-[14px] px-1 rounded-full bg-info-soft text-info-soft-fg text-[10px] leading-[14px] text-center"
+                  >
+                    {leverCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -979,7 +1017,7 @@ const GeneratorEditor: React.FC<Props> = ({
 
       {/* Tab Content */}
       <div className="space-y-2 max-h-[calc(100vh-150px)] overflow-y-auto pr-1">
-        {activeTab === "settings" && (
+        {activeOrFallback === "settings" && (
           <div className="space-y-2">
             {/* Name Section */}
             <div>
@@ -1302,12 +1340,23 @@ const GeneratorEditor: React.FC<Props> = ({
                 </div>
               </>
             )}
+          </div>
+        )}
 
+        {activeOrFallback === "levers" && (
+          <div className="space-y-2">
             <LeverAuthoringSection
+              variant="flat"
               objectType={ScenarioObjectType.GENERATOR}
               componentName={localGeneratorDraft.name}
               levers={localGeneratorDraft.levers ?? []}
-              currentDistributionType={localGeneratorDraft.interarrivalTime?.distribution}
+              // Only a Rate generator has an inter-arrival distribution to warn
+              // about; a Pattern one draws its timing from the pattern.
+              currentDistributionType={
+                localGeneratorDraft.mode === GeneratorType.FREQUENCY
+                  ? localGeneratorDraft.interarrivalTime?.distribution
+                  : undefined
+              }
               onChange={(next) => {
                 setLocalGeneratorDraft((prev) =>
                   updateGeneratorImmutably(prev, { levers: next })
@@ -1318,7 +1367,7 @@ const GeneratorEditor: React.FC<Props> = ({
           </div>
         )}
 
-        {activeTab === "events" && (
+        {activeOrFallback === "events" && (
           <StateModificationsEditor
             modifications={localGeneratorDraft.initialStates || []}
             onModificationsChange={handleStateModificationsChange}
@@ -1329,7 +1378,7 @@ const GeneratorEditor: React.FC<Props> = ({
           />
         )}
 
-        {activeTab === "routing" && (
+        {activeOrFallback === "routing" && (
           <ConnectorRoutingView
             sourceId={localGeneratorDraft.id}
             sourceType="Generator"
@@ -1338,7 +1387,7 @@ const GeneratorEditor: React.FC<Props> = ({
         )}
 
         {/* Temporarily hidden - states managed at Model level
-        {activeTab === "states" && (
+        {activeOrFallback === "states" && (
           <StatesEditor
             states={states}
             onStatesChange={onStatesChange}

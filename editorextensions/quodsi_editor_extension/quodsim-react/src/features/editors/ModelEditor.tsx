@@ -10,14 +10,21 @@ import {
   ScenarioObjectType,
   resolveCalendarWindow,
   msToCoarsestDuration,
+  eligibleLeverProperties,
+  countActiveLevers,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
-import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock } from "lucide-react";
-import { LeverAuthoringSection } from "./LeverAuthoringSection";
+import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock, SlidersHorizontal } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
-import { CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField } from "quodsi_studio/platforms/shared";
+import {
+  CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField,
+  // Levers moved onto their own tab (2026-08-31) and Lucid dropped its
+  // near-verbatim fork of the section at the same time -- this is the monorepo
+  // original, shared with drawio/Studio/Visio.
+  LeverAuthoringSection,
+} from "quodsi_studio/platforms/shared";
 import { ArrivalsTab } from "./ArrivalsTab";
 import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
@@ -55,7 +62,7 @@ interface Props {
   onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
-export type EditorTab = "basic" | "states" | "entities" | "resources" | "requirements" | "arrivals" | "schedules" | "scenarios" | "validation";
+export type EditorTab = "basic" | "states" | "entities" | "resources" | "requirements" | "arrivals" | "schedules" | "scenarios" | "levers" | "validation";
 
 /**
  * Tab navigation configuration for ModelEditor.
@@ -103,6 +110,12 @@ const TAB_CONFIG = [
     title: "Schedules",
     icon: CalendarClock,
     tooltip: "Define work schedules — recurring weekly capacity plus dated exceptions — that resources and activities can follow"
+  },
+  {
+    id: "levers" as const,
+    title: "Scenario levers",
+    icon: SlidersHorizontal,
+    tooltip: "Mark replications or the random seed as a scenario lever -- a value range a Study can sweep across its design points"
   },
   {
     id: "validation" as const,
@@ -423,6 +436,11 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     setHasPendingChanges(true);
   };
 
+  const leverCount = countActiveLevers(
+    localModelDraft?.levers,
+    eligibleLeverProperties(ScenarioObjectType.MODEL)
+  );
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -438,19 +456,31 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                title={tab.tooltip}
+                // Icon-only buttons, so `title` IS the accessible name -- existing
+                // tests select tabs by their tooltip text. The badge pill below is
+                // aria-hidden for the same reason: unhidden, a bare number would be
+                // the only text content and would become the whole accessible name.
+                title={tab.id === "levers" && leverCount > 0 ? `${tab.tooltip} (${leverCount})` : tab.tooltip}
                 // flex-1 + centered icon: the strip shares the dock width
-                // across however many tabs exist (seven since the Resources
-                // and Arrivals tabs landed), instead of a fixed px-3 per tab
-                // that overflowed the 300px dock and forced a horizontal
-                // scrollbar.
-                className={`flex-1 flex justify-center px-1 py-2 border-b-2 ${
+                // across however many tabs exist (nine since the Levers tab
+                // landed), instead of a fixed px-3 per tab that overflowed the
+                // 300px dock and forced a horizontal scrollbar.
+                className={`relative flex-1 flex justify-center px-1 py-2 border-b-2 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
                 <Icon className="w-4 h-4" />
+                {tab.id === "levers" && leverCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    data-testid="tab-badge-levers"
+                    className="absolute top-0.5 right-0.5 min-w-[14px] px-1 rounded-full bg-info-soft text-info-soft-fg text-[10px] leading-[14px] text-center"
+                  >
+                    {leverCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -738,18 +768,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                   </div>
                 </AccordionSection>
 
-                {/* Study levers */}
-                <LeverAuthoringSection
-                  objectType={ScenarioObjectType.MODEL}
-                  componentName={localModelDraft.name}
-                  levers={localModelDraft.levers ?? []}
-                  onChange={(next: ScenarioLever[]) => {
-                    setLocalModelDraft((prev) =>
-                      updateModelImmutably(prev, { levers: next })
-                    );
-                    setHasPendingChanges(true);
-                  }}
-                />
 
                 {/* Auto-save status */}
                 <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
@@ -775,6 +793,20 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       {activeTab === "schedules" && <SchedulesTab />}
       {activeTab === "requirements" && (
         <ResourceRequirementsEditor accessor={accessor} referenceCleanup="host" />
+      )}
+      {activeTab === "levers" && (
+        <div className="space-y-2 p-2">
+          <LeverAuthoringSection
+            variant="flat"
+            objectType={ScenarioObjectType.MODEL}
+            componentName={localModelDraft.name}
+            levers={localModelDraft.levers ?? []}
+            onChange={(next: ScenarioLever[]) => {
+              setLocalModelDraft((prev) => updateModelImmutably(prev, { levers: next }));
+              setHasPendingChanges(true);
+            }}
+          />
+        </div>
       )}
       {activeTab === "validation" && (
         <ValidationDashboard

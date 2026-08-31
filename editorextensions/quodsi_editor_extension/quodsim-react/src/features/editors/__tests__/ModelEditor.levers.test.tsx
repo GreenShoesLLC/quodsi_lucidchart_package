@@ -35,11 +35,21 @@ const baseProps = {
   onEntitiesChange: vi.fn(),
 };
 
+
+// Levers moved off the Basic/Settings tab onto their own (2026-08-31), and Lucid
+// dropped its fork of the section for the monorepo original at the same time. The
+// tab strip is icon-only, so `title` is the accessible name -- these buttons are
+// selected by their tooltip text, like every other Lucid tab. Once on the tab the
+// section renders FLAT: there is no disclosure left to expand.
+const LEVERS_TAB_NAME = /mark .* as a scenario lever/i
+
 describe("ModelEditor — scenario lever authoring", () => {
   it("renders the lever-authoring section with the Model numeric properties", () => {
     render(<ModelEditor {...baseProps} />);
+    // Not on Basic any more.
+    expect(screen.queryByTestId("lever-authoring")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: LEVERS_TAB_NAME }));
     expect(screen.getByTestId("lever-authoring")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
     expect(
       screen.getByLabelText(/use Replications as a scenario lever/i)
     ).toBeInTheDocument();
@@ -52,7 +62,7 @@ describe("ModelEditor — scenario lever authoring", () => {
     const onSave = vi.fn();
     render(<ModelEditor {...baseProps} onSave={onSave} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
+    fireEvent.click(screen.getByRole("button", { name: LEVERS_TAB_NAME }));
     fireEvent.click(
       screen.getByLabelText(/use Replications as a scenario lever/i)
     );

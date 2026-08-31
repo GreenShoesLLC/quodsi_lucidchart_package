@@ -407,6 +407,11 @@ export {
   validateLeverRange,
   boundsFor,
   MAX_LEVER_LEVELS,
+  // Which properties a lever section offers, and how many of them are authored.
+  // Needed by the editor SHELLS since levers moved onto their own tab (2026-08-31):
+  // the shell decides whether the tab exists and what its badge reads.
+  eligibleLeverProperties,
+  countActiveLevers,
 } from '@quodsi/shared';
 export type { ScenarioLever, LeverRange } from '@quodsi/shared';
 export type { QueueRanking, QueueRankingOrder } from '@quodsi/shared';
