@@ -57,6 +57,7 @@ import {
 import { ResourceEditor, ResourceLinkPicker } from "quodsi_studio/platforms/shared";
 import { useMessaging } from "../../messaging/MessageContext";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 
 /**
  * The model-root projection's resource row. `shapeId` / `laneRef` are
@@ -93,6 +94,9 @@ interface SwimLaneEditorProps {
 const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
   const { sendMessage } = useMessaging();
   const { accessor } = useModelRootSource();
+  // OPEN_SETTINGS_MODAL sender for the linked-lane ResourceEditor's own
+  // ViewTell mount below.
+  const { openSettingsModal } = useSimulationRunSender();
   const [activeLaneIndex, setActiveLaneIndex] = useState(0);
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(true);
@@ -306,6 +310,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
                 onEditWorkSchedule={(id) =>
                   sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, { scheduleId: id })
                 }
+                onOpenSettings={openSettingsModal}
               />
             </div>
 

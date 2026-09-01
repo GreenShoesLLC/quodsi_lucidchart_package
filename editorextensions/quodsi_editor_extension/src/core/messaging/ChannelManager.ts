@@ -17,6 +17,7 @@ export class ChannelManager {
     pattern: { ready: false, queue: [] },
     schedule: { ready: false, queue: [] },
     'work-schedule': { ready: false, queue: [] },
+    settings: { ready: false, queue: [] },
   };
   
   /**

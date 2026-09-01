@@ -67,11 +67,15 @@ import {
   // fork of the section at the same time -- these are the monorepo originals, which
   // carry the hiddenProperties rule and the theme tokens the fork never had.
   LeverAuthoringSection, activityLeverTargets, activityHiddenLeverProperties,
+  // Complexity views (Task 11a): the same hook + tell Studio's ActivityEditor uses.
+  useView, ViewTell,
 } from "quodsi_studio/platforms/shared";
+import { LUCID_ACTIVITY_TAB_SURFACE, LUCID_ACTIVITY_EXTRA_SURFACES } from "./viewSurfaceMaps";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
@@ -213,6 +217,15 @@ const TAB_CONFIG = [
   //     "Define custom state variables that this activity can track and modify",
   // },
 ];
+
+// Compile-time proof that the map covers exactly this editor's real tab ids.
+// A tab added to TAB_CONFIG without a line in LUCID_ACTIVITY_TAB_SURFACE
+// fails here, naming it.
+type _TabsAreMapped = [
+  Exclude<(typeof TAB_CONFIG)[number]["id"], keyof typeof LUCID_ACTIVITY_TAB_SURFACE>
+] extends [never] ? true : never;
+const _tabsAreMapped: _TabsAreMapped = true;
+void _tabsAreMapped;
 
 // ============================================================================
 // DRAFT HELPERS (module-scope, exported for direct testing)
@@ -467,6 +480,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
   const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
+  const { visible } = useView();
 
   // Name validation state
   const [nameError, setNameError] = useState<string | null>(null);
@@ -563,6 +577,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // activity selection.
   const { accessor: modelRootAccessor } = useModelRootSource();
   const { sendMessage } = useMessaging();
+  // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
+  const { openSettingsModal } = useSimulationRunSender();
 
   const accessor = useReferenceDataAccessor(
     referenceData,
@@ -1024,6 +1040,15 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     )
   );
 
+  // Complexity views (Task 11a): a tab whose surface the current view doesn't
+  // show is dropped from the strip. Falls back to "basic" -- always visible,
+  // since activity.tab.basic is the lowest level in the catalog -- when the
+  // active tab is view-hidden.
+  const tabs = TAB_CONFIG.filter((t) => visible.has(LUCID_ACTIVITY_TAB_SURFACE[t.id]));
+  const activeOrFallback: ActivityTab = tabs.some((t) => t.id === activeTab)
+    ? activeTab
+    : "basic";
+
   // Guard against invalid activity data
   if (!localActivityDraft?.id) {
     return (
@@ -1056,7 +1081,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         {/* Tab Navigation */}
         <div className="border-b bg-gray-50">
           <div className="flex">
-            {TAB_CONFIG.map((tab) => {
+            {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
@@ -1070,7 +1095,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   // text content and would become the button's whole accessible name.
                   title={tab.id === "levers" && leverCount > 0 ? `${tab.tooltip} (${leverCount})` : tab.tooltip}
                   className={`relative px-3 py-2 border-b-2 ${
-                    activeTab === tab.id
+                    activeOrFallback === tab.id
                       ? "border-blue-600 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
@@ -1091,9 +1116,18 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           </div>
         </div>
 
+        <ViewTell
+          surfaces={[
+            ...TAB_CONFIG.map((t) => LUCID_ACTIVITY_TAB_SURFACE[t.id]),
+            ...LUCID_ACTIVITY_EXTRA_SURFACES,
+          ]}
+          ctx={{ element: localActivityDraft }}
+          onOpenSettings={openSettingsModal}
+        />
+
         {/* Tab Content */}
         <div className="space-y-2 max-h-[calc(100vh-150px)] overflow-y-auto pr-1">
-          {activeTab === "basic" && (
+          {activeOrFallback === "basic" && (
             <div className="space-y-2">
               {/* Name Section */}
                 <div>
@@ -1262,7 +1296,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             </div>
           )}
 
-          {activeTab === "levers" && (
+          {activeOrFallback === "levers" && (
             <div className="space-y-2">
               <LeverAuthoringSection
                 variant="flat"
@@ -1282,7 +1316,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             </div>
           )}
 
-          {activeTab === "actions" && (
+          {activeOrFallback === "actions" && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-gray-700">Actions</span>
@@ -1333,7 +1367,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             </div>
           )}
 
-          {activeTab === "financial" && (
+          {activeOrFallback === "financial" && (
             <div className="space-y-1">
                 {/* Enable Financial Tracking */}
                 <div className="flex items-center gap-2">
@@ -1511,7 +1545,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               </div>
           )}
 
-          {activeTab === "failure" && (
+          {activeOrFallback === "failure" && (
             <div className="space-y-1">
               {/* Enable Failure Simulation */}
               <div className="flex items-center gap-2">
@@ -1651,16 +1685,17 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             </div>
           )}
 
-          {activeTab === "connectors" && (
+          {activeOrFallback === "connectors" && (
             <ConnectorRoutingView
               sourceId={localActivityDraft.id}
               sourceType="Activity"
               accessor={accessor}
+              onOpenSettings={openSettingsModal}
             />
           )}
 
           {/* Temporarily hidden - states managed at Model level
-          {activeTab === "states" && (
+          {activeOrFallback === "states" && (
             <StatesEditor
                 states={states}
                 onStatesChange={onStatesChange}

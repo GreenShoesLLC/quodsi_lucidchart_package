@@ -53,6 +53,7 @@ import ActivityEditor, {
   updateActivityImmutably,
 } from "../ActivityEditor";
 import { CLEARED_FIELDS_KEY, EnvelopeMessageType } from "@quodsi/lucid-shared";
+import { setView } from "quodsi_studio/platforms/shared";
 
 const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }));
 
@@ -170,12 +171,19 @@ async function lastSave(onSave: ReturnType<typeof vi.fn>) {
   return onSave.mock.calls.at(-1)![0];
 }
 
+// This file predates Complexity Views and exercises CapacitySourcePicker's
+// "Follow a schedule" option, gated on resource.capacity.schedule --
+// 'advanced' in the catalog. Pin the view for every test here rather than
+// weaken any assertion -- view-gating itself is covered by viewGating.test.tsx
+// / Studio's own viewFieldGating.test.tsx.
 beforeEach(() => {
   mockSendMessage.mockClear();
+  setView("advanced");
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
+  setView("basic");
 });
 
 describe("ActivityEditor — capacity source picker", () => {
@@ -318,5 +326,23 @@ describe("ActivityEditor draft helpers — workScheduleId", () => {
     // `updates.workScheduleId ?? base.workScheduleId` would resurrect it here.
     const afterUnrelatedEdit = updateActivityImmutably(draft, { name: "Renamed" });
     expect(afterUnrelatedEdit.workScheduleId).toBeUndefined();
+  });
+});
+
+// Final-review fix, 2026-09-01: the tab-bar ViewTell above (mounted at
+// ActivityEditor.tsx's tab strip) only ever listed TAB_CONFIG's own tab
+// surfaces, so a Basic-view Activity linked to a work schedule showed
+// "Follow a schedule" checked-and-disabled (this file's first test, under
+// 'advanced') with nothing explaining why in Basic -- the mirror of the
+// Studio-side gap ACTIVITY_EXTRA_SURFACES fixed. Widening the tell's surface
+// list with LUCID_ACTIVITY_EXTRA_SURFACES is what this proves.
+describe("ActivityEditor Basic — capacity-schedule tell", () => {
+  it("names the capacity-schedule concept when a Basic activity follows a work schedule", () => {
+    setView("basic");
+    render(<ActivityEditor activity={linked} onSave={vi.fn()} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT]));
+
+    const tell = screen.getByRole("note");
+    expect(tell).toHaveTextContent(/capacity schedule/i);
   });
 });

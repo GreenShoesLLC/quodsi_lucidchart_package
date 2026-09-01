@@ -60,6 +60,17 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_SCHEDULE_MODAL, { shapeId, modalSize: getModalSizePref() });
   }, [send]);
 
+  /**
+   * Send an OPEN_SETTINGS_MODAL message to open the shared Settings screen
+   * as a real Lucid modal over the whole application. Handled by
+   * modelRootHandler.ts on the host side, same as the other OPEN_*_MODAL
+   * senders -- but UNLIKE openPatternModal/openScheduleModal, Settings is
+   * global: no shapeId, mirroring openStatusModal's no-id shape instead.
+   */
+  const openSettingsModal = useCallback(() => {
+    send(EnvelopeMessageType.OPEN_SETTINGS_MODAL, { modalSize: getModalSizePref() });
+  }, [send]);
+
   return {
     openStudiesModal,
     openDiagramMappingModal,
@@ -67,5 +78,6 @@ export function useSimulationRunSender() {
     autoConvertPage,
     openPatternModal,
     openScheduleModal,
+    openSettingsModal,
   };
 }

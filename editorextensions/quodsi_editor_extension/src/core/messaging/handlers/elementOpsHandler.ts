@@ -91,6 +91,11 @@ export class ElementOpsHandler {
     // does, the RESULT must come back to its own channel rather than hang for
     // the full 30s ELEMENT_UPDATE timeout on 'model'.
     if (msg.source === 'work-schedule-iframe') return 'work-schedule';
+    // The settings modal never sends ELEMENT_UPDATE -- SettingsPanel only
+    // reads/writes the viewer's localStorage view preference, never the
+    // model -- but the branch is here for the same defensive reason as
+    // 'work-schedule' above.
+    if (msg.source === 'settings-iframe') return 'settings';
     return 'model';
   }
 

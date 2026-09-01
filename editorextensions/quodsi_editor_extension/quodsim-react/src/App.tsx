@@ -6,6 +6,7 @@ import { StudioEmbedView } from "./features/embed/StudioEmbedView";
 import { PatternEditorView } from "./features/pattern/PatternEditorView";
 import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
+import { SettingsEditorView } from "./features/settings/SettingsEditorView";
 
 interface AppProps {
   panelType?: "model";
@@ -39,6 +40,16 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
       <MessageProvider initialPanelType="work-schedule">
         <div className="h-full w-full">
           <WorkScheduleEditorView />
+        </div>
+      </MessageProvider>
+    );
+  }
+
+  if (urlParams.get("view") === "settings") {
+    return (
+      <MessageProvider initialPanelType="settings">
+        <div className="h-full w-full">
+          <SettingsEditorView />
         </div>
       </MessageProvider>
     );

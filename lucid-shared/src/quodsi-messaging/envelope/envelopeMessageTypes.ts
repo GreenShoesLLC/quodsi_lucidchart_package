@@ -100,6 +100,16 @@ export enum EnvelopeMessageType {
   // elsewhere (the Resource/Activity capacity control).
   OPEN_WORK_SCHEDULE_MODAL = "OPEN_WORK_SCHEDULE_MODAL",
 
+  // Settings screen (Complexity Views, Task 11b) -- the fourth member of the
+  // same family as the three above, and wired the same way: a RoutingModal
+  // loading ?view=settings on the 'settings' channel. Unlike the three
+  // above, Settings is GLOBAL: its payload carries no id at all (no shapeId,
+  // no scheduleId) -- there is no element context, only an optional
+  // modalSize. It hosts quodsi_studio's shared SettingsPanel, which reads
+  // and writes the viewer's own view preference directly (localStorage),
+  // never the model.
+  OPEN_SETTINGS_MODAL = "OPEN_SETTINGS_MODAL",
+
   // Diagram Mapping (Phase 2B)
   ANALYZE_PAGE = "ANALYZE_PAGE",
   PAGE_ANALYSIS_RESULT = "PAGE_ANALYSIS_RESULT",

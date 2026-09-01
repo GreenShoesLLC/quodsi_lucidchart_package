@@ -24,12 +24,16 @@ import {
   // near-verbatim fork of the section at the same time -- this is the monorepo
   // original, shared with drawio/Studio/Visio.
   LeverAuthoringSection,
+  // Complexity views (Task 11a): the same hook + tell Studio's ModelEditor uses.
+  useView, ViewTell,
 } from "quodsi_studio/platforms/shared";
+import { LUCID_MODEL_TAB_SURFACE } from "./viewSurfaceMaps";
 import { ArrivalsTab } from "./ArrivalsTab";
 import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
@@ -124,6 +128,28 @@ const TAB_CONFIG = [
     tooltip: "View comprehensive model validation results and resolve any issues"
   },
 ];
+
+// Compile-time proof that the map covers exactly this editor's real tab ids,
+// EXCLUDING "validation" -- a diagnostics tab with no equivalent in Studio's
+// Model editor and no surface id in the catalog, so it is deliberately never
+// gated by view. A tab added to TAB_CONFIG without a line in
+// LUCID_MODEL_TAB_SURFACE (validation aside) fails here, naming it.
+type _TabsAreMapped = [
+  Exclude<Exclude<(typeof TAB_CONFIG)[number]["id"], "validation">, keyof typeof LUCID_MODEL_TAB_SURFACE>
+] extends [never] ? true : never;
+const _tabsAreMapped: _TabsAreMapped = true;
+void _tabsAreMapped;
+
+// The single place "validation" is excluded from the surface-gated tab set.
+// A type predicate rather than an `as` cast, so `LUCID_MODEL_TAB_SURFACE[t.id]`
+// stays a real index lookup below -- an id this predicate lets through that
+// isn't actually a key of the map is still a compile error, same as
+// ActivityEditor/GeneratorEditor's un-cast lookups.
+function hasMappedSurface(
+  t: (typeof TAB_CONFIG)[number]
+): t is (typeof TAB_CONFIG)[number] & { id: keyof typeof LUCID_MODEL_TAB_SURFACE } {
+  return t.id !== "validation";
+}
 
 /**
  * Default random seed value used when no seed is specified.
@@ -223,9 +249,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // Use props if provided, otherwise fall back to local state (backward compatible)
   const activeTab = activeTabProp ?? localActiveTab;
   const setActiveTab = onTabChangeProp ?? setLocalActiveTab;
+  const { visible } = useView();
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const { updateResourceRequirements } = useModelOpsSender();
+  // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
+  const { openSettingsModal } = useSimulationRunSender();
   const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements });
 
   // Direct form state management
@@ -441,6 +470,27 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     eligibleLeverProperties(ScenarioObjectType.MODEL)
   );
 
+  // Complexity views (Task 11a): a tab whose surface the current view doesn't
+  // show is dropped from the strip. "validation" has no surface -- it is
+  // diagnostics, not authoring complexity -- so it always passes through.
+  // Falls back to "basic", always visible (model.tab.basic is the catalog's
+  // floor), when the active tab (local OR host-controlled via activeTabProp)
+  // is view-hidden.
+  const tabs = TAB_CONFIG.filter(
+    (t) => !hasMappedSurface(t) || visible.has(LUCID_MODEL_TAB_SURFACE[t.id])
+  );
+  const activeOrFallback: EditorTab = tabs.some((t) => t.id === activeTab) ? activeTab : "basic";
+
+  // The tell only names surfaces this editor can actually back with live
+  // usage data. Arrivals and Schedules are deliberately left out: Lucid
+  // fetches the model root lazily inside ArrivalsTab/SchedulesTab, and
+  // lifting that read up here just to power a notice would change fetch
+  // behaviour in a repo that ships by manual package upload. States stays
+  // in, since `states` is already a prop this component holds.
+  const tellSurfaces = TAB_CONFIG.filter(hasMappedSurface)
+    .filter((t) => t.id !== "arrivals" && t.id !== "schedules")
+    .map((t) => LUCID_MODEL_TAB_SURFACE[t.id]);
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -449,7 +499,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     <div className="flex flex-col bg-white">
       <div className="border-b bg-gray-50">
         <div className="flex">
-          {TAB_CONFIG.map((tab) => {
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -466,7 +516,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                 // landed), instead of a fixed px-3 per tab that overflowed the
                 // 300px dock and forced a horizontal scrollbar.
                 className={`relative flex-1 flex justify-center px-1 py-2 border-b-2 ${
-                  activeTab === tab.id
+                  activeOrFallback === tab.id
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
@@ -487,7 +537,18 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
         </div>
       </div>
 
-      {activeTab === "basic" && (
+      <ViewTell
+        surfaces={tellSurfaces}
+        // Model-level predicates in @quodsi/shared read `ctx.model`, not
+        // `ctx.element` (see usage.ts's `modelHasStates`) -- `localModelDraft`
+        // is a `Model`, not a `ModelDefinition`, so it cannot stand in for
+        // `model` wholesale either. `states` is the one piece of the real
+        // model-definition shape this component already holds.
+        ctx={{ model: { states } }}
+        onOpenSettings={openSettingsModal}
+      />
+
+      {activeOrFallback === "basic" && (
         <div className="w-full">
           <div className="space-y-2">
               {/* Model Name - Always Visible WITH LABEL */}
@@ -774,7 +835,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
               </div>
           </div>
       )}
-      {activeTab === "states" && (
+      {activeOrFallback === "states" && (
         <StatesEditor
             states={states}
             onStatesChange={onStatesChange}
@@ -782,19 +843,19 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             referenceData={referenceData}
           />
       )}
-      {activeTab === "entities" && (
+      {activeOrFallback === "entities" && (
         <EntitiesEditor
             entities={entities}
             onEntitiesChange={onEntitiesChange}
           />
       )}
-      {activeTab === "resources" && <ResourcesTab />}
-      {activeTab === "arrivals" && <ArrivalsTab />}
-      {activeTab === "schedules" && <SchedulesTab />}
-      {activeTab === "requirements" && (
+      {activeOrFallback === "resources" && <ResourcesTab />}
+      {activeOrFallback === "arrivals" && <ArrivalsTab />}
+      {activeOrFallback === "schedules" && <SchedulesTab />}
+      {activeOrFallback === "requirements" && (
         <ResourceRequirementsEditor accessor={accessor} referenceCleanup="host" />
       )}
-      {activeTab === "levers" && (
+      {activeOrFallback === "levers" && (
         <div className="space-y-2 p-2">
           <LeverAuthoringSection
             variant="flat"
@@ -808,7 +869,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
           />
         </div>
       )}
-      {activeTab === "validation" && (
+      {activeOrFallback === "validation" && (
         <ValidationDashboard
           validationState={validationState || null}
           onGoToModelSettings={() => setActiveTab("basic")}

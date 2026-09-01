@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity, Trash2 } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity, Trash2, Settings } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -33,6 +33,17 @@ interface PanelHeaderProps {
   referenceData?: EditorReferenceData;
   onViewModelJson?: () => void;
   onOpenStatus?: () => void;
+  /**
+   * Complexity Views (Task 11b) -- the DELIBERATE entry point to Settings,
+   * as opposed to ViewTell's TEACHING entry point (see SettingsPanel.tsx's
+   * own header comment for that pairing). Without this, a Basic-view Lucid
+   * user whose model uses nothing hidden has no reachable control to change
+   * their view at all: ViewTell only renders when a hidden surface is
+   * actually in use. Lucid has no account-menu gear (its AccountStrip is
+   * Lucid's own, unlike Studio's TopBar) -- this "..." panel menu is the
+   * next best home.
+   */
+  onOpenSettings?: () => void;
 }
 
 /**
@@ -50,6 +61,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   referenceData,
   onViewModelJson,
   onOpenStatus,
+  onOpenSettings,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
@@ -209,6 +221,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           >
             <Activity className="w-3 h-3 text-gray-500" />
             Status
+          </button>
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              onOpenSettings?.();
+            }}
+            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+          >
+            <Settings className="w-3 h-3 text-gray-500" />
+            Settings
           </button>
           <button
             onClick={() => {

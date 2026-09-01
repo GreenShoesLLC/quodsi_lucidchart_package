@@ -23,7 +23,7 @@ const logger = getLogger('InitializationEffects');
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
   dispatch: React.Dispatch<any>,
-  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule'
+  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings'
 ) {
   useEffect(() => {
     if (!state.app.initialized) {
@@ -32,7 +32,7 @@ export function usePanelTypeDetectionEffect(
       const panelParam = urlParams.get("panel");
       const viewParam = urlParams.get("view");
 
-      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | undefined = initialPanelType;
+      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | "settings" | undefined = initialPanelType;
 
       if (viewParam === "pattern") {
         detectedType = "pattern";
@@ -46,6 +46,10 @@ export function usePanelTypeDetectionEffect(
         // without the prop. The panel type it settles on IS the REACT_APP_READY
         // `panel` value, i.e. which channel the host marks ready.
         detectedType = "work-schedule";
+      } else if (viewParam === "settings") {
+        // The Settings modal (Complexity Views, Task 11b) -- same reasoning
+        // as work-schedule above.
+        detectedType = "settings";
       } else if (viewParam === "studio-embed") {
         detectedType = "studio-embed";
       } else if (viewParam === "results") {
