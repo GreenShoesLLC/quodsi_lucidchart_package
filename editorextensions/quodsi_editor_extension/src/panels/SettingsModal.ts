@@ -17,9 +17,19 @@ import { RoutingModal } from './RoutingModal';
  *
  * TITLED -- same as PatternEditorModal/ScheduleEditorModal, and for the same
  * reason: Lucid's own chrome gives this modal a native title bar whose X
- * closes it with no code of ours. SettingsPanel draws its own header (with
- * its own X, wired to CLOSE_MODAL via SettingsEditorView) as a second exit,
- * same doubled-chrome tradeoff those two modals accept.
+ * closes it with no code of ours. UNLIKE those two, SettingsEditorView does
+ * NOT also wire SettingsPanel's own close button to CLOSE_MODAL. Review
+ * finding: passing `onClose` doubled the close affordance (Lucid's native X
+ * plus SettingsPanel's own), and unlike ScheduleModal -- which takes a
+ * `hideHeader` prop ScheduleEditorView sets specifically to collapse this
+ * redundancy -- SettingsPanel has no such prop. The correct equivalent here
+ * is simply omitting `onClose`: SettingsPanel's own X only renders when
+ * `onClose` is supplied (`{onClose && (...)}`), so leaving it undefined
+ * removes the second X and the native title bar becomes the only way out.
+ * SettingsPanel's "Settings" `<h2>` heading itself is unconditional (it has
+ * no `hideHeader`-equivalent to suppress it), so the title text still
+ * appears twice -- a smaller, purely cosmetic residual this modal accepts,
+ * versus the doubled INTERACTIVE close affordance the previous version had.
  */
 export class SettingsModal extends RoutingModal {
   /**

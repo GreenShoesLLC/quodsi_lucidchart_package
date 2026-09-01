@@ -9,25 +9,30 @@
 // header comment) -- there is no model, no shapeId, no accessor, and
 // therefore nothing to buffer or flush. This view is correspondingly the
 // thinnest of the four *EditorView siblings: it renders SettingsPanel and
-// wires its own close button to CLOSE_MODAL, exactly as StudioEmbedView's
-// close button and ScheduleEditorView's `onClose` do for a chromeless modal
-// with no native title-bar X (Lucid's real title bar here supplies a second
-// exit; SettingsPanel's own X stays wired for the same doubled-chrome reason
-// ScheduleEditorModal accepts).
+// nothing else.
+//
+// NO `onClose` (review round 1, Minor). SettingsModal.ts gives this modal a
+// real Lucid title bar with a native X -- there is already a way out.
+// Passing `onClose` here made SettingsPanel draw its OWN close button too
+// (`{onClose && (...)}` in its render), doubling the interactive close
+// affordance for no reason: unlike ScheduleModal/ScheduleEditorView, which
+// take a `hideHeader` prop specifically to collapse this redundancy,
+// SettingsPanel has no such prop -- so the correct equivalent here is
+// simply omitting `onClose`, not wiring a second exit. (SettingsPanel's
+// "Settings" `<h2>` heading itself still renders unconditionally alongside
+// Lucid's own title bar text -- a smaller, purely cosmetic text repeat this
+// view accepts, distinct from the doubled INTERACTIVE close button the
+// previous version had.)
 //
 // `extraSections` is deliberately omitted -- that slot is Studio's theme
 // control, and Lucid has no theme-preference machinery to hand it (see
 // SettingsPanel's own header comment and this task's brief).
-import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { SettingsPanel } from 'quodsi_studio/platforms/shared'
-import { useMessaging } from '../../messaging/MessageProvider'
 
 export function SettingsEditorView() {
-  const { sendMessage } = useMessaging()
-
   return (
     <div className="h-full w-full bg-surface">
-      <SettingsPanel onClose={() => sendMessage(EnvelopeMessageType.CLOSE_MODAL)} />
+      <SettingsPanel />
     </div>
   )
 }

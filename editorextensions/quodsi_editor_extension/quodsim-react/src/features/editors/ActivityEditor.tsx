@@ -1687,6 +1687,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               sourceId={localActivityDraft.id}
               sourceType="Activity"
               accessor={accessor}
+              onOpenSettings={openSettingsModal}
             />
           )}
 

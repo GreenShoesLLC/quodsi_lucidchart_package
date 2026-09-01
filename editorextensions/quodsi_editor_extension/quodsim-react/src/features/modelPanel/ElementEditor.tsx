@@ -19,6 +19,7 @@ import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 
 const log = getLogger("ElementEditor");
 
@@ -75,6 +76,9 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   // shapeWriters are registered (compare ActivityEditor/GeneratorEditor,
   // which register one for the shape they already own a draft of).
   const { updateResourceRequirements, updateElement } = useModelOpsSender();
+  // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorRoutingView
+  // ViewTell mount below.
+  const { openSettingsModal } = useSimulationRunSender();
   const connectorAccessor = useReferenceDataAccessor(referenceData, {
     updateResourceRequirements,
     updateElement,
@@ -224,6 +228,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             sourceType={isActivitySource ? 'Activity' : 'Generator'}
             selectedConnectorId={safeElementData.id}
             accessor={connectorAccessor}
+            onOpenSettings={openSettingsModal}
           />
         );
       }

@@ -4,24 +4,23 @@
 // own header comment) -- no accessor, no model, nothing to buffer or flush.
 // So unlike ScheduleEditorView.test.tsx/PatternEditorView.test.tsx, which
 // stub the heavy shared modal to isolate accessor wiring, this test renders
-// the REAL SettingsPanel: there is no accessor wiring to isolate FROM, and
-// exercising the real component is what proves the close button's onClose
-// actually reaches CLOSE_MODAL through this view.
+// the REAL SettingsPanel: there is no accessor wiring to isolate FROM.
+//
+// Review round 1 (Minor): this view passes NO `onClose` to SettingsPanel --
+// Lucid's own modal chrome (SettingsModal.ts's `title: 'Settings'`) already
+// supplies a native title-bar X, so wiring a second one here would double
+// the interactive close affordance (SettingsPanel only draws its own X when
+// `onClose` is supplied). The test below pins that absence, replacing the
+// prior version's "wires the close button to CLOSE_MODAL" assertion, which
+// tested exactly the redundancy this fix removes.
 
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { EnvelopeMessageType } from '@quodsi/lucid-shared'
-
-const mockSendMessage = vi.fn()
-vi.mock('../../../messaging/MessageProvider', () => ({
-  useMessaging: () => ({ sendMessage: mockSendMessage }),
-}))
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach } from 'vitest'
 
 import { SettingsEditorView } from '../SettingsEditorView'
 
 describe('SettingsEditorView', () => {
   beforeEach(() => {
-    mockSendMessage.mockClear()
     localStorage.clear()
   })
 
@@ -34,9 +33,8 @@ describe('SettingsEditorView', () => {
     expect(screen.getByText(/^View$/i)).toBeInTheDocument()
   })
 
-  it("wires SettingsPanel's close button to CLOSE_MODAL -- this modal has no other native way out for a chromeless close", () => {
+  it('does not draw its own close button -- Lucid\'s native modal title bar is the only way out', () => {
     render(<SettingsEditorView />)
-    fireEvent.click(screen.getByRole('button', { name: /close settings/i }))
-    expect(mockSendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+    expect(screen.queryByRole('button', { name: /close settings/i })).not.toBeInTheDocument()
   })
 })

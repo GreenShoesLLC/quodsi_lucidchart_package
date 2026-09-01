@@ -1409,6 +1409,7 @@ const GeneratorEditor: React.FC<Props> = ({
             sourceId={localGeneratorDraft.id}
             sourceType="Generator"
             accessor={routingAccessor}
+            onOpenSettings={openSettingsModal}
           />
         )}
 

@@ -56,7 +56,7 @@ export const ModelPanel: React.FC = () => {
   const { selection } = useMessaging();
 
   // Get simulation run senders (for diagram mapping modal and auto-convert)
-  const { openDiagramMappingModal, openStatusModal, autoConvertPage } = useSimulationRunSender();
+  const { openDiagramMappingModal, openStatusModal, openSettingsModal, autoConvertPage } = useSimulationRunSender();
 
   // Tab state management for ModelEditor
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
@@ -326,6 +326,7 @@ export const ModelPanel: React.FC = () => {
         referenceData={referenceData}
         onViewModelJson={handleViewModelJson}
         onOpenStatus={() => openStatusModal()}
+        onOpenSettings={() => openSettingsModal()}
       />}
 
       <div className="flex-1 bg-gray-50 overflow-auto">
