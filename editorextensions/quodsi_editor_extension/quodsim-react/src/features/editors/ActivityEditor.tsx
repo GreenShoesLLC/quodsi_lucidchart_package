@@ -75,6 +75,7 @@ import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccesso
 import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
@@ -576,6 +577,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // activity selection.
   const { accessor: modelRootAccessor } = useModelRootSource();
   const { sendMessage } = useMessaging();
+  // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
+  const { openSettingsModal } = useSimulationRunSender();
 
   const accessor = useReferenceDataAccessor(
     referenceData,
@@ -1116,6 +1119,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         <ViewTell
           surfaces={TAB_CONFIG.map((t) => LUCID_ACTIVITY_TAB_SURFACE[t.id])}
           ctx={{ element: localActivityDraft }}
+          onOpenSettings={openSettingsModal}
         />
 
         {/* Tab Content */}

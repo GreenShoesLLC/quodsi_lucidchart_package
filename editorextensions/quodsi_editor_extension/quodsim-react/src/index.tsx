@@ -44,8 +44,19 @@ import "./index_new.css";
 // Relative, not via the exports map: quodsi_studio's package.json exports
 // does not publish theme.css as a subpath.
 import '../../../../../quodsi_studio/src/platforms/shared/theme.css';
+import { applyViewUrlOverride } from 'quodsi_studio/platforms/shared';
 
 const log = getLogger('index');
+
+// Complexity Views (Task 11b): one-time ?qview=basic|intermediate|advanced
+// bootstrap, same call quodsi_studio's own main.tsx and the miro/visio
+// platform entries make -- see applyViewUrlOverride's own header. MUST run
+// before the first render: it writes localStorage synchronously and strips
+// the param, and useView's initial state (useState(getView)) reads that
+// same localStorage key on mount. This single entry point serves every
+// ?view= route (model panel AND the pattern/schedule/work-schedule/settings
+// modals below), so calling it once here covers all of them.
+applyViewUrlOverride();
 
 // Initialize the messaging system
 const cleanup = initializeMessaging({

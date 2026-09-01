@@ -33,6 +33,7 @@ import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
@@ -252,6 +253,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const { updateResourceRequirements } = useModelOpsSender();
+  // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
+  const { openSettingsModal } = useSimulationRunSender();
   const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements });
 
   // Direct form state management
@@ -542,6 +545,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
         // `model` wholesale either. `states` is the one piece of the real
         // model-definition shape this component already holds.
         ctx={{ model: { states } }}
+        onOpenSettings={openSettingsModal}
       />
 
       {activeOrFallback === "basic" && (

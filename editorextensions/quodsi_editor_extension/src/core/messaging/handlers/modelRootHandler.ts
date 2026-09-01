@@ -6,6 +6,7 @@ import { PanelRole } from '../types';
 import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
 import { WorkScheduleEditorModal } from '../../../panels/WorkScheduleEditorModal';
+import { SettingsModal } from '../../../panels/SettingsModal';
 import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('ModelRootHandler');
@@ -40,6 +41,14 @@ export class ModelRootHandler {
    */
   private static openWorkScheduleModal: WorkScheduleEditorModal | null = null;
 
+  /**
+   * The settings modal currently open, if any. Same guard shape as the
+   * three above, and a SEPARATE holder on purpose -- see
+   * openWorkScheduleModal's comment for why: these are separate singleton
+   * channels, so one being open must not block another.
+   */
+  private static openSettingsModal: SettingsModal | null = null;
+
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.MODEL_ROOT_REQUEST:
@@ -62,6 +71,10 @@ export class ModelRootHandler {
 
       case EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL:
         ModelRootHandler.handleOpenWorkScheduleModal(msg);
+        return true;
+
+      case EnvelopeMessageType.OPEN_SETTINGS_MODAL:
+        ModelRootHandler.handleOpenSettingsModal(msg);
         return true;
 
       default:
@@ -192,6 +205,40 @@ export class ModelRootHandler {
   }
 
   /**
+   * Handle OPEN_SETTINGS_MODAL: open the shared Settings screen in a real
+   * Lucid modal over the whole application. Mirrors handleOpenScheduleModal
+   * above -- see handleOpenPatternModal's comment for why this lives here
+   * and why the guard exists -- with 'settings' standing in for 'schedule'.
+   *
+   * UNLIKE the pattern/schedule/work-schedule modals, Settings is GLOBAL: it
+   * has no shapeId and no element context, so there is no "missing id"
+   * case to log-and-return on -- an absent `data` (or an absent
+   * `modalSize` within it) is not a malformed message, just the default.
+   */
+  private static handleOpenSettingsModal(msg: EnvelopeBase): void {
+    const data = (msg.data ?? {}) as { modalSize?: ModalSize };
+
+    // SINGLETON GUARD -- see handleOpenPatternModal's comment for the full
+    // rationale (same hazard, same fix: hold the open modal, refuse a
+    // second open, release on frameClosed, identity-checked).
+    if (ModelRootHandler.openSettingsModal) {
+      log.debug('OPEN_SETTINGS_MODAL: a settings modal is already open; ignoring');
+      return;
+    }
+
+    const modal = new SettingsModal(ModelManager.getClient(), {
+      modalSize: data.modalSize,
+      onClosed: () => {
+        if (ModelRootHandler.openSettingsModal === modal) {
+          ModelRootHandler.openSettingsModal = null;
+        }
+      },
+    });
+    ModelRootHandler.openSettingsModal = modal;
+    modal.show();
+  }
+
+  /**
    * Determine which channel to send a response to based on the message
    * source. Mirrors SimulationRunHandler.getResponseChannel /
    * DiagramMappingRelayHandler.getResponseChannel: a message that
@@ -206,6 +253,7 @@ export class ModelRootHandler {
     if (msg.source === 'pattern-iframe') return 'pattern';
     if (msg.source === 'schedule-iframe') return 'schedule';
     if (msg.source === 'work-schedule-iframe') return 'work-schedule';
+    if (msg.source === 'settings-iframe') return 'settings';
     return 'model';
   }
 

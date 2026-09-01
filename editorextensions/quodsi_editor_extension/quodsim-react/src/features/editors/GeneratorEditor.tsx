@@ -476,8 +476,9 @@ const GeneratorEditor: React.FC<Props> = ({
   const { selectElement, updateResourceRequirements, updateElement } = useModelOpsSender();
 
   // Get the senders for OPEN_PATTERN_MODAL / OPEN_SCHEDULE_MODAL (host-hosted
-  // arrival-pattern / arrival-schedule editors).
-  const { openPatternModal, openScheduleModal } = useSimulationRunSender();
+  // arrival-pattern / arrival-schedule editors) and OPEN_SETTINGS_MODAL (the
+  // shared Settings screen ViewTell's switch affordance opens below).
+  const { openPatternModal, openScheduleModal, openSettingsModal } = useSimulationRunSender();
 
   // Task 5 (routing tab): a SEPARATE accessor from `accessor` above --
   // useModelRootSource's projects generators/arrivalPatterns/model settings
@@ -1037,6 +1038,7 @@ const GeneratorEditor: React.FC<Props> = ({
       <ViewTell
         surfaces={TAB_CONFIG.map((t) => LUCID_GENERATOR_TAB_SURFACE[t.id])}
         ctx={{ element: localGeneratorDraft }}
+        onOpenSettings={openSettingsModal}
       />
 
       {/* Tab Content */}

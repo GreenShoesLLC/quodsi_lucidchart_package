@@ -21,6 +21,7 @@ import {
   useView,
   ViewTell,
   SettingsPanel,
+  applyViewUrlOverride,
 } from 'quodsi_studio/platforms/shared'
 
 describe('shared panel import', () => {
@@ -55,12 +56,16 @@ describe('shared panel import', () => {
     expect(typeof CapacitySourcePicker).toBe('function')
     expect(typeof workScheduleUsage).toBe('function')
     // Complexity views (Task 11a): useView/ViewTell are mounted directly in
-    // Lucid's own editors; SettingsPanel reaches Lucid indirectly today (no
-    // host modal in this half -- ViewTell falls back to switching the view
-    // directly) but is named here so its export is guarded the same way.
+    // Lucid's own editors. Task 11b gave SettingsPanel a real host modal
+    // (SettingsModal -> ?view=settings -> SettingsEditorView) and threaded
+    // applyViewUrlOverride's one-time ?qview= bootstrap into the react
+    // entry point (index.tsx) -- both named here so a shared export that
+    // stops resolving across this seam fails in Lucid's own suite, same as
+    // every other shared panel.
     expect(typeof useView).toBe('function')
     expect(typeof ViewTell).toBe('function')
     expect(typeof SettingsPanel).toBe('function')
+    expect(typeof applyViewUrlOverride).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {

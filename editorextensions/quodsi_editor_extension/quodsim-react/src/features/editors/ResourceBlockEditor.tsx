@@ -47,6 +47,7 @@ import { ResourceEditor, ResourceLinkPicker } from 'quodsi_studio/platforms/shar
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { useModelRootSource } from '../../adapters/useModelRootSource'
 import { useMessaging } from '../../messaging/MessageProvider'
+import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 
 /**
  * The model-root projection's resource row. `shapeId` / `laneRef` are
@@ -69,6 +70,10 @@ interface Props {
 export const ResourceBlockEditor: React.FC<Props> = ({ blockId, resourceId }) => {
   const { accessor } = useModelRootSource()
   const { sendMessage } = useMessaging()
+  // OPEN_SETTINGS_MODAL sender for the shared ResourceEditor's own ViewTell
+  // mount (its switch affordance) -- see that component's `onOpenSettings`
+  // prop.
+  const { openSettingsModal } = useSimulationRunSender()
   // Same subscription idiom every shared panel uses, so this re-renders the
   // moment a MODEL_ROOT_SNAPSHOT lands -- which is what swaps the picker for
   // the editor after a link is written (saveShape re-requests the projection
@@ -88,6 +93,7 @@ export const ResourceBlockEditor: React.FC<Props> = ({ blockId, resourceId }) =>
         onEditWorkSchedule={(id) =>
           sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, { scheduleId: id })
         }
+        onOpenSettings={openSettingsModal}
       />
     )
   }

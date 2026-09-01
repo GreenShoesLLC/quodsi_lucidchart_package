@@ -29,6 +29,9 @@ export const MESSAGE_SOURCES = [
   // its messages dropped as "Invalid message format", and the modal hangs on
   // its loading state forever because its REACT_APP_READY never lands.
   'work-schedule-iframe',
+  // Settings screen (Complexity Views, Task 11b). Same RUNTIME-list
+  // requirement as work-schedule-iframe above.
+  'settings-iframe',
 ] as const;
 
 /**
