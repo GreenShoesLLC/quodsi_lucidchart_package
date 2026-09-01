@@ -13,10 +13,17 @@
 // ELEMENT_UPDATE sender. Task 7 (connector-move-time-actions): this is the
 // seam pin that the section's edits actually reach the host, not just that
 // ConnectorLucid can round-trip an actions array it's handed directly.
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { ConnectorRoutingView } from 'quodsi_studio/platforms/shared'
+import { ConnectorRoutingView, setView } from 'quodsi_studio/platforms/shared'
 import { createReferenceDataAccessor } from '../useReferenceDataAccessor'
+
+// This seam predates Complexity Views and exercises ConnectorMoveTimeSection,
+// which is entirely ViewGated on connector.field.moveTime ('intermediate' in
+// the catalog). Pin the view for this test rather than weaken the assertion --
+// view-gating itself is covered by Studio's own viewFieldGating.test.tsx.
+beforeEach(() => setView('intermediate'))
+afterEach(() => setView('basic'))
 
 const referenceData = {
   resources: [],

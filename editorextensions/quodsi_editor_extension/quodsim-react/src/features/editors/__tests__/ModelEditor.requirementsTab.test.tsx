@@ -60,7 +60,13 @@ describe("ModelEditor — Requirements tab uses the shared editor", () => {
     expect(screen.getByRole("button", { name: "Add New" })).toBeInTheDocument();
     const rows = screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent);
     expect(rows).toEqual(["Triage team", "Doctor"]);
-    expect(screen.getByText("1 step")).toBeInTheDocument();
+    // NOT a Complexity Views issue -- confirmed empirically (setView('advanced')
+    // alone does not fix this) and by history: quodsi_studio commit 0dfeb3ac
+    // ("requirement usage copy says \"actions\", not \"steps\"") renamed this
+    // badge's wording on main well before this branch existed; this fixture
+    // was never updated for that rename. Correcting the stale wording, not
+    // weakening the assertion -- the count and its meaning are unchanged.
+    expect(screen.getByText("1 action")).toBeInTheDocument();
     expect(screen.getByText("Resource")).toBeInTheDocument(); // the renamed pill
     expect(screen.queryByText(/Templates/)).not.toBeInTheDocument(); // Lucid's tab is gone
     await user.click(screen.getByRole("button", { name: "Add New" }));

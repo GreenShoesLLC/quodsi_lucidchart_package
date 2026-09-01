@@ -139,6 +139,17 @@ type _TabsAreMapped = [
 const _tabsAreMapped: _TabsAreMapped = true;
 void _tabsAreMapped;
 
+// The single place "validation" is excluded from the surface-gated tab set.
+// A type predicate rather than an `as` cast, so `LUCID_MODEL_TAB_SURFACE[t.id]`
+// stays a real index lookup below -- an id this predicate lets through that
+// isn't actually a key of the map is still a compile error, same as
+// ActivityEditor/GeneratorEditor's un-cast lookups.
+function hasMappedSurface(
+  t: (typeof TAB_CONFIG)[number]
+): t is (typeof TAB_CONFIG)[number] & { id: keyof typeof LUCID_MODEL_TAB_SURFACE } {
+  return t.id !== "validation";
+}
+
 /**
  * Default random seed value used when no seed is specified.
  * This provides reproducible simulation results for testing and debugging.
@@ -463,9 +474,19 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // floor), when the active tab (local OR host-controlled via activeTabProp)
   // is view-hidden.
   const tabs = TAB_CONFIG.filter(
-    (t) => t.id === "validation" || visible.has(LUCID_MODEL_TAB_SURFACE[t.id as keyof typeof LUCID_MODEL_TAB_SURFACE])
+    (t) => !hasMappedSurface(t) || visible.has(LUCID_MODEL_TAB_SURFACE[t.id])
   );
   const activeOrFallback: EditorTab = tabs.some((t) => t.id === activeTab) ? activeTab : "basic";
+
+  // The tell only names surfaces this editor can actually back with live
+  // usage data. Arrivals and Schedules are deliberately left out: Lucid
+  // fetches the model root lazily inside ArrivalsTab/SchedulesTab, and
+  // lifting that read up here just to power a notice would change fetch
+  // behaviour in a repo that ships by manual package upload. States stays
+  // in, since `states` is already a prop this component holds.
+  const tellSurfaces = TAB_CONFIG.filter(hasMappedSurface)
+    .filter((t) => t.id !== "arrivals" && t.id !== "schedules")
+    .map((t) => LUCID_MODEL_TAB_SURFACE[t.id]);
 
   // ============================================================================
   // RENDER
@@ -514,10 +535,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       </div>
 
       <ViewTell
-        surfaces={TAB_CONFIG.filter((t) => t.id !== "validation").map(
-          (t) => LUCID_MODEL_TAB_SURFACE[t.id as keyof typeof LUCID_MODEL_TAB_SURFACE]
-        )}
-        ctx={{ element: localModelDraft }}
+        surfaces={tellSurfaces}
+        // Model-level predicates in @quodsi/shared read `ctx.model`, not
+        // `ctx.element` (see usage.ts's `modelHasStates`) -- `localModelDraft`
+        // is a `Model`, not a `ModelDefinition`, so it cannot stand in for
+        // `model` wholesale either. `states` is the one piece of the real
+        // model-definition shape this component already holds.
+        ctx={{ model: { states } }}
       />
 
       {activeOrFallback === "basic" && (

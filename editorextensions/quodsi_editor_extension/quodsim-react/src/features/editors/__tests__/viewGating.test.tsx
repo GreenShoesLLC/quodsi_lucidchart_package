@@ -1,6 +1,6 @@
 // Complexity Views, Lucid half (Task 11a).
 //
-// Proves two things:
+// Proves three things:
 //   1. Lucid's tab-id -> surface-id maps point at the SAME @quodsi/shared
 //      catalog Studio uses, including the ids that genuinely differ from
 //      Studio's naming (ActivityEditor's "connectors" tab, GeneratorEditor's
@@ -12,11 +12,19 @@
 //   2. The gating actually bites in a rendered editor: a tab whose surface is
 //      above the current view is absent from the tab strip, and reappears
 //      once the view is raised.
+//   3. THE TELL actually renders when a view-hidden surface is genuinely in
+//      use -- review round 1 caught that ModelEditor's ViewTell mount passed
+//      ctx={{ element: localModelDraft }} while every model-level predicate
+//      in @quodsi/shared reads ctx.model, so surfacesInUse was always empty
+//      and the tell was structurally dead code no assertion here would have
+//      caught. These tests render an element/model that actually uses a
+//      hidden surface and assert role="note" appears.
 
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { resolveVisibleSurfaces } from "@quodsi/shared";
+import { State, ComponentType, StateType, StateListManager } from "@quodsi/lucid-shared";
 import ActivityEditor from "../ActivityEditor";
 import GeneratorEditor from "../GeneratorEditor";
 import ModelEditor from "../ModelEditor";
@@ -151,6 +159,73 @@ describe("GeneratorEditor — view gates the Event Modifications tab", () => {
     expect(
       screen.getByRole("button", { name: /Set initial state values/i })
     ).toBeInTheDocument();
+  });
+});
+
+describe("The tell: never silently hide live behaviour", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("ActivityEditor: shows the tell when Failure is configured but hidden in Basic", () => {
+    setView("basic");
+    render(
+      <ActivityEditor
+        {...activityProps}
+        activity={
+          {
+            id: "a1",
+            name: "Triage",
+            capacity: 1,
+            actions: [],
+            levers: [],
+            failureProperties: { enabled: true },
+          } as any
+        }
+      />
+    );
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent(/failures/i);
+    expect(note).toHaveTextContent(/hidden in Basic/i);
+  });
+
+  it("ActivityEditor: shows no tell when Failure is not configured", () => {
+    setView("basic");
+    render(<ActivityEditor {...activityProps} />);
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("GeneratorEditor: shows the tell when initial states are configured but hidden in Basic", () => {
+    setView("basic");
+    render(
+      <GeneratorEditor
+        {...generatorProps}
+        generator={
+          {
+            id: "g1",
+            name: "Arrivals",
+            mode: "frequency",
+            levers: [],
+            initialStates: [{ stateId: "s1", value: 1 }],
+          } as any
+        }
+      />
+    );
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent(/initial states/i);
+  });
+
+  it("ModelEditor: shows the tell when the model has states but States is hidden in Basic", () => {
+    setView("basic");
+    const states = new StateListManager();
+    states.add(new State("unit_price_MODEL_1", "unit_price", ComponentType.MODEL, StateType.NUMBER, 0));
+    render(<ModelEditor {...modelProps} states={states} />);
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent(/states/i);
+  });
+
+  it("ModelEditor: shows no tell when the model has no states", () => {
+    setView("basic");
+    render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 });
 
