@@ -328,3 +328,21 @@ describe("ActivityEditor draft helpers — workScheduleId", () => {
     expect(afterUnrelatedEdit.workScheduleId).toBeUndefined();
   });
 });
+
+// Final-review fix, 2026-09-01: the tab-bar ViewTell above (mounted at
+// ActivityEditor.tsx's tab strip) only ever listed TAB_CONFIG's own tab
+// surfaces, so a Basic-view Activity linked to a work schedule showed
+// "Follow a schedule" checked-and-disabled (this file's first test, under
+// 'advanced') with nothing explaining why in Basic -- the mirror of the
+// Studio-side gap ACTIVITY_EXTRA_SURFACES fixed. Widening the tell's surface
+// list with LUCID_ACTIVITY_EXTRA_SURFACES is what this proves.
+describe("ActivityEditor Basic — capacity-schedule tell", () => {
+  it("names the capacity-schedule concept when a Basic activity follows a work schedule", () => {
+    setView("basic");
+    render(<ActivityEditor activity={linked} onSave={vi.fn()} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT]));
+
+    const tell = screen.getByRole("note");
+    expect(tell).toHaveTextContent(/capacity schedule/i);
+  });
+});

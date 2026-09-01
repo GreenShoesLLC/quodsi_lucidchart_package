@@ -68,3 +68,14 @@ export const LUCID_MODEL_TAB_SURFACE: Record<ModelTabId, SurfaceId> = {
   schedules: 'model.tab.schedules',
   levers: 'model.tab.levers',
 }
+
+// Task 13-equivalent, ported from quodsi_studio's ACTIVITY_EXTRA_SURFACES
+// (see that file's header): ActivityEditor mounts the same shared
+// CapacitySourcePicker Resource's own editor does, so it needs the same two
+// option-level surfaces widening its ViewTell -- otherwise a Basic Activity
+// following a work schedule shows "Follow a schedule" checked-and-disabled
+// with no tell to explain it. Final-review fix, 2026-09-01.
+export const LUCID_ACTIVITY_EXTRA_SURFACES: SurfaceId[] = [
+  'resource.capacity.fixed',
+  'resource.capacity.schedule',
+]

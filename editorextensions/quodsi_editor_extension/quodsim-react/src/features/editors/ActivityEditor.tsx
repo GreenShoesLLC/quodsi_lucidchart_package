@@ -70,7 +70,7 @@ import {
   // Complexity views (Task 11a): the same hook + tell Studio's ActivityEditor uses.
   useView, ViewTell,
 } from "quodsi_studio/platforms/shared";
-import { LUCID_ACTIVITY_TAB_SURFACE } from "./viewSurfaceMaps";
+import { LUCID_ACTIVITY_TAB_SURFACE, LUCID_ACTIVITY_EXTRA_SURFACES } from "./viewSurfaceMaps";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useMessaging } from "../../messaging/MessageProvider";
@@ -1117,7 +1117,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         </div>
 
         <ViewTell
-          surfaces={TAB_CONFIG.map((t) => LUCID_ACTIVITY_TAB_SURFACE[t.id])}
+          surfaces={[
+            ...TAB_CONFIG.map((t) => LUCID_ACTIVITY_TAB_SURFACE[t.id]),
+            ...LUCID_ACTIVITY_EXTRA_SURFACES,
+          ]}
           ctx={{ element: localActivityDraft }}
           onOpenSettings={openSettingsModal}
         />
