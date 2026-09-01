@@ -14,6 +14,13 @@ import {
   WorkScheduleModal,
   CapacitySourcePicker,
   workScheduleUsage,
+  // Complexity views (Task 11a). Lucid mounts these directly in its own
+  // editors (ActivityEditor, GeneratorEditor, ModelEditor) rather than
+  // reimplementing the hook or the tell -- guard the barrel export they
+  // travel on like every other shared panel.
+  useView,
+  ViewTell,
+  SettingsPanel,
 } from 'quodsi_studio/platforms/shared'
 
 describe('shared panel import', () => {
@@ -47,6 +54,13 @@ describe('shared panel import', () => {
     expect(typeof WorkScheduleModal).toBe('function')
     expect(typeof CapacitySourcePicker).toBe('function')
     expect(typeof workScheduleUsage).toBe('function')
+    // Complexity views (Task 11a): useView/ViewTell are mounted directly in
+    // Lucid's own editors; SettingsPanel reaches Lucid indirectly today (no
+    // host modal in this half -- ViewTell falls back to switching the view
+    // directly) but is named here so its export is guarded the same way.
+    expect(typeof useView).toBe('function')
+    expect(typeof ViewTell).toBe('function')
+    expect(typeof SettingsPanel).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {

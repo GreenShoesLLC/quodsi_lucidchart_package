@@ -42,7 +42,10 @@ import {
   // originals, shared with drawio/Studio/Visio.
   LeverAuthoringSection,
   generatorHasLevers,
+  // Complexity views (Task 11a): the same hook + tell Studio's GeneratorEditor uses.
+  useView, ViewTell,
 } from "quodsi_studio/platforms/shared";
+import { LUCID_GENERATOR_TAB_SURFACE } from "./viewSurfaceMaps";
 
 const log = getLogger("GeneratorEditor");
 
@@ -140,6 +143,15 @@ const TAB_CONFIG = [
   //   tooltip: "Define custom state variables for entities created by this generator"
   // },
 ];
+
+// Compile-time proof that the map covers exactly this editor's real tab ids.
+// A tab added to TAB_CONFIG without a line in LUCID_GENERATOR_TAB_SURFACE
+// fails here, naming it.
+type _TabsAreMapped = [
+  Exclude<(typeof TAB_CONFIG)[number]["id"], keyof typeof LUCID_GENERATOR_TAB_SURFACE>
+] extends [never] ? true : never;
+const _tabsAreMapped: _TabsAreMapped = true;
+void _tabsAreMapped;
 
 
 // ============================================================================
@@ -408,6 +420,7 @@ const GeneratorEditor: React.FC<Props> = ({
    * Currently active tab in the editor.
    */
   const [activeTab, setActiveTab] = useState<GeneratorTab>("settings");
+  const { visible } = useView();
 
   /**
    * Whether advanced settings section is expanded (Frequency mode only).
@@ -967,14 +980,20 @@ const GeneratorEditor: React.FC<Props> = ({
   // GENERATOR is FREQUENCY-only or PATTERN-only, so each checkbox would author a
   // lever the engine ignores when a Study sweeps it. See `generatorHasLevers`.
   const showLeverTab = generatorHasLevers(localGeneratorDraft);
-  const tabs = TAB_CONFIG.filter((t) => t.id !== "levers" || showLeverTab);
+  // Complexity views (Task 11a) compose with the Levers mode-gate: a tab must
+  // clear BOTH to appear.
+  const tabs = TAB_CONFIG.filter(
+    (t) => visible.has(LUCID_GENERATOR_TAB_SURFACE[t.id]) && (t.id !== "levers" || showLeverTab)
+  );
   const leverCount = countActiveLevers(
     localGeneratorDraft?.levers,
     eligibleLeverProperties(ScenarioObjectType.GENERATOR)
   );
-  // Switching a generator to Schedule while its Levers tab is open would otherwise
-  // strand the active tab on a tab that no longer renders.
-  const activeOrFallback = activeTab === "levers" && !showLeverTab ? "settings" : activeTab;
+  // Switching a generator to Schedule while its Levers tab is open, or raising
+  // the view no longer showing the active tab, would otherwise strand the
+  // active tab on one that no longer renders -- fall back to "settings",
+  // which is always visible (generator.tab.basic is the catalog's floor).
+  const activeOrFallback = tabs.some((t) => t.id === activeTab) ? activeTab : "settings";
 
   return (
     <div className="space-y-2">
@@ -1014,6 +1033,11 @@ const GeneratorEditor: React.FC<Props> = ({
           })}
         </div>
       </div>
+
+      <ViewTell
+        surfaces={TAB_CONFIG.map((t) => LUCID_GENERATOR_TAB_SURFACE[t.id])}
+        ctx={{ element: localGeneratorDraft }}
+      />
 
       {/* Tab Content */}
       <div className="space-y-2 max-h-[calc(100vh-150px)] overflow-y-auto pr-1">

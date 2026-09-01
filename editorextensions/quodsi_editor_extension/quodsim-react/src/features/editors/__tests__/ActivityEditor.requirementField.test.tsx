@@ -3,6 +3,14 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ActivityEditor from "../ActivityEditor";
 import { StateListManager } from "@quodsi/lucid-shared";
+import { setView } from "quodsi_studio/platforms/shared";
+
+// This file predates Complexity Views and exercises the Failure tab, which
+// Task 11a's catalog puts at 'advanced'. Pin the view for every test here
+// rather than weaken any assertion -- view-gating itself is covered by
+// viewGating.test.tsx.
+beforeEach(() => setView("advanced"));
+afterEach(() => setView("basic"));
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
