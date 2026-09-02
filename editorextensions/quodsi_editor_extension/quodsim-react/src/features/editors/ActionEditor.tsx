@@ -40,7 +40,7 @@ import { X, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { StateConditionEditor } from "./StateConditionEditor";
-import { RequirementField } from "quodsi_studio/platforms/shared";
+import { RequirementField, ViewGated } from "quodsi_studio/platforms/shared";
 
 interface ActionEditorProps {
   activityId?: string;
@@ -1304,8 +1304,15 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             </label>
           </div>
 
-          {/* State Condition Guard */}
-          {renderStateConditionGuard()}
+          {/* State Condition Guard -- intermediate since 2026-09-01. It reads
+              and writes model STATES, themselves intermediate, so in Basic it
+              offered a condition builder over states the user has no tab to
+              create. quodsi_studio gates the equivalent control on ActionCard
+              (Classic) and RecipeStep ("Only if...") with this same surface;
+              Lucid renders its own, so it needs its own wrapper. */}
+          <ViewGated surface="action.field.condition">
+            {renderStateConditionGuard()}
+          </ViewGated>
 
           {/* Action-specific content */}
           {renderActionContent()}

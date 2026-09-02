@@ -18,11 +18,19 @@
 // selector that resolves it, and it stays the only combobox on screen in
 // First Available mode (that connect type renders a priority <input>, not a
 // <select>).
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ConnectorRoutingView } from 'quodsi_studio/platforms/shared'
+import { ConnectorRoutingView, setView } from 'quodsi_studio/platforms/shared'
 import { createReferenceDataAccessor } from '../useReferenceDataAccessor'
+
+// First Available moved basic -> INTERMEDIATE on 2026-09-01 (Renee's
+// simple-version spec: Basic offers Probability only), so the option is only
+// in the picker from Intermediate up. What this file pins is the WRITE PATH,
+// not the gating, so it just asks for a view where the option exists. Basic's
+// grandfathering of an already-First-Available connector is covered in the
+// monorepo's panels/__tests__/optionGating.test.tsx -- ConnectorRoutingView is
+// the same shared component in both hosts.
 
 const referenceData = {
   resources: [],
@@ -41,6 +49,9 @@ const referenceData = {
 } as any
 
 describe('ConnectorRoutingView over useReferenceDataAccessor (seam)', () => {
+  beforeEach(() => setView('intermediate'))
+  afterEach(() => setView('basic'))
+
   it('First Available: mode goes to the source writer, priority goes to ELEMENT_UPDATE and re-ranks from the overlay', async () => {
     const user = userEvent.setup()
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})

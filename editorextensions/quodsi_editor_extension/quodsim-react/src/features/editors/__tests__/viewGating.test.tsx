@@ -22,7 +22,7 @@
 
 import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { resolveVisibleSurfaces } from "@quodsi/shared";
 import { State, ComponentType, StateType, StateListManager } from "@quodsi/lucid-shared";
 import ActivityEditor from "../ActivityEditor";
@@ -226,6 +226,48 @@ describe("The tell: never silently hide live behaviour", () => {
     setView("basic");
     render(<ModelEditor {...modelProps} states={new StateListManager()} />);
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+});
+
+describe("ModelEditor — view gates the model-level FIELDS", () => {
+  // Lucid renders its own copies of these controls rather than mounting
+  // quodsi_studio's BasicSettingsTab, so the shared package's gating does not
+  // reach them -- these wrappers are Lucid-local and need Lucid-local proof.
+  // Hiding a field writes nothing: the stored value still reaches the engine,
+  // which is why the model.field.* surfaces are also in
+  // LUCID_MODEL_EXTRA_SURFACES so the tell can explain a non-default one.
+  beforeEach(() => localStorage.clear());
+
+  // All four live inside the DEFAULT-COLLAPSED "Advanced Settings" accordion,
+  // so an absence assertion that skips this click passes whether the gate
+  // exists or not. Open it first, or the Basic test below is vacuous.
+  function renderModelEditorWithAdvancedOpen() {
+    render(<ModelEditor {...modelProps} />);
+    fireEvent.click(screen.getByText("Advanced Settings"));
+  }
+
+  it("hides Replications, Time Mode, Clock Unit and Warmup in Basic", () => {
+    setView("basic");
+    renderModelEditorWithAdvancedOpen();
+    expect(screen.queryByTestId("reps-input")).not.toBeInTheDocument();
+    expect(screen.queryByText("Time Mode")).not.toBeInTheDocument();
+    expect(screen.queryByText("Clock Unit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Warmup Time")).not.toBeInTheDocument();
+  });
+
+  it("shows all four in Intermediate", () => {
+    setView("intermediate");
+    renderModelEditorWithAdvancedOpen();
+    expect(screen.getByTestId("reps-input")).toBeInTheDocument();
+    expect(screen.getByText("Time Mode")).toBeInTheDocument();
+    expect(screen.getByText("Clock Unit")).toBeInTheDocument();
+    expect(screen.getByText("Warmup Time")).toBeInTheDocument();
+  });
+
+  it("keeps Run Time visible in Basic", () => {
+    setView("basic");
+    render(<ModelEditor {...modelProps} />);
+    expect(screen.getByText("Run Time")).toBeInTheDocument();
   });
 });
 

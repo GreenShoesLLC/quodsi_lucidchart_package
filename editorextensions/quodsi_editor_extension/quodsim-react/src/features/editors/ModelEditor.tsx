@@ -25,9 +25,9 @@ import {
   // original, shared with drawio/Studio/Visio.
   LeverAuthoringSection,
   // Complexity views (Task 11a): the same hook + tell Studio's ModelEditor uses.
-  useView, ViewTell,
+  useView, ViewTell, ViewGated,
 } from "quodsi_studio/platforms/shared";
-import { LUCID_MODEL_TAB_SURFACE } from "./viewSurfaceMaps";
+import { LUCID_MODEL_TAB_SURFACE, LUCID_MODEL_EXTRA_SURFACES } from "./viewSurfaceMaps";
 import { ArrivalsTab } from "./ArrivalsTab";
 import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
@@ -487,9 +487,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // lifting that read up here just to power a notice would change fetch
   // behaviour in a repo that ships by manual package upload. States stays
   // in, since `states` is already a prop this component holds.
-  const tellSurfaces = TAB_CONFIG.filter(hasMappedSurface)
-    .filter((t) => t.id !== "arrivals" && t.id !== "schedules")
-    .map((t) => LUCID_MODEL_TAB_SURFACE[t.id]);
+  const tellSurfaces = [
+    ...TAB_CONFIG.filter(hasMappedSurface)
+      .filter((t) => t.id !== "arrivals" && t.id !== "schedules")
+      .map((t) => LUCID_MODEL_TAB_SURFACE[t.id]),
+    ...LUCID_MODEL_EXTRA_SURFACES,
+  ];
 
   // ============================================================================
   // RENDER
@@ -616,7 +619,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                   onToggle={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
                 >
                   <div className="space-y-2">
-                    {/* Replications */}
+                    {/* Replications -- intermediate since 2026-09-01
+                        (Renee's simple-version spec: a Basic model's Basic tab
+                        is Model Name + Run Time). Hiding it does not change
+                        what runs: the stored value still goes to the engine,
+                        and the tell above names it when it is non-default. */}
+                    <ViewGated surface="model.field.replications">
                     <div>
                       <div className="flex items-center gap-1 mb-1">
                         <label className="text-xs font-medium text-gray-700">
@@ -638,8 +646,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                         onBlur={saveNow}
                       />
                     </div>
+                    </ViewGated>
 
                     {/* Time Mode */}
+                    <ViewGated surface="model.field.timeMode">
                     <div>
                       <div className="flex items-center gap-1 mb-1">
                         <label className="text-xs font-medium text-gray-700">
@@ -662,11 +672,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                         ))}
                       </select>
                     </div>
+                    </ViewGated>
 
                     {/* Clock Mode Fields - Conditional */}
                     {localModelDraft.timeMode === SimulationTimeType.Clock && (
                       <>
                         {/* Clock Unit */}
+                        <ViewGated surface="model.field.clockUnit">
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <label className="text-xs font-medium text-gray-700">
@@ -689,8 +701,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                             ))}
                           </select>
                         </div>
+                        </ViewGated>
 
                         {/* Warmup Time - Simple number + dropdown */}
+                        <ViewGated surface="model.field.warmup">
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <label className="text-xs font-medium text-gray-700">
@@ -724,6 +738,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                             </select>
                           </div>
                         </div>
+                        </ViewGated>
                       </>
                     )}
 
@@ -746,6 +761,17 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                         value by the viewer's offset on every open/save. */}
                     {localModelDraft.timeMode === SimulationTimeType.CalendarDate && (
                       <>
+                        {/* Start/Finish Date below are DELIBERATELY UNGATED:
+                            in calendar mode they are the only run-length
+                            control that exists (Run Time and Clock Unit both
+                            render only in clock mode), so hiding them would
+                            leave a Basic viewer of a calendar model unable to
+                            say how long the run is. Same grandfather rule the
+                            option lists use -- the Time Mode SELECTOR above is
+                            gated, the fields a model already uses are not.
+                            Warmup is optional, so it stays gated. Mirrors
+                            quodsi_studio's BasicSettingsTab exactly. */}
+                        <ViewGated surface="model.field.warmup">
                         <div>
                           {/* The checkbox, the picker and the "warmup date is
                               a LENGTH on the wire" inversion all live in
@@ -763,6 +789,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                             onWarmupTimeChange={(warmupTime) => commitCalendar({ warmupTime })}
                           />
                         </div>
+                        </ViewGated>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
                             <label className="text-xs font-medium text-gray-700">
