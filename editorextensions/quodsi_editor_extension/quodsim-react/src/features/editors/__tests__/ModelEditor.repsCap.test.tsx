@@ -1,6 +1,15 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ModelEditor from "../ModelEditor";
+import { setView } from "quodsi_studio/platforms/shared";
+// Replications, Time Mode, Clock Unit and Warmup all moved to the
+// INTERMEDIATE view on 2026-09-01 (Renee's simple-version spec: a Basic
+// model's Basic tab is Model Name + Run Time). This file pins field
+// BEHAVIOUR, not gating, so it asks for a view that renders the fields.
+// The gating itself lives in viewGating.test.tsx.
+beforeEach(() => setView('intermediate'));
+afterEach(() => setView('basic'));
+
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({

@@ -76,6 +76,22 @@ export const LUCID_MODEL_TAB_SURFACE: Record<ModelTabId, SurfaceId> = {
 // following a work schedule shows "Follow a schedule" checked-and-disabled
 // with no tell to explain it. Final-review fix, 2026-09-01.
 export const LUCID_ACTIVITY_EXTRA_SURFACES: SurfaceId[] = [
+  // Lucid's ActionEditor renders its own "State Condition Guard" rather
+  // than the shared ActionCard, so this surface has to be listed (and
+  // gated) here independently.
+  'action.field.condition',
   'resource.capacity.fixed',
   'resource.capacity.schedule',
+]
+
+// Model-level FIELD surfaces, the counterpart to quodsi_studio's
+// MODEL_EXTRA_SURFACES. Lucid's ModelEditor renders its own copies of these
+// four controls (it does not mount the shared BasicSettingsTab), so it needs
+// its own ViewGated wrappers AND its own tell list -- without this, gating
+// them would hide live settings with nothing on screen to explain why.
+export const LUCID_MODEL_EXTRA_SURFACES: SurfaceId[] = [
+  'model.field.replications',
+  'model.field.clockUnit',
+  'model.field.timeMode',
+  'model.field.warmup',
 ]
