@@ -208,7 +208,7 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
       <iframe
         ref={iframeRef}
         title="embedded-studio"
-        src={`${studioOrigin}${studioPath}?embed=1`}
+        src={`${studioOrigin}${studioPath}${studioPath.includes('?') ? '&' : '?'}embed=1`}
         style={{ height: '100%', width: '100%', border: 'none' }}
       />
     </div>
