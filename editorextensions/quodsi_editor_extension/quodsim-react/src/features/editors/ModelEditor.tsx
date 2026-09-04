@@ -555,12 +555,31 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
 
       <ViewTell
         surfaces={tellSurfaces}
-        // Model-level predicates in @quodsi/shared read `ctx.model`, not
-        // `ctx.element` (see usage.ts's `modelHasStates`) -- `localModelDraft`
-        // is a `Model`, not a `ModelDefinition`, so it cannot stand in for
-        // `model` wholesale either. `states` is the one piece of the real
-        // model-definition shape this component already holds.
-        ctx={{ model: { states } }}
+        // Model-level predicates in @quodsi/shared read `ctx.model` shaped
+        // like a ModelDefinition (see usage.ts): collections at the top level,
+        // the Model's own fields under `model`. `localModelDraft` is a `Model`,
+        // so it supplies that inner record, and the collections come from the
+        // props this editor already holds. Until 2026-09-04 this passed
+        // `{ states }` only, so no other predicate could fire in this host
+        // (Daniel's Lucid smoke: a Basic model with resources showed no tell).
+        // Still NOT covered: workSchedules / arrivalPatterns /
+        // arrivalSchedules -- those live behind SchedulesTab's and
+        // ArrivalsTab's own useModelRootSource subscriptions.
+        ctx={{
+          model: {
+            states,
+            entities,
+            resources: referenceData?.resources,
+            resourceRequirements: referenceData?.resourceRequirements,
+            levers: localModelDraft.levers,
+            model: {
+              warmupTime: localModelDraft.warmupTime,
+              timeMode: localModelDraft.timeMode,
+              replications: localModelDraft.replications,
+              timeUnit: localModelDraft.timeUnit,
+            },
+          },
+        }}
         onOpenSettings={openSettingsModal}
       />
 

@@ -24,7 +24,7 @@ import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { resolveVisibleSurfaces } from "@quodsi/shared";
-import { State, ComponentType, StateType, StateListManager } from "@quodsi/lucid-shared";
+import { State, ComponentType, StateType, StateListManager, PeriodUnit } from "@quodsi/lucid-shared";
 import ActivityEditor from "../ActivityEditor";
 import GeneratorEditor from "../GeneratorEditor";
 import ModelEditor from "../ModelEditor";
@@ -222,9 +222,32 @@ describe("The tell: never silently hide live behaviour", () => {
     expect(note).toHaveTextContent(/states/i);
   });
 
+  // Daniel's Lucid smoke, 2026-09-04: the Model editor's tell context was
+  // `{ states }` only, so no other model-level predicate could ever fire in
+  // this host. It now carries everything the editor holds (resources,
+  // entities, requirements, levers, the model fields); work schedules and
+  // arrivals live behind their tabs' own model-root subscriptions and are
+  // still not covered here.
+  it("ModelEditor: shows the tell when the model has resources but Resources is hidden in Basic", () => {
+    setView("basic");
+    render(
+      <ModelEditor
+        {...modelProps}
+        states={new StateListManager()}
+        referenceData={{ resources: [{ id: "r1", name: "Nurse" }] } as any}
+      />
+    );
+    expect(screen.getByRole("note")).toHaveTextContent(/resources/i);
+  });
+
   it("ModelEditor: shows no tell when the model has no states", () => {
     setView("basic");
-    render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    // At the shared defaults (10 replications, minutes). The tell context now
+    // carries the model fields too, so a fixture at Lucid's own fallbacks
+    // (1 replication, hours -- see extractModelData) would legitimately trip
+    // the replications and clock-unit tells and hide what this test pins.
+    const atDefaults = { ...modelProps.model, replications: 10, timeUnit: PeriodUnit.MINUTES };
+    render(<ModelEditor {...modelProps} model={atDefaults} states={new StateListManager()} />);
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 });
