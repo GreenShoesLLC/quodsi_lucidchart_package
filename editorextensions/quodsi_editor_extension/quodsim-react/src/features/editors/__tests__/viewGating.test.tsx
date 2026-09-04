@@ -248,7 +248,10 @@ describe("ModelEditor — view gates the model-level FIELDS", () => {
 
   it("hides Replications, Time Mode, Clock Unit and Warmup in Basic", () => {
     setView("basic");
-    renderModelEditorWithAdvancedOpen();
+    // No accordion to open in Basic any more (2026-09-04): every control in
+    // it is intermediate, so the whole section is withheld -- see the
+    // "empty Advanced Settings" test below. Render plainly and assert.
+    render(<ModelEditor {...modelProps} states={new StateListManager()} />);
     expect(screen.queryByTestId("reps-input")).not.toBeInTheDocument();
     expect(screen.queryByText("Time Mode")).not.toBeInTheDocument();
     expect(screen.queryByText("Clock Unit")).not.toBeInTheDocument();
@@ -296,5 +299,21 @@ describe("ModelEditor — view gates the Schedules tab", () => {
     expect(
       screen.getByRole("button", { name: /View comprehensive model validation/i })
     ).toBeInTheDocument();
+  });
+
+  // Daniel's Lucid smoke, 2026-09-04: in Basic the Model editor showed an
+  // "Advanced Settings" disclosure that opened onto nothing -- every control
+  // inside it (Replications, Time Mode, Clock Unit, Warmup) is intermediate.
+  // Studio's BasicSettingsTab already drops the accordion when it has no
+  // content; this is the Lucid twin of that rule.
+  it("ModelEditor: hides the empty Advanced Settings accordion in Basic, shows it in Intermediate", () => {
+    setView("basic");
+    const basic = render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    expect(screen.queryByRole("button", { name: /advanced settings/i })).not.toBeInTheDocument();
+    basic.unmount();
+
+    setView("intermediate");
+    render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    expect(screen.getByRole("button", { name: /advanced settings/i })).toBeInTheDocument();
   });
 });

@@ -476,6 +476,19 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // Falls back to "basic", always visible (model.tab.basic is the catalog's
   // floor), when the active tab (local OR host-controlled via activeTabProp)
   // is view-hidden.
+  // Every control inside "Advanced Settings" is view-gated (Replications,
+  // Time Mode, Clock Unit, Warmup are all intermediate), so in Basic the
+  // accordion could open onto nothing -- Daniel's Lucid smoke, 2026-09-04.
+  // Render it only when it has content. Same rule as Studio's
+  // BasicSettingsTab: the calendar Start/Finish dates are deliberately
+  // ungated, so a calendar-mode model always has content here.
+  const advancedHasContent =
+    localModelDraft.timeMode === SimulationTimeType.CalendarDate ||
+    visible.has("model.field.replications") ||
+    visible.has("model.field.timeMode") ||
+    visible.has("model.field.clockUnit") ||
+    visible.has("model.field.warmup");
+
   const tabs = TAB_CONFIG.filter(
     (t) => !hasMappedSurface(t) || visible.has(LUCID_MODEL_TAB_SURFACE[t.id])
   );
@@ -612,7 +625,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                   </div>
                 )}
 
-                {/* Advanced Settings - Accordion */}
+                {/* Advanced Settings - Accordion (only when something inside is visible) */}
+                {advancedHasContent && (
                 <AccordionSection
                   title="Advanced Settings"
                   isExpanded={isAdvancedExpanded}
@@ -855,6 +869,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                     )}
                   </div>
                 </AccordionSection>
+                )}
 
 
                 {/* Auto-save status */}
