@@ -4,6 +4,19 @@ import { useSender } from './useSender';
 import { getModalSizePref } from '../../lib/modalSizePref';
 
 /**
+ * Focus carried to the embedded Advisor consult. Mirrors quodsi_studio's
+ * AdvisorFocus, flattened into the field names the host puts on the
+ * /embed/advisor query string (focusId/focusType/focusName/mode).
+ */
+export interface AdvisorLaunchFocus {
+  /** Shape id of the focused element; '' for the model as a whole. */
+  focusId: string;
+  focusType: 'Model' | 'Activity' | 'Resource' | 'Generator' | 'Entity' | 'Connector';
+  focusName?: string;
+  mode: 'definition';
+}
+
+/**
  * Custom hook that provides typed functions for sending simulation run-related messages
  *
  * @returns Object containing simulation run operations message sender functions
@@ -71,6 +84,18 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_SETTINGS_MODAL, { modalSize: getModalSizePref() });
   }, [send]);
 
+  /**
+   * Send an OPEN_ADVISOR_MODAL message to open the embedded-Studio Advisor
+   * consult (/embed/advisor) as a real Lucid modal. Handled by
+   * simulationRunHandler.ts beside OPEN_STATUS_MODAL: like /status it needs
+   * no server model id, so it opens concretely and instantly. The focus
+   * fields ride on the query string; modalSize follows the user's preference
+   * like every other OPEN_*_MODAL.
+   */
+  const openAdvisorModal = useCallback((focus: AdvisorLaunchFocus) => {
+    send(EnvelopeMessageType.OPEN_ADVISOR_MODAL, { ...focus, modalSize: getModalSizePref() });
+  }, [send]);
+
   return {
     openStudiesModal,
     openDiagramMappingModal,
@@ -79,5 +104,6 @@ export function useSimulationRunSender() {
     openPatternModal,
     openScheduleModal,
     openSettingsModal,
+    openAdvisorModal,
   };
 }

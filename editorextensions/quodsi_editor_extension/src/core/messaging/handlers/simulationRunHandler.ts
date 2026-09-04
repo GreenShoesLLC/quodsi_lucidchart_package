@@ -62,6 +62,10 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenStatusModal(msg);
         return true;
 
+      case EnvelopeMessageType.OPEN_ADVISOR_MODAL:
+        SimulationRunHandler.handleOpenAdvisorModal(msg);
+        return true;
+
       case EnvelopeMessageType.RUN_SCENARIO:
         SimulationRunHandler.handleRunScenario(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleRunScenario failed', e),
@@ -250,6 +254,43 @@ export class SimulationRunHandler {
       fullScreenPath: '/status', // enables the "↗ open full screen" pop-out
       modalSize: data?.modalSize,
       isPublic: true, // /status is public (PublicLayout) — no token relay/overlay
+    }).show();
+  }
+
+  /**
+   * Handle OPEN_ADVISOR_MODAL: open the embedded Studio Advisor consult at
+   * /embed/advisor with the focus on the query string. Like /status and
+   * unlike Studies, it needs no server model id -- the consult carries the
+   * document inline (relayed via STUDIO_CATALOG.document when the embed
+   * requests the catalog) -- so it opens concretely and instantly: no
+   * UpsertModel, no pending path. Not public: the token relay must run.
+   *
+   * Malformed or missing fields degrade to a Model consult rather than a
+   * refused open; the Studio page applies the same fallback on its side.
+   */
+  private static handleOpenAdvisorModal(msg: EnvelopeBase): void {
+    const data = (msg.data ?? {}) as {
+      focusId?: string;
+      focusType?: string;
+      focusName?: string;
+      mode?: string;
+      modalSize?: ModalSize;
+    };
+    // Hand-encoded, like every sibling modal (PatternEditorModal,
+    // StudioEmbedModal, ...): the Lucid extension sandbox has no
+    // `URLSearchParams` (smoke 2026-09-04 -- `new URLSearchParams()` threw a
+    // ReferenceError the router swallowed, so the click did nothing).
+    const pairs: Array<[string, string]> = [
+      ['focusType', data.focusType ?? 'Model'],
+      ['focusId', data.focusId ?? ''],
+    ];
+    if (data.focusName) pairs.push(['focusName', data.focusName]);
+    pairs.push(['mode', data.mode ?? 'definition']);
+    const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+    new StudioEmbedModal(ModelManager.getClient(), {
+      title: 'Ask the Advisor',
+      studioPath: `/embed/advisor?${query}`,
+      modalSize: data.modalSize,
     }).show();
   }
 
@@ -508,6 +549,13 @@ export class SimulationRunHandler {
       // even when the serializer sparse-omitted the key, so the catalog's own
       // shape stays stable across models.
       workSchedules: model.workSchedules ?? [],
+      // The WHOLE clean wire document, for the embedded Advisor consult
+      // (/embed/advisor). The catalog projection above is deliberately lossy
+      // (no states, arrival patterns or connector conditions) and the Advisor
+      // is grounded in the clean schema, so it must see the document the
+      // serializer actually produced. Receiver: quodsi_studio
+      // RelayedCatalog.document -> LucidEmbedModelAccessor.getRelayedDocument.
+      document: model,
     };
   }
 

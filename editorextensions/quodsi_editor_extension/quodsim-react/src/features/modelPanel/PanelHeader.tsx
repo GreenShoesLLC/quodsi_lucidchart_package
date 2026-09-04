@@ -15,6 +15,7 @@ import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
+import { AdvisorLaunchButton, advisorFocusForElement, modelAdvisorFocus } from "./AdvisorLaunchButton";
 
 const log = getLogger("PanelHeader");
 
@@ -279,7 +280,11 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {modelName}
             </span>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-1">
+            {/* AI Advisor entry point. Ships DARK behind the same devtools
+                flag as the DevTools menu item (drawio's counterpart is
+                ?qdev=1); both hosts ungate together (ClickUp 86e31e5rt). */}
+            {devToolsEnabled && <AdvisorLaunchButton focus={modelAdvisorFocus(modelName)} />}
             <MenuButton />
           </div>
         </div>
@@ -316,7 +321,12 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {elementName}
             </span>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-1">
+            {devToolsEnabled && currentElement && (
+              <AdvisorLaunchButton
+                focus={advisorFocusForElement(elementType, currentElement.id, elementName, modelName)}
+              />
+            )}
             <MenuButton />
           </div>
         </div>

@@ -169,4 +169,27 @@ describe('SimulationRunHandler.buildStudioCatalog (review F4)', () => {
     // array keeps the catalog's own shape stable across models.
     expect(catalog.workSchedules).toEqual([]);
   });
+
+  it('relays the whole serialized model as `document` for the embedded Advisor consult', () => {
+    const model: Partial<ISerializedModel> = {
+      name: 'M',
+      timeUnit: 'minutes' as any,
+      replications: 1,
+      runTime: { value: 24, unit: 'hours' } as any,
+      activities: [{ id: 'a1', name: 'Triage' } as any],
+      generators: [],
+      resources: [],
+      resourceRequirements: [],
+      connectors: [],
+      entities: [],
+      states: [{ id: 's1', name: 'served' } as any],
+    };
+
+    const catalog = buildCatalog(model, 'page-1', null);
+
+    // Same reference: the embed sends exactly what the serializer produced.
+    expect(catalog.document).toBe(model);
+    // The catalog's own per-record projection is unchanged by the extra key.
+    expect(catalog.activities).toEqual([expect.objectContaining({ id: 'a1', name: 'Triage' })]);
+  });
 });
