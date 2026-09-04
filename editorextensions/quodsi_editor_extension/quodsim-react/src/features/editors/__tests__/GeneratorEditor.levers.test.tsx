@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
+import { setView } from "quodsi_studio/platforms/shared";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -50,7 +51,16 @@ const baseProps = {
 const LEVERS_TAB_NAME = /mark .* as a scenario lever/i
 
 describe("GeneratorEditor — scenario lever authoring", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setView("basic");
+  });
+  afterEach(() => setView("basic"));
+
   it("renders the lever-authoring section with the Generator numeric properties", () => {
+    // Entities Per Creation lives in the Basic tab's Advanced Settings, which
+    // is intermediate as of 2026-09-03 -- so is its lever.
+    setView("intermediate");
     render(<GeneratorEditor {...baseProps} />);
     // Not on Settings any more.
     expect(screen.queryByTestId("lever-authoring")).not.toBeInTheDocument();
@@ -63,5 +73,35 @@ describe("GeneratorEditor — scenario lever authoring", () => {
     expect(
       screen.queryByLabelText(/use Max Entities as a scenario lever/i)
     ).not.toBeInTheDocument();
+  });
+
+  // Renee's 2026-09-03 Basic review: the only generator lever that matches
+  // what Basic shows is Inter-arrival Timing. The two Advanced Settings levers
+  // follow that section's gate; Arrival Volume is Pattern-only.
+  it("offers a Basic Rate generator exactly one lever: Inter-arrival Timing", () => {
+    render(<GeneratorEditor {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: LEVERS_TAB_NAME }));
+    expect(screen.getByLabelText(/use Inter-arrival Timing as a scenario lever/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/use Entities Per Creation as a scenario lever/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/use Periodic Occurrences as a scenario lever/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/use Arrival Volume as a scenario lever/i)).not.toBeInTheDocument();
+  });
+
+  it("never offers a Rate generator the Pattern-only Arrival Volume lever, even in Advanced", () => {
+    setView("advanced");
+    render(<GeneratorEditor {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: LEVERS_TAB_NAME }));
+    expect(screen.getByLabelText(/use Entities Per Creation as a scenario lever/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/use Arrival Volume as a scenario lever/i)).not.toBeInTheDocument();
+  });
+
+  it("hides the Advanced Settings section in Basic and shows it in Intermediate", () => {
+    const basic = render(<GeneratorEditor {...baseProps} />);
+    expect(screen.queryByRole("button", { name: /advanced settings/i })).not.toBeInTheDocument();
+    basic.unmount();
+
+    setView("intermediate");
+    render(<GeneratorEditor {...baseProps} />);
+    expect(screen.getByRole("button", { name: /advanced settings/i })).toBeInTheDocument();
   });
 });

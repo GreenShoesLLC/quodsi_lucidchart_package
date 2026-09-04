@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ModelEditor from "../ModelEditor";
+import { setView } from "quodsi_studio/platforms/shared";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -54,6 +55,11 @@ const referenceData = {
 } as any;
 
 describe("ModelEditor — Requirements tab uses the shared editor", () => {
+  // model.tab.requirements is intermediate as of 2026-09-03 (Renee's Basic
+  // review); the tab itself is unchanged once the view shows it.
+  beforeEach(() => setView("intermediate"));
+  afterEach(() => setView("basic"));
+
   it("lists custom first with usage, then the resource row with the Resource pill", async () => {
     const user = userEvent.setup();
     render(<ModelEditor {...baseProps} referenceData={referenceData} activeTab="requirements" />);
