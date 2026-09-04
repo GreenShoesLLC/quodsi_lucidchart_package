@@ -54,17 +54,17 @@ describe("AdvisorLaunchButton", () => {
 
 describe("advisorFocusForElement", () => {
   it("maps a consultable element type to an element focus", () => {
-    expect(advisorFocusForElement("Generator", "g1", "Arrivals")).toEqual({
+    expect(advisorFocusForElement("Generator", "g1", "Arrivals", "Clinic")).toEqual({
       focusId: "g1", focusType: "Generator", focusName: "Arrivals", mode: "definition",
     });
   });
 
-  it("maps every other type (None, Model, unknown) to the model focus with no id", () => {
-    expect(advisorFocusForElement("None", "x", "Thing")).toEqual({
-      focusId: "", focusType: "Model", focusName: undefined, mode: "definition",
+  it("maps a non-consultable type (None, unknown) to the model focus, carrying the model name", () => {
+    expect(advisorFocusForElement("None", "x", "Thing", "Clinic")).toEqual({
+      focusId: "", focusType: "Model", focusName: "Clinic", mode: "definition",
     });
-    expect(advisorFocusForElement("Model", "page-1", "My Model")).toEqual({
-      focusId: "", focusType: "Model", focusName: "My Model", mode: "definition",
+    expect(advisorFocusForElement("None", "x", "Thing", "")).toEqual({
+      focusId: "", focusType: "Model", focusName: undefined, mode: "definition",
     });
   });
 });

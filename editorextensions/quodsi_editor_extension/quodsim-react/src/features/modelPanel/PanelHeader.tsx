@@ -324,7 +324,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           <div className="flex-shrink-0 flex items-center gap-1">
             {devToolsEnabled && currentElement && (
               <AdvisorLaunchButton
-                focus={advisorFocusForElement(elementType, currentElement.id, elementName)}
+                focus={advisorFocusForElement(elementType, currentElement.id, elementName, modelName)}
               />
             )}
             <MenuButton />

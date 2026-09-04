@@ -49,12 +49,15 @@ export function modelAdvisorFocus(modelName: string): AdvisorLaunchFocus {
  * Focus for the element header. A consultable element type keeps its shape
  * id (which IS the element id in Lucid -- ModelLucid sets id to the platform
  * element id -- so the server's focus pinning finds it in the relayed
- * document). Anything else (None, Model, unknown) is the model focus.
+ * document). Anything else (None, unknown) falls back to the model focus,
+ * carrying the model name -- the model header never routes through this
+ * function, so there is no "Model" case to special-case here.
  */
 export function advisorFocusForElement(
   elementType: string,
   elementId: string,
   elementName: string,
+  modelName: string,
 ): AdvisorLaunchFocus {
   if (CONSULTABLE_TYPES.has(elementType as AdvisorLaunchFocus["focusType"])) {
     return {
@@ -64,5 +67,5 @@ export function advisorFocusForElement(
       mode: "definition",
     };
   }
-  return modelAdvisorFocus(elementType === "Model" ? elementName : "");
+  return modelAdvisorFocus(modelName);
 }

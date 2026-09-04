@@ -60,4 +60,16 @@ describe("PanelHeader — Advisor sparkle (dark behind quodsi_devtools)", () => 
     render(<PanelHeader {...baseProps} editorType="activity" currentElement={activityElement} />);
     expect(focusOf()).toEqual({ focusId: "a1", focusType: "Activity", focusName: "Triage", mode: "definition" });
   });
+
+  it("falls back to the Model focus, carrying the model name, for a non-consultable element type", () => {
+    localStorage.setItem("quodsi_devtools", "true");
+    const noneElement: any = {
+      id: "x1",
+      name: "Thing",
+      metadata: { type: "None" },
+      data: { name: "Thing" },
+    };
+    render(<PanelHeader {...baseProps} editorType="activity" currentElement={noneElement} />);
+    expect(focusOf()).toEqual({ focusId: "", focusType: "Model", focusName: "Clinic", mode: "definition" });
+  });
 });
