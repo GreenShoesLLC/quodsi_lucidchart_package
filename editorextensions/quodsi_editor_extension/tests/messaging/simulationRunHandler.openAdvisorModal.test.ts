@@ -76,6 +76,27 @@ afterEach(() => {
 });
 
 describe('OPEN_ADVISOR_MODAL', () => {
+  it('opens without URLSearchParams -- the Lucid extension sandbox does not provide it', () => {
+    // Smoke 2026-09-04: the first build threw inside the router ("Error
+    // handling message") because the handler built its query string with
+    // `new URLSearchParams()`, which exists in Node (so jest passed) but not
+    // in the Lucid extension VM. Every sibling modal encodes by hand with
+    // `encodeURIComponent`; this pins that the handler does too.
+    const saved = (globalThis as any).URLSearchParams;
+    delete (globalThis as any).URLSearchParams;
+    try {
+      expect(SimulationRunHandler.handleMessage(openMessage({
+        focusId: 'a1', focusType: 'Activity', focusName: 'Triage & Sort', mode: 'definition',
+      }))).toBe(true);
+    } finally {
+      (globalThis as any).URLSearchParams = saved;
+    }
+    expect(shown).toHaveLength(1);
+    const path = studioPathOf(shown[0]);
+    const q = new URLSearchParams(path.slice('/embed/advisor?'.length));
+    expect(q.get('focusName')).toBe('Triage & Sort');
+  });
+
   it('is handled', () => {
     expect(SimulationRunHandler.handleMessage(openMessage({ focusType: 'Model', focusId: '', mode: 'definition' }))).toBe(true);
     expect(shown).toHaveLength(1);

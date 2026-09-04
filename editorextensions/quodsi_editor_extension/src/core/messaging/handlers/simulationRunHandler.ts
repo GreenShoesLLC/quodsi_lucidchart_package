@@ -276,14 +276,20 @@ export class SimulationRunHandler {
       mode?: string;
       modalSize?: ModalSize;
     };
-    const q = new URLSearchParams();
-    q.set('focusType', data.focusType ?? 'Model');
-    q.set('focusId', data.focusId ?? '');
-    if (data.focusName) q.set('focusName', data.focusName);
-    q.set('mode', data.mode ?? 'definition');
+    // Hand-encoded, like every sibling modal (PatternEditorModal,
+    // StudioEmbedModal, ...): the Lucid extension sandbox has no
+    // `URLSearchParams` (smoke 2026-09-04 -- `new URLSearchParams()` threw a
+    // ReferenceError the router swallowed, so the click did nothing).
+    const pairs: Array<[string, string]> = [
+      ['focusType', data.focusType ?? 'Model'],
+      ['focusId', data.focusId ?? ''],
+    ];
+    if (data.focusName) pairs.push(['focusName', data.focusName]);
+    pairs.push(['mode', data.mode ?? 'definition']);
+    const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
     new StudioEmbedModal(ModelManager.getClient(), {
       title: 'Ask the Advisor',
-      studioPath: `/embed/advisor?${q.toString()}`,
+      studioPath: `/embed/advisor?${query}`,
       modalSize: data.modalSize,
     }).show();
   }
