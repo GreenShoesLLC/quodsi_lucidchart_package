@@ -1,5 +1,6 @@
 import React from "react";
 import { DiagramElementType, SimulationObjectType } from "@quodsi/lucid-shared";
+import { useView } from "quodsi_studio/platforms/shared";
 
 interface SimulationTypeInfo {
   type: SimulationObjectType;
@@ -66,16 +67,25 @@ export const SimulationComponentSelector: React.FC<
   onTypeChange,
   disabled = false,
 }) => {
+  // Complexity views (2026-09-04, Daniel's ruling): Resource is an
+  // Intermediate concept (shape.type.resource), so a Basic viewer dropping a
+  // block is offered Activity / Generator / None only -- the same gate the
+  // drawio / Studio ShapeTypeSelector applies. The selected type is always
+  // kept (disabled when the view hides it): filtering it out would make the
+  // <select> fall to another value and one change event would reclassify
+  // an existing Resource block.
+  const { visible } = useView();
+  const isOffered = (type: SimulationObjectType) =>
+    type !== SimulationObjectType.Resource || visible.has("shape.type.resource");
   const validTypes = React.useMemo(() => {
-    if (!diagramElementType) return SIMULATION_TYPE_CONFIG;
-
-    // Create a Set from the valid types for this diagram element type
-    const validTypeSet = new Set<SimulationObjectType>(
-      VALID_DIAGRAM_TYPE_MAPPINGS[diagramElementType]
-    );
-
-    return SIMULATION_TYPE_CONFIG.filter(({ type }) => validTypeSet.has(type));
-  }, [diagramElementType]);
+    const base = !diagramElementType
+      ? SIMULATION_TYPE_CONFIG
+      : SIMULATION_TYPE_CONFIG.filter(({ type }) =>
+          new Set<SimulationObjectType>(VALID_DIAGRAM_TYPE_MAPPINGS[diagramElementType]).has(type)
+        );
+    return base.filter(({ type }) => type === selectedType || isOffered(type));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagramElementType, selectedType, visible]);
 
   return (
     <select
@@ -87,7 +97,7 @@ export const SimulationComponentSelector: React.FC<
       className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"
     >
       {validTypes.map(({ type, displayName, description }) => (
-        <option key={type} value={type} title={description}>
+        <option key={type} value={type} title={description} disabled={!isOffered(type)}>
           {displayName}
         </option>
       ))}

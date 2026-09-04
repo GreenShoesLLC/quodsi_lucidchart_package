@@ -1,15 +1,18 @@
-// Real ConnectorRoutingView (from the Studio shared barrel) driven by the
-// real createReferenceDataAccessor over a fake updateElement sender. Ports
-// the four behaviors the deleted RoutingConfigurationPanel.levers.test.tsx
-// pinned (git show 3d32f98^:.../RoutingConfigurationPanel.levers.test.tsx)
-// for CONNECTOR-scoped scenario-lever authoring, which lost coverage when
-// that file was deleted in 3d32f98 even though ConnectorRoutingView still
-// wires LeverAuthoringSection with objectType={ScenarioObjectType.CONNECTOR}
-// per connector card and routes `onChange` through
-// accessor.updateShape(connectorId, 'Connector', { levers: next }).
+// Real ConnectorEditor (from the Studio shared barrel) driven by the real
+// createReferenceDataAccessor over a fake updateElement sender. Ports the
+// behaviors the deleted RoutingConfigurationPanel.levers.test.tsx pinned
+// (git show 3d32f98^:.../RoutingConfigurationPanel.levers.test.tsx) for
+// CONNECTOR-scoped scenario-lever authoring.
+//
+// 2026-09-03 (Renee's Basic review): lever authoring left the routing card
+// for ConnectorEditor's own Levers tab, so this file now renders the editor
+// the Lucid ElementEditor Connector case renders (ConnectorEditor), not the
+// bare ConnectorRoutingView. The write path is unchanged: the Levers tab
+// routes `onChange` through accessor.updateShape(connectorId, 'Connector',
+// { levers: next }), which the adapter sends as ELEMENT_UPDATE.
 import { describe, it, expect, vi, type Mock } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { ConnectorRoutingView } from 'quodsi_studio/platforms/shared'
+import { ConnectorEditor } from 'quodsi_studio/platforms/shared'
 import { ScenarioPropertyName, createScenarioLever, type ScenarioLever } from '@quodsi/lucid-shared'
 import { createReferenceDataAccessor } from '../useReferenceDataAccessor'
 
@@ -28,58 +31,54 @@ const makeReferenceData = (c1Levers: ScenarioLever[] = []) => ({
 
 type UpdateElementMock = Mock<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>
 
-function renderView(referenceData: any, updateElement: UpdateElementMock = vi.fn(async () => {})) {
+function renderEditor(referenceData: any, shapeId = 'c1', updateElement: UpdateElementMock = vi.fn(async () => {})) {
   const updateResourceRequirements = vi.fn(async () => {})
   const source = createReferenceDataAccessor(referenceData, () => ({ updateResourceRequirements, updateElement }))
-  render(<ConnectorRoutingView sourceId="act-1" sourceType="Activity" accessor={source.accessor} />)
+  render(<ConnectorEditor shapeId={shapeId} accessor={source.accessor} />)
   return { updateElement }
 }
 
-/** Cards are an accordion (Studio, 2026-08-26): Lever authoring renders only
- *  on the EXPANDED card, and nothing is expanded until a header is clicked
- *  (or the view is given a selectedConnectorId). */
-const expandCard = (id: string) => fireEvent.click(screen.getByTestId(`connector-header-${id}`))
+const openLeversTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Levers' }))
 
-describe('ConnectorRoutingView — CONNECTOR-scoped scenario-lever authoring (seam)', () => {
-  it('lever section is absent while cards are collapsed, and collapsed itself once a card opens', () => {
-    renderView(makeReferenceData())
+describe('ConnectorEditor — CONNECTOR-scoped scenario-lever authoring (seam)', () => {
+  it('routing card carries no lever section; the Levers tab renders it flat, without a disclosure', () => {
+    renderEditor(makeReferenceData())
+    // Routing is the default tab and the selected card opens expanded.
+    expect(screen.getByTestId('connector-routing-card-c1')).toBeInTheDocument()
     expect(screen.queryByTestId('lever-authoring')).toBeNull()
-    expandCard('c1')
-    // One disclosure toggle: the open card's.
-    expect(screen.getAllByRole('button', { name: /scenario levers/i }).length).toBe(1)
-    // Collapsed: the inner WEIGHT checkbox is not rendered.
-    expect(screen.queryByLabelText(/use Weight as a scenario lever/i)).toBeNull()
+
+    openLeversTab()
+    expect(screen.getByTestId('lever-authoring')).toBeInTheDocument()
+    // Flat variant: no "Scenario levers" disclosure to open first.
+    expect(screen.queryByRole('button', { name: /scenario levers/i })).toBeNull()
+    expect(screen.getByLabelText(/use Weight as a scenario lever/i)).toBeInTheDocument()
   })
 
-  it('shows an enabled-lever count badge while collapsed when a connector already has a lever', () => {
+  it('badges the Levers tab with the enabled-lever count when a connector already has a lever', () => {
     const c1Levers = [
       createScenarioLever({ propertyName: ScenarioPropertyName.WEIGHT, label: 'Conn One — Weight', enabled: true }),
     ]
-    renderView(makeReferenceData(c1Levers))
-    expandCard('c1')
-    // Still collapsed (no inner checkbox)...
-    expect(screen.queryByLabelText(/use Weight as a scenario lever/i)).toBeNull()
-    // ...but the badge surfaces the one enabled lever on c1.
-    expect(screen.getByTestId('lever-count')).toHaveTextContent('1')
+    renderEditor(makeReferenceData(c1Levers))
+    expect(screen.getByRole('tab', { name: 'Levers' })).toHaveTextContent('1')
+    openLeversTab()
+    expect((screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement).checked).toBe(true)
   })
 
-  it('each connector gets its own lever-authoring section, one open at a time', () => {
-    renderView(makeReferenceData())
-    expandCard('c1')
+  it('authors the SELECTED connector only: c2 shows its own (empty) levers, not c1\'s', () => {
+    const c1Levers = [
+      createScenarioLever({ propertyName: ScenarioPropertyName.WEIGHT, label: 'Conn One — Weight', enabled: true }),
+    ]
+    renderEditor(makeReferenceData(c1Levers), 'c2')
+    expect(screen.getByRole('tab', { name: 'Levers' })).not.toHaveTextContent('1')
+    openLeversTab()
     expect(screen.getAllByTestId('lever-authoring').length).toBe(1)
-    fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }))
-    expect(screen.getAllByLabelText(/use Weight as a scenario lever/i).length).toBe(1)
-    // Opening c2 closes c1: still exactly one section, now c2's.
-    expandCard('c2')
-    expect(screen.getAllByTestId('lever-authoring').length).toBe(1)
-    expect(screen.getByTestId('connector-routing-card-c2')).toContainElement(screen.getByTestId('lever-authoring'))
+    expect((screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement).checked).toBe(false)
   })
 
   it('enabling the WEIGHT lever dispatches updateElement(c1, Connector, { levers: [non-empty] })', async () => {
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
-    renderView(makeReferenceData(), updateElement)
-    expandCard('c1')
-    fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }))
+    renderEditor(makeReferenceData(), 'c1', updateElement)
+    openLeversTab()
     const checkbox = screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement
     expect(checkbox.checked).toBe(false)
 

@@ -24,7 +24,9 @@
 // ResourceBlockEditor has no map of its own: it renders the SHARED
 // ResourceEditor from quodsi_studio/platforms/shared directly, and that
 // component already gates its own tabs with RESOURCE_TAB_SURFACE -- nothing
-// to duplicate here.
+// to duplicate here. Likewise ElementEditor's Connector case renders the
+// shared ConnectorEditor (2026-09-03), whose Routing | Levers tabs are gated
+// by CONNECTOR_TAB_SURFACE in that file.
 
 import type { SurfaceId } from '@quodsi/shared'
 
@@ -82,6 +84,13 @@ export const LUCID_ACTIVITY_EXTRA_SURFACES: SurfaceId[] = [
   'action.field.condition',
   'resource.capacity.fixed',
   'resource.capacity.schedule',
+]
+
+// GeneratorEditor renders its own "Advanced Settings" block (it does not mount
+// the shared GeneratorBasicTab), so like the model fields below it needs its
+// own ViewGated wrapper AND its own tell entry. Intermediate as of 2026-09-03.
+export const LUCID_GENERATOR_EXTRA_SURFACES: SurfaceId[] = [
+  'generator.field.advanced',
 ]
 
 // Model-level FIELD surfaces, the counterpart to quodsi_studio's

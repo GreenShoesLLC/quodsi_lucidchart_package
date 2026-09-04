@@ -42,10 +42,12 @@ import {
   // originals, shared with drawio/Studio/Visio.
   LeverAuthoringSection,
   generatorHasLevers,
+  // Mode + view rules for which levers the tab may offer (2026-09-03).
+  generatorHiddenLeverProperties,
   // Complexity views (Task 11a): the same hook + tell Studio's GeneratorEditor uses.
-  useView, ViewTell,
+  useView, ViewTell, ViewGated,
 } from "quodsi_studio/platforms/shared";
-import { LUCID_GENERATOR_TAB_SURFACE } from "./viewSurfaceMaps";
+import { LUCID_GENERATOR_TAB_SURFACE, LUCID_GENERATOR_EXTRA_SURFACES } from "./viewSurfaceMaps";
 
 const log = getLogger("GeneratorEditor");
 
@@ -980,16 +982,19 @@ const GeneratorEditor: React.FC<Props> = ({
   // A SCHEDULED generator gets no Levers tab: every property the section offers a
   // GENERATOR is FREQUENCY-only or PATTERN-only, so each checkbox would author a
   // lever the engine ignores when a Study sweeps it. See `generatorHasLevers`.
-  const showLeverTab = generatorHasLevers(localGeneratorDraft);
+  // What the tab may offer after the mode + view rules (Studio's
+  // generatorHiddenLeverProperties, 2026-09-03). The badge counts against the
+  // same list so it never advertises a lever the tab has no checkbox for, and
+  // an empty offer drops the tab rather than showing an empty one.
+  const hiddenLeverProperties = generatorHiddenLeverProperties(localGeneratorDraft, visible);
+  const eligibleLevers = eligibleLeverProperties(ScenarioObjectType.GENERATOR, hiddenLeverProperties);
+  const showLeverTab = generatorHasLevers(localGeneratorDraft) && eligibleLevers.length > 0;
   // Complexity views (Task 11a) compose with the Levers mode-gate: a tab must
   // clear BOTH to appear.
   const tabs = TAB_CONFIG.filter(
     (t) => visible.has(LUCID_GENERATOR_TAB_SURFACE[t.id]) && (t.id !== "levers" || showLeverTab)
   );
-  const leverCount = countActiveLevers(
-    localGeneratorDraft?.levers,
-    eligibleLeverProperties(ScenarioObjectType.GENERATOR)
-  );
+  const leverCount = countActiveLevers(localGeneratorDraft?.levers, eligibleLevers);
   // Switching a generator to Schedule while its Levers tab is open, or raising
   // the view no longer showing the active tab, would otherwise strand the
   // active tab on one that no longer renders -- fall back to "settings",
@@ -1036,7 +1041,7 @@ const GeneratorEditor: React.FC<Props> = ({
       </div>
 
       <ViewTell
-        surfaces={TAB_CONFIG.map((t) => LUCID_GENERATOR_TAB_SURFACE[t.id])}
+        surfaces={[...TAB_CONFIG.map((t) => LUCID_GENERATOR_TAB_SURFACE[t.id]), ...LUCID_GENERATOR_EXTRA_SURFACES]}
         ctx={{ element: localGeneratorDraft }}
         onOpenSettings={openSettingsModal}
       />
@@ -1242,7 +1247,11 @@ const GeneratorEditor: React.FC<Props> = ({
                   />
                 </div>
 
-                {/* Advanced Settings - Expandable */}
+                {/* Advanced Settings - Expandable. Intermediate+ (generator.field.advanced,
+                    2026-09-03, Renee's Basic review): a first model needs an entity and an
+                    inter-arrival time, nothing in here. The levers over these same fields
+                    follow this gate -- see generatorHiddenLeverProperties above. */}
+                <ViewGated surface="generator.field.advanced">
                 <div className="pt-2 border-t">
                   <div className="flex items-center gap-1">
                     <button
@@ -1364,6 +1373,7 @@ const GeneratorEditor: React.FC<Props> = ({
                     </div>
                   )}
                 </div>
+                </ViewGated>
               </>
             )}
           </div>
@@ -1376,6 +1386,7 @@ const GeneratorEditor: React.FC<Props> = ({
               objectType={ScenarioObjectType.GENERATOR}
               componentName={localGeneratorDraft.name}
               levers={localGeneratorDraft.levers ?? []}
+              hiddenProperties={hiddenLeverProperties}
               // Only a Rate generator has an inter-arrival distribution to warn
               // about; a Pattern one draws its timing from the pattern.
               currentDistributionType={

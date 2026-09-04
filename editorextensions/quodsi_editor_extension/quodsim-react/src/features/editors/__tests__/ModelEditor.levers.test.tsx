@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ModelEditor from "../ModelEditor";
+import { setView } from "quodsi_studio/platforms/shared";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -44,6 +45,11 @@ const baseProps = {
 const LEVERS_TAB_NAME = /mark .* as a scenario lever/i
 
 describe("ModelEditor — scenario lever authoring", () => {
+  // model.tab.levers is intermediate as of 2026-09-03 (reps + seed are
+  // intermediate fields); the tab itself is unchanged once the view shows it.
+  beforeEach(() => setView("intermediate"));
+  afterEach(() => setView("basic"));
+
   it("renders the lever-authoring section with the Model numeric properties", () => {
     render(<ModelEditor {...baseProps} />);
     // Not on Basic any more.

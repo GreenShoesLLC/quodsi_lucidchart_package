@@ -476,6 +476,19 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // Falls back to "basic", always visible (model.tab.basic is the catalog's
   // floor), when the active tab (local OR host-controlled via activeTabProp)
   // is view-hidden.
+  // Every control inside "Advanced Settings" is view-gated (Replications,
+  // Time Mode, Clock Unit, Warmup are all intermediate), so in Basic the
+  // accordion could open onto nothing -- Daniel's Lucid smoke, 2026-09-04.
+  // Render it only when it has content. Same rule as Studio's
+  // BasicSettingsTab: the calendar Start/Finish dates are deliberately
+  // ungated, so a calendar-mode model always has content here.
+  const advancedHasContent =
+    localModelDraft.timeMode === SimulationTimeType.CalendarDate ||
+    visible.has("model.field.replications") ||
+    visible.has("model.field.timeMode") ||
+    visible.has("model.field.clockUnit") ||
+    visible.has("model.field.warmup");
+
   const tabs = TAB_CONFIG.filter(
     (t) => !hasMappedSurface(t) || visible.has(LUCID_MODEL_TAB_SURFACE[t.id])
   );
@@ -542,12 +555,31 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
 
       <ViewTell
         surfaces={tellSurfaces}
-        // Model-level predicates in @quodsi/shared read `ctx.model`, not
-        // `ctx.element` (see usage.ts's `modelHasStates`) -- `localModelDraft`
-        // is a `Model`, not a `ModelDefinition`, so it cannot stand in for
-        // `model` wholesale either. `states` is the one piece of the real
-        // model-definition shape this component already holds.
-        ctx={{ model: { states } }}
+        // Model-level predicates in @quodsi/shared read `ctx.model` shaped
+        // like a ModelDefinition (see usage.ts): collections at the top level,
+        // the Model's own fields under `model`. `localModelDraft` is a `Model`,
+        // so it supplies that inner record, and the collections come from the
+        // props this editor already holds. Until 2026-09-04 this passed
+        // `{ states }` only, so no other predicate could fire in this host
+        // (Daniel's Lucid smoke: a Basic model with resources showed no tell).
+        // Still NOT covered: workSchedules / arrivalPatterns /
+        // arrivalSchedules -- those live behind SchedulesTab's and
+        // ArrivalsTab's own useModelRootSource subscriptions.
+        ctx={{
+          model: {
+            states,
+            entities,
+            resources: referenceData?.resources,
+            resourceRequirements: referenceData?.resourceRequirements,
+            levers: localModelDraft.levers,
+            model: {
+              warmupTime: localModelDraft.warmupTime,
+              timeMode: localModelDraft.timeMode,
+              replications: localModelDraft.replications,
+              timeUnit: localModelDraft.timeUnit,
+            },
+          },
+        }}
         onOpenSettings={openSettingsModal}
       />
 
@@ -612,7 +644,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                   </div>
                 )}
 
-                {/* Advanced Settings - Accordion */}
+                {/* Advanced Settings - Accordion (only when something inside is visible) */}
+                {advancedHasContent && (
                 <AccordionSection
                   title="Advanced Settings"
                   isExpanded={isAdvancedExpanded}
@@ -855,6 +888,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                     )}
                   </div>
                 </AccordionSection>
+                )}
 
 
                 {/* Auto-save status */}
