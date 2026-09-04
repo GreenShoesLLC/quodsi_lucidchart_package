@@ -40,7 +40,7 @@ import { X, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { StateConditionEditor } from "./StateConditionEditor";
-import { RequirementField, ViewGated } from "quodsi_studio/platforms/shared";
+import { RequirementField, ViewGated, useView, ACTION_TYPE_SURFACE } from "quodsi_studio/platforms/shared";
 
 interface ActionEditorProps {
   activityId?: string;
@@ -285,6 +285,13 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   onNavigateToModelEditor,
 }) => {
   const [conditionExpanded, setConditionExpanded] = useState(false);
+  const { visible } = useView();
+  // An action type with a `null` surface (retired plain DELAY, dev-only
+  // SCRIPT) is never view-gated -- it is handled by the filter above.
+  const isTypeVisible = (type: ActionType) => {
+    const surface = ACTION_TYPE_SURFACE[type];
+    return surface === null ? true : visible.has(surface);
+  };
 
   const handleActionTypeChange = (newType: ActionType) => {
     let newAction: Action;
@@ -1276,8 +1283,15 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                 // leading `type === action.type` clause grandfathers a
                 // legacy DELAY action so it stays selectable on its own card.
                 .filter((type) => type === action.type || (type !== ActionType.LOOP && type !== ActionType.BRANCH && type !== ActionType.DELAY && type !== ActionType.SCRIPT))
+                // Complexity views (2026-09-04, Daniel's Lucid smoke): the same
+                // catalog gate Studio's ActionCard applies -- delay is basic,
+                // seize/release/assign intermediate, the rest advanced. The
+                // selected type is grandfathered (and disabled below) so a
+                // Basic user opening a Split action never has the <select>
+                // fall to another value and rewrite the model.
+                .filter((type) => type === action.type || isTypeVisible(type))
                 .map((type) => (
-                <option key={type} value={type}>
+                <option key={type} value={type} disabled={type !== action.type ? false : !isTypeVisible(type)}>
                   {ACTION_TYPE_LABELS[type]}
                 </option>
               ))}
