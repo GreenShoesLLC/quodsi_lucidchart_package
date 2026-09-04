@@ -10,7 +10,10 @@ import {
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 
-import { ConnectorRoutingView } from "quodsi_studio/platforms/shared";
+// The Connector case renders the SHARED ConnectorEditor (2026-09-03): Routing |
+// Levers tabs, source resolution and the not-found/unconnected banners all
+// live there, same as Studio/drawio.
+import { ConnectorEditor } from "quodsi_studio/platforms/shared";
 import ModelEditor, { EditorTab } from "../editors/ModelEditor";
 import { EntityRow } from "../editors/EntitiesEditor";
 import ActivityEditor from "../editors/ActivityEditor";
@@ -69,15 +72,15 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousEditorTypeRef = useRef<string | null>(null);
 
-  // Unconditional (hook order): backs the Connector case's ConnectorRoutingView
+  // Unconditional (hook order): backs the Connector case's ConnectorEditor
   // below. This screen holds no draft of its own -- every routing edit made
   // here (weight/priority/condition/entity template/connect type) writes
   // straight through to storage via Task 2's ELEMENT_UPDATE sender, so no
   // shapeWriters are registered (compare ActivityEditor/GeneratorEditor,
   // which register one for the shape they already own a draft of).
   const { updateResourceRequirements, updateElement } = useModelOpsSender();
-  // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorRoutingView
-  // ViewTell mount below.
+  // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorEditor (its
+  // routing cards' ViewTell mounts) below.
   const { openSettingsModal } = useSimulationRunSender();
   const connectorAccessor = useReferenceDataAccessor(referenceData, {
     updateResourceRequirements,
@@ -205,28 +208,22 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
 
       case SimulationObjectType.Connector:
       case "Connector": {
+        // ConnectorEditor resolves the source (Activity or Generator) from the
+        // accessor snapshot itself and renders its own "not found" /
+        // "unconnected" banners, so the source lookup and the red
+        // data-integrity notice that used to live here are gone with it. A
+        // connector whose source is missing is still logged for diagnosis.
         const sourceId = safeElementData.sourceId as string | undefined;
-        const isActivitySource = !!referenceData.activities?.some((a) => a.id === sourceId);
-        const isGeneratorSource = !isActivitySource && !!referenceData.generators?.some((g) => g.id === sourceId);
-
-        if (!sourceId || (!isActivitySource && !isGeneratorSource)) {
-          // Error: Source not found in either Activities or Generators - data integrity issue
+        const hasSource =
+          !!sourceId &&
+          (!!referenceData.activities?.some((a) => a.id === sourceId) ||
+            !!referenceData.generators?.some((g) => g.id === sourceId));
+        if (!hasSource) {
           log.error("Source not found for connector:", safeElementData.id, "sourceId:", sourceId);
-          return (
-            <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
-              <div className="font-medium">Cannot edit connector</div>
-              <div className="text-xs mt-1">
-                Source element not found. This indicates a data integrity issue.
-              </div>
-            </div>
-          );
         }
-
         return (
-          <ConnectorRoutingView
-            sourceId={sourceId}
-            sourceType={isActivitySource ? 'Activity' : 'Generator'}
-            selectedConnectorId={safeElementData.id}
+          <ConnectorEditor
+            shapeId={safeElementData.id}
             accessor={connectorAccessor}
             onOpenSettings={openSettingsModal}
           />
