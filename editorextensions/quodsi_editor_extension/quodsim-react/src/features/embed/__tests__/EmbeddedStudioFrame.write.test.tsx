@@ -82,6 +82,17 @@ describe("EmbeddedStudioFrame write relay", () => {
     expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 8, success: false, error: "no persistence path" }, ORIGIN);
   });
 
+  it("fast-fails an unknown write kind instead of leaving the iframe to time out", () => {
+    const { iframe, iframePost } = mount();
+    fromIframe(iframe, { type: "QUODSI_EMBED_WRITE", requestId: 11, kind: "bogus", payload: {} });
+    expect(iframePost).toHaveBeenCalledWith(
+      { type: "QUODSI_EMBED_WRITE_RESULT", requestId: 11, success: false, error: "unknown write kind" },
+      ORIGIN,
+    );
+    // No envelope (with the iframe as its `source`) was ever posted to the host.
+    expect(parentPost).not.toHaveBeenCalledWith(expect.objectContaining({ source: "studio-embed-iframe" }), expect.anything());
+  });
+
   it("ignores a result whose id it never issued", () => {
     const { iframePost } = mount();
     fromHost({ id: "someone-elses", type: EnvelopeMessageType.STATES_UPDATE_RESULT, source: "host", target: "model-iframe", version: "1.0", data: { success: true } });

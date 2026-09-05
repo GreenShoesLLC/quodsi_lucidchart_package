@@ -168,7 +168,13 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
       ) {
         const { requestId, kind, payload } = e.data as { requestId: number; kind: EmbedWriteKind; payload: unknown };
         const envelope = buildWriteEnvelope(kind, payload, uuid());
-        if (!envelope) return;
+        if (!envelope) {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: 'QUODSI_EMBED_WRITE_RESULT', requestId, success: false, error: 'unknown write kind' },
+            studioOrigin,
+          );
+          return;
+        }
         const timer = window.setTimeout(() => writeIdsRef.current.delete(envelope.id), WRITE_ID_TTL_MS);
         writeIdsRef.current.set(envelope.id, { requestId, timer });
         window.parent.postMessage(envelope, '*');
