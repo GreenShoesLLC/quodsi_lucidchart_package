@@ -45,6 +45,11 @@ import type {
   ModelStateAccessor,
 } from 'quodsi_studio/platforms/shared'
 import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
+import {
+  createShapeUnavailable,
+  deleteShapeUnavailable,
+  moveShapeUnavailable,
+} from 'quodsi_studio/platforms/shared'
 import type { ModelDefinition } from '@quodsi/shared'
 
 export type { ShapeInfoLike, DomainType, ModelStateSnapshot, ModelStateAccessor }
@@ -235,6 +240,11 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     // host renders a document onto). Lucid has none yet: the shared
     // rejection tells the card so, instead of a silent no-op.
     createModel: createModelUnavailable,
+    // Shape ops (arm 1b) need a drawing half too. Lucid has none yet, so
+    // reject the same shared way.
+    createShape: createShapeUnavailable,
+    deleteShape: deleteShapeUnavailable,
+    moveShape: moveShapeUnavailable,
   }
 
   // Optional members: only attached when the host actually supports the
