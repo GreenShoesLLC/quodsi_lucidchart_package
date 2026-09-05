@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { v4 as uuid } from 'uuid';
 import { EnvelopeMessageType, isEnvelope } from '@quodsi/lucid-shared';
 import { useMessaging } from '../../messaging/MessageProvider';
-import { buildWriteEnvelope, WRITE_RESULT_TYPES, type EmbedWriteKind } from './embedWriteEnvelope';
+import { buildWriteEnvelope, WRITE_RESULT_TYPES, WRITE_ID_TTL_MS, type EmbedWriteKind } from './embedWriteEnvelope';
 
 interface Props {
   /** Studio path to embed, e.g. `/embed/scenarios/<id>/results`. `?embed=1` is appended. */
@@ -39,8 +39,14 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
   // Re-arm safety: when the host replies with an empty token (auth still
   // establishing), poll for it instead of waiting out the full timeout.
   const retryRef = useRef<number | null>(null);
-  // Write relay correlation: envelope id -> the iframe's requestId.
-  const writeIdsRef = useRef(new Map<string, number>());
+  // Write relay correlation: envelope id -> the iframe's requestId + the
+  // eviction timer that forgets it if the host never answers (see
+  // WRITE_ID_TTL_MS in embedWriteEnvelope.ts).
+  // `number`, not `ReturnType<typeof setTimeout>`: this file always calls
+  // window.setTimeout (DOM lib, returns number), but with @types/node also
+  // in scope (tsconfig `types`) the bare `setTimeout` global resolves to
+  // Node's `Timeout` — matches the existing timerRef/retryRef convention above.
+  const writeIdsRef = useRef(new Map<string, { requestId: number; timer: number }>());
 
   // All hooks must come before any conditional return (Rules of Hooks).
   useEffect(() => {
@@ -55,8 +61,10 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
       // Write relay (response): a *_RESULT for an envelope we issued -> back into the iframe.
       if (isEnvelope(e.data) && WRITE_RESULT_TYPES.has(e.data.type) && writeIdsRef.current.has(e.data.id)) {
         if (e.source !== window.parent) return;
-        const requestId = writeIdsRef.current.get(e.data.id)!;
+        const entry = writeIdsRef.current.get(e.data.id)!;
+        window.clearTimeout(entry.timer);
         writeIdsRef.current.delete(e.data.id);
+        const requestId = entry.requestId;
         const d = (e.data.data ?? {}) as { success?: boolean; errorMessage?: string };
         iframeRef.current?.contentWindow?.postMessage(
           { type: 'QUODSI_EMBED_WRITE_RESULT', requestId, success: !!d.success, error: d.errorMessage },
@@ -161,7 +169,8 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
         const { requestId, kind, payload } = e.data as { requestId: number; kind: EmbedWriteKind; payload: unknown };
         const envelope = buildWriteEnvelope(kind, payload, uuid());
         if (!envelope) return;
-        writeIdsRef.current.set(envelope.id, requestId);
+        const timer = window.setTimeout(() => writeIdsRef.current.delete(envelope.id), WRITE_ID_TTL_MS);
+        writeIdsRef.current.set(envelope.id, { requestId, timer });
         window.parent.postMessage(envelope, '*');
         return;
       }
@@ -221,6 +230,8 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
       window.removeEventListener('message', onMessage);
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       if (retryRef.current !== null) window.clearTimeout(retryRef.current);
+      for (const entry of writeIdsRef.current.values()) window.clearTimeout(entry.timer);
+      writeIdsRef.current.clear();
     };
   }, [sendMessage, studioOrigin]);
 

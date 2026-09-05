@@ -11,7 +11,7 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 }));
 
 import { EmbeddedStudioFrame } from "../EmbeddedStudioFrame";
-import { buildWriteEnvelope } from "../embedWriteEnvelope";
+import { buildWriteEnvelope, WRITE_ID_TTL_MS } from "../embedWriteEnvelope";
 
 const ORIGIN = "https://studio.example";
 
@@ -86,5 +86,34 @@ describe("EmbeddedStudioFrame write relay", () => {
     const { iframePost } = mount();
     fromHost({ id: "someone-elses", type: EnvelopeMessageType.STATES_UPDATE_RESULT, source: "host", target: "model-iframe", version: "1.0", data: { success: true } });
     expect(iframePost).not.toHaveBeenCalledWith(expect.objectContaining({ type: "QUODSI_EMBED_WRITE_RESULT" }), expect.anything());
+  });
+
+  it("forgets an unanswered write after WRITE_ID_TTL_MS", () => {
+    vi.useFakeTimers();
+    try {
+      const { iframe, iframePost } = mount();
+      fromIframe(iframe, { type: "QUODSI_EMBED_WRITE", requestId: 9, kind: "states", payload: { states: [{ id: "s1" }] } });
+      const envelope = parentPost.mock.calls.map((c: any) => c[0]).find((m: any) => m?.type === EnvelopeMessageType.STATES_UPDATE) as any;
+      act(() => { vi.advanceTimersByTime(WRITE_ID_TTL_MS); });
+      fromHost({ id: envelope.id, type: EnvelopeMessageType.STATES_UPDATE_RESULT, source: "host", target: "studio-embed-iframe", version: "1.0", data: { success: true } });
+      expect(iframePost).not.toHaveBeenCalledWith(expect.objectContaining({ type: "QUODSI_EMBED_WRITE_RESULT" }), expect.anything());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a relayed result clears its timer", () => {
+    vi.useFakeTimers();
+    try {
+      const { iframe, iframePost } = mount();
+      fromIframe(iframe, { type: "QUODSI_EMBED_WRITE", requestId: 10, kind: "entities", payload: { entities: [{ id: "e1" }] } });
+      const envelope = parentPost.mock.calls.map((c: any) => c[0]).find((m: any) => m?.type === EnvelopeMessageType.ENTITIES_UPDATE) as any;
+      fromHost({ id: envelope.id, type: EnvelopeMessageType.ENTITIES_UPDATE_RESULT, source: "host", target: "studio-embed-iframe", version: "1.0", data: { success: true } });
+      expect(iframePost).toHaveBeenCalledTimes(1);
+      expect(() => { act(() => { vi.advanceTimersByTime(WRITE_ID_TTL_MS); }); }).not.toThrow();
+      expect(iframePost).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -10,6 +10,12 @@ import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared';
 
 export type EmbedWriteKind = 'element' | 'modelRoot' | 'states' | 'entities';
 
+// The iframe's own write-request promise already rejects itself after 30s
+// (see the Studio-side writer); this must exceed that so the iframe always
+// gives up first -- a host result arriving after this window is stale and
+// simply dropped rather than relayed into a promise nothing is awaiting.
+export const WRITE_ID_TTL_MS = 35_000;
+
 export function buildWriteEnvelope(kind: EmbedWriteKind, payload: any, id: string): EnvelopeBase | null {
   const base = { id, source: 'studio-embed-iframe' as const, target: 'host' as const, version: '1.0' };
   switch (kind) {
