@@ -44,6 +44,7 @@ import type {
   ModelStateSnapshot,
   ModelStateAccessor,
 } from 'quodsi_studio/platforms/shared'
+import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
 import type { ModelDefinition } from '@quodsi/shared'
 
 export type { ShapeInfoLike, DomainType, ModelStateSnapshot, ModelStateAccessor }
@@ -230,6 +231,10 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     getSnapshot,
     updateShape,
     updateModel,
+    // The Advisor's generate-model arm needs a drawing half (a new page the
+    // host renders a document onto). Lucid has none yet: the shared
+    // rejection tells the card so, instead of a silent no-op.
+    createModel: createModelUnavailable,
   }
 
   // Optional members: only attached when the host actually supports the

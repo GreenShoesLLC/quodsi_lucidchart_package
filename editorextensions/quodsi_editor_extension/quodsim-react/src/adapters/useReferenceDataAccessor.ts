@@ -51,6 +51,7 @@ import { useEffect, useRef } from 'react'
 import type { EditorReferenceData, ISerializedResourceRequirement } from '@quodsi/lucid-shared'
 import { RequirementMode } from '@quodsi/lucid-shared'
 import type { ModelStateAccessor, ModelStateSnapshot } from 'quodsi_studio/platforms/shared'
+import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
 
 export type ReferenceDataSenders = {
   updateResourceRequirements: (list: ISerializedResourceRequirement[]) => Promise<void>
@@ -162,6 +163,9 @@ export function createReferenceDataAccessor(
       return () => { listeners.delete(listener) }
     },
     getSnapshot: () => snapshot,
+    // Reference-data accessor: no drawing half, so generate-model is
+    // rejected the shared way (see LucidModelStateAccessor).
+    createModel: createModelUnavailable,
     async updateModel(patch) {
       const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements')
       if (unhandled.length > 0) {
