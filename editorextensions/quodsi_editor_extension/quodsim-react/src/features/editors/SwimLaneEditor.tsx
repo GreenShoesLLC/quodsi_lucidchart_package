@@ -58,6 +58,7 @@ import { ResourceEditor, ResourceLinkPicker } from "quodsi_studio/platforms/shar
 import { useMessaging } from "../../messaging/MessageContext";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
+import { AdvisorLaunchButton } from "../modelPanel/AdvisorLaunchButton";
 
 /**
  * The model-root projection's resource row. `shapeId` / `laneRef` are
@@ -100,6 +101,13 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
   const [activeLaneIndex, setActiveLaneIndex] = useState(0);
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(true);
+  // Advisor sparkle ships DARK behind the same devtools flag PanelHeader
+  // reads (the button itself does not check it). Lanes never render
+  // PanelHeader, so the gate lives here too.
+  const [devToolsEnabled, setDevToolsEnabled] = useState(false);
+  useEffect(() => {
+    setDevToolsEnabled(localStorage.getItem("quodsi_devtools") === "true");
+  }, []);
   const [swimlaneData, setSwimlaneData] = useState<SwimLaneQuodsiData>(
     elementData.swimlaneData || {
       lanes: elementData.lanes.map(() => null),
@@ -190,6 +198,18 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-blue-600" />
           <span className="text-sm font-semibold text-gray-900">Swimlane</span>
+          <div className="ml-auto flex items-center gap-1">
+            {devToolsEnabled && editableResource && (
+              <AdvisorLaunchButton
+                focus={{
+                  focusId: editableResource.id,
+                  focusType: "Resource",
+                  focusName: editableResource.name,
+                  mode: "definition",
+                }}
+              />
+            )}
+          </div>
         </div>
         <div className="text-xs text-gray-500 mt-0.5">
           {elementData.isVertical ? "Vertical" : "Horizontal"} &middot;{" "}

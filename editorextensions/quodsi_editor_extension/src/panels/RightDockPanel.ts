@@ -46,7 +46,15 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             url: 'quodsim-react/index.html?panel=model', // Query param helps the React app identify which panel it is
             location: PanelLocation.RightDock,
             iconUrl: QUODSI_ICON_BASE64,
-            width: 300
+            width: 300,
+            // Lucid "may destroy the panel iframe and recreate it when needed
+            // for optimal application performance" (SDK docs, editor-extension-
+            // iframes). A silent remount throws away in-progress panel state --
+            // an unsaved edit, a write awaiting its RESULT, flags read on mount.
+            // `persist` keeps the iframe alive in the background (RightDock
+            // only). Added 2026-09-05 while chasing the sporadic modal-Close bug
+            // (ClickUp 86e34gka7).
+            persist: true,
         });
         
         this.debug.debug('Constructor called with role: model');

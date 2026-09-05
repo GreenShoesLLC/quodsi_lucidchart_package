@@ -2,6 +2,7 @@ import { EnvelopeBase, EnvelopeMessageType, ISerializedEntity, getLogger } from 
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('EntitiesHandler');
@@ -35,6 +36,12 @@ export class EntitiesHandler {
     }
   }
 
+  /** Mirrors ElementOpsHandler.getResponseChannel: the embedded Studio iframe answers on its own channel. */
+  private static getResponseChannel(msg: EnvelopeBase): PanelRole {
+    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
+    return 'model';
+  }
+
   /**
    * Handle entities update request
    *
@@ -49,6 +56,8 @@ export class EntitiesHandler {
     log.debug('Entities update requested', {
       entitiesCount: data.entities.length
     });
+
+    const channel = EntitiesHandler.getResponseChannel(msg);
 
     try {
       // Get the client and model manager from singleton
@@ -73,11 +82,11 @@ export class EntitiesHandler {
       await SelectionHandler.sendSelectionChangedMessage(true);
 
       // Send success response
-      router.send('model', {
+      router.send(channel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.ENTITIES_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: true
@@ -90,11 +99,11 @@ export class EntitiesHandler {
       log.error('Error updating entities', error);
 
       // Send error response
-      router.send('model', {
+      router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.ENTITIES_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: false,

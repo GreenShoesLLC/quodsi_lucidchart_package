@@ -1,4 +1,5 @@
 import {
+    CommandName,
     EditorClient,
     Modal,
     JsonSerializable
@@ -49,6 +50,33 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
     // ------------------------------------------------------------------ //
 
     /**
+     * Hide this modal whether or not the SDK believes it is visible.
+     *
+     * The SDK's Modal.hide() is a no-op until its private `visible` flag is
+     * true, and that flag is set only after Lucid ACKNOWLEDGES the ShowModal
+     * command (`await sendCommand(ShowModal)` in modal.js). Smoke 2026-09-05
+     * (ClickUp 86e34gka7): the modal was on screen, "CLOSE_MODAL received —
+     * hiding modal" logged twice with no effect, and the third click closed
+     * it -- the acknowledgement was late (Lucid's own network calls were
+     * failing at the time). When it never arrives, only a page refresh
+     * recovers. A message FROM the frame is proof the frame exists, so on
+     * CLOSE_MODAL we send HideModal ourselves, keyed by the same per-instance
+     * action name the SDK uses, and reset the flag so a later frameClosed /
+     * hide() stays consistent. When the flag is already true this is exactly
+     * what hide() does.
+     */
+    private hideRegardless(): void {
+        const sdk = this as unknown as { visible?: boolean };
+        if (sdk.visible) {
+            this.hide();
+            return;
+        }
+        this.debug.debug('CLOSE_MODAL before the SDK marked the modal visible — forcing HideModal');
+        this.client.sendCommand(CommandName.HideModal, { n: this.messageActionName });
+        sdk.visible = false;
+    }
+
+    /**
      * Relay a message from the host to this modal's iframe.
      * Implementation of the RoutablePanel interface.
      */
@@ -80,7 +108,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
         // intercept here and hide rather than routing to the host.
         if (envelope.type === EnvelopeMessageType.CLOSE_MODAL) {
             this.debug.debug('CLOSE_MODAL received — hiding modal');
-            this.hide();
+            this.hideRegardless();
             return;
         }
 

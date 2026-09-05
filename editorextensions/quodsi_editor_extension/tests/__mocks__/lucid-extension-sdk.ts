@@ -36,15 +36,26 @@ export class DocumentProxy {
 // `.config` so tests can assert on the url/size/title a RoutingModal
 // subclass (e.g. PatternEditorModal, StudioEmbedModal) computed, without
 // pulling in the real SDK's iframe/platform machinery.
+// The two command names RoutingModal's forced hide reaches for. Values match
+// node_modules/lucid-extension-sdk/commandtypes.js.
+export const CommandName = { ShowModal: 'sm', HideModal: 'hm' } as const;
+
 export class Modal {
   public readonly config: unknown;
+  // Mirrors IframeUI: the per-instance action name the SDK keys iframe
+  // messages (and the HideModal command) on. RoutingModal's forced hide
+  // sends HideModal with exactly this name.
+  protected messageActionName = `__ui_message__${++Modal.nextId}`;
+  private static nextId = 0;
+  protected readonly client: any;
   // Mirrors the real SDK's Modal (node_modules/lucid-extension-sdk/ui/modal.js):
   // `visible` starts false, `show()` flips it true, `hide()` only acts (and
   // only flips it back false) when it is currently true. This is the seam
   // RoutingModal.messageFromFrame's CLOSE_MODAL intercept depends on -- see
   // tests/model/routingModal.closeModal.test.ts.
   public visible = false;
-  constructor(_client: unknown, config: unknown) {
+  constructor(client: unknown, config: unknown) {
+    this.client = client;
     this.config = config;
   }
   // No-ops so a test can drive a RoutingModal subclass's real lifecycle
