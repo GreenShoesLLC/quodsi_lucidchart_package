@@ -68,6 +68,27 @@ describe('RoutingModal.messageFromFrame -- CLOSE_MODAL seam', () => {
         expect((modal as any).visible).toBe(false);
     });
 
+    it('still hides when the SDK has not yet marked the modal visible (ShowModal ack slow or lost)', () => {
+        // Smoke 2026-09-05 (ClickUp 86e34gka7): "[RoutingModal] CLOSE_MODAL
+        // received — hiding modal" logged twice with NO effect, then the third
+        // click closed the modal. The SDK sets `visible` only after Lucid
+        // acknowledges ShowModal, and Modal.hide() is a no-op until then -- so
+        // a slow/lost ack leaves a modal on screen that refuses to close. A
+        // message FROM the frame proves the frame exists, so the intercept
+        // must send HideModal regardless of the flag.
+        const sendCommand = jest.fn();
+        const modal = new ScheduleEditorModal({ sendCommand } as any, { shapeId: 'gen-1' });
+        // show() deliberately NOT called: visible stays false, as it does in
+        // production between sendCommand(ShowModal) and its acknowledgement.
+        expect((modal as any).visible).toBe(false);
+
+        deliverToModal(modal, closeModalEnvelope());
+
+        expect(sendCommand).toHaveBeenCalledWith('hm', { n: (modal as any).messageActionName });
+        expect((modal as any).visible).toBe(false);
+        expect(router.receive).not.toHaveBeenCalled();
+    });
+
     it('rejects a non-envelope message without throwing', () => {
         const modal = new ScheduleEditorModal(FAKE_CLIENT, { shapeId: 'gen-1' });
         const hideSpy = jest.spyOn(modal, 'hide');
