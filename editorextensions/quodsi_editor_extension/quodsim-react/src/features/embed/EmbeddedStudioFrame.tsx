@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { v4 as uuid } from 'uuid';
 import { EnvelopeMessageType, isEnvelope } from '@quodsi/lucid-shared';
 import { useMessaging } from '../../messaging/MessageProvider';
+import { buildWriteEnvelope, WRITE_RESULT_TYPES, type EmbedWriteKind } from './embedWriteEnvelope';
 
 interface Props {
   /** Studio path to embed, e.g. `/embed/scenarios/<id>/results`. `?embed=1` is appended. */
@@ -23,7 +25,10 @@ interface Props {
  * extension. Runs the token relay: when the Studio iframe asks for a token
  * (QUODSI_EMBED_TOKEN_REFRESH), request it from the host (REQUEST_STUDIO_TOKEN);
  * when the host replies (STUDIO_TOKEN), forward it into the iframe
- * (QUODSI_EMBED_TOKEN). Foundation for every Path 1 embed.
+ * (QUODSI_EMBED_TOKEN). Foundation for every Path 1 embed. Also relays the
+ * Advisor write half: iframe QUODSI_EMBED_WRITE requests become the
+ * extension's own write envelopes, and the matching *_RESULT is echoed back
+ * into the iframe as QUODSI_EMBED_WRITE_RESULT.
  */
 export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = true }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -34,6 +39,8 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
   // Re-arm safety: when the host replies with an empty token (auth still
   // establishing), poll for it instead of waiting out the full timeout.
   const retryRef = useRef<number | null>(null);
+  // Write relay correlation: envelope id -> the iframe's requestId.
+  const writeIdsRef = useRef(new Map<string, number>());
 
   // All hooks must come before any conditional return (Rules of Hooks).
   useEffect(() => {
@@ -45,6 +52,18 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
       timerRef.current = window.setTimeout(() => setTimedOut(true), 10000);
     }
     function onMessage(e: MessageEvent) {
+      // Write relay (response): a *_RESULT for an envelope we issued -> back into the iframe.
+      if (isEnvelope(e.data) && WRITE_RESULT_TYPES.has(e.data.type) && writeIdsRef.current.has(e.data.id)) {
+        if (e.source !== window.parent) return;
+        const requestId = writeIdsRef.current.get(e.data.id)!;
+        writeIdsRef.current.delete(e.data.id);
+        const d = (e.data.data ?? {}) as { success?: boolean; errorMessage?: string };
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_EMBED_WRITE_RESULT', requestId, success: !!d.success, error: d.errorMessage },
+          studioOrigin,
+        );
+        return;
+      }
       // Fix #1 (STUDIO_TOKEN hop): only accept the host reply from window.parent.
       // NOTE — smoke-test-sensitive: if the Lucid SDK delivers host messages
       // from a source other than window.parent (e.g. via an intermediate frame),
@@ -130,6 +149,20 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
         e.data?.type === 'QUODSI_EMBED_CATALOG_REQUEST'
       ) {
         sendMessage(EnvelopeMessageType.REQUEST_STUDIO_CATALOG);
+        return;
+      }
+      // Write relay (request): iframe asks to write -> post the extension's own
+      // envelope with a fresh id and remember which iframe request it answers.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_EMBED_WRITE'
+      ) {
+        const { requestId, kind, payload } = e.data as { requestId: number; kind: EmbedWriteKind; payload: unknown };
+        const envelope = buildWriteEnvelope(kind, payload, uuid());
+        if (!envelope) return;
+        writeIdsRef.current.set(envelope.id, requestId);
+        window.parent.postMessage(envelope, '*');
         return;
       }
       // Run delegation: iframe asks to run a scenario -> forward to the extension.
