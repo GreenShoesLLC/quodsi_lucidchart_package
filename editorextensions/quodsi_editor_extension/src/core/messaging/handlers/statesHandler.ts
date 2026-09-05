@@ -2,6 +2,7 @@ import { EnvelopeBase, EnvelopeMessageType, ISerializedState, getLogger } from '
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('StatesHandler');
@@ -33,6 +34,12 @@ export class StatesHandler {
     }
   }
 
+  /** Mirrors ElementOpsHandler.getResponseChannel: the embedded Studio iframe answers on its own channel. */
+  private static getResponseChannel(msg: EnvelopeBase): PanelRole {
+    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
+    return 'model';
+  }
+
   /**
    * Handle states update request
    *
@@ -47,6 +54,8 @@ export class StatesHandler {
     log.debug('States update requested', {
       statesCount: data.states.length
     });
+
+    const channel = StatesHandler.getResponseChannel(msg);
 
     try {
       // Get the client and model manager from singleton
@@ -72,11 +81,11 @@ export class StatesHandler {
       await SelectionHandler.sendSelectionChangedMessage(true);
 
       // Send success response
-      router.send('model', {
+      router.send(channel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.STATES_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: true
@@ -89,11 +98,11 @@ export class StatesHandler {
       log.error('Error updating states', error);
 
       // Send error response
-      router.send('model', {
+      router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.STATES_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: false,

@@ -96,6 +96,11 @@ export class ElementOpsHandler {
     // model -- but the branch is here for the same defensive reason as
     // 'work-schedule' above.
     if (msg.source === 'settings-iframe') return 'settings';
+    // The embedded Studio iframe (Advisor write half) writes through the
+    // panel's EmbeddedStudioFrame with source 'studio-embed-iframe'; its
+    // RESULT must come back on the studio-embed channel or the iframe's
+    // write hangs for the full 30 s timeout.
+    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     return 'model';
   }
 
