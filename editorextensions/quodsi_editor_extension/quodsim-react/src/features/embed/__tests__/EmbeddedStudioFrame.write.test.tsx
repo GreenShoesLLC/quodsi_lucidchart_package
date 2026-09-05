@@ -48,6 +48,12 @@ describe("buildWriteEnvelope", () => {
   it("returns null for an unknown kind", () => {
     expect(buildWriteEnvelope("bogus" as any, {} as any, "id-6")).toBeNull();
   });
+  it("maps a model write to ELEMENT_UPDATE on the page with no element-type hint", () => {
+    expect(buildWriteEnvelope("model", { elementId: "page-1", patch: { replications: 5, name: "Clinic v2" } }, "id-7")).toEqual({
+      id: "id-7", type: EnvelopeMessageType.ELEMENT_UPDATE, source: "studio-embed-iframe", target: "host", version: "1.0",
+      data: { elementId: "page-1", type: "Model", data: { replications: 5, name: "Clinic v2", id: "page-1" } },
+    });
+  });
 });
 
 describe("EmbeddedStudioFrame write relay", () => {

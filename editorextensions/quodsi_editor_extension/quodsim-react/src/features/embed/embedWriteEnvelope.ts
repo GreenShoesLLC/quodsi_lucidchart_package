@@ -8,7 +8,7 @@
 // like any other panel edit.
 import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared';
 
-export type EmbedWriteKind = 'element' | 'modelRoot' | 'states' | 'entities';
+export type EmbedWriteKind = 'element' | 'modelRoot' | 'states' | 'entities' | 'model';
 
 // The iframe's own write-request promise already rejects itself after 30s
 // (see the Studio-side writer); this must exceed that so the iframe always
@@ -40,6 +40,17 @@ export function buildWriteEnvelope(kind: EmbedWriteKind, payload: any, id: strin
       return { ...base, type: EnvelopeMessageType.STATES_UPDATE, data: { states: (payload as { states: unknown }).states } } as EnvelopeBase;
     case 'entities':
       return { ...base, type: EnvelopeMessageType.ENTITIES_UPDATE, data: { entities: (payload as { entities: unknown }).entities } } as EnvelopeBase;
+    case 'model': {
+      // Run settings live on the Lucid page. ElementOpsHandler treats
+      // type 'Model' as "the current page" and StorageAdapter merges, so a
+      // partial patch is safe; no diagramElementType (it is not a shape).
+      const { elementId, patch } = payload as { elementId: string; patch: Record<string, unknown> };
+      return {
+        ...base,
+        type: EnvelopeMessageType.ELEMENT_UPDATE,
+        data: { elementId, type: 'Model', data: { ...patch, id: elementId } },
+      } as EnvelopeBase;
+    }
     default:
       return null;
   }
