@@ -23,7 +23,7 @@ import {
   getLogger,
 } from '@quodsi/lucid-shared';
 import { router } from '../index';
-import { Viewport } from 'lucid-extension-sdk';
+import { Viewport, DocumentProxy, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { PanelRole } from '../types';
@@ -53,6 +53,38 @@ function stripGeometry(element: JsonObject): JsonObject {
 }
 
 /**
+ * MODEL_CREATE_PAGE's document root keys that make up the page-level "Model"
+ * write -- the same run-settings fields ElementOpsHandler.handleElementUpdate
+ * writes for `type === 'Model'`. Only keys the document actually carries are
+ * copied through.
+ */
+const RUN_SETTINGS_KEYS = [
+  'name',
+  'description',
+  'replications',
+  'seed',
+  'timeUnit',
+  'timeMode',
+  'runTime',
+  'warmupTime',
+  'startDateTime',
+] as const;
+
+/**
+ * MODEL_CREATE_PAGE's document root keys that make up the model-ROOT patch,
+ * i.e. exactly the keys ModelManager.updateModelRoot recognises. Passing an
+ * unrecognised key would make updateModelRoot throw, so this list must never
+ * drift from that method's own `knownKeys`.
+ */
+const MODEL_ROOT_KEYS = [
+  'resources',
+  'resourceRequirements',
+  'arrivalPatterns',
+  'arrivalSchedules',
+  'workSchedules',
+] as const;
+
+/**
  * Handler for single-shape create/delete/move operations, driven by the
  * embedded Studio iframe (Advisor drawing half).
  */
@@ -80,8 +112,10 @@ export class ShapeOpsHandler {
           .catch(err => log.error('Error in handleShapeMove:', err));
         return true;
 
-      // EnvelopeMessageType.MODEL_CREATE_PAGE: bulk page creation from an
-      // Advisor-authored document. Task 5 -- not implemented here yet.
+      case EnvelopeMessageType.MODEL_CREATE_PAGE:
+        ShapeOpsHandler.handleModelCreatePage(msg)
+          .catch(err => log.error('Error in handleModelCreatePage:', err));
+        return true;
 
       // Not a shape operations message
       default:
@@ -119,6 +153,112 @@ export class ShapeOpsHandler {
       case 'Connector':
         return SimulationObjectType.Connector;
     }
+  }
+
+  /**
+   * Creates one Activity/Generator block at `box`, converts it via the
+   * factory, merges the Advisor's element data over the conversion default,
+   * and writes the merged record both to the in-memory ModelDefinition
+   * (registerElement) and to storage (updateElementData) -- see the C1/C2
+   * comments on handleShapeCreate's original single-block path, which this
+   * factors out of. Callers are responsible for `client.loadBlockClasses`
+   * (handleShapeCreate does it per call; the page-creation path does it once
+   * for the whole page).
+   */
+  private static async createBlockRecord(
+    page: any,
+    modelManager: ModelManager,
+    factory: LucidElementFactory,
+    shapeType: 'Activity' | 'Generator',
+    box: { x: number; y: number; w: number; h: number },
+    advisorElement: JsonObject
+  ): Promise<{ id: string; block: any; record: JsonObject }> {
+    const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
+
+    const name = (advisorElement as any).name ?? `New ${shapeType}`;
+    newBlock.textAreas.set('Text', name);
+
+    const platformObject = factory.createPlatformObject(newBlock, ShapeOpsHandler.shapeSimType(shapeType), true);
+    const record = {
+      ...platformObject.getSimulationObject(),
+      ...advisorElement,
+      id: newBlock.id,
+    };
+
+    await modelManager.registerElement(record as any, newBlock);
+    modelManager.getStorageAdapter().updateElementData(newBlock as any, record as any);
+
+    return { id: newBlock.id, block: newBlock, record };
+  }
+
+  /**
+   * Creates a Resource block at `box` -- a POINTER at a model-level record,
+   * not a shape-owned domain record (storage format 2; see ResourceLucid's
+   * doc comment and LucidPageConversionService ~700-725, which this mirrors).
+   * Unlike createBlockRecord, there is deliberately NO storage write-back
+   * here: the resource's actual data (name/capacity/etc.) already lives in
+   * the page's q_resources list, written by the page-level
+   * `updateModelRoot({ resources })` call before any block exists. Merging a
+   * domain record onto the block's q_data here would overwrite the pointer
+   * and re-classify the block as storage-format-1 on the next open.
+   */
+  private static async createResourceBlockRecord(
+    page: any,
+    modelManager: ModelManager,
+    factory: LucidElementFactory,
+    box: { x: number; y: number; w: number; h: number },
+    advisorElement: JsonObject
+  ): Promise<{ id: string; block: any; record: JsonObject }> {
+    const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
+
+    const name = (advisorElement as any).name ?? 'New Resource';
+    newBlock.textAreas.set('Text', name);
+
+    const platformObject = factory.createPlatformObject(newBlock, SimulationObjectType.Resource, true);
+    const record = {
+      ...platformObject.getSimulationObject(),
+      ...advisorElement,
+      id: newBlock.id,
+    };
+
+    await modelManager.registerElement(record as any, newBlock);
+
+    return { id: newBlock.id, block: newBlock, record };
+  }
+
+  /**
+   * Creates a Connector line between two already-created blocks, converts
+   * it via the factory, merges the Advisor's element data (with sourceId/
+   * targetId forced to the Lucid-assigned block ids), and writes the merged
+   * record both in-memory and to storage. Factored out of handleShapeCreate
+   * for reuse by the page-creation path -- see createBlockRecord's comment.
+   */
+  private static async createLineRecord(
+    page: any,
+    modelManager: ModelManager,
+    factory: LucidElementFactory,
+    sourceBlock: any,
+    targetBlock: any,
+    advisorElement: JsonObject
+  ): Promise<{ id: string; line: any; record: JsonObject }> {
+    const newLine = page.addLine({
+      endpoint1: { connection: sourceBlock, linkX: 1, linkY: 0.5 },
+      endpoint2: { connection: targetBlock, linkX: 0, linkY: 0.5 },
+    });
+
+    const platformObject = factory.createPlatformObject(newLine, SimulationObjectType.Connector, true);
+    const record = {
+      ...platformObject.getSimulationObject(),
+      ...advisorElement,
+      id: newLine.id,
+      sourceId: sourceBlock.id,
+      targetId: targetBlock.id,
+    };
+
+    await modelManager.registerElement(record as any, newLine);
+    modelManager.getStorageAdapter().updateElementData(newLine as any, record as any);
+
+    return { id: newLine.id, line: newLine, record };
   }
 
   /**
@@ -162,34 +302,26 @@ export class ShapeOpsHandler {
           throw new Error(`Connector target not found: ${targetId}`);
         }
 
-        const newLine = page.addLine({
-          endpoint1: { connection: sourceBlock, linkX: 1, linkY: 0.5 },
-          endpoint2: { connection: targetBlock, linkX: 0, linkY: 0.5 },
-        });
-
-        const factory = ShapeOpsHandler.newElementFactory(modelManager);
-        const platformObject = factory.createPlatformObject(newLine, SimulationObjectType.Connector, true);
-        const record = {
-          ...platformObject.getSimulationObject(),
-          ...advisorElement,
-          id: newLine.id,
-          sourceId: sourceBlock.id,
-          targetId: targetBlock.id,
-        };
-
         // C1: registerElement() only updates the in-memory ModelDefinition.
         // createPlatformObject(..., true) already wrote CONVERSION-DEFAULT
         // data to storage (ConnectorLucid.createFromConversion calls
-        // storageAdapter.setElementData); without this write-back the merged
+        // storageAdapter.setElementData); without a write-back the merged
         // record (the Advisor's weight/probability/etc.) is discarded the
         // next time validateModel() rebuilds the ModelDefinition FROM
-        // STORAGE, and the defaults win. updateElementData merges `record`
-        // over what's already there -- same call
+        // STORAGE, and the defaults win. createLineRecord's updateElementData
+        // call merges `record` over what's already there -- same call
         // LucidPageConversionService.reserveConvertedName makes to
         // overwrite a conversion default post-hoc.
-        await modelManager.registerElement(record as any, newLine);
-        modelManager.getStorageAdapter().updateElementData(newLine as any, record as any);
-        newId = newLine.id;
+        const factory = ShapeOpsHandler.newElementFactory(modelManager);
+        const created = await ShapeOpsHandler.createLineRecord(
+          page,
+          modelManager,
+          factory,
+          sourceBlock,
+          targetBlock,
+          advisorElement
+        );
+        newId = created.id;
       } else {
         let box;
         if (data.near) {
@@ -206,27 +338,18 @@ export class ShapeOpsHandler {
         // in this session. Idempotent -- safe to call on every create, not
         // just the first one after a fresh load.
         await client.loadBlockClasses(['ProcessBlock']);
-        const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
-
-        const name = (advisorElement as any).name ?? `New ${data.shapeType}`;
-        newBlock.textAreas.set('Text', name);
-
-        const factory = ShapeOpsHandler.newElementFactory(modelManager);
-        const platformObject = factory.createPlatformObject(
-          newBlock,
-          ShapeOpsHandler.shapeSimType(data.shapeType),
-          true
-        );
-        const record = {
-          ...platformObject.getSimulationObject(),
-          ...advisorElement,
-          id: newBlock.id,
-        };
 
         // C1 -- see the Connector branch's comment above.
-        await modelManager.registerElement(record as any, newBlock);
-        modelManager.getStorageAdapter().updateElementData(newBlock as any, record as any);
-        newId = newBlock.id;
+        const factory = ShapeOpsHandler.newElementFactory(modelManager);
+        const created = await ShapeOpsHandler.createBlockRecord(
+          page,
+          modelManager,
+          factory,
+          data.shapeType,
+          box,
+          advisorElement
+        );
+        newId = created.id;
       }
 
       await modelManager.validateModel();
@@ -413,6 +536,212 @@ export class ShapeOpsHandler {
         data: {
           success: false,
           errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      });
+
+      return false;
+    }
+  }
+
+  /**
+   * Handle MODEL_CREATE_PAGE: builds a whole new page from an
+   * Advisor-authored document -- positions and all. Creates the page,
+   * switches both the viewport and the ModelManager to it, writes the
+   * page-level model (run settings, then the model-root lists, then states
+   * and entities), creates every block (generators, activities, resources)
+   * and then every line (connectors, endpoints resolved through the
+   * resulting Advisor-id -> Lucid-id map), validates, and replies with the
+   * page id and the id map.
+   *
+   * Any failure once the page exists rolls it back: the viewport and the
+   * ModelManager are pointed back at whatever page was current before this
+   * ran, and the new page is deleted -- in that order, so neither host is
+   * ever left holding a reference to a page that's about to disappear.
+   */
+  private static async handleModelCreatePage(msg: EnvelopeBase): Promise<boolean> {
+    const data = msg.data as { document: JsonObject };
+    const document = (data.document ?? {}) as Record<string, any>;
+    const channel = ShapeOpsHandler.getResponseChannel(msg);
+    log.debug('Model create page requested', { name: document.name });
+
+    const client = ModelManager.getClient();
+    const modelManager = ModelManager.getInstance();
+    const viewport = new Viewport(client);
+    const originalPage = viewport.getCurrentPage();
+
+    let page: any;
+    let currentStep = 'page setup';
+
+    try {
+      const doc = new DocumentProxy(client);
+      page = doc.addPage({ title: String(document.name ?? 'Generated model') });
+
+      viewport.setCurrentPage(page);
+      modelManager.setCurrentPage(page);
+
+      // Page-level Model write -- same call handleElementUpdate makes for
+      // type Model (ElementOpsHandler.handleElementUpdate treats the page
+      // itself as the element).
+      currentStep = 'page settings';
+      const runSettings: JsonObject = {};
+      for (const key of RUN_SETTINGS_KEYS) {
+        if (key in document) {
+          (runSettings as any)[key] = document[key];
+        }
+      }
+      await modelManager.saveElementData(
+        page,
+        { ...runSettings, id: page.id },
+        SimulationObjectType.Model,
+        page
+      );
+
+      // Model-root lists (resources, resourceRequirements, arrivalPatterns,
+      // arrivalSchedules, workSchedules) -- only the keys the document
+      // actually carries; updateModelRoot throws on anything it doesn't
+      // recognise.
+      currentStep = 'model root';
+      const rootPatch: Record<string, unknown> = {};
+      for (const key of MODEL_ROOT_KEYS) {
+        if (key in document) {
+          rootPatch[key] = document[key];
+        }
+      }
+      await modelManager.updateModelRoot(rootPatch, page);
+
+      if ('states' in document) {
+        currentStep = 'states';
+        await modelManager.updateStates(document.states, page);
+      }
+      if ('entities' in document) {
+        currentStep = 'entities';
+        await modelManager.updateEntities(document.entities, page);
+      }
+
+      const factory = ShapeOpsHandler.newElementFactory(modelManager);
+      const idMap: Record<string, string> = {};
+
+      // Loaded ONCE for the whole page -- not per block, unlike the single-
+      // shape SHAPE_CREATE path where every call is its own request.
+      await client.loadBlockClasses(['ProcessBlock']);
+
+      const blockBox = (record: Record<string, any>) => ({
+        x: Number(record.x) || 0,
+        y: Number(record.y) || 0,
+        w: 80,
+        h: 80,
+      });
+
+      const generators = (document.generators ?? []) as Array<Record<string, any>>;
+      for (const record of generators) {
+        currentStep = String(record.id);
+        const created = await ShapeOpsHandler.createBlockRecord(
+          page,
+          modelManager,
+          factory,
+          'Generator',
+          blockBox(record),
+          stripGeometry(record)
+        );
+        idMap[String(record.id)] = created.id;
+      }
+
+      const activities = (document.activities ?? []) as Array<Record<string, any>>;
+      for (const record of activities) {
+        currentStep = String(record.id);
+        const created = await ShapeOpsHandler.createBlockRecord(
+          page,
+          modelManager,
+          factory,
+          'Activity',
+          blockBox(record),
+          stripGeometry(record)
+        );
+        idMap[String(record.id)] = created.id;
+      }
+
+      const resources = (document.resources ?? []) as Array<Record<string, any>>;
+      for (const record of resources) {
+        currentStep = String(record.id);
+        const created = await ShapeOpsHandler.createResourceBlockRecord(
+          page,
+          modelManager,
+          factory,
+          blockBox(record),
+          stripGeometry(record)
+        );
+        idMap[String(record.id)] = created.id;
+      }
+
+      const connectors = (document.connectors ?? []) as Array<Record<string, any>>;
+      for (const record of connectors) {
+        currentStep = String(record.id);
+        const sourceAdvisorId = record.sourceId;
+        const targetAdvisorId = record.targetId;
+
+        const sourceLucidId = sourceAdvisorId !== undefined ? idMap[String(sourceAdvisorId)] : undefined;
+        if (!sourceLucidId) {
+          throw new Error(`Connector source not found: ${sourceAdvisorId}`);
+        }
+        const targetLucidId = targetAdvisorId !== undefined ? idMap[String(targetAdvisorId)] : undefined;
+        if (!targetLucidId) {
+          throw new Error(`Connector target not found: ${targetAdvisorId}`);
+        }
+
+        const sourceBlock = page.allBlocks.get(sourceLucidId);
+        const targetBlock = page.allBlocks.get(targetLucidId);
+
+        const created = await ShapeOpsHandler.createLineRecord(
+          page,
+          modelManager,
+          factory,
+          sourceBlock,
+          targetBlock,
+          stripGeometry(record)
+        );
+        idMap[String(record.id)] = created.id;
+      }
+
+      await modelManager.validateModel();
+
+      router.send(channel, {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT,
+        source: 'host',
+        target: `${channel}-iframe`,
+        version: '1.0',
+        data: { success: true, pageId: page.id, idMap },
+      });
+
+      const selectedItems = viewport.getSelectedItems();
+      await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
+
+      return true;
+    } catch (error) {
+      log.error('Error creating model page', error);
+
+      if (page) {
+        try {
+          if (originalPage) {
+            viewport.setCurrentPage(originalPage);
+            modelManager.setCurrentPage(originalPage);
+          }
+          page.delete();
+        } catch (rollbackError) {
+          log.error('Error rolling back created page', rollbackError);
+        }
+      }
+
+      const baseMessage = error instanceof Error ? error.message : String(error);
+      router.send(channel, {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT,
+        source: 'host',
+        target: `${channel}-iframe`,
+        version: '1.0',
+        data: {
+          success: false,
+          errorMessage: `create model failed at ${currentStep}: ${baseMessage}`,
         },
       });
 
