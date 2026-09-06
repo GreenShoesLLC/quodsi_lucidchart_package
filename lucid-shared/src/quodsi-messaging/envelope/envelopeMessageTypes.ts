@@ -56,6 +56,18 @@ export enum EnvelopeMessageType {
   RESOURCE_REQUIREMENTS_UPDATE = "RESOURCE_REQUIREMENTS_UPDATE",
   RESOURCE_REQUIREMENTS_UPDATE_RESULT = "RESOURCE_REQUIREMENTS_UPDATE_RESULT",
 
+  // Shape Operations (Lucid Advisor drawing half) -- lets the frame ask the
+  // extension to create/delete/move a shape, and lets the extension create a
+  // whole page-level model from a document produced elsewhere.
+  SHAPE_CREATE = "SHAPE_CREATE",
+  SHAPE_CREATE_RESULT = "SHAPE_CREATE_RESULT",
+  SHAPE_DELETE = "SHAPE_DELETE",
+  SHAPE_DELETE_RESULT = "SHAPE_DELETE_RESULT",
+  SHAPE_MOVE = "SHAPE_MOVE",
+  SHAPE_MOVE_RESULT = "SHAPE_MOVE_RESULT",
+  MODEL_CREATE_PAGE = "MODEL_CREATE_PAGE",
+  MODEL_CREATE_PAGE_RESULT = "MODEL_CREATE_PAGE_RESULT",
+
   // Modal
   // Sent by a chromeless embed modal's own "Close" button to ask the host to
   // hide the modal (chromeless modals have no native title-bar X).

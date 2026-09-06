@@ -4,6 +4,7 @@ import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ModelJsonRequestMessage, ModelJsonResponseMessage } from './modelOps/messages';
 import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage } from './elementOps/messages';
+import { ShapeCreateMessage, ShapeCreateResultMessage, ShapeDeleteMessage, ShapeDeleteResultMessage, ShapeMoveMessage, ShapeMoveResultMessage, ModelCreatePageMessage, ModelCreatePageResultMessage, ShapeOpsMessage } from './shapeOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
@@ -95,6 +96,20 @@ export {
   ElementOpsMessage
 } from './elementOps/messages';
 
+// Export shape operations messages
+export {
+  ShapeSide,
+  ShapeCreateMessage,
+  ShapeCreateResultMessage,
+  ShapeDeleteMessage,
+  ShapeDeleteResultMessage,
+  ShapeMoveMessage,
+  ShapeMoveResultMessage,
+  ModelCreatePageMessage,
+  ModelCreatePageResultMessage,
+  ShapeOpsMessage
+} from './shapeOps/messages';
+
 
 // Export simulation run messages
 export {
@@ -125,6 +140,7 @@ export type QuodsiMessage =
   | SimulationMessage
   | ModelOpsMessage
   | ElementOpsMessage
+  | ShapeOpsMessage
   | EntitlementMessage
 ;
 
@@ -163,6 +179,15 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.STATES_UPDATE_RESULT]: StatesUpdateResultMessage['data'];
   [EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE]: ResourceRequirementsUpdateMessage['data'];
   [EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT]: ResourceRequirementsUpdateResultMessage['data'];
+
+  [EnvelopeMessageType.SHAPE_CREATE]: ShapeCreateMessage['data'];
+  [EnvelopeMessageType.SHAPE_CREATE_RESULT]: ShapeCreateResultMessage['data'];
+  [EnvelopeMessageType.SHAPE_DELETE]: ShapeDeleteMessage['data'];
+  [EnvelopeMessageType.SHAPE_DELETE_RESULT]: ShapeDeleteResultMessage['data'];
+  [EnvelopeMessageType.SHAPE_MOVE]: ShapeMoveMessage['data'];
+  [EnvelopeMessageType.SHAPE_MOVE_RESULT]: ShapeMoveResultMessage['data'];
+  [EnvelopeMessageType.MODEL_CREATE_PAGE]: ModelCreatePageMessage['data'];
+  [EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT]: ModelCreatePageResultMessage['data'];
 
 
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST]: Record<string, never>;
