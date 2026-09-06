@@ -151,6 +151,7 @@ beforeEach(() => {
       callOrder.push('validateModel');
     }),
     getModelDefinition: jest.fn().mockResolvedValue(null),
+    invalidateModelCache: jest.fn(),
     getStorageAdapter: jest.fn(() => storageAdapterStub),
   };
 });
@@ -297,6 +298,43 @@ describe('SHAPE_CREATE', () => {
     expect(calls[0][1].data.errorMessage).toEqual(expect.stringContaining('nope'));
   });
 
+  it('places near a Resource record id by resolving it through the resource\'s shapeId pointer block', async () => {
+    const pointerBlock = fakeAnchorBlock('blk-r1', { x: 500, y: 200, w: 80, h: 60 });
+    allBlocksMap.set('blk-r1', pointerBlock);
+
+    modelManagerStub.getModelDefinition = jest.fn().mockResolvedValue({
+      resources: {
+        get: (id: string) => (id === 'r1' ? { id: 'r1', shapeId: 'blk-r1' } : undefined),
+      },
+    });
+
+    createPlatformObjectMock.mockReturnValue({
+      getSimulationObject: () => ({
+        id: 'placeholder',
+        type: SimulationObjectType.Activity,
+        name: 'New Activity',
+        capacity: 1,
+      }),
+    });
+
+    const handled = await (ShapeOpsHandler as any).handleShapeCreate(
+      msg(EnvelopeMessageType.SHAPE_CREATE, {
+        shapeType: 'Activity',
+        element: { name: 'Triage' },
+        near: { elementId: 'r1', side: 'right' },
+      })
+    );
+
+    expect(handled).toBe(true);
+
+    // round(1.75*80) = 140 -> x = 500 + 80 + 140 = 720, same y as the
+    // pointer block ('blk-r1'), not the Advisor's 'r1' record id.
+    expect(addBlockMock).toHaveBeenCalledWith({
+      className: 'ProcessBlock',
+      boundingBox: { x: 720, y: 200, w: 80, h: 80 },
+    });
+  });
+
   it('fails without creating anything when a Connector endpoint is unknown', async () => {
     const handled = await (ShapeOpsHandler as any).handleShapeCreate(
       msg(EnvelopeMessageType.SHAPE_CREATE, {
@@ -432,6 +470,61 @@ describe('SHAPE_MOVE', () => {
   });
 
   it('fails when the element to move is unknown', async () => {
+    const handled = await (ShapeOpsHandler as any).handleShapeMove(
+      msg(EnvelopeMessageType.SHAPE_MOVE, { elementId: 'nope', x: 1, y: 2 })
+    );
+
+    expect(handled).toBe(false);
+
+    const calls = resultCalls(EnvelopeMessageType.SHAPE_MOVE_RESULT);
+    expect(calls[0][1].data.success).toBe(false);
+    expect(calls[0][1].data.errorMessage).toEqual(expect.stringContaining('nope'));
+  });
+
+  it('invalidates the model cache after a successful move', async () => {
+    const a1 = allBlocksMap.get('a1');
+    a1.setBoundingBox = jest.fn();
+    modelManagerStub.invalidateModelCache = jest.fn();
+
+    const handled = await (ShapeOpsHandler as any).handleShapeMove(
+      msg(EnvelopeMessageType.SHAPE_MOVE, { elementId: 'a1', x: 50, y: 60 })
+    );
+
+    expect(handled).toBe(true);
+    expect(modelManagerStub.invalidateModelCache).toHaveBeenCalled();
+  });
+
+  it('resolves a Resource record id (not a block id) through its shapeId pointer', async () => {
+    allBlocksMap.set('blk-r1', fakeAnchorBlock('blk-r1', { x: 500, y: 200, w: 80, h: 60 }));
+    const pointerBlock = allBlocksMap.get('blk-r1');
+    pointerBlock.setBoundingBox = jest.fn();
+
+    modelManagerStub.getModelDefinition = jest.fn().mockResolvedValue({
+      resources: {
+        get: (id: string) => (id === 'r1' ? { id: 'r1', shapeId: 'blk-r1' } : undefined),
+      },
+    });
+    modelManagerStub.invalidateModelCache = jest.fn();
+
+    const handled = await (ShapeOpsHandler as any).handleShapeMove(
+      msg(EnvelopeMessageType.SHAPE_MOVE, { elementId: 'r1', x: 10, y: 20 })
+    );
+
+    expect(handled).toBe(true);
+    expect(pointerBlock.setBoundingBox).toHaveBeenCalledWith({ x: 10, y: 20, w: 80, h: 60 });
+    expect(modelManagerStub.invalidateModelCache).toHaveBeenCalled();
+
+    const calls = resultCalls(EnvelopeMessageType.SHAPE_MOVE_RESULT);
+    expect(calls[0][1]).toMatchObject({ data: { success: true } });
+  });
+
+  it('fails when an id is neither a block nor a resource with a shapeId', async () => {
+    modelManagerStub.getModelDefinition = jest.fn().mockResolvedValue({
+      resources: {
+        get: () => undefined,
+      },
+    });
+
     const handled = await (ShapeOpsHandler as any).handleShapeMove(
       msg(EnvelopeMessageType.SHAPE_MOVE, { elementId: 'nope', x: 1, y: 2 })
     );

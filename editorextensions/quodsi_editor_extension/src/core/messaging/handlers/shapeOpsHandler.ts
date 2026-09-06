@@ -19,11 +19,12 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   JsonObject,
+  Resource,
   SimulationObjectType,
   getLogger,
 } from '@quodsi/lucid-shared';
 import { router } from '../index';
-import { Viewport, DocumentProxy, PageProxy } from 'lucid-extension-sdk';
+import { BlockProxy, Viewport, DocumentProxy, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { PanelRole } from '../types';
@@ -142,6 +143,37 @@ export class ShapeOpsHandler {
    */
   private static newElementFactory(modelManager: ModelManager): LucidElementFactory {
     return new LucidElementFactory(modelManager.getStorageAdapter());
+  }
+
+  /**
+   * Resolves an Advisor-supplied id to a canvas block, trying the id as a
+   * literal Lucid block id first and falling back to a Resource pointer
+   * lookup.
+   *
+   * The Advisor names a Resource by its `q_resources` RECORD id (e.g. 'r1'
+   * or a uuid) -- the id ModelDefinition tracks it under -- not by the
+   * POINTER block's own Lucid-assigned id. Those two only coincide for a
+   * legacy-migrated resource (pre storage-format-2, where the block WAS the
+   * record). Everywhere else, `page.allBlocks.get(theRecordId)` misses.
+   * ModelDefinitionPageBuilder.linkResourceClaimants stamps the winning
+   * claimant's block id onto the resource as the transient `shapeId` field
+   * (see its doc comment) whenever a canvas block currently claims that
+   * resource, so a miss on the direct lookup is retried through
+   * `getModelDefinition().resources.get(id).shapeId`. Mirrors
+   * DrawioModelManager's cell-miss fallback (~line 677-700 in the drawio
+   * repo's src/state/DrawioModelManager.ts).
+   */
+  private static async resolveBlock(
+    page: PageProxy,
+    modelManager: ModelManager,
+    id: string
+  ): Promise<BlockProxy | undefined> {
+    const direct = page.allBlocks.get(id);
+    if (direct) return direct;
+
+    const def = await modelManager.getModelDefinition();
+    const resource = def?.resources.get(id) as (Resource & { shapeId?: string }) | undefined;
+    return resource?.shapeId ? page.allBlocks.get(resource.shapeId) : undefined;
   }
 
   private static shapeSimType(shapeType: ShapeType): SimulationObjectType {
@@ -338,7 +370,7 @@ export class ShapeOpsHandler {
       } else {
         let box;
         if (data.near) {
-          const anchor = page.allBlocks.get(data.near.elementId);
+          const anchor = await ShapeOpsHandler.resolveBlock(page, modelManager, data.near.elementId);
           if (!anchor) {
             throw new Error(`Placement anchor not found: ${data.near.elementId}`);
           }
@@ -509,19 +541,27 @@ export class ShapeOpsHandler {
 
     try {
       const client = ModelManager.getClient();
+      const modelManager = ModelManager.getInstance();
       const viewport = new Viewport(client);
       const page = viewport.getCurrentPage();
       if (!page) {
         throw new Error('Current page not available');
       }
 
-      const block = page.allBlocks.get(data.elementId);
+      // See resolveBlock's doc comment: the Advisor may name a Resource by
+      // its q_resources record id rather than the pointer block's own id.
+      const block = await ShapeOpsHandler.resolveBlock(page, modelManager, data.elementId);
       if (!block) {
         throw new Error(`Element not found: ${data.elementId}`);
       }
 
       const box = block.getBoundingBox();
       block.setBoundingBox({ x: data.x, y: data.y, w: box.w, h: box.h });
+
+      // Moving a block changes its geometry but not any element record, so
+      // nothing else marks the model dirty -- without this the next
+      // REQUEST_STUDIO_CATALOG would still hand back the pre-move box.
+      modelManager.invalidateModelCache();
 
       router.send(channel, {
         id: msg.id,
@@ -532,7 +572,6 @@ export class ShapeOpsHandler {
         data: { success: true },
       });
 
-      const modelManager = ModelManager.getInstance();
       const selectedItems = viewport.getSelectedItems();
       await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
 
@@ -651,6 +690,13 @@ export class ShapeOpsHandler {
         h: 80,
       });
 
+      // Each createBlockRecord/createLineRecord call below runs
+      // registerElement, which -- while the ModelDefinition is dirty --
+      // triggers a full ensureModelDefinition() rebuild from storage. That
+      // makes this loop O(n) rebuilds for an n-element page, not one; left
+      // as-is because it's well inside the 60s budget for Advisor-sized
+      // models, but worth revisiting if MODEL_CREATE_PAGE is ever asked to
+      // build much larger documents.
       const generators = (document.generators ?? []) as Array<Record<string, any>>;
       for (const record of generators) {
         currentStep = String(record.id);
