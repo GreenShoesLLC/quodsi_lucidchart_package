@@ -194,36 +194,49 @@ export class ShapeOpsHandler {
   /**
    * Creates a Resource block at `box` -- a POINTER at a model-level record,
    * not a shape-owned domain record (storage format 2; see ResourceLucid's
-   * doc comment and LucidPageConversionService ~700-725, which this mirrors).
-   * Unlike createBlockRecord, there is deliberately NO storage write-back
-   * here: the resource's actual data (name/capacity/etc.) already lives in
-   * the page's q_resources list, written by the page-level
-   * `updateModelRoot({ resources })` call before any block exists. Merging a
-   * domain record onto the block's q_data here would overwrite the pointer
-   * and re-classify the block as storage-format-1 on the next open.
+   * doc comment). The Advisor's resource record (with `advisorElement.id`)
+   * was already written into the page's q_resources list by the page-level
+   * `updateModelRoot({ resources })` call before any block exists.
+   *
+   * Fix round 1 (task review, CRITICAL): this must NOT go through
+   * `factory.createPlatformObject(..., Resource, true)` --
+   * ResourceLucid.createFromConversion looks for an EXISTING q_resources
+   * record whose id equals the just-created BLOCK's id (a fresh Lucid id,
+   * e.g. 'blk-4'), never finds one (the Advisor's record lives under its own
+   * id, e.g. 'r1'), and mints a SECOND orphaned record -- leaving the
+   * Advisor's original record, and anything in `resourceRequirements` that
+   * references it by id, unclaimed. There is no id the block could be given
+   * to make the ids match: block ids are assigned by `addBlock` itself.
+   *
+   * Instead this writes the pointer directly, the same shape the existing
+   * link path uses (ResourceBlockEditor -> updateShape(blockId, 'Resource',
+   * { resourceId }) -> ModelManager.handleDataUpdate's Resource branch,
+   * which stores exactly `{ id, type, resourceId }`): a bare
+   * `{ id: block.id, resourceId: advisorElement.id }` via the public
+   * `modelManager.setElementData`, pointing the new block at the q_resources
+   * record the Advisor's id already names. No `registerElement` call either
+   * -- ModelManager.registerElement's Resource case is a documented no-op
+   * (the record is model-level, not tracked on the in-memory ModelDefinition
+   * by element id), so there is nothing for it to do here.
    */
   private static async createResourceBlockRecord(
     page: any,
     modelManager: ModelManager,
-    factory: LucidElementFactory,
     box: { x: number; y: number; w: number; h: number },
     advisorElement: JsonObject
-  ): Promise<{ id: string; block: any; record: JsonObject }> {
+  ): Promise<{ id: string; block: any }> {
     const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
 
     const name = (advisorElement as any).name ?? 'New Resource';
     newBlock.textAreas.set('Text', name);
 
-    const platformObject = factory.createPlatformObject(newBlock, SimulationObjectType.Resource, true);
-    const record = {
-      ...platformObject.getSimulationObject(),
-      ...advisorElement,
-      id: newBlock.id,
-    };
+    modelManager.setElementData(
+      newBlock as any,
+      { id: newBlock.id, resourceId: String((advisorElement as any).id) },
+      SimulationObjectType.Resource
+    );
 
-    await modelManager.registerElement(record as any, newBlock);
-
-    return { id: newBlock.id, block: newBlock, record };
+    return { id: newBlock.id, block: newBlock };
   }
 
   /**
@@ -604,7 +617,13 @@ export class ShapeOpsHandler {
       const rootPatch: Record<string, unknown> = {};
       for (const key of MODEL_ROOT_KEYS) {
         if (key in document) {
-          rootPatch[key] = document[key];
+          // Fix round 1 (task review, MINOR 1): the document's resource
+          // records carry layout x/y (needed below to place their blocks),
+          // but q_resources is a model-level list with no geometry -- an
+          // unstripped write would leave x/y sitting on the stored record.
+          rootPatch[key] = key === 'resources'
+            ? (document.resources as Array<Record<string, any>>).map(stripGeometry)
+            : document[key];
         }
       }
       await modelManager.updateModelRoot(rootPatch, page);
@@ -666,7 +685,6 @@ export class ShapeOpsHandler {
         const created = await ShapeOpsHandler.createResourceBlockRecord(
           page,
           modelManager,
-          factory,
           blockBox(record),
           stripGeometry(record)
         );
@@ -725,6 +743,15 @@ export class ShapeOpsHandler {
           if (originalPage) {
             viewport.setCurrentPage(originalPage);
             modelManager.setCurrentPage(originalPage);
+          } else {
+            // Fix round 1 (task review, MINOR 2): there was no page open
+            // before this ran (e.g. a brand-new document), so there is
+            // nothing to restore. modelManager.setCurrentPage is left
+            // pointing at the page we're about to delete -- surfaced loudly
+            // here rather than silently, since the next caller that reads
+            // ModelManager's current-page context would otherwise be working
+            // against a page that no longer exists.
+            log.warn('Rolling back a created page with no original page to restore; ModelManager still references the deleted page.');
           }
           page.delete();
         } catch (rollbackError) {

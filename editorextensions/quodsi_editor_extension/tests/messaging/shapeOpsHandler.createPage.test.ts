@@ -203,6 +203,12 @@ beforeEach(() => {
     registerElement: jest.fn(async (record: any) => {
       callOrder.push(`registerElement:${record.id}`);
     }),
+    // Fix round 1 (task review, CRITICAL): the resource pointer write --
+    // ModelManager's own public setElementData, NOT registerElement/storage
+    // updateElementData -- see createResourceBlockRecord's doc comment.
+    setElementData: jest.fn((element: any) => {
+      callOrder.push(`setElementData:${element.id}`);
+    }),
     validateModel: jest.fn(async () => {
       callOrder.push('validateModel');
     }),
@@ -252,10 +258,13 @@ describe('MODEL_CREATE_PAGE', () => {
       newPage
     );
 
-    // Model root patch -- only the recognised keys.
+    // Model root patch -- only the recognised keys. Fix round 1 (task
+    // review, MINOR 1): resources are geometry-stripped before the write --
+    // q_resources is a model-level list with no x/y, unlike the block list
+    // used to place the resource's block below.
     expect(modelManagerStub.updateModelRoot).toHaveBeenCalledWith(
       {
-        resources: document.resources,
+        resources: [{ id: 'r1', name: 'Nurse', capacity: 2 }],
         resourceRequirements: document.resourceRequirements,
         arrivalPatterns: document.arrivalPatterns,
         arrivalSchedules: document.arrivalSchedules,
@@ -307,9 +316,24 @@ describe('MODEL_CREATE_PAGE', () => {
       expect.objectContaining({ id: 'blk-3', name: 'Exam' }),
       newPageBlocks.get('blk-3')
     );
-    expect(modelManagerStub.registerElement).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'blk-4', name: 'Nurse' }),
+    // Fix round 1 (task review, CRITICAL): the resource block is NEVER
+    // created via createPlatformObject/registerElement -- that path
+    // (ResourceLucid.createFromConversion) mints a second, orphaned
+    // q_resources record because the block's own id never matches the
+    // Advisor's resource id. Instead it gets a direct pointer write.
+    expect(createPlatformObjectMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      SimulationObjectType.Resource,
+      expect.anything()
+    );
+    expect(modelManagerStub.registerElement).not.toHaveBeenCalledWith(
+      expect.anything(),
       newPageBlocks.get('blk-4')
+    );
+    expect(modelManagerStub.setElementData).toHaveBeenCalledWith(
+      newPageBlocks.get('blk-4'),
+      { id: 'blk-4', resourceId: 'r1' },
+      SimulationObjectType.Resource
     );
     expect(modelManagerStub.registerElement).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'ln-1', sourceId: 'blk-1', targetId: 'blk-2' }),
@@ -376,7 +400,7 @@ describe('MODEL_CREATE_PAGE', () => {
       'registerElement:blk-3',
       'updateElementData:blk-3',
       'addBlock:700,100',
-      'registerElement:blk-4',
+      'setElementData:blk-4',
       'addLine',
       'registerElement:ln-1',
       'updateElementData:ln-1',
