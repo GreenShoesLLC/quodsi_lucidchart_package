@@ -92,7 +92,22 @@ describe('placeNear', () => {
 });
 
 describe('placeAtFlowEnd', () => {
-  it('places right of the rightmost Activity/Generator block, on the first generator\'s row', () => {
+  // Fix round 1 / I1: placeAtFlowEnd reads modelManager.getModelDefinition()
+  // (a ModelDefinition, whose activities/generators are list managers with
+  // .getAll()) -- NOT modelManager.getModel() (the Model ROOT record, which
+  // has no activities/generators at all). A stub shaped like the Model root
+  // would let this pass for the wrong reason, so the stub below mirrors the
+  // real list-manager shape.
+  function modelDefStub(activityIds: string[], generatorIds: string[]) {
+    return {
+      getModelDefinition: async () => ({
+        activities: { getAll: () => activityIds.map(id => ({ id })) },
+        generators: { getAll: () => generatorIds.map(id => ({ id })) },
+      }),
+    };
+  }
+
+  it('places right of the rightmost Activity/Generator block, on the first generator\'s row', async () => {
     const gen = block('g1', { x: 0, y: 500, w: 80, h: 80 });
     const act1 = block('a1', { x: 200, y: 0, w: 80, h: 60 });
     const act2 = block('a2', { x: 400, y: 100, w: 100, h: 60 }); // rightmost: 400+100=500
@@ -100,44 +115,35 @@ describe('placeAtFlowEnd', () => {
     const decoy = block('d1', { x: 900, y: 900, w: 50, h: 50 });
     const p = page(gen, act1, act2, decoy);
 
-    const modelManager = {
-      getModel: () => ({
-        activities: [{ id: 'a1' }, { id: 'a2' }],
-        generators: [{ id: 'g1' }],
-      }),
-    };
+    const modelManager = modelDefStub(['a1', 'a2'], ['g1']);
 
-    const result = placeAtFlowEnd(p, modelManager);
+    const result = await placeAtFlowEnd(p, modelManager);
 
     // rightmost is act2: x=400,w=100 -> right edge 500; offset round(1.75*100)=175
     expect(result).toEqual({ x: 500 + 175, y: 500, w: 80, h: 80 });
   });
 
-  it('falls back to {x:0,y:0,w:80,h:80} when there is no model yet', () => {
+  it('falls back to {x:0,y:0,w:80,h:80} when there is no model yet', async () => {
     const p = page();
-    const modelManager = { getModel: () => null };
+    const modelManager = { getModelDefinition: async () => null };
 
-    expect(placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, w: 80, h: 80 });
+    expect(await placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, w: 80, h: 80 });
   });
 
-  it('falls back to the default box when no block on the page is part of the flow', () => {
+  it('falls back to the default box when no block on the page is part of the flow', async () => {
     const decoy = block('d1', { x: 900, y: 900, w: 50, h: 50 });
     const p = page(decoy);
-    const modelManager = {
-      getModel: () => ({ activities: [{ id: 'a1' }], generators: [] }),
-    };
+    const modelManager = modelDefStub(['a1'], []);
 
-    expect(placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, w: 80, h: 80 });
+    expect(await placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, w: 80, h: 80 });
   });
 
-  it('falls back to the rightmost flow block\'s own row when the model has no generator', () => {
+  it('falls back to the rightmost flow block\'s own row when the model has no generator', async () => {
     const act1 = block('a1', { x: 0, y: 30, w: 80, h: 60 });
     const p = page(act1);
-    const modelManager = {
-      getModel: () => ({ activities: [{ id: 'a1' }], generators: [] }),
-    };
+    const modelManager = modelDefStub(['a1'], []);
 
-    const result = placeAtFlowEnd(p, modelManager);
+    const result = await placeAtFlowEnd(p, modelManager);
 
     expect(result.y).toBe(30);
   });

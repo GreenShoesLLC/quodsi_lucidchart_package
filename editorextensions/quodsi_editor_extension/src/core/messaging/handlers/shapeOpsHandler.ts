@@ -25,7 +25,6 @@ import {
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
-import { StorageAdapter } from '../../StorageAdapter';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
@@ -34,6 +33,24 @@ import { placeNear, placeAtFlowEnd, ShapeSide } from './shapePlacement';
 const log = getLogger('ShapeOpsHandler');
 
 type ShapeType = 'Activity' | 'Generator' | 'Connector';
+
+/**
+ * Advisor-authored geometry that must never survive into the merged record.
+ * The placement engine (placeNear / placeAtFlowEnd) is the sole author of
+ * where a newly created shape lands -- a stray x/y/width/height carried on
+ * the Advisor's `element` payload (e.g. copied from wherever the Advisor
+ * last saw the shape) would otherwise silently overwrite the placed box
+ * once the merged record is written back to storage.
+ */
+const GEOMETRY_KEYS = ['x', 'y', 'width', 'height'] as const;
+
+function stripGeometry(element: JsonObject): JsonObject {
+  const stripped: any = { ...element };
+  for (const key of GEOMETRY_KEYS) {
+    delete stripped[key];
+  }
+  return stripped;
+}
 
 /**
  * Handler for single-shape create/delete/move operations, driven by the
@@ -83,9 +100,14 @@ export class ShapeOpsHandler {
     return 'model';
   }
 
-  private static newElementFactory(): LucidElementFactory {
-    const storageAdapter = new StorageAdapter();
-    return new LucidElementFactory(storageAdapter);
+  /**
+   * Fix round 1 (minor): reuse the manager's own StorageAdapter instead of
+   * constructing a fresh one, so the factory's conversion-default write and
+   * this handler's own updateElementData overwrite (see handleShapeCreate)
+   * go through the same adapter the rest of ModelManager uses.
+   */
+  private static newElementFactory(modelManager: ModelManager): LucidElementFactory {
+    return new LucidElementFactory(modelManager.getStorageAdapter());
   }
 
   private static shapeSimType(shapeType: ShapeType): SimulationObjectType {
@@ -122,7 +144,9 @@ export class ShapeOpsHandler {
         throw new Error('Current page not available');
       }
 
-      const advisorElement = (data.element ?? {}) as JsonObject;
+      // Strip x/y/width/height before this ever reaches a merge -- see
+      // stripGeometry's doc comment.
+      const advisorElement = stripGeometry((data.element ?? {}) as JsonObject);
       let newId: string;
 
       if (data.shapeType === 'Connector') {
@@ -143,7 +167,7 @@ export class ShapeOpsHandler {
           endpoint2: { connection: targetBlock, linkX: 0, linkY: 0.5 },
         });
 
-        const factory = ShapeOpsHandler.newElementFactory();
+        const factory = ShapeOpsHandler.newElementFactory(modelManager);
         const platformObject = factory.createPlatformObject(newLine, SimulationObjectType.Connector, true);
         const record = {
           ...platformObject.getSimulationObject(),
@@ -153,7 +177,18 @@ export class ShapeOpsHandler {
           targetId: targetBlock.id,
         };
 
+        // C1: registerElement() only updates the in-memory ModelDefinition.
+        // createPlatformObject(..., true) already wrote CONVERSION-DEFAULT
+        // data to storage (ConnectorLucid.createFromConversion calls
+        // storageAdapter.setElementData); without this write-back the merged
+        // record (the Advisor's weight/probability/etc.) is discarded the
+        // next time validateModel() rebuilds the ModelDefinition FROM
+        // STORAGE, and the defaults win. updateElementData merges `record`
+        // over what's already there -- same call
+        // LucidPageConversionService.reserveConvertedName makes to
+        // overwrite a conversion default post-hoc.
         await modelManager.registerElement(record as any, newLine);
+        modelManager.getStorageAdapter().updateElementData(newLine as any, record as any);
         newId = newLine.id;
       } else {
         let box;
@@ -164,15 +199,19 @@ export class ShapeOpsHandler {
           }
           box = placeNear(page as any, anchor as any, data.near.side);
         } else {
-          box = placeAtFlowEnd(page as any, modelManager as any);
+          box = await placeAtFlowEnd(page as any, modelManager as any);
         }
 
+        // C2: the SDK rejects addBlock for a class that hasn't been loaded
+        // in this session. Idempotent -- safe to call on every create, not
+        // just the first one after a fresh load.
+        await client.loadBlockClasses(['ProcessBlock']);
         const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
 
         const name = (advisorElement as any).name ?? `New ${data.shapeType}`;
         newBlock.textAreas.set('Text', name);
 
-        const factory = ShapeOpsHandler.newElementFactory();
+        const factory = ShapeOpsHandler.newElementFactory(modelManager);
         const platformObject = factory.createPlatformObject(
           newBlock,
           ShapeOpsHandler.shapeSimType(data.shapeType),
@@ -184,7 +223,9 @@ export class ShapeOpsHandler {
           id: newBlock.id,
         };
 
+        // C1 -- see the Connector branch's comment above.
         await modelManager.registerElement(record as any, newBlock);
+        modelManager.getStorageAdapter().updateElementData(newBlock as any, record as any);
         newId = newBlock.id;
       }
 
@@ -226,8 +267,17 @@ export class ShapeOpsHandler {
    * Handle SHAPE_DELETE: deletes one shape. For an Activity/Generator block,
    * also deletes every line attached to it (source or target end) before
    * the block itself, so the model's connector list never briefly points at
-   * a deleted block. removeElement is called for each deleted id, lines
-   * first, matching canvas-deletion order.
+   * a deleted block.
+   *
+   * I2 (fix round 1): modelManager.removeElement(id) is called BEFORE the
+   * matching item.delete(), lines first then the block -- not after, and
+   * not batched at the end. removeElement resolves the element via
+   * page.allBlocks/allLines.get(id) (ModelManager.findElementProxy); once
+   * delete() has already removed it from the page that lookup finds
+   * nothing, removeElement warns and silently skips its cascades
+   * (destination-reference cleanup, orphaned pattern/schedule removal,
+   * clearElementData). deletedIds keeps the same lines-first order either
+   * way.
    */
   private static async handleShapeDelete(msg: EnvelopeBase): Promise<boolean> {
     const data = msg.data as { shapeType: ShapeType; elementId: string };
@@ -250,6 +300,7 @@ export class ShapeOpsHandler {
         if (!line) {
           throw new Error(`Element not found: ${data.elementId}`);
         }
+        await modelManager.removeElement(line.id);
         line.delete();
         deletedIds.push(line.id);
       } else {
@@ -268,16 +319,14 @@ export class ShapeOpsHandler {
         }
 
         for (const line of connectedLines) {
+          await modelManager.removeElement(line.id);
           line.delete();
           deletedIds.push(line.id);
         }
 
+        await modelManager.removeElement(block.id);
         block.delete();
         deletedIds.push(block.id);
-      }
-
-      for (const id of deletedIds) {
-        await modelManager.removeElement(id);
       }
 
       await modelManager.validateModel();

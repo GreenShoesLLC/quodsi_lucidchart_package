@@ -10,6 +10,24 @@
 // creation tests can drive it with a minimal fake block/line (no shapeData,
 // no getPage) without exercising the real conversion/naming pipeline --
 // that pipeline is already covered by tests/conversion/*.
+//
+// Fix round 1 (task review): covers four findings against the original
+// Task 4 cut --
+//   C1 registerElement() alone never reaches the page: it only updates the
+//      in-memory ModelDefinition, and validateModel's rebuild-from-storage
+//      throws the merged record away in favor of the conversion defaults
+//      createPlatformObject wrote. The fix writes the merged record through
+//      modelManager.getStorageAdapter().updateElementData(item, record)
+//      BEFORE validateModel, and strips x/y/width/height off the Advisor's
+//      element first so a stray coordinate can't clobber the placed box.
+//   C2 client.loadBlockClasses(['ProcessBlock']) must be awaited before
+//      page.addBlock, exactly as LucidPageConversionService does -- the
+//      SDK rejects addBlock for an unloaded class.
+//   I1 (in shapePlacement.test.ts) placeAtFlowEnd needs the ModelDefinition
+//      (getModelDefinition()), not the Model root (getModel()).
+//   I2 removeElement(id) must run BEFORE the corresponding delete(), lines
+//      first then the block -- calling it after delete() finds nothing on
+//      the live page and silently no-ops the cascades.
 import { Viewport } from '../__mocks__/lucid-extension-sdk';
 
 let currentPage: any = null;
@@ -26,10 +44,11 @@ jest.mock('../../src/core/messaging/index', () => ({
 }));
 
 let modelManagerStub: any;
+let clientStub: any;
 jest.mock('../../src/core/ModelManager', () => ({
   ModelManager: {
     getInstance: () => modelManagerStub,
-    getClient: () => ({}),
+    getClient: () => clientStub,
   },
 }));
 
@@ -66,11 +85,20 @@ let allBlocksMap: Map<string, any>;
 let allLinesMap: Map<string, any>;
 let addBlockMock: jest.Mock;
 let addLineMock: jest.Mock;
+let storageAdapterStub: any;
+let callOrder: string[];
 
 beforeEach(() => {
   sendMock.mockClear();
   handleLucidSelectionEventMock.mockClear();
   createPlatformObjectMock.mockReset();
+  callOrder = [];
+
+  clientStub = {
+    loadBlockClasses: jest.fn(async () => {
+      callOrder.push('loadBlockClasses');
+    }),
+  };
 
   allBlocksMap = new Map<string, any>([
     ['a1', fakeAnchorBlock('a1', { x: 100, y: 100, w: 80, h: 60 })],
@@ -79,6 +107,7 @@ beforeEach(() => {
   allLinesMap = new Map<string, any>();
 
   addBlockMock = jest.fn((def: any) => {
+    callOrder.push('addBlock');
     const newBlock = {
       id: 'blk-9',
       textAreas: new Map<string, string>(),
@@ -91,6 +120,7 @@ beforeEach(() => {
   });
 
   addLineMock = jest.fn((def: any) => {
+    callOrder.push('addLine');
     const newLine = { id: 'ln-9', delete: jest.fn() };
     allLinesMap.set(newLine.id, newLine);
     return newLine;
@@ -104,16 +134,29 @@ beforeEach(() => {
     addLine: addLineMock,
   };
 
+  storageAdapterStub = {
+    updateElementData: jest.fn(() => {
+      callOrder.push('updateElementData');
+    }),
+  };
+
   modelManagerStub = {
-    registerElement: jest.fn().mockResolvedValue(undefined),
-    removeElement: jest.fn().mockResolvedValue(undefined),
-    validateModel: jest.fn().mockResolvedValue(undefined),
-    getModel: jest.fn().mockReturnValue(null),
+    registerElement: jest.fn(async () => {
+      callOrder.push('registerElement');
+    }),
+    removeElement: jest.fn(async () => {
+      callOrder.push('removeElement');
+    }),
+    validateModel: jest.fn(async () => {
+      callOrder.push('validateModel');
+    }),
+    getModelDefinition: jest.fn().mockResolvedValue(null),
+    getStorageAdapter: jest.fn(() => storageAdapterStub),
   };
 });
 
 describe('SHAPE_CREATE', () => {
-  it('creates an Activity near a1 on the right', async () => {
+  it('creates an Activity near a1 on the right, writes the merged record to storage, and strips stray geometry', async () => {
     createPlatformObjectMock.mockReturnValue({
       getSimulationObject: () => ({
         id: 'placeholder',
@@ -126,12 +169,18 @@ describe('SHAPE_CREATE', () => {
     const handled = await (ShapeOpsHandler as any).handleShapeCreate(
       msg(EnvelopeMessageType.SHAPE_CREATE, {
         shapeType: 'Activity',
-        element: { name: 'Triage', capacity: 2 },
+        // x/y/width/height are stray Advisor-authored geometry -- must never
+        // reach the merged record, which would otherwise let them clobber
+        // the placement engine's computed box.
+        element: { name: 'Triage', capacity: 2, x: 999, y: 999, width: 999, height: 999 },
         near: { elementId: 'a1', side: 'right' },
       })
     );
 
     expect(handled).toBe(true);
+
+    // C2: loadBlockClasses(['ProcessBlock']) must be awaited before addBlock.
+    expect(clientStub.loadBlockClasses).toHaveBeenCalledWith(['ProcessBlock']);
 
     // round(1.75*80) = 140 -> x = 100 + 80 + 140 = 320
     expect(addBlockMock).toHaveBeenCalledWith({
@@ -144,12 +193,26 @@ describe('SHAPE_CREATE', () => {
 
     expect(createPlatformObjectMock).toHaveBeenCalledWith(createdBlock, SimulationObjectType.Activity, true);
 
-    expect(modelManagerStub.registerElement).toHaveBeenCalledWith(
-      { id: 'blk-9', type: SimulationObjectType.Activity, name: 'Triage', capacity: 2 },
-      createdBlock
-    );
+    const expectedRecord = { id: 'blk-9', type: SimulationObjectType.Activity, name: 'Triage', capacity: 2 };
+
+    // C1: registerElement's in-memory write...
+    expect(modelManagerStub.registerElement).toHaveBeenCalledWith(expectedRecord, createdBlock);
+    // ...AND the storage write that actually makes it stick past the next
+    // validateModel() rebuild-from-storage.
+    expect(modelManagerStub.getStorageAdapter).toHaveBeenCalled();
+    expect(storageAdapterStub.updateElementData).toHaveBeenCalledWith(createdBlock, expectedRecord);
 
     expect(modelManagerStub.validateModel).toHaveBeenCalled();
+
+    // Full ordering: block class loaded, block added, registered in-memory,
+    // written to storage, THEN validated.
+    expect(callOrder).toEqual([
+      'loadBlockClasses',
+      'addBlock',
+      'registerElement',
+      'updateElementData',
+      'validateModel',
+    ]);
 
     const calls = resultCalls(EnvelopeMessageType.SHAPE_CREATE_RESULT);
     expect(calls).toHaveLength(1);
@@ -162,7 +225,7 @@ describe('SHAPE_CREATE', () => {
     expect(handleLucidSelectionEventMock).toHaveBeenCalled();
   });
 
-  it('creates a Connector between two blocks', async () => {
+  it('creates a Connector between two blocks, writes the merged record to storage, and strips stray geometry', async () => {
     createPlatformObjectMock.mockReturnValue({
       getSimulationObject: () => ({
         id: 'placeholder',
@@ -178,11 +241,14 @@ describe('SHAPE_CREATE', () => {
     const handled = await (ShapeOpsHandler as any).handleShapeCreate(
       msg(EnvelopeMessageType.SHAPE_CREATE, {
         shapeType: 'Connector',
-        element: { sourceId: 'a1', targetId: 'a2', probability: 1 },
+        element: { sourceId: 'a1', targetId: 'a2', probability: 1, x: 5, y: 5 },
       })
     );
 
     expect(handled).toBe(true);
+
+    // A Connector never touches block classes.
+    expect(clientStub.loadBlockClasses).not.toHaveBeenCalled();
 
     expect(addLineMock).toHaveBeenCalledWith({
       endpoint1: { connection: sourceBlock, linkX: 1, linkY: 0.5 },
@@ -195,17 +261,17 @@ describe('SHAPE_CREATE', () => {
       true
     );
 
-    expect(modelManagerStub.registerElement).toHaveBeenCalledWith(
-      {
-        id: 'ln-9',
-        type: SimulationObjectType.Connector,
-        name: 'New Connector',
-        probability: 1,
-        sourceId: 'a1',
-        targetId: 'a2',
-      },
-      allLinesMap.get('ln-9')
-    );
+    const expectedRecord = {
+      id: 'ln-9',
+      type: SimulationObjectType.Connector,
+      name: 'New Connector',
+      probability: 1,
+      sourceId: 'a1',
+      targetId: 'a2',
+    };
+
+    expect(modelManagerStub.registerElement).toHaveBeenCalledWith(expectedRecord, allLinesMap.get('ln-9'));
+    expect(storageAdapterStub.updateElementData).toHaveBeenCalledWith(allLinesMap.get('ln-9'), expectedRecord);
 
     const calls = resultCalls(EnvelopeMessageType.SHAPE_CREATE_RESULT);
     expect(calls[0][1]).toMatchObject({ data: { success: true, id: 'ln-9' } });
@@ -221,8 +287,10 @@ describe('SHAPE_CREATE', () => {
     );
 
     expect(handled).toBe(false);
+    expect(clientStub.loadBlockClasses).not.toHaveBeenCalled();
     expect(addBlockMock).not.toHaveBeenCalled();
     expect(modelManagerStub.registerElement).not.toHaveBeenCalled();
+    expect(storageAdapterStub.updateElementData).not.toHaveBeenCalled();
 
     const calls = resultCalls(EnvelopeMessageType.SHAPE_CREATE_RESULT);
     expect(calls[0][1].data.success).toBe(false);
@@ -240,6 +308,7 @@ describe('SHAPE_CREATE', () => {
     expect(handled).toBe(false);
     expect(addLineMock).not.toHaveBeenCalled();
     expect(modelManagerStub.registerElement).not.toHaveBeenCalled();
+    expect(storageAdapterStub.updateElementData).not.toHaveBeenCalled();
 
     const calls = resultCalls(EnvelopeMessageType.SHAPE_CREATE_RESULT);
     expect(calls[0][1].data.success).toBe(false);
@@ -253,13 +322,22 @@ describe('SHAPE_DELETE', () => {
       id,
       getEndpoint1: () => ({ connection: sourceId ? { id: sourceId } : undefined }),
       getEndpoint2: () => ({ connection: targetId ? { id: targetId } : undefined }),
-      delete: jest.fn(),
+      delete: jest.fn(() => {
+        callOrder.push(`delete:${id}`);
+      }),
     };
   }
 
-  it('deletes an Activity and its connected lines, lines first, in traversal order', async () => {
+  it('deletes an Activity and its connected lines, lines first, removeElement BEFORE each delete', async () => {
     const a1 = allBlocksMap.get('a1');
-    a1.delete = jest.fn();
+    a1.delete = jest.fn(() => {
+      callOrder.push('delete:a1');
+    });
+
+    modelManagerStub.removeElement = jest.fn((id: string) => {
+      callOrder.push(`removeElement:${id}`);
+      return Promise.resolve();
+    });
 
     const l1 = fakeLine('l1', 'a1', 'x'); // a1 -> x
     const l2 = fakeLine('l2', 'y', 'a1'); // y -> a1
@@ -279,7 +357,19 @@ describe('SHAPE_DELETE', () => {
     expect(l3.delete).not.toHaveBeenCalled();
     expect(a1.delete).toHaveBeenCalled();
 
-    expect(modelManagerStub.removeElement.mock.calls.map((c: any[]) => c[0])).toEqual(['l1', 'l2', 'a1']);
+    // I2: removeElement(id) must run BEFORE the matching delete(), lines
+    // first then the block -- calling it after delete() finds nothing on
+    // the live page and silently skips the cascades (destination
+    // references, orphaned patterns/schedules, clearElementData).
+    expect(callOrder).toEqual([
+      'removeElement:l1',
+      'delete:l1',
+      'removeElement:l2',
+      'delete:l2',
+      'removeElement:a1',
+      'delete:a1',
+      'validateModel',
+    ]);
 
     const calls = resultCalls(EnvelopeMessageType.SHAPE_DELETE_RESULT);
     expect(calls[0][1]).toMatchObject({
@@ -289,7 +379,12 @@ describe('SHAPE_DELETE', () => {
     expect(handleLucidSelectionEventMock).toHaveBeenCalled();
   });
 
-  it('deletes a Connector by its own id', async () => {
+  it('deletes a Connector by its own id, removeElement before delete', async () => {
+    modelManagerStub.removeElement = jest.fn((id: string) => {
+      callOrder.push(`removeElement:${id}`);
+      return Promise.resolve();
+    });
+
     const line = fakeLine('l1', 'a1', 'a2');
     allLinesMap.set('l1', line);
 
@@ -300,6 +395,7 @@ describe('SHAPE_DELETE', () => {
     expect(handled).toBe(true);
     expect(line.delete).toHaveBeenCalled();
     expect(modelManagerStub.removeElement).toHaveBeenCalledWith('l1');
+    expect(callOrder).toEqual(['removeElement:l1', 'delete:l1', 'validateModel']);
 
     const calls = resultCalls(EnvelopeMessageType.SHAPE_DELETE_RESULT);
     expect(calls[0][1]).toMatchObject({ data: { success: true, deletedIds: ['l1'] } });

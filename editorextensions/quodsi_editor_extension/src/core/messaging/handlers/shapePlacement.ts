@@ -35,14 +35,26 @@ export interface PlacementPageLike {
   };
 }
 
-/** What placeAtFlowEnd needs from the model manager: the current model's
- * activity/generator id lists, used to classify which blocks on the page are
- * part of the process flow. */
+/**
+ * What placeAtFlowEnd needs from the model manager: the current
+ * ModelDefinition's activity/generator LIST MANAGERS (`.getAll()`), used to
+ * classify which blocks on the page are part of the process flow.
+ *
+ * Fix round 1 / I1: this is deliberately `getModelDefinition()`, not
+ * `getModel()`. `ModelManager.getModel()` returns the Model ROOT record
+ * (name, runTime, seed, ...) -- it has no `activities`/`generators` at all,
+ * so calling placeAtFlowEnd against the real ModelManager always found an
+ * empty flow set and silently fell back to {x:0,y:0}. `getModelDefinition()`
+ * returns the ModelDefinition, whose `activities`/`generators` are list
+ * managers (see ModelManager.registerElement/removeElement using
+ * `modelDef.activities.add/remove`, and e.g. ModelManager.ts:1686
+ * `newModel.activities.getAll()`), which is what actually holds the ids.
+ */
 export interface PlacementModelManagerLike {
-  getModel(): {
-    activities?: Array<{ id: string }>;
-    generators?: Array<{ id: string }>;
-  } | null;
+  getModelDefinition(): Promise<{
+    activities: { getAll(): Array<{ id: string }> };
+    generators: { getAll(): Array<{ id: string }> };
+  } | null>;
 }
 
 /**
@@ -115,26 +127,26 @@ export function placeNear(
  * rightmost block the model manager currently classifies as an Activity or
  * a Generator, on the first generator's row (so a chain of
  * Generator -> Activity -> Activity... reads left to right). Blocks are
- * classified by id membership in `modelManager.getModel()`'s activities /
- * generators lists, not by shape class, since a page can hold blocks the
- * model doesn't track.
+ * classified by id membership in `modelManager.getModelDefinition()`'s
+ * activities / generators list managers, not by shape class, since a page
+ * can hold blocks the model doesn't track.
  *
  * Falls back to `{x:0, y:0, w:80, h:80}` when there is no model yet, or no
  * block on the page is currently part of the flow.
  */
-export function placeAtFlowEnd(
+export async function placeAtFlowEnd(
   page: PlacementPageLike,
   modelManager: PlacementModelManagerLike
-): Box {
+): Promise<Box> {
   const fallback: Box = { x: 0, y: 0, ...DEFAULT_SHAPE_SIZE };
 
-  const model = modelManager.getModel();
-  if (!model) {
+  const modelDef = await modelManager.getModelDefinition();
+  if (!modelDef) {
     return fallback;
   }
 
-  const activityIds = (model.activities ?? []).map(a => a.id);
-  const generatorIds = (model.generators ?? []).map(g => g.id);
+  const activityIds = modelDef.activities.getAll().map(a => a.id);
+  const generatorIds = modelDef.generators.getAll().map(g => g.id);
   const flowIds = new Set<string>([...activityIds, ...generatorIds]);
 
   if (flowIds.size === 0) {
