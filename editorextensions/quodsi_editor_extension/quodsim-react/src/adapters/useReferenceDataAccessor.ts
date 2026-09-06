@@ -52,6 +52,11 @@ import type { EditorReferenceData, ISerializedResourceRequirement } from '@quods
 import { RequirementMode } from '@quodsi/lucid-shared'
 import type { ModelStateAccessor, ModelStateSnapshot } from 'quodsi_studio/platforms/shared'
 import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
+import {
+  createShapeUnavailable,
+  deleteShapeUnavailable,
+  moveShapeUnavailable,
+} from 'quodsi_studio/platforms/shared'
 
 export type ReferenceDataSenders = {
   updateResourceRequirements: (list: ISerializedResourceRequirement[]) => Promise<void>
@@ -166,6 +171,10 @@ export function createReferenceDataAccessor(
     // Reference-data accessor: no drawing half, so generate-model is
     // rejected the shared way (see LucidModelStateAccessor).
     createModel: createModelUnavailable,
+    // Same posture, same reason: no drawing half here either.
+    createShape: createShapeUnavailable,
+    deleteShape: deleteShapeUnavailable,
+    moveShape: moveShapeUnavailable,
     async updateModel(patch) {
       const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements')
       if (unhandled.length > 0) {
