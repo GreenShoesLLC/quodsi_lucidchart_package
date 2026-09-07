@@ -31,6 +31,23 @@ export type ModelInput = Model | { data: Partial<Model> } | Partial<Model>;
  * @param mod - Model data in various formats
  * @returns Normalized Model instance with all properties initialized
  */
+/**
+ * A page's Model reaches the panel as RAW storage JSON (itemDataBuilder
+ * round-trips it through JSON.parse(JSON.stringify(...))), so a calendar-mode
+ * date arrives as an ISO STRING while `Model` types it `Date | null`, and
+ * ModelEditor calls `.toISOString()` on it. Mirrors the extension's
+ * ModelLucid.coerceDate: Date passes through, a parseable string becomes a
+ * Date, anything else (null, undefined, garbage) becomes null rather than an
+ * Invalid Date, which would itself throw on `.toISOString()`.
+ */
+const coerceStoredDate = (value: unknown): Date | null => {
+  if (value === undefined || value === null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value !== 'string') return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 export const extractModelData = (mod: ModelInput): Model => {
   const data = (mod as any).data || mod;
 
@@ -47,9 +64,9 @@ export const extractModelData = (mod: ModelInput): Model => {
     // without a `runTime` — and in calendar mode there is no Run Time input on
     // screen to notice it with, since the Finish Date drives `runTime` instead.
     data.runTime ?? Duration.constant(24, PeriodUnit.HOURS),
-    data.warmupDateTime || null,
-    data.startDateTime || null,
-    data.finishDateTime || null
+    coerceStoredDate(data.warmupDateTime),
+    coerceStoredDate(data.startDateTime),
+    coerceStoredDate(data.finishDateTime)
   );
 
   model.description = data.description || "";

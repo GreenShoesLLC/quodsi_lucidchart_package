@@ -8,13 +8,25 @@
 // like any other panel edit.
 import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared';
 
-export type EmbedWriteKind = 'element' | 'modelRoot' | 'states' | 'entities' | 'model';
+export type EmbedWriteKind =
+  | 'element' | 'modelRoot' | 'states' | 'entities' | 'model'
+  | 'createShape' | 'deleteShape' | 'moveShape' | 'createModel';
 
 // The iframe's own write-request promise already rejects itself after 30s
 // (see the Studio-side writer); this must exceed that so the iframe always
 // gives up first -- a host result arriving after this window is stale and
 // simply dropped rather than relayed into a promise nothing is awaiting.
 export const WRITE_ID_TTL_MS = 35_000;
+
+/**
+ * Per-kind eviction window for the write-id map (see WRITE_ID_TTL_MS above).
+ * `createModel` (MODEL_CREATE_PAGE) can build out a whole page of shapes on
+ * the host side, which routinely runs past the ordinary 35s budget; give it
+ * more room before the frame gives up and drops a result that does arrive.
+ */
+export function writeTtlMs(kind: EmbedWriteKind): number {
+  return kind === 'createModel' ? 65_000 : WRITE_ID_TTL_MS;
+}
 
 export function buildWriteEnvelope(kind: EmbedWriteKind, payload: any, id: string): EnvelopeBase | null {
   const base = { id, source: 'studio-embed-iframe' as const, target: 'host' as const, version: '1.0' };
@@ -51,6 +63,22 @@ export function buildWriteEnvelope(kind: EmbedWriteKind, payload: any, id: strin
         data: { elementId, type: 'Model', data: { ...patch, id: elementId } },
       } as EnvelopeBase;
     }
+    case 'createShape': {
+      const { type, element, near } = payload as { type: string; element: unknown; near?: unknown };
+      return { ...base, type: EnvelopeMessageType.SHAPE_CREATE, data: { shapeType: type, element, near } } as EnvelopeBase;
+    }
+    case 'deleteShape': {
+      const { type, elementId } = payload as { type: string; elementId: string };
+      return { ...base, type: EnvelopeMessageType.SHAPE_DELETE, data: { shapeType: type, elementId } } as EnvelopeBase;
+    }
+    case 'moveShape': {
+      const { elementId, x, y } = payload as { elementId: string; x: number; y: number };
+      return { ...base, type: EnvelopeMessageType.SHAPE_MOVE, data: { elementId, x, y } } as EnvelopeBase;
+    }
+    case 'createModel': {
+      const { document } = payload as { document: unknown };
+      return { ...base, type: EnvelopeMessageType.MODEL_CREATE_PAGE, data: { document } } as EnvelopeBase;
+    }
     default:
       return null;
   }
@@ -62,4 +90,8 @@ export const WRITE_RESULT_TYPES: ReadonlySet<string> = new Set([
   EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
   EnvelopeMessageType.STATES_UPDATE_RESULT,
   EnvelopeMessageType.ENTITIES_UPDATE_RESULT,
+  EnvelopeMessageType.SHAPE_CREATE_RESULT,
+  EnvelopeMessageType.SHAPE_DELETE_RESULT,
+  EnvelopeMessageType.SHAPE_MOVE_RESULT,
+  EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT,
 ]);

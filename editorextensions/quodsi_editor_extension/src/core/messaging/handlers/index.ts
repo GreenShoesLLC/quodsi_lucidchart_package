@@ -4,6 +4,7 @@ import { FrameworkHandler } from './frameworkHandler';
 import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
 import { ElementOpsHandler } from './elementOpsHandler';
+import { ShapeOpsHandler } from './shapeOpsHandler';
 import { StatesHandler } from './statesHandler';
 import { EntitiesHandler } from './entitiesHandler';
 import { ModelRootHandler } from './modelRootHandler';
@@ -63,6 +64,16 @@ export class MessageHandlers {
 
     // Diagram-mapping relay messages (embedded Studio 2B)
     if (DiagramMappingRelayHandler.handleMessage(msg)) {
+      return true;
+    }
+
+    // Shape operations messages (Advisor drawing half: create/delete/move a
+    // single shape). Registered before ElementOpsHandler -- SHAPE_CREATE /
+    // SHAPE_DELETE / SHAPE_MOVE are a disjoint message-type set from
+    // ElementOpsHandler's ELEMENT_* messages, so ordering doesn't change
+    // which handler answers, but keeps the two shape-touching handlers
+    // adjacent in the dispatch chain.
+    if (ShapeOpsHandler.handleMessage(msg)) {
       return true;
     }
 
@@ -130,6 +141,7 @@ export {
   SimulationHandler,
   ModelOpsHandler,
   ElementOpsHandler,
+  ShapeOpsHandler,
   StatesHandler,
   EntitiesHandler,
   ModelRootHandler,

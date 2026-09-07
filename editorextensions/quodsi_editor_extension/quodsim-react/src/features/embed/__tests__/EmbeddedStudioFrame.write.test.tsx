@@ -11,7 +11,7 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 }));
 
 import { EmbeddedStudioFrame } from "../EmbeddedStudioFrame";
-import { buildWriteEnvelope, WRITE_ID_TTL_MS } from "../embedWriteEnvelope";
+import { buildWriteEnvelope, WRITE_ID_TTL_MS, WRITE_RESULT_TYPES, writeTtlMs } from "../embedWriteEnvelope";
 
 const ORIGIN = "https://studio.example";
 
@@ -54,6 +54,44 @@ describe("buildWriteEnvelope", () => {
       data: { elementId: "page-1", type: "Model", data: { replications: 5, name: "Clinic v2", id: "page-1" } },
     });
   });
+  it("maps createShape to SHAPE_CREATE", () => {
+    expect(buildWriteEnvelope("createShape", { type: "Activity", element: { name: "Triage" }, near: { elementId: "a1", side: "right" } }, "id-8")).toEqual({
+      id: "id-8", type: EnvelopeMessageType.SHAPE_CREATE, source: "studio-embed-iframe", target: "host", version: "1.0",
+      data: { shapeType: "Activity", element: { name: "Triage" }, near: { elementId: "a1", side: "right" } },
+    });
+  });
+  it("maps deleteShape to SHAPE_DELETE", () => {
+    expect(buildWriteEnvelope("deleteShape", { type: "Connector", elementId: "c1" }, "id-9")).toEqual({
+      id: "id-9", type: EnvelopeMessageType.SHAPE_DELETE, source: "studio-embed-iframe", target: "host", version: "1.0",
+      data: { shapeType: "Connector", elementId: "c1" },
+    });
+  });
+  it("maps moveShape to SHAPE_MOVE", () => {
+    expect(buildWriteEnvelope("moveShape", { elementId: "a1", x: 100, y: 200 }, "id-10")).toEqual({
+      id: "id-10", type: EnvelopeMessageType.SHAPE_MOVE, source: "studio-embed-iframe", target: "host", version: "1.0",
+      data: { elementId: "a1", x: 100, y: 200 },
+    });
+  });
+  it("maps createModel to MODEL_CREATE_PAGE", () => {
+    const document = { activities: [], resources: [] };
+    expect(buildWriteEnvelope("createModel", { document }, "id-11")).toEqual({
+      id: "id-11", type: EnvelopeMessageType.MODEL_CREATE_PAGE, source: "studio-embed-iframe", target: "host", version: "1.0",
+      data: { document },
+    });
+  });
+  it("WRITE_RESULT_TYPES includes the four shape-op results", () => {
+    expect(WRITE_RESULT_TYPES.has(EnvelopeMessageType.SHAPE_CREATE_RESULT)).toBe(true);
+    expect(WRITE_RESULT_TYPES.has(EnvelopeMessageType.SHAPE_DELETE_RESULT)).toBe(true);
+    expect(WRITE_RESULT_TYPES.has(EnvelopeMessageType.SHAPE_MOVE_RESULT)).toBe(true);
+    expect(WRITE_RESULT_TYPES.has(EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT)).toBe(true);
+  });
+  it("writeTtlMs gives createModel a longer eviction window; everything else keeps WRITE_ID_TTL_MS", () => {
+    expect(writeTtlMs("createModel")).toBe(65_000);
+    expect(writeTtlMs("createShape")).toBe(WRITE_ID_TTL_MS);
+    expect(writeTtlMs("deleteShape")).toBe(WRITE_ID_TTL_MS);
+    expect(writeTtlMs("moveShape")).toBe(WRITE_ID_TTL_MS);
+    expect(writeTtlMs("element")).toBe(WRITE_ID_TTL_MS);
+  });
 });
 
 describe("EmbeddedStudioFrame write relay", () => {
@@ -77,7 +115,7 @@ describe("EmbeddedStudioFrame write relay", () => {
     expect(typeof envelope.id).toBe("string");
 
     fromHost({ id: envelope.id, type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT, source: "host", target: "studio-embed-iframe", version: "1.0", data: { success: true, elementId: "a1" } });
-    expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 7, success: true, error: undefined }, ORIGIN);
+    expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 7, success: true, error: undefined, data: { elementId: "a1" } }, ORIGIN);
   });
 
   it("relays a failure with the host's errorMessage", () => {
@@ -85,7 +123,31 @@ describe("EmbeddedStudioFrame write relay", () => {
     fromIframe(iframe, { type: "QUODSI_EMBED_WRITE", requestId: 8, kind: "modelRoot", payload: { patch: { states: [] } } });
     const envelope = parentPost.mock.calls.map((c: any) => c[0]).find((m: any) => m?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) as any;
     fromHost({ id: envelope.id, type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT, source: "host", target: "studio-embed-iframe", version: "1.0", data: { success: false, errorMessage: "no persistence path" } });
-    expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 8, success: false, error: "no persistence path" }, ORIGIN);
+    expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 8, success: false, error: "no persistence path", data: {} }, ORIGIN);
+  });
+
+  it("relays a createShape write's result, including the created id in data", () => {
+    const { iframe, iframePost } = mount();
+    fromIframe(iframe, { type: "QUODSI_EMBED_WRITE", requestId: 12, kind: "createShape", payload: { type: "Activity", element: { name: "Triage" } } });
+    const envelope = parentPost.mock.calls.map((c: any) => c[0]).find((m: any) => m?.type === EnvelopeMessageType.SHAPE_CREATE) as any;
+    expect(envelope).toMatchObject({ source: "studio-embed-iframe", target: "host", data: { shapeType: "Activity", element: { name: "Triage" } } });
+    fromHost({ id: envelope.id, type: EnvelopeMessageType.SHAPE_CREATE_RESULT, source: "host", target: "studio-embed-iframe", version: "1.0", data: { success: true, id: "new-a1" } });
+    expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 12, success: true, error: undefined, data: { id: "new-a1" } }, ORIGIN);
+  });
+
+  it("gives a createModel write the longer eviction window instead of WRITE_ID_TTL_MS", () => {
+    vi.useFakeTimers();
+    try {
+      const { iframe, iframePost } = mount();
+      fromIframe(iframe, { type: "QUODSI_EMBED_WRITE", requestId: 13, kind: "createModel", payload: { document: { activities: [] } } });
+      const envelope = parentPost.mock.calls.map((c: any) => c[0]).find((m: any) => m?.type === EnvelopeMessageType.MODEL_CREATE_PAGE) as any;
+      // Still alive just past the ordinary WRITE_ID_TTL_MS window.
+      act(() => { vi.advanceTimersByTime(WRITE_ID_TTL_MS + 1000); });
+      fromHost({ id: envelope.id, type: EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT, source: "host", target: "studio-embed-iframe", version: "1.0", data: { success: true, pageId: "p1" } });
+      expect(iframePost).toHaveBeenCalledWith({ type: "QUODSI_EMBED_WRITE_RESULT", requestId: 13, success: true, error: undefined, data: { pageId: "p1" } }, ORIGIN);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("fast-fails an unknown write kind instead of leaving the iframe to time out", () => {
