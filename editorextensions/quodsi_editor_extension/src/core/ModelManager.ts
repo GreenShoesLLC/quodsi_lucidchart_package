@@ -1382,6 +1382,7 @@ export class ModelManager {
      * Reference cleanup strategy:
      * - Generator.entityId (flat, dissolved EntitySourceConfig): SET TO "" (required field, empty = unset)
      * - Activity.sourceConfig.entityId: SET TO "" (required field, empty = unset)
+     * - Connector.entityId: DELETED (optional field, absent = no entity-template restriction)
      * - CreateAction.entityTemplateId: SET TO null (already nullable)
      *
      * @param entityId ID of the deleted entity
@@ -1460,6 +1461,24 @@ export class ModelManager {
             if (lineTypeInfo?.type !== SimulationObjectType.Connector) continue;
 
             let modified = false;
+
+            // Clean the connector's OWN entity-template routing link. Left out
+            // originally, so deleting an entity left every entity_template edge
+            // pointing at a dead id: the engine's clean loader cross-references
+            // it and rejects the entire document, and the model stops loading
+            // with an error naming an entity the user already deleted.
+            //
+            // DELETED, not set to "": a connector's entityId is OPTIONAL ("no
+            // entity-template restriction"), unlike Generator.entityId and
+            // Activity.sourceConfig.entityId above, which are REQUIRED fields
+            // whose unset sentinel is "". setElementData re-stringifies the
+            // whole envelope, so the delete really clears -- this is not the
+            // updateElementData merge path, which cannot express deletion.
+            if (elementData.entityId === entityId) {
+                this.debug.debug('Clearing Connector entityId:', entityId);
+                delete elementData.entityId;
+                modified = true;
+            }
 
             // Clean actions array (for CREATE actions)
             if (elementData.actions && Array.isArray(elementData.actions)) {
