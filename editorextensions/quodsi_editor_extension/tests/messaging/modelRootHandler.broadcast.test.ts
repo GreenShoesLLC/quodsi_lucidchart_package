@@ -150,7 +150,7 @@ describe('ModelRootHandler snapshot targeting', () => {
       source: 'model-iframe',
       target: 'host',
       version: '1.0',
-      data: { patch: { arrivalPatterns: [] } },
+      data: { patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' },
     } as any;
 
     await (ModelRootHandler as any).handleUpdate(msg);

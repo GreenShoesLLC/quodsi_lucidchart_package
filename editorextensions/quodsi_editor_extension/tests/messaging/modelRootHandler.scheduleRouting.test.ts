@@ -66,7 +66,7 @@ function updateMsg(source: string, id: string): any {
     source,
     target: 'host',
     version: '1.0',
-    data: { patch: { arrivalSchedules: [] } },
+    data: { patch: { arrivalSchedules: [] }, basedOnPageId: 'page-1' },
   };
 }
 

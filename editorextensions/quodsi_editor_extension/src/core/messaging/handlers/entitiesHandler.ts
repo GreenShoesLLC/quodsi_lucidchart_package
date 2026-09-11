@@ -4,6 +4,7 @@ import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
+import { assertWritePage, isPageMismatch } from '../pageGuard';
 
 const log = getLogger('EntitiesHandler');
 
@@ -51,6 +52,7 @@ export class EntitiesHandler {
   private static async handleEntitiesUpdate(msg: EnvelopeBase): Promise<boolean> {
     const data = msg.data as {
       entities: ISerializedEntity[];
+      basedOnPageId?: string;
     };
 
     log.debug('Entities update requested', {
@@ -70,6 +72,9 @@ export class EntitiesHandler {
       if (!currentPage) {
         throw new Error('Current page not available');
       }
+
+      // Page guard (spec 2026-09-11): refuse before anything is stored.
+      assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
 
       // Update entities using ModelManager
       await modelManager.updateEntities(data.entities, currentPage);
@@ -110,6 +115,17 @@ export class EntitiesHandler {
           errorMessage: error instanceof Error ? error.message : String(error)
         }
       });
+
+      // A page mismatch means the panel is showing another page's data: push
+      // fresh referenceData so it shows the current page. Other failures
+      // behave as before.
+      if (isPageMismatch(error)) {
+        try {
+          await SelectionHandler.sendSelectionChangedMessage(true);
+        } catch (refreshError) {
+          log.error('Error refreshing referenceData after a page-mismatch rejection', refreshError);
+        }
+      }
 
       return false;
     }

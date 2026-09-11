@@ -4,6 +4,7 @@ import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension
 import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
+import { assertWritePage, isPageMismatch } from '../pageGuard';
 
 const log = getLogger('ElementOpsHandler');
 
@@ -151,6 +152,7 @@ export class ElementOpsHandler {
       type: string;
       data: JsonObject;
       diagramElementType?: string;
+      basedOnPageId?: string;
     };
 
     log.debug('Element update requested', {
@@ -182,6 +184,11 @@ export class ElementOpsHandler {
           elementId: data.elementId,
           pageId: currentPage.id
         });
+        // Page guard (spec 2026-09-11): a model settings write must be based
+        // on the current page. Its element id is not a reliable page id -- a
+        // duplicated Lucid page keeps the original page's model id -- so the
+        // panel sends basedOnPageId explicitly.
+        assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
         // Model is the Page itself, not a block or line
         element = currentPage;
       } else {
@@ -255,10 +262,21 @@ export class ElementOpsHandler {
         }
       });
 
+      // A page mismatch means the panel is showing another page's data: push
+      // fresh referenceData so it shows the current page. Other failures
+      // behave as before.
+      if (isPageMismatch(error)) {
+        try {
+          await SelectionHandler.sendSelectionChangedMessage(true);
+        } catch (refreshError) {
+          log.error('Error refreshing referenceData after a page-mismatch rejection', refreshError);
+        }
+      }
+
       return false;
     }
   }
-  
+
   /**
    * Handle element update result
    * 

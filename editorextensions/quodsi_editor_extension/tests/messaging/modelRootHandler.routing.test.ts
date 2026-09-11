@@ -69,7 +69,7 @@ function updateMsg(source: string, id: string): any {
     source,
     target: 'host',
     version: '1.0',
-    data: { patch: { arrivalPatterns: [] } },
+    data: { patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' },
   };
 }
 
