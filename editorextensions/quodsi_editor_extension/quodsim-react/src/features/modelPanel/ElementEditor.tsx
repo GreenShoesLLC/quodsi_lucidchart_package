@@ -151,7 +151,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onRemoveModel={onRemoveModel}
             onValidate={onValidate}
             states={states}
-            onStatesChange={onStatesChange}
             entities={entities}
             referenceData={referenceData}
             resourceRequirements={resourceRequirements}

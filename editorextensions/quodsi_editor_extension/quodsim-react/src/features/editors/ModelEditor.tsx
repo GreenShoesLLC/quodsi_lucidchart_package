@@ -15,11 +15,11 @@ import {
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock, SlidersHorizontal } from "lucide-react";
-import StatesEditor from "./StatesEditor";
 import { EntitiesTab } from "./EntitiesTab";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
   CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField,
+  StatesEditor,
   // Levers moved onto their own tab (2026-08-31) and Lucid dropped its
   // near-verbatim fork of the section at the same time -- this is the monorepo
   // original, shared with drawio/Studio/Visio.
@@ -60,7 +60,6 @@ interface Props {
   onRemoveModel?: () => void;
   onValidate?: () => void;
   states: StateListManager;
-  onStatesChange: (states: StateListManager) => void;
   entities: EntityRow[];
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
@@ -233,7 +232,7 @@ const START_DATE_HINT = "Set the start date first";
  *   for falsy fields (DEFAULT_RANDOM_SEED for seed, PeriodUnit.HOURS for unit
  *   selectors, etc.) so every saved Model is fully populated even if the user
  *   blanked optional fields.
- * - States tab: Auto-saves immediately via parent onStatesChange.
+ * - States tab: Studio's shared StatesEditor over the referenceData accessor; writes go through updateStates (STATES_UPDATE round trip), the host cleans references.
  * - Requirements tab: Auto-saves immediately via updateResourceRequirements.
  * - Validation tab: Read-only.
  * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Save failed —
@@ -242,7 +241,7 @@ const START_DATE_HINT = "Set the start date first";
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, entities, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, entities, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -256,10 +255,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const { visible } = useView();
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const { updateResourceRequirements } = useModelOpsSender();
+  const { updateResourceRequirements, updateStates } = useModelOpsSender();
   // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
   const { openSettingsModal } = useSimulationRunSender();
-  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements });
+  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements, updateStates });
 
   // Direct form state management
   const [localModelDraft, setLocalModelDraft] = useState<Model>(() => extractModelData(model));
@@ -905,14 +904,18 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
               </div>
           </div>
       )}
-      {activeOrFallback === "states" && (
-        <StatesEditor
-            states={states}
-            onStatesChange={onStatesChange}
-            defaultComponentType="ALL"
-            referenceData={referenceData}
-          />
-      )}
+      {/* States: Studio's shared StatesEditor (spec 2026-09-11 States). The
+          host's STATES_UPDATE write runs the shared delete rule, hence
+          referenceCleanup="host". THE LOADING GATE IS LOAD-BEARING: with no
+          referenceData.states yet the editor would show an empty list, and an
+          Add there would send a one-row list that updateStates treats as
+          deleting every existing state. */}
+      {activeOrFallback === "states" &&
+        (referenceData?.states === undefined ? (
+          <div className="p-3 text-xs text-muted">Loading…</div>
+        ) : (
+          <StatesEditor accessor={accessor} referenceCleanup="host" />
+        ))}
       {activeOrFallback === "entities" && <EntitiesTab />}
       {activeOrFallback === "resources" && <ResourcesTab />}
       {activeOrFallback === "arrivals" && <ArrivalsTab />}
