@@ -84,6 +84,13 @@ interface ChangeTracker {
 export class ModelManager {
     private debug = getLogger('ModelManager');
     private modelDefinition: ModelDefinition | null = null;
+    /**
+     * The page the cached modelDefinition was built for. The rebuild diff
+     * (detectAndCleanupDeletedElements) runs only when rebuilding that same
+     * page -- after a page switch the cached model belongs to another page
+     * (spec 2026-09-11 page guard, decision 5).
+     */
+    private modelDefinitionPageId: string | null = null;
     private storageAdapter: StorageAdapter;
     private currentPage: PageProxy | null = null;
     private currentValidationResult: ValidationResult | null = null;
@@ -254,6 +261,7 @@ export class ModelManager {
                         this.debug.error('Version check failed:', error);
                         const message = error instanceof Error ? error.message : String(error);
                         this.modelDefinition = null;
+                        this.modelDefinitionPageId = null;
                         // A too-new document is not a failed upgrade: reloading
                         // cannot help, only updating the extension can, so it
                         // carries its own code and its own (already complete)
@@ -317,12 +325,17 @@ export class ModelManager {
                     throw new Error(`activities.add is not a function: ${typeof newModelDefinition.activities.add}`);
                 }
 
-                // Detect elements deleted from diagram and clean up orphaned references
-                if (this.modelDefinition) {
+                // Detect elements deleted from diagram and clean up orphaned references --
+                // only when the cached model was built for THIS page. After a page switch
+                // the cached model is another page's, and diffing it would treat that
+                // page's elements as deleted from this one and write cleanups to this
+                // page's storage (spec 2026-09-11 page guard, decision 5).
+                if (this.modelDefinition && this.modelDefinitionPageId === this.currentPage.id) {
                     await this.detectAndCleanupDeletedElements(this.modelDefinition, newModelDefinition, this.currentPage);
                 }
 
                 this.modelDefinition = newModelDefinition;
+                this.modelDefinitionPageId = this.currentPage.id;
                 this.changeTracker.modelDefinitionDirty = false;
                 this.changeTracker.lastModelDefinitionUpdate = Date.now();
                 this.changeTracker.pendingChanges.clear();
@@ -364,6 +377,7 @@ export class ModelManager {
     public async registerElement(element: SimulationObject, elementProxy: ElementProxy): Promise<void> {
         if (element.type === SimulationObjectType.Model) {
             this.modelDefinition = new ModelDefinition(element as Model);
+            this.modelDefinitionPageId = this.currentPage?.id ?? null;
             this.markModelDirty();
             return;
         }
@@ -829,6 +843,7 @@ export class ModelManager {
         }
 
         this.modelDefinition = null;
+        this.modelDefinitionPageId = null;
         this.currentPage = null;
         this.currentValidationResult = null;
         this.pageBuilder = null;
