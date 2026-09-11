@@ -285,3 +285,66 @@ describe('useReferenceDataAccessor', () => {
     expect(writer2).toHaveBeenCalledWith({ routing: 'first_available' })
   })
 })
+
+describe('states writes', () => {
+  const st = (id: string, name: string) => ({ id, name, componentType: 'model', dataType: 'number', initialValue: 0, collectStatistics: true })
+  const statesOf = (s: ReferenceDataSource) =>
+    (s.accessor.getSnapshot().modelDefinition as unknown as { states: Array<{ id: string }> }).states.map((x) => x.id)
+  const withStates = () => ({ states: [st('s1', 'A'), st('s2', 'B')] } as unknown as EditorReferenceData)
+
+  it('overlays the new list immediately, sends it, and resolves on the host result', async () => {
+    let resolveSend!: () => void
+    const updateStates = vi.fn(() => new Promise<void>((r) => { resolveSend = r }))
+    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
+
+    const p = source.accessor.updateModel({ states: [st('s2', 'B')] })
+
+    expect(updateStates).toHaveBeenCalledWith([st('s2', 'B')])
+    expect(statesOf(source)).toEqual(['s2'])
+    expect(source.accessor.getSnapshot().saveStatus).toBe('saving')
+    resolveSend()
+    await p
+    expect(source.accessor.getSnapshot().saveStatus).toBe('saved')
+  })
+
+  it('restores the previous list and reports failure when the host rejects', async () => {
+    const updateStates = vi.fn(async () => { throw new Error('Current page not available') })
+    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
+
+    await expect(source.accessor.updateModel({ states: [st('s2', 'B')] })).rejects.toThrow('Current page not available')
+
+    expect(statesOf(source)).toEqual(['s1', 's2'])
+    expect(source.accessor.getSnapshot().saveStatus).toBe('failed')
+    expect(source.accessor.getSnapshot().saveError).toBe('Current page not available')
+  })
+
+  it('a new referenceData replaces the overlay', async () => {
+    const updateStates = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
+    await source.accessor.updateModel({ states: [st('s2', 'B')] })
+
+    source.setReferenceData({ states: [st('s9', 'Z')] } as unknown as EditorReferenceData)
+
+    expect(statesOf(source)).toEqual(['s9'])
+  })
+
+  it('a states-only patch never sends resource requirements', async () => {
+    const updateResourceRequirements = vi.fn(async () => {})
+    const updateStates = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements, updateStates }))
+
+    await source.accessor.updateModel({ states: [] })
+
+    expect(updateStates).toHaveBeenCalledTimes(1)
+    expect(updateResourceRequirements).not.toHaveBeenCalled()
+  })
+
+  it('throws when no updateStates sender is configured, without touching the snapshot', async () => {
+    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn() }))
+
+    await expect(source.accessor.updateModel({ states: [] })).rejects.toThrow(/no updateStates sender/)
+
+    expect(statesOf(source)).toEqual(['s1', 's2'])
+    expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
+  })
+})
