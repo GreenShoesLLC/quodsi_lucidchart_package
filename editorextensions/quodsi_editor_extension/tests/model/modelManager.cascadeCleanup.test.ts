@@ -376,4 +376,128 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         expect(storage.getElementData<any>(block).entityId).toBe(DEFAULT_ENT);
         expect(storage.getEntities(page).map((e) => e.id)).toEqual([DEFAULT_ENT]);
     });
+
+    // --- shared state rule (spec 2026-09-11 States): the host runs removeStateReferences --
+
+    it('cleans every state reference kind through the shared rule', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+
+        const gen = makeFakeBlock('gen-1');
+        storage.setElementData(
+            gen,
+            {
+                id: 'gen-1',
+                name: 'G',
+                entityId: 'e',
+                initialStates: [
+                    { stateId: 'state-sev', operation: 'assign', value: 1 },
+                    { stateId: 'state-keep', operation: 'assign', value: 2 },
+                ],
+            },
+            SimulationObjectType.Generator
+        );
+        page.allBlocks.set(gen.id, gen);
+
+        const act = makeFakeBlock('act-1');
+        storage.setElementData(
+            act,
+            {
+                id: 'act-1',
+                name: 'A',
+                sourceConfig: { entityId: 'e', initialStates: [{ stateId: 'state-sev', operation: 'assign', value: 1 }] },
+                queueRanking: { stateId: 'state-sev', order: 'ascending' },
+                actions: [
+                    {
+                        id: 'loop',
+                        type: 'loop',
+                        actions: [
+                            { id: 'set', type: 'assign', modifications: [{ stateId: 'state-sev', operation: 'assign', value: 3 }] },
+                            { id: 'br', type: 'branch', condition: { stateId: 'state-sev', comparison: 'equal', value: 'red' }, ifTrue: [], ifFalse: [] },
+                        ],
+                    },
+                    { id: 'split', type: 'split', inheritStates: ['severity', 'other'], splitIndexState: 'severity' },
+                    { id: 'join', type: 'join', matchState: 'severity', joinCountState: 'severity' },
+                ],
+            },
+            SimulationObjectType.Activity
+        );
+        page.allBlocks.set(act.id, act);
+
+        const line = makeFakeLine('conn-1');
+        storage.setElementData(
+            line,
+            {
+                id: 'conn-1',
+                name: 'C',
+                sourceId: 'act-1',
+                targetId: 'a2',
+                weight: 1,
+                condition: { stateId: 'state-sev', comparison: 'equal', value: 'red' },
+                actions: [{ id: 'ca', type: 'assign', modifications: [{ stateId: 'state-sev', operation: 'assign', value: 1 }] }],
+            },
+            SimulationObjectType.Connector
+        );
+        page.allLines.set(line.id, line);
+
+        const manager = new ModelManager(storage);
+        const affected = await (manager as any).cleanupStateReferences('state-sev', 'severity', page);
+
+        expect(affected).toBe(3);
+
+        const g = storage.getElementData<any>(gen);
+        expect(g.initialStates).toEqual([{ stateId: 'state-keep', operation: 'assign', value: 2 }]);
+        expect(g.entityId).toBe('e');
+
+        const a = storage.getElementData<any>(act);
+        expect(a.sourceConfig.initialStates).toEqual([]);
+        expect('queueRanking' in a).toBe(false);
+        expect(a.actions[0].actions[0].modifications).toEqual([]);
+        expect(a.actions[0].actions[1].condition).toBeNull();
+        expect(a.actions[1].inheritStates).toEqual(['other']);
+        expect(a.actions[1].splitIndexState).toBeNull();
+        expect(a.actions[2].matchState).toBeNull();
+        expect(a.actions[2].joinCountState).toBeNull();
+
+        const c = storage.getElementData<any>(line);
+        expect(c.condition).toBeNull();
+        expect(c.actions[0].modifications).toEqual([]);
+        expect(c.weight).toBe(1);
+    });
+
+    it('state cleanup does not rewrite elements that never referenced the state', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const touched = makeFakeBlock('gen-1');
+        const untouched = makeFakeBlock('gen-2');
+        storage.setElementData(touched, { id: 'gen-1', name: 'G1', entityId: 'e', initialStates: [{ stateId: 'state-sev', operation: 'assign', value: 1 }] }, SimulationObjectType.Generator);
+        storage.setElementData(untouched, { id: 'gen-2', name: 'G2', entityId: 'e', initialStates: [{ stateId: 'state-keep', operation: 'assign', value: 1 }] }, SimulationObjectType.Generator);
+        page.allBlocks.set(touched.id, touched);
+        page.allBlocks.set(untouched.id, untouched);
+
+        const manager = new ModelManager(storage);
+        const spy = jest.spyOn(storage, 'setElementData');
+        const affected = await (manager as any).cleanupStateReferences('state-sev', 'severity', page);
+
+        expect(affected).toBe(1);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][0]).toBe(touched);
+    });
+
+    it('updateStates cleans references to a removed state end to end', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const sev = { id: 'state-sev', name: 'severity', componentType: 'entity', dataType: 'number', initialValue: 0, collectStatistics: true };
+        const keep = { ...sev, id: 'state-keep', name: 'priority' };
+        storage.setStates(page, [sev, keep] as any);
+        const gen = makeFakeBlock('gen-1');
+        storage.setElementData(gen, { id: 'gen-1', name: 'G', entityId: 'e', initialStates: [{ stateId: 'state-sev', operation: 'assign', value: 1 }] }, SimulationObjectType.Generator);
+        page.allBlocks.set(gen.id, gen);
+
+        const manager = new ModelManager(storage);
+        await manager.updateStates([keep] as any, page);
+
+        expect(storage.getElementData<any>(gen).initialStates).toEqual([]);
+        expect(storage.getStates(page).map((s: any) => s.id)).toEqual(['state-keep']);
+    });
 });
