@@ -139,6 +139,11 @@ export type { CalendarWindow, CalendarWindowModelLike } from '@quodsi/shared';
 // into the same stored length.
 export { msToCoarsestDuration } from '@quodsi/shared';
 
+// The one entity-delete rule (spec 2026-09-11). The extension's
+// ModelManager.cleanupEntityReferences runs it over stored shape data so
+// LucidChart deletes an entity exactly the way drawio, Visio and Studio do.
+export { removeEntityReferences, pickFallbackEntityId } from '@quodsi/shared';
+
 // Work schedules (time-varying capacity, spec 2026-08-27). The class and its
 // list manager come straight from the core -- Lucid adds only storage
 // (`q_work_schedules`), the projection, and the clearable `workScheduleId`

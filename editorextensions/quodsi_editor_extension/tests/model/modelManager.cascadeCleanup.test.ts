@@ -8,8 +8,10 @@
 
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelManager } from '../../src/core/ModelManager';
-import { SimulationObjectType } from '@quodsi/lucid-shared';
+import { ModelDefaults, SimulationObjectType } from '@quodsi/lucid-shared';
 import { makeFakeBlock, makeFakeLine, makeFakePage } from '../helpers/fakeProxies';
+
+const DEFAULT_ENT = ModelDefaults.DEFAULT_ENTITY_ID;
 
 describe('ModelManager cascade cleanup (review F2)', () => {
     it('drops a connector condition naming the deleted state', async () => {
@@ -64,7 +66,7 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         expect(affected).toBe(0);
     });
 
-    it('clears a generator entityId naming the deleted entity', async () => {
+    it('re-points a generator entityId naming the deleted entity to the fallback', async () => {
         const storage = new StorageAdapter();
         const page = makeFakePage('page-1');
         const block = makeFakeBlock('gen-1');
@@ -81,10 +83,11 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         page.allBlocks.set(block.id, block);
 
         const manager = new ModelManager(storage);
-        const affected = await (manager as any).cleanupEntityReferences('entity-1', page);
+        const affected = await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
 
         const stored = storage.getElementData<any>(block);
-        expect(stored.entityId).toBe('');
+        expect(stored.entityId).toBe(DEFAULT_ENT);
+        expect(stored.interarrivalTime).toEqual({ value: 1, unit: 'minutes' });
         expect(affected).toBe(1);
     });
 
@@ -105,7 +108,7 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         page.allBlocks.set(block.id, block);
 
         const manager = new ModelManager(storage);
-        const affected = await (manager as any).cleanupEntityReferences('entity-other', page);
+        const affected = await (manager as any).cleanupEntityReferences('entity-other', DEFAULT_ENT, page);
 
         const stored = storage.getElementData<any>(block);
         expect(stored.entityId).toBe('entity-1');
@@ -213,7 +216,7 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         page.allLines.set(line.id, line);
 
         const manager = new ModelManager(storage);
-        const affected = await (manager as any).cleanupEntityReferences('entity-1', page);
+        const affected = await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
 
         const stored = storage.getElementData<any>(line);
         expect(stored).not.toHaveProperty('entityId');
@@ -239,7 +242,7 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         page.allLines.set(line.id, line);
 
         const manager = new ModelManager(storage);
-        const affected = await (manager as any).cleanupEntityReferences('entity-1', page);
+        const affected = await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
 
         const stored = storage.getElementData<any>(line);
         expect(stored.entityId).toBe('entity-keep');
@@ -258,9 +261,119 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         page.allLines.set(line.id, line);
 
         const manager = new ModelManager(storage);
-        const affected = await (manager as any).cleanupEntityReferences('entity-1', page);
+        const affected = await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
 
         expect(affected).toBe(0);
     });
 
+    // --- shared rule (spec 2026-09-11): the host runs removeEntityReferences --
+
+    it('re-points a self-generating activity sourceConfig.entityId to the fallback', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const block = makeFakeBlock('act-1');
+        storage.setElementData(
+            block,
+            { id: 'act-1', name: 'Self-gen', sourceConfig: { entityId: 'entity-1', mode: 'FREQUENCY' } },
+            SimulationObjectType.Activity
+        );
+        page.allBlocks.set(block.id, block);
+
+        const manager = new ModelManager(storage);
+        const affected = await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
+
+        const stored = storage.getElementData<any>(block);
+        expect(stored.sourceConfig).toEqual({ entityId: DEFAULT_ENT, mode: 'FREQUENCY' });
+        expect(affected).toBe(1);
+    });
+
+    it('nulls CREATE templates inside BRANCH and LOOP bodies on an activity', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const block = makeFakeBlock('act-1');
+        storage.setElementData(
+            block,
+            {
+                id: 'act-1',
+                name: 'Loops',
+                actions: [
+                    {
+                        id: 'loop',
+                        type: 'LOOP',
+                        actions: [
+                            { id: 'c1', type: 'CREATE', entityTemplateId: 'entity-1' },
+                            {
+                                id: 'br',
+                                type: 'BRANCH',
+                                ifTrue: [{ id: 'c2', type: 'CREATE', entityTemplateId: 'entity-1' }],
+                                ifFalse: [],
+                            },
+                        ],
+                    },
+                ],
+            },
+            SimulationObjectType.Activity
+        );
+        page.allBlocks.set(block.id, block);
+
+        const manager = new ModelManager(storage);
+        await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
+
+        const loop = storage.getElementData<any>(block).actions[0];
+        expect(loop.actions[0].entityTemplateId).toBeNull();
+        expect(loop.actions[1].ifTrue[0].entityTemplateId).toBeNull();
+    });
+
+    it('does not rewrite elements the rule leaves unchanged', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const touched = makeFakeBlock('gen-1');
+        const untouched = makeFakeBlock('gen-2');
+        storage.setElementData(touched, { id: 'gen-1', name: 'G1', entityId: 'entity-1' }, SimulationObjectType.Generator);
+        storage.setElementData(untouched, { id: 'gen-2', name: 'G2', entityId: 'entity-keep' }, SimulationObjectType.Generator);
+        page.allBlocks.set(touched.id, touched);
+        page.allBlocks.set(untouched.id, untouched);
+
+        const manager = new ModelManager(storage);
+        const spy = jest.spyOn(storage, 'setElementData');
+        const affected = await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
+
+        expect(affected).toBe(1);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][0]).toBe(touched);
+        expect(spy.mock.calls[0][2]).toBe(SimulationObjectType.Generator);
+    });
+
+    it('keeps the stored record id even when it differs from the block id', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const block = makeFakeBlock('blk-9');
+        storage.setElementData(block, { id: 'legacy-id', name: 'G', entityId: 'entity-1' }, SimulationObjectType.Generator);
+        page.allBlocks.set(block.id, block);
+
+        const manager = new ModelManager(storage);
+        await (manager as any).cleanupEntityReferences('entity-1', DEFAULT_ENT, page);
+
+        const stored = storage.getElementData<any>(block);
+        expect(stored.id).toBe('legacy-id');
+        expect(stored.entityId).toBe(DEFAULT_ENT);
+    });
+
+    it('updateEntities re-points a generator using a removed entity to the Default Entity', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        storage.setEntities(page, [
+            { id: DEFAULT_ENT, name: 'Default Entity' } as any,
+            { id: 'entity-1', name: 'Customer' } as any,
+        ]);
+        const block = makeFakeBlock('gen-1');
+        storage.setElementData(block, { id: 'gen-1', name: 'G1', entityId: 'entity-1' }, SimulationObjectType.Generator);
+        page.allBlocks.set(block.id, block);
+
+        const manager = new ModelManager(storage);
+        await manager.updateEntities([{ id: DEFAULT_ENT, name: 'Default Entity' } as any], page);
+
+        expect(storage.getElementData<any>(block).entityId).toBe(DEFAULT_ENT);
+        expect(storage.getEntities(page).map((e) => e.id)).toEqual([DEFAULT_ENT]);
+    });
 });
