@@ -18,7 +18,7 @@
 //     treat as deleting every existing entity.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
 import { Entity, Generator, Model, ModelDefinition, ModelDefaults } from '@quodsi/lucid-shared'
 import { projectModelRoot } from '../../../../../src/core/modelRootProjection'
 import { createModelRootSource, type ModelRootTransport } from '../../../adapters/useModelRootSource'
@@ -47,10 +47,11 @@ function buildModelDefinition(): ModelDefinition {
   return def
 }
 
-function mountWithProjection() {
+function mountWithProjection(transportOverrides: Partial<ModelRootTransport> = {}) {
   const transport: ModelRootTransport = {
     send: vi.fn().mockResolvedValue(undefined),
     saveShape: vi.fn().mockResolvedValue(undefined),
+    ...transportOverrides,
   }
   const source = createModelRootSource(transport)
   const projection = projectModelRoot(buildModelDefinition())
@@ -58,7 +59,7 @@ function mountWithProjection() {
   source.acceptSnapshot(projection as never)
   hookResult.current = { accessor: createLucidModelStateAccessor(source.deps), projection }
   render(<EntitiesTab />)
-  return { transport, projection }
+  return { transport, projection, source }
 }
 
 describe('EntitiesTab against a real model-root projection', () => {
@@ -89,6 +90,43 @@ describe('EntitiesTab against a real model-root projection', () => {
     expect(Object.keys(patch)).toEqual(['entities'])
     expect(patch.entities.map((e) => e.id)).toEqual([ModelDefaults.DEFAULT_ENTITY_ID])
     expect(transport.saveShape).not.toHaveBeenCalled()
+  })
+
+  // Final fix wave I1. Sequence: (1) click Delete Entity -> confirmDelete
+  // calls accessor.updateModel({ entities }) -> createModelRootSource's
+  // saveModel does an OPTIMISTIC ECHO of the shorter list into the cached
+  // projection *before* transport.send resolves, so the confirm box
+  // disappears here even though nothing is confirmed yet -- deletingEntity
+  // resolves undefined because Customer is already gone from the echoed
+  // list, even though deletingId is still set. (2) transport.send rejects;
+  // confirmDelete's catch sets deleteError but deletingId was never cleared.
+  // (3) the host's real corrective push -- ModelManager's snapshot restoring
+  // the never-actually-deleted entity -- is modeled here by re-accepting the
+  // same projection. That restores Customer to the list, so deletingEntity
+  // resolves again and the confirm box reappears -- this time WITH the
+  // error explained, not silently.
+  it('keeps the confirm box open with an explanation after the host rejects the delete', async () => {
+    const send = vi.fn().mockRejectedValue(new Error('no current page'))
+    const { source, projection } = mountWithProjection({ send })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Entity' }))
+
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
+    // The optimistic echo already hid the confirm box before the host replied.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Delete Entity' })).toBeNull()
+    )
+
+    // Model the host's corrective MODEL_ROOT_SNAPSHOT landing after the
+    // rejection.
+    await act(async () => {
+      source.acceptSnapshot(projection as never)
+    })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('no current page')
+    expect(screen.getByRole('button', { name: 'Delete Entity' })).toBeInTheDocument()
   })
 
   it('shows a loading state and no editor before the first snapshot', () => {

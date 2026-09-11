@@ -56,9 +56,10 @@ export type ModelRootProjection = {
     // Read by ScheduleModal.tsx:111-114 and handed straight to
     // ScheduleTable/SchedulePasteImport, whose props are literally
     // `{ id: string; name: string }[]` (ScheduleTable.tsx:42-43). Deliberately
-    // NOT the full Entity/State domain objects: the panels use id + name and
+    // NOT the full Entity/State domain objects: `states` carries id + name and
     // nothing else, and projecting whole objects would put every future field
-    // on those classes onto the MODEL_ROOT_SNAPSHOT wire for free.
+    // on those classes onto the MODEL_ROOT_SNAPSHOT wire for free. `entities`
+    // additionally carries `description` -- see the comment on that field below.
     //
     // Both were absent until 2026-08-19, so ScheduleModal's `?? []` fallbacks
     // silently produced empty dropdowns in Lucid: no scheduled-arrival row
