@@ -211,10 +211,13 @@ export function useModelPanel() {
         data
       });
       // Use the model update method
-      // Page guard (spec 2026-09-11): tie the save to the page this panel's
-      // data came from. Not the model element id -- a duplicated Lucid page
-      // keeps the original page's model id.
-      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType, selection.referenceData?.pageId);
+      // Page guard (spec 2026-09-11): tie the save to the page whose model
+      // data this form is editing. The host builds the page's modelItemData
+      // with id = the live page id, so the form and its page id always arrive
+      // together. (referenceData can lag a page switch, and the placeholder
+      // model below has a document id, not a page id -- a save from it is
+      // refused as not tied to a loaded page.)
+      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType, documentContext.metadata?.modelItemData?.id);
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';

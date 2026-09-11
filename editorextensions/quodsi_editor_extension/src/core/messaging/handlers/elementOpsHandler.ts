@@ -262,14 +262,17 @@ export class ElementOpsHandler {
         }
       });
 
-      // A page mismatch means the panel is showing another page's data: push
-      // fresh referenceData so it shows the current page. Other failures
-      // behave as before.
+      // A model settings save based on another page: rebuild the WHOLE
+      // selection for the current page (modelItemData + documentContext +
+      // referenceData). Rebuilding referenceData alone would resend the host's
+      // cached modelItemData, which can still be the previous page's.
       if (isPageMismatch(error)) {
         try {
-          await SelectionHandler.sendSelectionChangedMessage(true);
+          const client = ModelManager.getClient();
+          const viewport = new Viewport(client);
+          await SelectionHandler.handleLucidSelectionEvent(client, viewport.getSelectedItems(), ModelManager.getInstance());
         } catch (refreshError) {
-          log.error('Error refreshing referenceData after a page-mismatch rejection', refreshError);
+          log.error('Error refreshing the selection after a page-mismatch rejection', refreshError);
         }
       }
 

@@ -8,7 +8,7 @@ import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
 import { WorkScheduleEditorModal } from '../../../panels/WorkScheduleEditorModal';
 import { SettingsModal } from '../../../panels/SettingsModal';
 import { SelectionHandler } from './selection/SelectionHandler';
-import { assertWritePage, isPageMismatch } from '../pageGuard';
+import { assertWritePage } from '../pageGuard';
 
 const log = getLogger('ModelRootHandler');
 

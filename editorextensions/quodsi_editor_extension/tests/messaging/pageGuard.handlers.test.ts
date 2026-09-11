@@ -8,7 +8,17 @@ let currentPage: any = null;
 (Viewport.prototype as any).getSelectedItems = function (): any { return []; };
 
 const sendMock = jest.fn();
-jest.mock('../../src/core/messaging/index', () => ({ router: { send: sendMock } }));
+jest.mock('../../src/core/messaging/index', () => ({
+  router: {
+    send: sendMock,
+    // M1: ModelRootHandler.sendSnapshot reads this to decide which extra
+    // targets (pattern/schedule/work-schedule) also get the snapshot -- a
+    // mock without it makes sendSnapshot throw, and the mismatch path
+    // swallows that (.catch(log.error)), so the corrective snapshot the
+    // MODEL_ROOT_UPDATE mismatch test claims never actually goes out.
+    getChannelManager: () => ({ getChannel: () => undefined }),
+  },
+}));
 
 let modelManagerStub: any;
 jest.mock('../../src/core/ModelManager', () => ({
@@ -71,11 +81,22 @@ describe('MODEL_ROOT_UPDATE', () => {
     await flush();
 
     expect(modelManagerStub.updateModelRoot).not.toHaveBeenCalled();
-    expect(resultData(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT)).toEqual({
+    const resultIndex = sendMock.mock.calls.findIndex(
+      (c) => c[1]?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT
+    );
+    expect(sendMock.mock.calls[resultIndex]?.[1]?.data).toEqual({
       success: false,
       errorMessage: PAGE_GUARD_MISMATCH_MESSAGE,
     });
     expect(modelManagerStub.buildModelRootProjection).toHaveBeenCalled();
+    // M1: the corrective snapshot must actually be sent, after the failure
+    // result (so a pending saveModel promise rejects before the refresh
+    // lands) -- not merely that buildModelRootProjection was called.
+    const snapshotIndex = sendMock.mock.calls.findIndex(
+      (c) => c[1]?.type === EnvelopeMessageType.MODEL_ROOT_SNAPSHOT
+    );
+    expect(snapshotIndex).toBeGreaterThan(-1);
+    expect(snapshotIndex).toBeGreaterThan(resultIndex);
     expect(rebuildMock).not.toHaveBeenCalled();
   });
 
@@ -189,17 +210,22 @@ describe('ELEMENT_UPDATE', () => {
   const update = (source: string, data: unknown) =>
     (ElementOpsHandler as any).handleElementUpdate(msg(EnvelopeMessageType.ELEMENT_UPDATE, source, data));
 
-  it('refuses a model settings write based on another page: nothing saved, failure result, one forced rebuild', async () => {
-    await update('model-iframe', { elementId: 'original-page-id', type: 'Model', data: { name: 'M' }, basedOnPageId: 'page-A' });
+  it('refuses a model settings write based on another page: nothing saved, failure result, full selection re-process', async () => {
+    await update('model-iframe', { elementId: 'page-A', type: 'Model', data: { name: 'M' }, basedOnPageId: 'page-A' });
     await flush();
 
     expect(modelManagerStub.saveElementData).not.toHaveBeenCalled();
     expect(resultData(EnvelopeMessageType.ELEMENT_UPDATE_RESULT)).toEqual({
       success: false,
-      elementId: 'original-page-id',
+      elementId: 'page-A',
       errorMessage: PAGE_GUARD_MISMATCH_MESSAGE,
     });
-    expect(rebuildMock).toHaveBeenCalledTimes(1);
+    // Fix 3 (C1 step 2): a Model mismatch re-processes the WHOLE selection
+    // (modelItemData + documentContext + referenceData), not just a forced
+    // referenceData rebuild -- the forced rebuild alone resends the host's
+    // cached modelItemData, which can still be the previous page's.
+    expect(selectionMock).toHaveBeenCalledTimes(1);
+    expect(rebuildMock).not.toHaveBeenCalled();
   });
 
   it('refuses a model settings write with no page id', async () => {
@@ -213,8 +239,8 @@ describe('ELEMENT_UPDATE', () => {
     });
   });
 
-  it("saves a model settings write whose page id matches, even when the model's element id differs (duplicated page)", async () => {
-    await update('model-iframe', { elementId: 'original-page-id', type: 'Model', data: { name: 'M' }, basedOnPageId: 'page-B' });
+  it('trusts basedOnPageId, not the element id, for a model settings write', async () => {
+    await update('model-iframe', { elementId: 'page-A', type: 'Model', data: { name: 'M' }, basedOnPageId: 'page-B' });
     await flush();
 
     expect(modelManagerStub.saveElementData).toHaveBeenCalled();

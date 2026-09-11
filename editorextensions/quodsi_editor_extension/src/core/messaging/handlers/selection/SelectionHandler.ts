@@ -111,7 +111,16 @@ export class SelectionHandler {
         SelectionHandler.handleError('No current page found');
         return;
       }
-      
+
+      // Page guard (spec 2026-09-11): keep ModelManager on the page Lucid is
+      // showing. Several processors (None/Resource/SwimLane/Multiple) never
+      // set it, so after a page switch with nothing selected referenceData was
+      // built -- and stamped -- from the previous page. The rebuild diff is
+      // page-scoped, so switching here runs no cross-page cleanup.
+      if (manager.getCurrentPageId() !== currentPage.id) {
+        manager.setCurrentPage(currentPage);
+      }
+
       // Update document context
       const isQuodsiModel = manager.isQuodsiModel(currentPage);
       SelectionHandler.documentContext.update(
