@@ -47,7 +47,6 @@ const baseProps = {
   onSave: vi.fn(),
   referenceData,
   states: new StateListManager(),
-  onStatesChange: vi.fn(),
   entities: [],
 };
 

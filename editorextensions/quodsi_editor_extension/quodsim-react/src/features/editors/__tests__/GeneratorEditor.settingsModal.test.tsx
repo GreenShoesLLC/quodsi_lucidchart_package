@@ -53,7 +53,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 const baseProps = {
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 

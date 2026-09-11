@@ -71,7 +71,6 @@ const baseProps = {
   onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
-  onStatesChange: vi.fn(),
 };
 
 /** Simulates the host pushing a MODEL_ROOT_SNAPSHOT (unsolicited, or in

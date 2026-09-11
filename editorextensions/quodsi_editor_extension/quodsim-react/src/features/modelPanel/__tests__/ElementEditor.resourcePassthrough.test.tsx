@@ -102,7 +102,6 @@ const baseProps = {
     resourceRequirements: [],
   } as any,
   states: new StateListManager(),
-  onStatesChange: vi.fn(),
   entities: [],
 }
 

@@ -63,7 +63,7 @@ const ROUTING_TAB_NAME = /choose how entities pick a target/i
 describe('GeneratorEditor — Routing tab renders the shared ConnectorRoutingView', () => {
   it('Routing tab renders the shared view with four modes and both connectors', async () => {
     const user = userEvent.setup()
-    render(<GeneratorEditor generator={generator} onSave={vi.fn()} states={{} as any} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<GeneratorEditor generator={generator} onSave={vi.fn()} states={{} as any} referenceData={referenceData} />)
     const tab = screen.getByRole('button', { name: ROUTING_TAB_NAME })
     expect(tab).toBeInTheDocument()
     await user.click(tab)
@@ -76,7 +76,7 @@ describe('GeneratorEditor — Routing tab renders the shared ConnectorRoutingVie
   it('choosing First Available flows through the editor draft to onSave', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
-    render(<GeneratorEditor generator={generator} onSave={onSave} states={{} as any} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<GeneratorEditor generator={generator} onSave={onSave} states={{} as any} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: ROUTING_TAB_NAME }))
     await user.selectOptions(screen.getByRole('combobox'), 'first_available')
     await waitFor(() => expect(onSave).toHaveBeenCalled())

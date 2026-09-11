@@ -46,7 +46,6 @@ export const ModelPanel: React.FC = () => {
 
   // Get message senders
   const {
-    updateStates: sendStatesUpdate,
     requestModelJson
   } = useModelOpsSender();
 
@@ -145,22 +144,6 @@ export const ModelPanel: React.FC = () => {
 
     return stateListManager;
   }, [serializedStates]);
-
-  const handleStatesChange = (updatedStates: StateListManager) => {
-    // Serialize states and send to extension
-    const serializedStates = updatedStates.getAll().map(state => ({
-      id: state.id,
-      name: state.name,
-      componentType: state.componentType,
-      dataType: state.dataType,
-      initialValue: state.initialValue,
-      categoryValues: state.categoryValues,
-      description: state.description,
-      collectStatistics: state.collectStatistics
-    }));
-
-    sendStatesUpdate(serializedStates);
-  };
 
   useEffect(() => {
     // Handle element type issues
@@ -331,7 +314,6 @@ export const ModelPanel: React.FC = () => {
             referenceData={referenceData}
             currentElement={currentElement}
             states={states}
-            onStatesChange={handleStatesChange}
             entities={serializedEntities}
             resourceRequirements={serializedResourceRequirements}
             outgoingConnectors={outgoingConnectors}

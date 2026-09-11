@@ -34,7 +34,6 @@ interface ElementEditorProps {
   referenceData: EditorReferenceData;
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
-  onStatesChange: (states: StateListManager) => void;
   entities: EntityRow[];
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
@@ -56,7 +55,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   referenceData,
   currentElement,
   states,
-  onStatesChange,
   entities,
   resourceRequirements,
   outgoingConnectors,
@@ -169,7 +167,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             referenceData={referenceData}
             states={states}
-            onStatesChange={onStatesChange}
             outgoingConnectors={outgoingConnectors}
           />
         );
@@ -182,7 +179,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             referenceData={referenceData}
             states={states}
-            onStatesChange={onStatesChange}
           />
         );
 

@@ -21,7 +21,6 @@ import {
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
-import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
@@ -137,13 +136,6 @@ const TAB_CONFIG = [
     icon: SlidersHorizontal,
     tooltip: "Mark a property as a scenario lever -- a value range a Study can sweep across its design points to compare what-if scenarios"
   },
-  // Temporarily hidden - states managed at Model level
-  // {
-  //   id: "states" as const,
-  //   title: "State Definitions",
-  //   icon: Hash,
-  //   tooltip: "Define custom state variables for entities created by this generator"
-  // },
 ];
 
 // Compile-time proof that the map covers exactly this editor's real tab ids.
@@ -172,8 +164,6 @@ interface Props {
   referenceData: EditorReferenceData;
   /** State manager for model-level states */
   states: StateListManager;
-  /** Callback when states are modified */
-  onStatesChange: (states: StateListManager) => void;
 }
 
 /**
@@ -238,7 +228,6 @@ const GeneratorEditor: React.FC<Props> = ({
   onSave,
   referenceData,
   states,
-  onStatesChange,
 }) => {
   // ============================================================================
   // HELPER FUNCTIONS
@@ -1423,16 +1412,6 @@ const GeneratorEditor: React.FC<Props> = ({
             onOpenSettings={openSettingsModal}
           />
         )}
-
-        {/* Temporarily hidden - states managed at Model level
-        {activeOrFallback === "states" && (
-          <StatesEditor
-            states={states}
-            onStatesChange={onStatesChange}
-            defaultComponentType={ComponentType.ENTITY}
-          />
-        )}
-        */}
       </div>
 
       {/* Auto-save status */}

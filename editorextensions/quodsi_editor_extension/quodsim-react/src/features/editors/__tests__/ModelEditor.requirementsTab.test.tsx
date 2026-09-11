@@ -32,7 +32,6 @@ const baseProps = {
   model: { id: "m1", name: "My Model", reps: 1, seed: 12345, levers: [] } as any,
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   entities: [],
 };
 

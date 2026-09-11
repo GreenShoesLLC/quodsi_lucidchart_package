@@ -97,7 +97,6 @@ const baseProps = {
   onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
-  onStatesChange: vi.fn(),
 };
 
 describe("GeneratorEditor PATTERN lifecycle write failure (final fix wave item 3)", () => {
