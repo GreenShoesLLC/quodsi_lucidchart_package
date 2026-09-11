@@ -1,10 +1,12 @@
-// ModelEditor's States tab mounts Studio's shared StatesEditor over the
-// Model editor's referenceData accessor (spec 2026-09-11 States).
+// ModelEditor's States tab mounts Studio's shared StatesEditor (via
+// StatesTab) over the Model editor's referenceData accessor (spec 2026-09-11
+// States).
 //
 // NOT stubbed: the accessor (real createReferenceDataAccessor via
 // useReferenceDataAccessor) and the Studio StatesEditor. Stubbed: the message
-// senders (updateStates is the seam we assert on) and the Basic tab's
-// autosave hooks.
+// senders (updateStates is the seam we assert on), the Basic tab's autosave
+// hooks, and useMessaging (StatesTab reads its pageId -- final fix wave I2 --
+// with a stable id here since page-switch remount is StatesTab's own test).
 
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -14,6 +16,10 @@ import { setView } from "quodsi_studio/platforms/shared";
 const { updateStates, updateElementData } = vi.hoisted(() => ({
   updateStates: vi.fn(async (_states: unknown[]) => {}),
   updateElementData: vi.fn(),
+}));
+
+vi.mock("../../../messaging/MessageProvider", () => ({
+  useMessaging: () => ({ selection: { documentContext: { pageId: "page-1" } } }),
 }));
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -88,7 +94,19 @@ describe("ModelEditor — States tab uses the shared editor", () => {
   afterEach(() => setView("basic"));
 
   it("shows a loading line and no editor before referenceData carries states", () => {
-    render(<ModelEditor {...baseProps} referenceData={{ activities: [] } as any} />);
+    render(
+      <ModelEditor
+        {...baseProps}
+        referenceData={{
+          activities: [],
+          generators: [],
+          entities: [],
+          resources: [],
+          resourceRequirements: [],
+          connectors: [],
+        } as any}
+      />
+    );
 
     expect(screen.getByText(/Loading/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add State" })).toBeNull();

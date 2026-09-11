@@ -7,7 +7,6 @@ import {
   PeriodUnit,
   Distribution,
   StateListManager,
-  ComponentType,
   ModelDefaults,
   SimulationObjectType,
   isNameUniqueInReferenceData,
@@ -19,7 +18,7 @@ import {
   eligibleLeverProperties,
   countActiveLevers,
 } from "@quodsi/lucid-shared";
-import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight, GitBranch, SlidersHorizontal } from "lucide-react";
+import { Settings, Zap, Info, ChevronDown, ChevronRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -169,7 +168,7 @@ interface Props {
 /**
  * Available tabs in the generator editor
  */
-type GeneratorTab = "settings" | "events" | "routing" | "levers" | "states";
+type GeneratorTab = "settings" | "events" | "routing" | "levers";
 
 /**
  * GeneratorEditor - Comprehensive editor for Generator simulation objects

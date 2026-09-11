@@ -16,10 +16,10 @@ import {
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock, SlidersHorizontal } from "lucide-react";
 import { EntitiesTab } from "./EntitiesTab";
+import { StatesTab } from "./StatesTab";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
   CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField,
-  StatesEditor,
   // Levers moved onto their own tab (2026-08-31) and Lucid dropped its
   // near-verbatim fork of the section at the same time -- this is the monorepo
   // original, shared with drawio/Studio/Visio.
@@ -904,18 +904,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
               </div>
           </div>
       )}
-      {/* States: Studio's shared StatesEditor (spec 2026-09-11 States). The
-          host's STATES_UPDATE write runs the shared delete rule, hence
-          referenceCleanup="host". THE LOADING GATE IS LOAD-BEARING: with no
-          referenceData.states yet the editor would show an empty list, and an
-          Add there would send a one-row list that updateStates treats as
-          deleting every existing state. */}
-      {activeOrFallback === "states" &&
-        (referenceData?.states === undefined ? (
-          <div className="p-3 text-xs text-muted">Loading…</div>
-        ) : (
-          <StatesEditor accessor={accessor} referenceCleanup="host" />
-        ))}
+      {/* States: StatesTab mounts Studio's shared StatesEditor over this
+          editor's own referenceData accessor (spec 2026-09-11 States). The
+          loading gate and the per-page-switch remount both live in StatesTab
+          now -- see its header comment. */}
+      {activeOrFallback === "states" && (
+        <StatesTab accessor={accessor} hasStates={referenceData?.states !== undefined} />
+      )}
       {activeOrFallback === "entities" && <EntitiesTab />}
       {activeOrFallback === "resources" && <ResourcesTab />}
       {activeOrFallback === "arrivals" && <ArrivalsTab />}

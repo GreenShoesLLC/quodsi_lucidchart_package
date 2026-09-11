@@ -18,14 +18,24 @@ const logger = getLogger('useModelPanel');
 // render made it think the reference data changed every render too,
 // clearing its optimistic overlay each time. Frozen so nothing can
 // accidentally mutate the shared fallback.
-const EMPTY_REFERENCE_DATA: EditorReferenceData = Object.freeze({
+//
+// `states` is deliberately ABSENT here (not `[]`) so the Model editor's
+// States tab can tell "not loaded yet" from "no states" (spec 2026-09-11
+// States, loading gate; final fix wave I1). `[]` reads identically to a
+// loaded model that genuinely has zero states, which used to defeat
+// ModelEditor's loading gate (`referenceData?.states === undefined`) before
+// the host's first real referenceData arrived -- the States tab rendered an
+// empty list with "Add State" enabled, and an Add there sent a one-row list
+// that ModelManager.updateStates treated as deleting every other state.
+// Exported for the States loading-gate test
+// (messaging/hooks/__tests__/useModelPanel.emptyReferenceData.test.ts).
+export const EMPTY_REFERENCE_DATA: EditorReferenceData = Object.freeze({
   activities: [],
   generators: [],
   entities: [],
   resources: [],
   resourceRequirements: [],
-  connectors: [],
-  states: []
+  connectors: []
 });
 
 /**

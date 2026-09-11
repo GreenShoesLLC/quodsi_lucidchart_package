@@ -46,7 +46,6 @@ import {
   FailureProperties,
   FailureClockMode,
   StateListManager,
-  ComponentType,
   Connector,
   ResourceRequirement,
   isNameUniqueInReferenceData,
@@ -414,8 +413,7 @@ type ActivityTab =
   | "financial"
   | "failure"
   | "connectors"
-  | "levers"
-  | "states";
+  | "levers";
 
 /**
  * ActivityEditor - Comprehensive editor for Activity simulation objects
