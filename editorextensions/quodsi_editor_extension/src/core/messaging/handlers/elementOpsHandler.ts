@@ -4,6 +4,7 @@ import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension
 import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
+import { assertWritePage, isPageMismatch } from '../pageGuard';
 
 const log = getLogger('ElementOpsHandler');
 
@@ -151,6 +152,7 @@ export class ElementOpsHandler {
       type: string;
       data: JsonObject;
       diagramElementType?: string;
+      basedOnPageId?: string;
     };
 
     log.debug('Element update requested', {
@@ -182,6 +184,11 @@ export class ElementOpsHandler {
           elementId: data.elementId,
           pageId: currentPage.id
         });
+        // Page guard (spec 2026-09-11): a model settings write must be based
+        // on the current page, the same as every other guarded write -- the
+        // panel sends basedOnPageId explicitly, taken from the draft's own
+        // page id (see useModelPanel.ts's Model branch).
+        assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
         // Model is the Page itself, not a block or line
         element = currentPage;
       } else {
@@ -255,10 +262,24 @@ export class ElementOpsHandler {
         }
       });
 
+      // A model settings save based on another page: rebuild the WHOLE
+      // selection for the current page (modelItemData + documentContext +
+      // referenceData). Rebuilding referenceData alone would resend the host's
+      // cached modelItemData, which can still be the previous page's.
+      if (isPageMismatch(error)) {
+        try {
+          const client = ModelManager.getClient();
+          const viewport = new Viewport(client);
+          await SelectionHandler.handleLucidSelectionEvent(client, viewport.getSelectedItems(), ModelManager.getInstance());
+        } catch (refreshError) {
+          log.error('Error refreshing the selection after a page-mismatch rejection', refreshError);
+        }
+      }
+
       return false;
     }
   }
-  
+
   /**
    * Handle element update result
    * 

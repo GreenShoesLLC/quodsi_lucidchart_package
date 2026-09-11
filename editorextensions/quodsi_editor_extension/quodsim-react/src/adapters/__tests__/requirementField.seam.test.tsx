@@ -11,6 +11,7 @@ import type { ISerializedResourceRequirement } from '@quodsi/lucid-shared'
 import { createReferenceDataAccessor } from '../useReferenceDataAccessor'
 
 const referenceData = {
+  pageId: 'page-1',
   resources: [{ id: 'doc', name: 'Doctor' }, { id: 'nurse', name: 'Nurse' }],
   resourceRequirements: [
     { id: 'doc', name: 'Doctor', rootClause: { id: 'c', mode: 'require_all', requests: [{ resourceId: 'doc' }] } },

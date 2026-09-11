@@ -19,6 +19,10 @@ import { ISerializedResourceRequirement } from '../serialization/interfaces/ISer
  * key and just render blank rather than error.
  */
 export type ModelRootProjection = {
+    // The Lucid page this snapshot was built for (spec 2026-09-11 page guard).
+    // Stamped by ModelManager.buildModelRootProjection; panel writes echo it
+    // back as basedOnPageId so the host can refuse a write aimed at another page.
+    pageId?: string;
     generators: Array<{
         id: string;
         name: string;

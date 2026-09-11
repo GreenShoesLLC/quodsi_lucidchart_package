@@ -308,6 +308,7 @@ describe('ModelManager.buildModelRootProjection', () => {
     const projection = await mm.buildModelRootProjection({ id: 'page-A' });
 
     expect(projection).toEqual({
+      pageId: 'page-A',
       generators: [],
       arrivalPatterns: [],
       arrivalSchedules: [],
@@ -335,5 +336,15 @@ describe('ModelManager.buildModelRootProjection', () => {
     await mm.buildModelRootProjection({ id: 'page-B' });
 
     expect(changeTracker.modelDefinitionDirty).toBe(true);
+  });
+
+  // Page guard (spec 2026-09-11): every snapshot names the page it was built
+  // for, so a write based on it can be refused if the user switched pages.
+  it('stamps the projection with the page it was built for', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.pageId).toBe('page-A');
   });
 });

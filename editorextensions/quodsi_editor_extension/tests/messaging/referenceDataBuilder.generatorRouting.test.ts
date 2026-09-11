@@ -14,7 +14,10 @@ function list<T>(items: T[]) {
 }
 
 function fakeModelManager(modelDef: any): ModelManager {
-  return { getModelDefinition: async () => modelDef } as unknown as ModelManager;
+  return {
+    getModelDefinition: async () => modelDef,
+    getCurrentPageId: () => undefined,
+  } as unknown as ModelManager;
 }
 
 async function buildReferenceData() {

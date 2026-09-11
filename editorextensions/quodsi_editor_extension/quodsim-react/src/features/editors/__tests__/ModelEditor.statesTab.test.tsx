@@ -54,6 +54,7 @@ const TOTAL = { id: "total_MODEL_1", name: "total", componentType: "model", data
 // carry modifications (with expressions) -- enough for the formula warning.
 function referenceData() {
   return {
+    pageId: "page-1",
     states: [UNIT_PRICE, TOTAL],
     activities: [
       {

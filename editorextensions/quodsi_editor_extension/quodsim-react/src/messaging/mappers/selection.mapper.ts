@@ -75,6 +75,8 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         diagramElementType?: string;
         validationResult?: any;
         referenceData?: {
+          // Page guard (spec 2026-09-11): stamped by the extension.
+          pageId?: string;
           activities?: Array<{ id: string; name: string }>;
           generators?: Array<{ id: string; name: string }>;
           resources?: Array<{ id: string; name: string }>;

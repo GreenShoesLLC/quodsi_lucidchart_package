@@ -98,7 +98,10 @@ describe('write results route back to the embedded Studio iframe', () => {
   });
 
   it('the panel path is unchanged: model-iframe still answers on model', async () => {
-    StatesHandler.handleMessage(msg(EnvelopeMessageType.STATES_UPDATE, 'model-iframe', { states: [] }));
+    // Page guard (spec 2026-09-11): I2 -- without basedOnPageId this write is
+    // refused by the guard before reaching updateStates, so the test would
+    // pass without exercising the routing it names.
+    StatesHandler.handleMessage(msg(EnvelopeMessageType.STATES_UPDATE, 'model-iframe', { states: [], basedOnPageId: 'page-1' }));
     await new Promise((r) => setImmediate(r));
     expect(resultFor(EnvelopeMessageType.STATES_UPDATE_RESULT)![0]).toBe('model');
   });

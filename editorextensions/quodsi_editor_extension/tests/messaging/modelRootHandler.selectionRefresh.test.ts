@@ -79,7 +79,7 @@ function updateMsg(patch: Record<string, unknown> = { resources: [] }): any {
     source: 'model-iframe',
     target: 'host',
     version: '1.0',
-    data: { patch },
+    data: { patch, basedOnPageId: 'page-1' },
   };
 }
 

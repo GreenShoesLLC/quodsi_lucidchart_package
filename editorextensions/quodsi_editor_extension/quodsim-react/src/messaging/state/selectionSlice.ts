@@ -22,6 +22,11 @@ export interface SelectionState {
     metadata?: Record<string, any>;
   };
   referenceData?: {
+    // Page guard (spec 2026-09-11): the id of the page this referenceData
+    // came from, stamped by the extension. See @quodsi/lucid-shared's
+    // EditorReferenceData.pageId -- this is a locally-duplicated subset of
+    // that shape, not the same type.
+    pageId?: string;
     activities?: Array<{ id: string; name: string }>;
     resources?: Array<{ id: string; name: string }>;
     entities?: Array<{ id: string; name: string }>;
@@ -43,7 +48,7 @@ export const initialSelectionState: SelectionState = {
 
 // Action types
 export type SelectionAction =
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; diagramElementType?: string; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; states?: any[]; }; }
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; diagramElementType?: string; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { pageId?: string; activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; states?: any[]; }; }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer

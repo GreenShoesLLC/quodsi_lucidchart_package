@@ -150,7 +150,7 @@ describe('ModelRootHandler snapshot targeting', () => {
       source: 'model-iframe',
       target: 'host',
       version: '1.0',
-      data: { patch: { arrivalPatterns: [] } },
+      data: { patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' },
     } as any;
 
     await (ModelRootHandler as any).handleUpdate(msg);
@@ -177,7 +177,10 @@ describe('ModelRootHandler snapshot targeting', () => {
       source: 'pattern-iframe',
       target: 'host',
       version: '1.0',
-      data: { patch: { arrivalPatterns: [] } },
+      // Page guard (spec 2026-09-11): I2 -- without basedOnPageId this write
+      // is refused by the guard before updateModelRoot is ever reached, so
+      // the test would pass without exercising the broadcast path it names.
+      data: { patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' },
     } as any;
 
     await (ModelRootHandler as any).handleUpdate(msg);
@@ -201,7 +204,10 @@ describe('ModelRootHandler snapshot targeting', () => {
       source: 'model-iframe',
       target: 'host',
       version: '1.0',
-      data: { patch: {} },
+      // Page guard (spec 2026-09-11): I2 -- without basedOnPageId this write
+      // is refused by the guard before updateModelRoot is ever reached, so
+      // the stubbed 'boom' rejection this test pins would never fire.
+      data: { patch: {}, basedOnPageId: 'page-1' },
     } as any;
 
     await (ModelRootHandler as any).handleUpdate(msg);

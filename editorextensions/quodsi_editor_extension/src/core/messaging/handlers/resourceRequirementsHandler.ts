@@ -3,6 +3,7 @@ import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { SelectionHandler } from './selection/SelectionHandler';
+import { assertWritePage, isPageMismatch } from '../pageGuard';
 
 const log = getLogger('ResourceRequirementsHandler');
 
@@ -42,6 +43,7 @@ export class ResourceRequirementsHandler {
   private static async handleResourceRequirementsUpdate(msg: EnvelopeBase): Promise<boolean> {
     const data = msg.data as {
       resourceRequirements: ISerializedResourceRequirement[];
+      basedOnPageId?: string;
     };
 
     log.debug('Resource requirements update requested', {
@@ -59,6 +61,9 @@ export class ResourceRequirementsHandler {
       if (!currentPage) {
         throw new Error('Current page not available');
       }
+
+      // Page guard (spec 2026-09-11): refuse before anything is stored.
+      assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
 
       // Update resource requirements using ModelManager
       await modelManager.updateResourceRequirements(data.resourceRequirements, currentPage);
@@ -100,6 +105,17 @@ export class ResourceRequirementsHandler {
           errorMessage: error instanceof Error ? error.message : String(error)
         }
       });
+
+      // A page mismatch means the panel is showing another page's data: push
+      // fresh referenceData so it shows the current page. Other failures
+      // behave as before.
+      if (isPageMismatch(error)) {
+        try {
+          await SelectionHandler.sendSelectionChangedMessage(true);
+        } catch (refreshError) {
+          log.error('Error refreshing referenceData after a page-mismatch rejection', refreshError);
+        }
+      }
 
       return false;
     }
