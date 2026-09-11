@@ -49,7 +49,6 @@ const baseProps = {
   states: new StateListManager(),
   onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 };
 
 describe("ElementEditor — case Connector renders the shared ConnectorEditor", () => {

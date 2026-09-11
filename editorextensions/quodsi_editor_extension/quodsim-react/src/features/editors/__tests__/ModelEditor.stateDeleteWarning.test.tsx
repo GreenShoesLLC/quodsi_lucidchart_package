@@ -93,7 +93,6 @@ const baseProps = {
   states: buildStates(),
   onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
   activeTab: "states" as const,
 };
 

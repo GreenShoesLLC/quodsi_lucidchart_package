@@ -90,7 +90,6 @@ const modelProps = {
   states: {} as any,
   onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 };
 
 describe("Lucid tab surface maps", () => {

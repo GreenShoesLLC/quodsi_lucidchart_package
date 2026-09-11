@@ -16,7 +16,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock, SlidersHorizontal } from "lucide-react";
 import StatesEditor from "./StatesEditor";
-import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
+import { EntitiesTab } from "./EntitiesTab";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
   CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField,
@@ -49,6 +49,11 @@ import { EditorReferenceData, ResourceRequirement } from "@quodsi/lucid-shared";
 // TYPES
 // ============================================================================
 
+/** An entity row as the panel receives it (referenceData.entities). Still
+ *  needed after the Entities tab moved to the shared editor: the ViewTell
+ *  context below reads it. */
+export type EntityRow = { id: string; name: string; description?: string };
+
 interface Props {
   model: Model;
   onSave: (model: Model) => void;
@@ -57,7 +62,6 @@ interface Props {
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
   entities: EntityRow[];
-  onEntitiesChange: (entities: EntityRow[]) => void;
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
   validationState?: ValidationResult | null;
@@ -238,7 +242,7 @@ const START_DATE_HINT = "Set the start date first";
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, entities, onEntitiesChange, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, entities, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -909,12 +913,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             referenceData={referenceData}
           />
       )}
-      {activeOrFallback === "entities" && (
-        <EntitiesEditor
-            entities={entities}
-            onEntitiesChange={onEntitiesChange}
-          />
-      )}
+      {activeOrFallback === "entities" && <EntitiesTab />}
       {activeOrFallback === "resources" && <ResourcesTab />}
       {activeOrFallback === "arrivals" && <ArrivalsTab />}
       {activeOrFallback === "schedules" && <SchedulesTab />}

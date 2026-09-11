@@ -34,7 +34,6 @@ const baseProps = {
   states: {} as any,
   onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 };
 
 const referenceData = {

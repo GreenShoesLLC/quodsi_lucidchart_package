@@ -104,7 +104,6 @@ const baseProps = {
   states: new StateListManager(),
   onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 }
 
 describe('ElementEditor — Resource block pointer passthrough', () => {

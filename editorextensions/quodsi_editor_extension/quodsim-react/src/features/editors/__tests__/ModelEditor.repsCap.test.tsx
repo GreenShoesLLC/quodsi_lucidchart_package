@@ -41,7 +41,6 @@ const baseProps = {
   states: {} as any,
   onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 };
 
 describe("ModelEditor — Replications cap", () => {

@@ -14,6 +14,7 @@ import {
   WorkScheduleModal,
   CapacitySourcePicker,
   workScheduleUsage,
+  EntitiesEditor,
   // Complexity views (Task 11a). Lucid mounts these directly in its own
   // editors (ActivityEditor, GeneratorEditor, ModelEditor) rather than
   // reimplementing the hook or the tell -- guard the barrel export they
@@ -55,6 +56,9 @@ describe('shared panel import', () => {
     expect(typeof WorkScheduleModal).toBe('function')
     expect(typeof CapacitySourcePicker).toBe('function')
     expect(typeof workScheduleUsage).toBe('function')
+    // spec 2026-09-11: Lucid's Entities tab (EntitiesTab) mounts the shared
+    // EntitiesEditor; Lucid deleted its own features/editors/EntitiesEditor.tsx.
+    expect(typeof EntitiesEditor).toBe('function')
     // Complexity views (Task 11a): useView/ViewTell are mounted directly in
     // Lucid's own editors. Task 11b gave SettingsPanel a real host modal
     // (SettingsModal -> ?view=settings -> SettingsEditorView) and threaded

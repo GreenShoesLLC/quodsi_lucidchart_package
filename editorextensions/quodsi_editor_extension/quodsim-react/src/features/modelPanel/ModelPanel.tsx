@@ -5,8 +5,7 @@ import { useSimulationRunSender } from '../../messaging/senders/simulationRunSen
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedEntity, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
-import { EntityRow } from '../editors/EntitiesEditor';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
 import { EditorTab } from '../editors/ModelEditor';
@@ -48,7 +47,6 @@ export const ModelPanel: React.FC = () => {
   // Get message senders
   const {
     updateStates: sendStatesUpdate,
-    updateEntities: sendEntitiesUpdate,
     requestModelJson
   } = useModelOpsSender();
 
@@ -162,21 +160,6 @@ export const ModelPanel: React.FC = () => {
     }));
 
     sendStatesUpdate(serializedStates);
-  };
-
-  const handleEntitiesChange = (updatedEntities: EntityRow[]) => {
-    // Map entity rows to the serialized format and send to the extension.
-    // x/y are meaningless for list-based entities; persist them as 0.
-    const serialized: ISerializedEntity[] = updatedEntities.map(entity => ({
-      id: entity.id,
-      name: entity.name,
-      description: entity.description,
-      type: SimulationObjectType.Entity,
-      x: 0,
-      y: 0
-    }));
-
-    sendEntitiesUpdate(serialized);
   };
 
   useEffect(() => {
@@ -350,7 +333,6 @@ export const ModelPanel: React.FC = () => {
             states={states}
             onStatesChange={handleStatesChange}
             entities={serializedEntities}
-            onEntitiesChange={handleEntitiesChange}
             resourceRequirements={serializedResourceRequirements}
             outgoingConnectors={outgoingConnectors}
             validationState={validationState}
