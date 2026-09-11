@@ -283,12 +283,17 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const isSaving = localModelDraft.id ? elementOpsState.isSaving(localModelDraft.id) : false;
 
   // Custom hooks for state synchronization
+  // `model` doubles as the sync key: the extension re-sends the selection
+  // with a fresh object after any page write, including one it did not
+  // originate (the Advisor's run-settings Apply), and the open editor must
+  // pick those values up rather than show the pre-write ones (86e34wx7y).
   useFormSync(
     model.id,
     hasPendingChanges,
     () => extractModelData(model),
     setLocalModelDraft,
-    setHasPendingChanges
+    setHasPendingChanges,
+    model
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
