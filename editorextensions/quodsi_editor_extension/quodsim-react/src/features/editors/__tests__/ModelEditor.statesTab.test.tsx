@@ -62,7 +62,7 @@ function referenceData() {
         ],
       },
     ],
-    generators: [],
+    generators: [{ id: "gen_1", name: "Arrivals", initialStates: [{ stateId: UNIT_PRICE.id, operation: "assign", value: 1 }] }],
     connectors: [],
     resources: [],
     resourceRequirements: [],
@@ -119,6 +119,12 @@ describe("ModelEditor — States tab uses the shared editor", () => {
     const sent = updateStates.mock.calls[0][0] as Array<{ id: string }>;
     expect(sent.map((s) => s.id)).toEqual([TOTAL.id]);
     expect(updateElementData).not.toHaveBeenCalled();
+    // gen_1's initialStates sets unit_price directly, so with 'client' the
+    // panel would cascade into gen_1 via accessor.updateShape, which has no
+    // updateElement sender configured here and throws before updateStates is
+    // ever called -- surfacing as role="alert" instead of a clean single
+    // updateStates call. Only referenceCleanup="host" reaches this state.
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("a rejected states write keeps the dialog open with the error", async () => {
