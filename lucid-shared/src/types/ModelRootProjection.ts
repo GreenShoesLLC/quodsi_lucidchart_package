@@ -64,7 +64,10 @@ export type ModelRootProjection = {
     // silently produced empty dropdowns in Lucid: no scheduled-arrival row
     // could be given an entityId, and the engine rejects a document whose
     // scheduled arrivals have none.
-    entities?: Array<{ id: string; name: string }>;
+    // `description` added 2026-09-11 for the shared EntitiesEditor, which Lucid's
+    // Entities tab mounts (spec 2026-09-11). ScheduleTable/SchedulePasteImport
+    // read only id + name and ignore it. Still a narrow row, not the domain object.
+    entities?: Array<{ id: string; name: string; description?: string }>;
     states?: Array<{ id: string; name: string }>;
     // Lucid global resources (Plan 2b). Optional for the same fixture-churn
     // reason as arrivalSchedules; projectModelRoot populates both on every
