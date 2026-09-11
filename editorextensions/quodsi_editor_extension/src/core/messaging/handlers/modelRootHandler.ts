@@ -413,18 +413,5 @@ export class ModelRootHandler {
     } catch (err) {
       log.error('Error refreshing selection after model-root update:', err);
     }
-
-    // An `entities` write must also REBUILD referenceData, exactly as
-    // ENTITIES_UPDATE does (entitiesHandler.ts). handleLucidSelectionEvent
-    // alone is not enough on a Model selection: ModelProcessor builds no
-    // referenceData and SelectionState.update merges, so the panel would be
-    // re-sent the stale entity list the Model editor reads.
-    if ('entities' in patch) {
-      try {
-        await SelectionHandler.sendSelectionChangedMessage(true);
-      } catch (err) {
-        log.error('Error rebuilding referenceData after entities update:', err);
-      }
-    }
   }
 }

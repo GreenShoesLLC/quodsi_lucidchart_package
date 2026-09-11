@@ -59,11 +59,9 @@ jest.mock('../../src/core/ModelManager', () => ({
 }));
 
 const handleLucidSelectionEventMock = jest.fn().mockResolvedValue(undefined);
-const sendSelectionChangedMessageMock = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../src/core/messaging/handlers/selection/SelectionHandler', () => ({
   SelectionHandler: {
     handleLucidSelectionEvent: (...args: unknown[]) => handleLucidSelectionEventMock(...args),
-    sendSelectionChangedMessage: (...args: unknown[]) => sendSelectionChangedMessageMock(...args),
   },
 }));
 
@@ -88,7 +86,6 @@ function updateMsg(patch: Record<string, unknown> = { resources: [] }): any {
 beforeEach(() => {
   sendMock.mockClear();
   handleLucidSelectionEventMock.mockClear();
-  sendSelectionChangedMessageMock.mockClear();
   currentPage = { id: 'page-1' };
   selectedItems = [{ id: 'shape-9' }];
   modelManagerStub = {
@@ -158,30 +155,13 @@ describe('ModelRootHandler selection refresh after model-root writes', () => {
     }
   });
 
-  it('forces a referenceData rebuild after a successful entities write', async () => {
+  it('re-processes the current selection after a successful entities write', async () => {
+    // The Entities tab's writes reach the panel's referenceData through the
+    // same selection re-process as every model-root write: ModelProcessor and
+    // NoneSelectionProcessor rebuild referenceData on every re-process.
     await (ModelRootHandler as any).handleUpdate(updateMsg({ entities: [] }));
     await flush();
 
     expect(handleLucidSelectionEventMock).toHaveBeenCalledTimes(1);
-    expect(sendSelectionChangedMessageMock).toHaveBeenCalledTimes(1);
-    expect(sendSelectionChangedMessageMock).toHaveBeenCalledWith(true);
-  });
-
-  it('does not force a rebuild for a write without entities', async () => {
-    await (ModelRootHandler as any).handleUpdate(updateMsg({ resources: [] }));
-    await flush();
-
-    expect(sendSelectionChangedMessageMock).not.toHaveBeenCalled();
-  });
-
-  it('does not force a rebuild after a FAILED entities write', async () => {
-    modelManagerStub.updateModelRoot = async () => {
-      throw new Error('boom');
-    };
-
-    await (ModelRootHandler as any).handleUpdate(updateMsg({ entities: [] }));
-    await flush();
-
-    expect(sendSelectionChangedMessageMock).not.toHaveBeenCalled();
   });
 });
