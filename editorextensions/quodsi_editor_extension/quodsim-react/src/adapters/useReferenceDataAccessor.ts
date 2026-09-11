@@ -216,7 +216,10 @@ export function createReferenceDataAccessor(
       saveStatus = 'saved'
       notify()
     } catch (err) {
-      statesOverlay = previous
+      // Only roll back if this write's overlay is still current -- a fresher
+      // referenceData may have landed (and cleared it) while the send was
+      // in flight; resurrecting `previous` over that would overwrite it.
+      if (statesOverlay === next) statesOverlay = previous
       saveStatus = 'failed'
       saveError = err instanceof Error ? err.message : String(err)
       notify()

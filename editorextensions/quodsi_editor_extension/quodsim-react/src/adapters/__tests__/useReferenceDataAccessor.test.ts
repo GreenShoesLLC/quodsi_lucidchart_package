@@ -347,4 +347,30 @@ describe('states writes', () => {
     expect(statesOf(source)).toEqual(['s1', 's2'])
     expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
   })
+
+  it('does not resurrect a stale overlay over a fresher referenceData that lands mid-write, on rejection', async () => {
+    // First write succeeds, leaving a non-null overlay behind -- the case
+    // that actually exercises the bug: `previous` captured by the SECOND
+    // write is that non-null overlay, not the initial null.
+    const updateStates = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
+    await source.accessor.updateModel({ states: [st('s2', 'B')] })
+    expect(statesOf(source)).toEqual(['s2'])
+
+    let rejectSend!: (err: Error) => void
+    updateStates.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { rejectSend = reject }))
+    const p = source.accessor.updateModel({ states: [st('s3', 'C')] })
+
+    // A fresher referenceData lands while the second write is still in
+    // flight (e.g. an unrelated write elsewhere triggers a selection
+    // rebuild) -- it clears the overlay.
+    source.setReferenceData({ states: [st('s9', 'Z')] } as unknown as EditorReferenceData)
+    expect(statesOf(source)).toEqual(['s9'])
+
+    rejectSend(new Error('Current page not available'))
+    await expect(p).rejects.toThrow('Current page not available')
+
+    expect(statesOf(source)).toEqual(['s9'])
+    expect(source.accessor.getSnapshot().saveStatus).toBe('failed')
+  })
 })
