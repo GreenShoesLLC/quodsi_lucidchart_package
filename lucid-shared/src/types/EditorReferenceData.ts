@@ -63,6 +63,11 @@ export interface EditorReferenceActionSummary {
  * ModelDefinition and is built by referenceDataBuilder.
  */
 export interface EditorReferenceData {
+    /**
+     * The Lucid page this referenceData was built from (spec 2026-09-11 page
+     * guard). Panel writes based on it echo it back as basedOnPageId.
+     */
+    pageId?: string;
     entities?: Array<{ id: string, name: string, description?: string }>;
     resources?: Array<{ id: string, name: string }>;
     activities?: Array<{

@@ -195,6 +195,9 @@ export const referenceDataBuilder = {
       this.debug.error('Error building reference data:', error);
     }
 
+    // Page guard (spec 2026-09-11): name the page this data was built from.
+    referenceData.pageId = modelManager.getCurrentPageId();
+
     return referenceData;
   }
 };

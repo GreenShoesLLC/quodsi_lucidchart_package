@@ -746,6 +746,15 @@ export class ModelManager {
     }
 
     /**
+     * The Lucid page the model manager is currently tracking. Stamped on
+     * referenceData so panel writes can be tied to the page they were based on
+     * (spec 2026-09-11 page guard).
+     */
+    public getCurrentPageId(): string | undefined {
+        return this.currentPage?.id;
+    }
+
+    /**
      * Invalidates the cached ModelDefinition so it is rebuilt on next access.
      * Used by handlers that modify model data outside the normal element CRUD flow
      * (e.g., swimlane lane-to-resource conversion).
@@ -1767,7 +1776,9 @@ export class ModelManager {
         if (this.currentPage?.id !== page.id) {
             this.setCurrentPage(page);
         }
-        return projectModelRoot(await this.getModelDefinition());
+        // Stamp the page the snapshot was built for (spec 2026-09-11 page
+        // guard): writes based on it echo this back as basedOnPageId.
+        return { ...projectModelRoot(await this.getModelDefinition()), pageId: page.id };
     }
 
     /**
