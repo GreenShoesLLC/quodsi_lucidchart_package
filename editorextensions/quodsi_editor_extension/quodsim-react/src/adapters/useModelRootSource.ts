@@ -41,10 +41,14 @@ import {
   type LucidModelStateAccessorDeps,
   type ModelStateAccessor,
 } from './LucidModelStateAccessor'
+import { MODEL_NOT_LOADED_MESSAGE } from './pageGuardMessages'
 
 export type ModelRootTransport = {
-  /** Send a model-root patch to the host. Resolves when the host confirms. */
-  send(patch: Record<string, unknown>): Promise<void>
+  /**
+   * Send a model-root patch to the host with the page id of the snapshot it
+   * was based on (spec 2026-09-11 page guard). Resolves when the host confirms.
+   */
+  send(patch: Record<string, unknown>, basedOnPageId: string | undefined): Promise<void>
   /** Ask the host for a fresh snapshot. Optional -- absent in unit tests. */
   request?(): void
   /**
@@ -203,9 +207,19 @@ export function createModelRootSource(transport: ModelRootTransport) {
     // LucidModelStateAccessor for the bug this prevents. (echoPatch above
     // does branch on keys, but only over the LOCAL cache; what goes on the
     // wire is untouched.)
+    //
+    // Page guard (spec 2026-09-11): with no snapshot yet, an editor is looking
+    // at an empty list, and a whole-list write from it would overwrite the
+    // stored list -- refuse before any echo or message. Otherwise send the
+    // page id of the snapshot the patch was based on, captured BEFORE the
+    // echo replaces the projection object.
     saveModel: (patch: Record<string, unknown>) => {
+      if (!projection) {
+        return Promise.reject(new Error(MODEL_NOT_LOADED_MESSAGE))
+      }
+      const basedOnPageId = projection.pageId
       echoPatch(patch)
-      return transport.send(patch)
+      return transport.send(patch, basedOnPageId)
     },
   }
 
@@ -275,7 +289,7 @@ export function useModelRootSource(): {
   const sourceRef = useRef<ReturnType<typeof createModelRootSource> | null>(null)
   if (!sourceRef.current) {
     const transport: ModelRootTransport = {
-      send(patch) {
+      send(patch, basedOnPageId) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {
             reject(new Error('No parent window to send model-root update to'))
@@ -314,7 +328,7 @@ export function useModelRootSource(): {
             source,
             target: 'host',
             version: '1.0',
-            data: { patch },
+            data: { patch, basedOnPageId },
           }
           window.parent.postMessage(envelope, '*')
         })

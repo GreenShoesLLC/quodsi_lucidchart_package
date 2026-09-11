@@ -101,7 +101,9 @@ describe('useModelRootSource (hook)', () => {
   })
 
   it('updateModel round-trips through MODEL_ROOT_UPDATE / MODEL_ROOT_UPDATE_RESULT and flips saveStatus to saved', async () => {
+    const posted: any[] = []
     vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
+      posted.push(envelope)
       if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
         window.dispatchEvent(
           new MessageEvent('message', {
@@ -120,12 +122,33 @@ describe('useModelRootSource (hook)', () => {
 
     render(<Harness />)
 
+    // Page guard (spec 2026-09-11): saveModel now refuses a write before any
+    // snapshot has arrived, so feed one first -- same idiom as 'feeds an
+    // incoming MODEL_ROOT_SNAPSHOT' above.
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            id: 'whatever-id',
+            type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
+            source: 'host',
+            target: 'model-iframe',
+            version: '1.0',
+            data: { projection: { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } },
+          },
+        }),
+      )
+    })
+
     await act(async () => {
       screen.getByText('save').click()
       await Promise.resolve()
     })
 
     expect(screen.getByTestId('save-status').textContent).toBe('saved')
+
+    const update = posted.find((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
+    expect(update?.data).toEqual({ patch: expect.any(Object), basedOnPageId: 'page-1' })
   })
 
   it('updateModel rejects and flips saveStatus to failed when the host reports failure', async () => {
@@ -147,6 +170,24 @@ describe('useModelRootSource (hook)', () => {
     })
 
     render(<Harness />)
+
+    // Page guard (spec 2026-09-11): saveModel now refuses a write before any
+    // snapshot has arrived, so feed one first -- same idiom as 'feeds an
+    // incoming MODEL_ROOT_SNAPSHOT' above.
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            id: 'whatever-id',
+            type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
+            source: 'host',
+            target: 'model-iframe',
+            version: '1.0',
+            data: { projection: { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } },
+          },
+        }),
+      )
+    })
 
     await act(async () => {
       screen.getByText('save').click()

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createModelRootSource } from '../useModelRootSource'
+import { MODEL_NOT_LOADED_MESSAGE } from '../pageGuardMessages'
 
 describe('createModelRootSource', () => {
   it('returns null before any snapshot arrives', () => {
@@ -85,8 +86,8 @@ describe('createModelRootSource', () => {
     // so an in-place edit would be invisible to every subscriber.
     expect(after).not.toBe(before)
     expect(listener).toHaveBeenCalledTimes(1)
-    // Still forwarded verbatim.
-    expect(send).toHaveBeenCalledWith({ resources: [{ id: 'r1', name: 'Renamed' }] })
+    // Still forwarded verbatim. This snapshot carries no pageId.
+    expect(send).toHaveBeenCalledWith({ resources: [{ id: 'r1', name: 'Renamed' }] }, undefined)
   })
 
   it('echo replaces non-resource keys wholesale and drops rows the patch omits', async () => {
@@ -124,25 +125,37 @@ describe('createModelRootSource', () => {
     expect((source.deps.getModelDefinition() as any).resources[0].name).toBe('Host Wins')
   })
 
-  it('echoes nothing when no snapshot has arrived yet', async () => {
+  it('refuses a write before any snapshot arrives: rejects, sends nothing, echoes nothing', async () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const source = createModelRootSource({ send })
 
-    await source.deps.saveModel!({ resources: [{ id: 'r1', name: 'Nurse' }] })
+    await expect(source.deps.saveModel!({ resources: [{ id: 'r1', name: 'Nurse' }] }))
+      .rejects.toThrow(MODEL_NOT_LOADED_MESSAGE)
 
+    expect(send).not.toHaveBeenCalled()
     expect(source.deps.getModelDefinition()).toBeNull()
-    expect(send).toHaveBeenCalledTimes(1)
   })
 
-  it('sends the WHOLE patch verbatim through saveModel', async () => {
+  it('sends the WHOLE patch verbatim with the page id of the snapshot it was based on', async () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const source = createModelRootSource({ send })
+    source.acceptSnapshot({ generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } as any)
 
     await source.deps.saveModel!({ arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], future: 42 })
 
-    expect(send).toHaveBeenCalledWith({
-      arrivalPatterns: [{ id: 'ap-1', name: 'P1' }],
-      future: 42,
-    })
+    expect(send).toHaveBeenCalledWith(
+      { arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], future: 42 },
+      'page-1',
+    )
+  })
+
+  it('uses the page id captured BEFORE the optimistic echo', async () => {
+    const send = vi.fn().mockResolvedValue(undefined)
+    const source = createModelRootSource({ send })
+    source.acceptSnapshot({ generators: [], arrivalPatterns: [], model: {}, pageId: 'page-9' } as any)
+
+    await source.deps.saveModel!({ pageId: 'not-a-real-key' } as any)
+
+    expect(send.mock.calls[0][1]).toBe('page-9')
   })
 })
