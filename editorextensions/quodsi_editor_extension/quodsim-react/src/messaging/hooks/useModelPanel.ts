@@ -211,7 +211,10 @@ export function useModelPanel() {
         data
       });
       // Use the model update method
-      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType);
+      // Page guard (spec 2026-09-11): tie the save to the page this panel's
+      // data came from. Not the model element id -- a duplicated Lucid page
+      // keeps the original page's model id.
+      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType, selection.referenceData?.pageId);
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';

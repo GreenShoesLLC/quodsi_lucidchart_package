@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { v4 as uuid } from 'uuid';
-import { EnvelopeBase, EnvelopeMessageType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
@@ -74,12 +74,15 @@ export function useModelOpsSender() {
    * @param type Element type
    * @param data Updated element data
    * @param diagramElementType Optional diagram element type ('block' or 'line')
+   * @param basedOnPageId Optional page id the data was based on (spec 2026-09-11
+   *   page guard) -- present for a model settings save, absent for a shape write
    */
   const updateElementData = useCallback((
     elementId: string,
     type: string,
     data: Record<string, any>,
-    diagramElementType?: string
+    diagramElementType?: string,
+    basedOnPageId?: string
   ) => {
     // Dispatch ELEMENT_SAVE_START action to Redux to track save state
     dispatch({
@@ -88,7 +91,9 @@ export function useModelOpsSender() {
       optimisticData: data, // Store optimistic data for immediate UI update
     });
 
-    // Send the ELEMENT_UPDATE message to the extension
+    // Send the ELEMENT_UPDATE message to the extension. A model settings save
+    // carries the page id of the data it was based on (spec 2026-09-11 page
+    // guard); shape writes carry none.
     send(EnvelopeMessageType.ELEMENT_UPDATE, {
       elementId,
       type,
@@ -96,7 +101,8 @@ export function useModelOpsSender() {
         ...data,
         id: elementId  // Ensure ID is included in the data
       },
-      diagramElementType
+      diagramElementType,
+      ...(basedOnPageId !== undefined ? { basedOnPageId } : {})
     });
   }, [send, dispatch]);
   
@@ -130,7 +136,8 @@ export function useModelOpsSender() {
   }, [send]);
 
   /**
-   * Persist the model-level states list. A confirmed round trip, same shape as
+   * Persist the model-level states list, tied to the page it was based on
+   * (spec 2026-09-11 page guard). A confirmed round trip, same shape as
    * updateResourceRequirements below: resolves only when the host replies
    * STATES_UPDATE_RESULT for this envelope id, and rejects on a failure reply
    * or timeout. Studio's shared StatesEditor (Lucid's States tab,
@@ -139,9 +146,10 @@ export function useModelOpsSender() {
    * referenceData rebuild before replying.
    *
    * @param states Array of serialized state definitions
+   * @param basedOnPageId Page id the states list was based on
    */
   const updateStates = useCallback(
-    (states: ISerializedState[]): Promise<void> =>
+    (states: ISerializedState[], basedOnPageId: string): Promise<void> =>
       new Promise<void>((resolve, reject) => {
         if (!window.parent) {
           reject(new Error('No parent window to send states to'));
@@ -170,24 +178,12 @@ export function useModelOpsSender() {
           source: 'model-iframe',
           target: 'host',
           version: '1.0',
-          data: { states },
+          data: { states, basedOnPageId },
         };
         window.parent.postMessage(envelope, '*');
       }),
     [],
   );
-
-  /**
-   * Send a request to update the entities array
-   *
-   * @param entities Array of serialized entity definitions
-   */
-  const updateEntities = useCallback((entities: ISerializedEntity[]) => {
-    // Use ENTITIES_UPDATE for updating entities
-    send(EnvelopeMessageType.ENTITIES_UPDATE, {
-      entities
-    });
-  }, [send]);
 
   /**
    * Persist the custom resource-requirements list. Unlike the other senders
@@ -200,7 +196,7 @@ export function useModelOpsSender() {
    * editors only ever live in the model panel.
    */
   const updateResourceRequirements = useCallback(
-    (resourceRequirements: ISerializedResourceRequirement[]): Promise<void> =>
+    (resourceRequirements: ISerializedResourceRequirement[], basedOnPageId: string): Promise<void> =>
       new Promise<void>((resolve, reject) => {
         if (!window.parent) {
           reject(new Error('No parent window to send resource requirements to'));
@@ -229,7 +225,7 @@ export function useModelOpsSender() {
           source: 'model-iframe',
           target: 'host',
           version: '1.0',
-          data: { resourceRequirements },
+          data: { resourceRequirements, basedOnPageId },
         };
         window.parent.postMessage(envelope, '*');
       }),
@@ -318,7 +314,6 @@ export function useModelOpsSender() {
     convertElement,
     convertPage,
     updateStates,
-    updateEntities,
     updateResourceRequirements,
     updateElement,
     requestModelJson,
@@ -332,7 +327,6 @@ export function useModelOpsSender() {
     convertElement,
     convertPage,
     updateStates,
-    updateEntities,
     updateResourceRequirements,
     updateElement,
     requestModelJson,

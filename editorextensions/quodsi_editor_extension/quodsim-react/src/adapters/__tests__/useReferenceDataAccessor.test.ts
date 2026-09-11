@@ -3,12 +3,14 @@ import { renderHook, act } from '@testing-library/react'
 import type { EditorReferenceData, ISerializedResourceRequirement } from '@quodsi/lucid-shared'
 import { createReferenceDataAccessor, useReferenceDataAccessor, isPlainAutoRequirement } from '../useReferenceDataAccessor'
 import type { ReferenceDataSource } from '../useReferenceDataAccessor'
+import { MODEL_NOT_LOADED_MESSAGE } from '../pageGuardMessages'
 
 const auto = (id: string, name: string) => ({ id, name, rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: id }] } })
 const custom = { id: 'req-1', name: 'Triage', rootClause: { id: 'root', mode: 'require_any', requests: [{ resourceId: 'doc' }, { resourceId: 'nurse', quantity: 2 }] } }
 
 function refData(overrides: Partial<EditorReferenceData> = {}): EditorReferenceData {
   return {
+    pageId: 'page-1',
     resources: [{ id: 'doc', name: 'Doctor' }, { id: 'nurse', name: 'Nurse' }],
     resourceRequirements: [auto('doc', 'Doctor'), auto('nurse', 'Nurse'), custom] as never,
     activities: [{ id: 'a1', name: 'Intake', actions: [{ id: 'x', type: 'delay_with_resource', resourceRequirementId: 'req-1' }] }],
@@ -290,7 +292,7 @@ describe('states writes', () => {
   const st = (id: string, name: string) => ({ id, name, componentType: 'model', dataType: 'number', initialValue: 0, collectStatistics: true })
   const statesOf = (s: ReferenceDataSource) =>
     (s.accessor.getSnapshot().modelDefinition as unknown as { states: Array<{ id: string }> }).states.map((x) => x.id)
-  const withStates = () => ({ states: [st('s1', 'A'), st('s2', 'B')] } as unknown as EditorReferenceData)
+  const withStates = () => ({ pageId: 'page-1', states: [st('s1', 'A'), st('s2', 'B')] } as unknown as EditorReferenceData)
 
   it('overlays the new list immediately, sends it, and resolves on the host result', async () => {
     let resolveSend!: () => void
@@ -299,7 +301,7 @@ describe('states writes', () => {
 
     const p = source.accessor.updateModel({ states: [st('s2', 'B')] })
 
-    expect(updateStates).toHaveBeenCalledWith([st('s2', 'B')])
+    expect(updateStates).toHaveBeenCalledWith([st('s2', 'B')], 'page-1')
     expect(statesOf(source)).toEqual(['s2'])
     expect(source.accessor.getSnapshot().saveStatus).toBe('saving')
     resolveSend()
@@ -372,5 +374,43 @@ describe('states writes', () => {
 
     expect(statesOf(source)).toEqual(['s9'])
     expect(source.accessor.getSnapshot().saveStatus).toBe('failed')
+  })
+})
+
+describe('page guard (spec 2026-09-11)', () => {
+  const st = (id: string, name: string) => ({ id, name, componentType: 'model', dataType: 'number', initialValue: 0, collectStatistics: true })
+
+  it('passes referenceData.pageId to updateResourceRequirements', async () => {
+    const updateResourceRequirements = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements }))
+
+    await source.accessor.updateModel({ resourceRequirements: [] })
+
+    expect(updateResourceRequirements).toHaveBeenCalledWith([], 'page-1')
+  })
+
+  it('refuses a requirements write before referenceData carries a pageId: nothing sent, snapshot untouched', async () => {
+    const updateResourceRequirements = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(refData({ pageId: undefined }), () => ({ updateResourceRequirements }))
+
+    await expect(source.accessor.updateModel({ resourceRequirements: [] })).rejects.toThrow(MODEL_NOT_LOADED_MESSAGE)
+
+    expect(updateResourceRequirements).not.toHaveBeenCalled()
+    expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
+  })
+
+  it('refuses a states write before referenceData carries a pageId: no overlay, nothing sent', async () => {
+    const updateStates = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(
+      { states: [st('s1', 'A')] } as unknown as EditorReferenceData,
+      () => ({ updateResourceRequirements: vi.fn(), updateStates }),
+    )
+
+    await expect(source.accessor.updateModel({ states: [] })).rejects.toThrow(MODEL_NOT_LOADED_MESSAGE)
+
+    expect(updateStates).not.toHaveBeenCalled()
+    const states = (source.accessor.getSnapshot().modelDefinition as unknown as { states: Array<{ id: string }> }).states
+    expect(states.map((s) => s.id)).toEqual(['s1'])
+    expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
   })
 })

@@ -30,12 +30,13 @@ describe('useModelOpsSender.updateStates', () => {
 
   it('posts STATES_UPDATE and resolves on a successful RESULT with the same id', async () => {
     const { result } = renderHook(() => useModelOpsSender())
-    const p = result.current.updateStates([state as never])
+    const p = result.current.updateStates([state as never], 'page-1')
     expect(posted).toHaveLength(1)
     expect(posted[0].type).toBe(EnvelopeMessageType.STATES_UPDATE)
     expect(posted[0].source).toBe('model-iframe')
     expect(posted[0].target).toBe('host')
     expect((posted[0].data as { states: unknown[] }).states).toEqual([state])
+    expect((posted[0].data as { basedOnPageId?: string }).basedOnPageId).toBe('page-1')
     reply('some-other-id', { success: true }) // ignored
     reply(posted[0].id, { success: true })
     await expect(p).resolves.toBeUndefined()
@@ -43,14 +44,14 @@ describe('useModelOpsSender.updateStates', () => {
 
   it('rejects with the handler error message', async () => {
     const { result } = renderHook(() => useModelOpsSender())
-    const p = result.current.updateStates([])
+    const p = result.current.updateStates([], 'page-1')
     reply(posted[0].id, { success: false, errorMessage: 'Current page not available' })
     await expect(p).rejects.toThrow('Current page not available')
   })
 
   it('rejects on timeout', async () => {
     const { result } = renderHook(() => useModelOpsSender())
-    const p = result.current.updateStates([])
+    const p = result.current.updateStates([], 'page-1')
     vi.advanceTimersByTime(30_001)
     await expect(p).rejects.toThrow('States update timed out')
   })

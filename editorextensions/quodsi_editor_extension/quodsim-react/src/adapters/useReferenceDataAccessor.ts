@@ -51,6 +51,9 @@
 //    is sent through senders.updateStates (awaited), and is rolled back on
 //    rejection. The next referenceData prop replaces the overlay -- the host
 //    rebuilds referenceData before it replies.
+//  - Page guard (spec 2026-09-11): states and requirements writes echo
+//    referenceData.pageId to their senders, and are refused before the
+//    optimistic overlay when referenceData carries no pageId (not loaded yet).
 
 import { useEffect, useRef } from 'react'
 import type { EditorReferenceData, ISerializedResourceRequirement, ISerializedState } from '@quodsi/lucid-shared'
@@ -62,9 +65,10 @@ import {
   deleteShapeUnavailable,
   moveShapeUnavailable,
 } from 'quodsi_studio/platforms/shared'
+import { MODEL_NOT_LOADED_MESSAGE } from './pageGuardMessages'
 
 export type ReferenceDataSenders = {
-  updateResourceRequirements: (list: ISerializedResourceRequirement[]) => Promise<void>
+  updateResourceRequirements: (list: ISerializedResourceRequirement[], basedOnPageId: string) => Promise<void>
   /** Optional: callers that never write shapes (e.g. the requirement editors) omit it. */
   updateElement?: (elementId: string, type: string, data: Record<string, unknown>) => Promise<void>
   /**
@@ -72,7 +76,7 @@ export type ReferenceDataSenders = {
    * (STATES_UPDATE -> STATES_UPDATE_RESULT); the host runs the shared delete
    * rule and rebuilds referenceData before replying.
    */
-  updateStates?: (states: ISerializedState[]) => Promise<void>
+  updateStates?: (states: ISerializedState[], basedOnPageId: string) => Promise<void>
 }
 
 /** A host-implemented writer for a specific shape's own shape-data (no envelope, no round trip). */
@@ -175,6 +179,9 @@ export function createReferenceDataAccessor(
   }
 
   const writeRequirements = async (list: RequirementRecord[]) => {
+    // Page guard (spec 2026-09-11): no pageId means no real referenceData yet.
+    const basedOnPageId = referenceData?.pageId
+    if (!basedOnPageId) throw new Error(MODEL_NOT_LOADED_MESSAGE)
     const resourcesById = new Map((referenceData?.resources ?? []).map((r) => [r.id, r]))
     const customs = list
       .filter((r) => {
@@ -186,7 +193,7 @@ export function createReferenceDataAccessor(
     saveError = null
     notify()
     try {
-      await getSenders().updateResourceRequirements(customs)
+      await getSenders().updateResourceRequirements(customs, basedOnPageId)
       overlay = list
       saveStatus = 'saved'
       notify()
@@ -203,6 +210,10 @@ export function createReferenceDataAccessor(
     if (!send) {
       throw new Error('useReferenceDataAccessor.updateModel: no updateStates sender configured')
     }
+    // Page guard (spec 2026-09-11): refuse before overlaying when referenceData
+    // carries no pageId (not loaded yet).
+    const basedOnPageId = referenceData?.pageId
+    if (!basedOnPageId) throw new Error(MODEL_NOT_LOADED_MESSAGE)
     // Overlay BEFORE the round trip so the list (and an open delete dialog's
     // row) reflects the edit at once; roll back to the previous overlay if the
     // host rejects.
@@ -212,7 +223,7 @@ export function createReferenceDataAccessor(
     saveError = null
     notify()
     try {
-      await send(next)
+      await send(next, basedOnPageId)
       saveStatus = 'saved'
       notify()
     } catch (err) {
