@@ -1868,7 +1868,7 @@ export class ModelManager {
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'resources', 'resourceRequirements'];
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'entities', 'resources', 'resourceRequirements'];
         const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
@@ -1900,6 +1900,16 @@ export class ModelManager {
                 page,
                 patch.workSchedules as ISerializedWorkSchedule[]
             );
+        }
+
+        // Entities (spec 2026-09-11): Lucid's Entities tab mounts the shared
+        // EntitiesEditor, which writes the WHOLE list. Routed through
+        // updateEntities, never a bare setEntities: that is the one place that
+        // re-inserts the Default Entity and runs the shared delete rule over
+        // stored shape data. Entities and resources reference nothing of each
+        // other, so this position is arbitrary -- but fixed.
+        if ('entities' in patch) {
+            await this.updateEntities(patch.entities as ISerializedEntity[], page);
         }
 
         // `resources` before `resourceRequirements`: a delete patch's cascade

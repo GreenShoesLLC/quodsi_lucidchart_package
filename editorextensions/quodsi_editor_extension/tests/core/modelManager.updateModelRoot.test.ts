@@ -126,6 +126,45 @@ describe('ModelManager.updateModelRoot', () => {
     expect(changeTracker.modelDefinitionDirty).toBe(true);
   });
 
+  // spec 2026-09-11: Lucid's Entities tab mounts the shared EntitiesEditor,
+  // which writes accessor.updateModel({ entities }). The key must route to
+  // updateEntities -- the one place that re-inserts the Default Entity and
+  // runs the reference cascade -- not to a bare setEntities.
+  it('routes an entities patch through updateEntities', async () => {
+    const { storageAdapter, changeTracker } = harness();
+    const { ModelManager } = require('../../src/core/ModelManager');
+    const mm: any = Object.create(ModelManager.prototype);
+    mm.storageAdapter = storageAdapter;
+    mm.debug = { debug: () => {}, error: () => {} };
+    mm.changeTracker = changeTracker;
+    const updateEntities = jest.fn().mockResolvedValue(undefined);
+    mm.updateEntities = updateEntities;
+
+    const entities = [{ id: 'ent-1', name: 'Customer', description: 'walk-in' }];
+    const page = { id: 'page-1' };
+    await mm.updateModelRoot({ entities }, page);
+
+    expect(updateEntities).toHaveBeenCalledTimes(1);
+    expect(updateEntities).toHaveBeenCalledWith(entities, page);
+    expect(changeTracker.modelDefinitionDirty).toBe(true);
+  });
+
+  it('still rejects a mixed patch with an unknown key before writing entities', async () => {
+    const { storageAdapter, changeTracker } = harness();
+    const { ModelManager } = require('../../src/core/ModelManager');
+    const mm: any = Object.create(ModelManager.prototype);
+    mm.storageAdapter = storageAdapter;
+    mm.debug = { debug: () => {}, error: () => {} };
+    mm.changeTracker = changeTracker;
+    const updateEntities = jest.fn().mockResolvedValue(undefined);
+    mm.updateEntities = updateEntities;
+
+    await expect(
+      mm.updateModelRoot({ entities: [], bogus: 1 }, { id: 'page-1' })
+    ).rejects.toThrow(/bogus/);
+    expect(updateEntities).not.toHaveBeenCalled();
+  });
+
   it('throws on an unknown key rather than dropping it silently', async () => {
     const { storageAdapter, changeTracker } = harness();
     const { ModelManager } = require('../../src/core/ModelManager');
