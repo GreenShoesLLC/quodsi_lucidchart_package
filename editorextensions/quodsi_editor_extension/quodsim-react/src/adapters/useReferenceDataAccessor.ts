@@ -46,9 +46,14 @@
 //    On the shape-writer path the host editor's own autosave is a separate,
 //    later ELEMENT_UPDATE, so the overlay also bridges that window. See
 //    spec docs/superpowers/specs/2026-08-22-lucid-routing-tab-design.md.
+//  - updateModel also accepts `states` (the Model editor's States tab, spec
+//    2026-09-11 States): the list overlays modelDefinition.states at once,
+//    is sent through senders.updateStates (awaited), and is rolled back on
+//    rejection. The next referenceData prop replaces the overlay -- the host
+//    rebuilds referenceData before it replies.
 
 import { useEffect, useRef } from 'react'
-import type { EditorReferenceData, ISerializedResourceRequirement } from '@quodsi/lucid-shared'
+import type { EditorReferenceData, ISerializedResourceRequirement, ISerializedState } from '@quodsi/lucid-shared'
 import { RequirementMode } from '@quodsi/lucid-shared'
 import type { ModelStateAccessor, ModelStateSnapshot } from 'quodsi_studio/platforms/shared'
 import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
@@ -62,6 +67,12 @@ export type ReferenceDataSenders = {
   updateResourceRequirements: (list: ISerializedResourceRequirement[]) => Promise<void>
   /** Optional: callers that never write shapes (e.g. the requirement editors) omit it. */
   updateElement?: (elementId: string, type: string, data: Record<string, unknown>) => Promise<void>
+  /**
+   * Optional: the Model editor's States tab supplies it. Confirmed round trip
+   * (STATES_UPDATE -> STATES_UPDATE_RESULT); the host runs the shared delete
+   * rule and rebuilds referenceData before replying.
+   */
+  updateStates?: (states: ISerializedState[]) => Promise<void>
 }
 
 /** A host-implemented writer for a specific shape's own shape-data (no envelope, no round trip). */
@@ -131,6 +142,7 @@ export function createReferenceDataAccessor(
 ): ReferenceDataSource {
   let referenceData = initial
   let overlay: RequirementRecord[] | null = null
+  let statesOverlay: ISerializedState[] | null = null
   // id -> merged patch. Object.create(null): shapeId is host-controlled data,
   // not a trusted key set, so a plain {} risks a prototype-chain lookup
   // (e.g. shapeId === 'constructor') resolving to something other than
@@ -151,7 +163,7 @@ export function createReferenceDataAccessor(
       generators: withOverlay(referenceData?.generators as unknown as ElementRecord[] | undefined),
       connectors: withOverlay(referenceData?.connectors as unknown as ElementRecord[] | undefined),
       entities: referenceData?.entities ?? [],
-      states: referenceData?.states ?? [],
+      states: statesOverlay ?? referenceData?.states ?? [],
     } as unknown as ModelStateSnapshot['modelDefinition'],
     saveStatus,
     saveError,
@@ -160,6 +172,59 @@ export function createReferenceDataAccessor(
   const notify = () => {
     snapshot = build()
     listeners.forEach((l) => l())
+  }
+
+  const writeRequirements = async (list: RequirementRecord[]) => {
+    const resourcesById = new Map((referenceData?.resources ?? []).map((r) => [r.id, r]))
+    const customs = list
+      .filter((r) => {
+        const resource = resourcesById.get(r.id)
+        return !resource || !isPlainAutoRequirement(r, resource)
+      })
+      .map((r) => ({ id: r.id, name: r.name, rootClause: r.rootClause })) as ISerializedResourceRequirement[]
+    saveStatus = 'saving'
+    saveError = null
+    notify()
+    try {
+      await getSenders().updateResourceRequirements(customs)
+      overlay = list
+      saveStatus = 'saved'
+      notify()
+    } catch (err) {
+      saveStatus = 'failed'
+      saveError = err instanceof Error ? err.message : String(err)
+      notify()
+      throw err
+    }
+  }
+
+  const writeStates = async (next: ISerializedState[]) => {
+    const send = getSenders().updateStates
+    if (!send) {
+      throw new Error('useReferenceDataAccessor.updateModel: no updateStates sender configured')
+    }
+    // Overlay BEFORE the round trip so the list (and an open delete dialog's
+    // row) reflects the edit at once; roll back to the previous overlay if the
+    // host rejects.
+    const previous = statesOverlay
+    statesOverlay = next
+    saveStatus = 'saving'
+    saveError = null
+    notify()
+    try {
+      await send(next)
+      saveStatus = 'saved'
+      notify()
+    } catch (err) {
+      // Only roll back if this write's overlay is still current -- a fresher
+      // referenceData may have landed (and cleared it) while the send was
+      // in flight; resurrecting `previous` over that would overwrite it.
+      if (statesOverlay === next) statesOverlay = previous
+      saveStatus = 'failed'
+      saveError = err instanceof Error ? err.message : String(err)
+      notify()
+      throw err
+    }
   }
 
   const accessor: ModelStateAccessor = {
@@ -176,31 +241,15 @@ export function createReferenceDataAccessor(
     deleteShape: deleteShapeUnavailable,
     moveShape: moveShapeUnavailable,
     async updateModel(patch) {
-      const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements')
+      const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements' && k !== 'states')
       if (unhandled.length > 0) {
         throw new Error(`useReferenceDataAccessor.updateModel: no persistence path for key(s): ${unhandled.join(', ')}`)
       }
-      const list = (patch.resourceRequirements as RequirementRecord[] | undefined) ?? []
-      const resourcesById = new Map((referenceData?.resources ?? []).map((r) => [r.id, r]))
-      const customs = list
-        .filter((r) => {
-          const resource = resourcesById.get(r.id)
-          return !resource || !isPlainAutoRequirement(r, resource)
-        })
-        .map((r) => ({ id: r.id, name: r.name, rootClause: r.rootClause })) as ISerializedResourceRequirement[]
-      saveStatus = 'saving'
-      saveError = null
-      notify()
-      try {
-        await getSenders().updateResourceRequirements(customs)
-        overlay = list
-        saveStatus = 'saved'
-        notify()
-      } catch (err) {
-        saveStatus = 'failed'
-        saveError = err instanceof Error ? err.message : String(err)
-        notify()
-        throw err
+      if ('states' in patch) {
+        await writeStates((patch.states as ISerializedState[] | undefined) ?? [])
+      }
+      if ('resourceRequirements' in patch) {
+        await writeRequirements((patch.resourceRequirements as RequirementRecord[] | undefined) ?? [])
       }
     },
     async updateShape(shapeId, type, patch) {
@@ -256,6 +305,7 @@ export function createReferenceDataAccessor(
       if (next === referenceData) return
       referenceData = next
       overlay = null
+      statesOverlay = null
       elementOverlays = Object.create(null)
       notify()
     },

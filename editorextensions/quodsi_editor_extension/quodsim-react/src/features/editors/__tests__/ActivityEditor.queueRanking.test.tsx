@@ -40,7 +40,6 @@ vi.mock("../SaveStatusLine", () => ({
 
 const baseProps = {
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 

@@ -72,14 +72,14 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-function updateMsg(): any {
+function updateMsg(patch: Record<string, unknown> = { resources: [] }): any {
   return {
     id: 'req-1',
     type: EnvelopeMessageType.MODEL_ROOT_UPDATE,
     source: 'model-iframe',
     target: 'host',
     version: '1.0',
-    data: { patch: { resources: [] } },
+    data: { patch },
   };
 }
 
@@ -153,5 +153,15 @@ describe('ModelRootHandler selection refresh after model-root writes', () => {
     } finally {
       snapshotSpy.mockRestore();
     }
+  });
+
+  it('re-processes the current selection after a successful entities write', async () => {
+    // The Entities tab's writes reach the panel's referenceData through the
+    // same selection re-process as every model-root write: ModelProcessor and
+    // NoneSelectionProcessor rebuild referenceData on every re-process.
+    await (ModelRootHandler as any).handleUpdate(updateMsg({ entities: [] }));
+    await flush();
+
+    expect(handleLucidSelectionEventMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -15,8 +15,8 @@ import {
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock, SlidersHorizontal } from "lucide-react";
-import StatesEditor from "./StatesEditor";
-import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
+import { EntitiesTab } from "./EntitiesTab";
+import { StatesTab } from "./StatesTab";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
   CalendarDateTimeField, ResourceRequirementsEditor, WarmupDateField,
@@ -49,15 +49,18 @@ import { EditorReferenceData, ResourceRequirement } from "@quodsi/lucid-shared";
 // TYPES
 // ============================================================================
 
+/** An entity row as the panel receives it (referenceData.entities). Still
+ *  needed after the Entities tab moved to the shared editor: the ViewTell
+ *  context below reads it. */
+export type EntityRow = { id: string; name: string; description?: string };
+
 interface Props {
   model: Model;
   onSave: (model: Model) => void;
   onRemoveModel?: () => void;
   onValidate?: () => void;
   states: StateListManager;
-  onStatesChange: (states: StateListManager) => void;
   entities: EntityRow[];
-  onEntitiesChange: (entities: EntityRow[]) => void;
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
   validationState?: ValidationResult | null;
@@ -229,7 +232,7 @@ const START_DATE_HINT = "Set the start date first";
  *   for falsy fields (DEFAULT_RANDOM_SEED for seed, PeriodUnit.HOURS for unit
  *   selectors, etc.) so every saved Model is fully populated even if the user
  *   blanked optional fields.
- * - States tab: Auto-saves immediately via parent onStatesChange.
+ * - States tab: Studio's shared StatesEditor over the referenceData accessor; writes go through updateStates (STATES_UPDATE round trip), the host cleans references.
  * - Requirements tab: Auto-saves immediately via updateResourceRequirements.
  * - Validation tab: Read-only.
  * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Save failed —
@@ -238,7 +241,7 @@ const START_DATE_HINT = "Set the start date first";
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, entities, onEntitiesChange, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, entities, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -252,10 +255,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const { visible } = useView();
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const { updateResourceRequirements } = useModelOpsSender();
+  const { updateResourceRequirements, updateStates } = useModelOpsSender();
   // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
   const { openSettingsModal } = useSimulationRunSender();
-  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements });
+  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements, updateStates });
 
   // Direct form state management
   const [localModelDraft, setLocalModelDraft] = useState<Model>(() => extractModelData(model));
@@ -901,20 +904,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
               </div>
           </div>
       )}
+      {/* States: StatesTab mounts Studio's shared StatesEditor over this
+          editor's own referenceData accessor (spec 2026-09-11 States). The
+          loading gate and the per-page-switch remount both live in StatesTab
+          now -- see its header comment. */}
       {activeOrFallback === "states" && (
-        <StatesEditor
-            states={states}
-            onStatesChange={onStatesChange}
-            defaultComponentType="ALL"
-            referenceData={referenceData}
-          />
+        <StatesTab accessor={accessor} hasStates={referenceData?.states !== undefined} />
       )}
-      {activeOrFallback === "entities" && (
-        <EntitiesEditor
-            entities={entities}
-            onEntitiesChange={onEntitiesChange}
-          />
-      )}
+      {activeOrFallback === "entities" && <EntitiesTab />}
       {activeOrFallback === "resources" && <ResourcesTab />}
       {activeOrFallback === "arrivals" && <ArrivalsTab />}
       {activeOrFallback === "schedules" && <SchedulesTab />}

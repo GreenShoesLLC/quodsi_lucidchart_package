@@ -46,7 +46,6 @@ import {
   FailureProperties,
   FailureClockMode,
   StateListManager,
-  ComponentType,
   Connector,
   ResourceRequirement,
   isNameUniqueInReferenceData,
@@ -60,7 +59,6 @@ import { QueueRankingSection } from "./QueueRankingSection";
 import { eligibleLeverProperties, countActiveLevers } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
-import StatesEditor from "./StatesEditor";
 import {
   RequirementField, RequirementFieldContext, ConnectorRoutingView, CapacitySourcePicker,
   // Levers moved onto their own tab (2026-08-31) and Lucid dropped its near-verbatim
@@ -208,14 +206,6 @@ const TAB_CONFIG = [
     tooltip:
       "Mark a property as a scenario lever -- a value range a Study can sweep across its design points to compare what-if scenarios",
   },
-  // Temporarily hidden - states managed at Model level
-  // {
-  //   id: "states" as const,
-  //   title: "State Definitions",
-  //   icon: Hash,
-  //   tooltip:
-  //     "Define custom state variables that this activity can track and modify",
-  // },
 ];
 
 // Compile-time proof that the map covers exactly this editor's real tab ids.
@@ -410,8 +400,6 @@ interface ActivityEditorProps {
   referenceData?: EditorReferenceData;
   /** State manager for model-level states */
   states: StateListManager;
-  /** Callback when states are modified */
-  onStatesChange: (states: StateListManager) => void;
   /** Connectors leaving this activity (for routing configuration) */
   outgoingConnectors?: Connector[];
 }
@@ -425,8 +413,7 @@ type ActivityTab =
   | "financial"
   | "failure"
   | "connectors"
-  | "levers"
-  | "states";
+  | "levers";
 
 /**
  * ActivityEditor - Comprehensive editor for Activity simulation objects
@@ -474,7 +461,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   onSave,
   referenceData,
   states,
-  onStatesChange,
   outgoingConnectors = [],
 }) => {
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
@@ -1693,16 +1679,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               onOpenSettings={openSettingsModal}
             />
           )}
-
-          {/* Temporarily hidden - states managed at Model level
-          {activeOrFallback === "states" && (
-            <StatesEditor
-                states={states}
-                onStatesChange={onStatesChange}
-                defaultComponentType={ComponentType.ACTIVITY}
-              />
-          )}
-          */}
         </div>
 
         {/* Validation banners + auto-save status */}

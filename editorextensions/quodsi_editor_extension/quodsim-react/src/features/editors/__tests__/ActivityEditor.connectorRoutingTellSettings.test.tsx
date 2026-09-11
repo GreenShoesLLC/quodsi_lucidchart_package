@@ -91,7 +91,6 @@ describe("ActivityEditor's Routing tab — the shared ConnectorRoutingView's per
         activity={activity}
         onSave={vi.fn()}
         states={new StateListManager()}
-        onStatesChange={vi.fn()}
         referenceData={referenceData}
       />
     );

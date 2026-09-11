@@ -139,6 +139,11 @@ export type { CalendarWindow, CalendarWindowModelLike } from '@quodsi/shared';
 // into the same stored length.
 export { msToCoarsestDuration } from '@quodsi/shared';
 
+// The one entity-delete rule (spec 2026-09-11). The extension's
+// ModelManager.cleanupEntityReferences runs it over stored shape data so
+// LucidChart deletes an entity exactly the way drawio, Visio and Studio do.
+export { removeEntityReferences, pickFallbackEntityId } from '@quodsi/shared';
+
 // Work schedules (time-varying capacity, spec 2026-08-27). The class and its
 // list manager come straight from the core -- Lucid adds only storage
 // (`q_work_schedules`), the projection, and the clearable `workScheduleId`
@@ -493,10 +498,14 @@ export { parseExpression, collectStateNames, inferExpressionType, findArityError
 
 // Delete-time expression-reference detection — shared by every host's States delete
 // dialog (Studio, drawio, Lucid) so "references this state inside a formula" stays
-// one implementation. Actual removal of direct (non-expression) references is
-// Lucid-extension-side (ModelManager.cleanupStateReferences, on save), so only the
-// read-only detector is re-exported here. Re-exported (not `export *`) per this
+// one implementation. Actual removal of direct (non-expression) references runs
+// extension-side (ModelManager.cleanupStateReferences) using the shared
+// removeStateReferences re-exported below. Re-exported (not `export *`) per this
 // file's curated-surface convention; see quodsi_shared/src/conversion/stateReferences.ts
 // for the implementation.
 export { findExpressionsReferencingState } from '@quodsi/shared';
+// The one state-delete rule (spec 2026-09-11 States): the extension's
+// ModelManager.cleanupStateReferences runs it over stored shape data so
+// LucidChart deletes a state exactly the way drawio, Visio and Studio do.
+export { removeStateReferences } from '@quodsi/shared';
 export type { ExpressionStateReference, StateReferenceScope } from '@quodsi/shared';

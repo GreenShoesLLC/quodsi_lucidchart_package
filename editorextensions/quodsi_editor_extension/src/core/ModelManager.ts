@@ -33,7 +33,27 @@ import {
     stripTransientResourceMarkers,
     StoredResourceRecord,
     resourceLinkIssues,
+    removeEntityReferences,
+    removeStateReferences,
+    pickFallbackEntityId,
 } from "@quodsi/lucid-shared";
+
+/** Stored element data a shared reference-cleanup rule runs over, keyed by Lucid item id. */
+type SharedCleanupCollections = {
+    generators: Array<Record<string, unknown>>;
+    activities: Array<Record<string, unknown>>;
+    connectors: Array<Record<string, unknown>>;
+};
+
+/** What @quodsi/shared removeEntityReferences / removeStateReferences return. */
+type SharedCleanupResult = {
+    collections: {
+        generators?: Array<Record<string, unknown>>;
+        activities?: Array<Record<string, unknown>>;
+        connectors?: Array<Record<string, unknown>>;
+    };
+    changedElementIds: string[];
+};
 import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
@@ -478,7 +498,10 @@ export class ModelManager {
         const existingEntity = modelDef.entities.get(elementId);
         if (existingEntity) {
             this.debug.debug('Entity deletion detected, performing cascading cleanup:', elementId);
-            const affectedCount = await this.cleanupEntityReferences(elementId, this.currentPage);
+            const fallbackEntityId = this.entityFallbackFor(
+                modelDef.entities.getAll().filter(e => e.id !== elementId)
+            );
+            const affectedCount = await this.cleanupEntityReferences(elementId, fallbackEntityId, this.currentPage);
             this.debug.debug('Cleaned up entity references:', { affectedCount });
         }
 
@@ -927,315 +950,28 @@ export class ModelManager {
     }
 
     /**
-     * Helper method to clean state references from an actions array.
-     * Handles all action types that can contain state references.
+     * Clean up every reference to a deleted State with the SHARED rule
+     * (@quodsi/shared removeStateReferences) -- the same rule drawio, Visio and
+     * Studio run (spec 2026-09-11 States). Covers generator initialStates,
+     * activity sourceConfig.initialStates, action modifications, inheritStates,
+     * splitIndexState / matchState / joinCountState and condition (recursing
+     * BRANCH and LOOP), activity queueRanking (the rule sets it to undefined;
+     * setElementData's whole-record write drops the key), connector condition
+     * and connector actions.
      *
-     * @param actions Array of actions to clean
-     * @param deletedStateId ID of the deleted state (for StateModification.stateUniqueId)
-     * @param deletedStateName Name of the deleted state (for string references like inheritStates)
-     * @returns Object with cleaned actions array and whether any modifications were made
-     */
-    private cleanActionsStateReferences(
-        actions: any[],
-        deletedStateId: string,
-        deletedStateName: string
-    ): { actions: any[]; modified: boolean } {
-        let modified = false;
-
-        for (const action of actions) {
-            if (!action || !action.type) continue;
-
-            // Handle modifications array (ASSIGN, SPLIT, CREATE, JOIN,
-            // DELAY_WITH_RESOURCE actions all use the unified `modifications`
-            // field since wire-cleanup Phase B2 Task 6 — the old
-            // DELAY_WITH_RESOURCE-only `stateModifications` field no longer
-            // exists).
-            if (action.modifications && Array.isArray(action.modifications)) {
-                const originalLength = action.modifications.length;
-                action.modifications = action.modifications.filter(
-                    (mod: any) => mod.stateId !== deletedStateId
-                );
-                if (action.modifications.length !== originalLength) {
-                    modified = true;
-                }
-            }
-
-            // Handle inheritStates array (SPLIT, CREATE, JOIN actions)
-            if (action.inheritStates && Array.isArray(action.inheritStates)) {
-                const originalLength = action.inheritStates.length;
-                action.inheritStates = action.inheritStates.filter(
-                    (name: string) => name !== deletedStateName
-                );
-                if (action.inheritStates.length !== originalLength) {
-                    modified = true;
-                }
-            }
-
-            // Handle SPLIT action specific fields
-            if (action.type === ActionType.SPLIT) {
-                if (action.splitIndexState === deletedStateName) {
-                    action.splitIndexState = null;
-                    modified = true;
-                }
-            }
-
-            // Handle JOIN action specific fields
-            if (action.type === ActionType.JOIN) {
-                if (action.matchState === deletedStateName) {
-                    action.matchState = null;
-                    modified = true;
-                }
-                if (action.joinCountState === deletedStateName) {
-                    action.joinCountState = null;
-                    modified = true;
-                }
-            }
-
-            // Handle BRANCH action - recursively clean nested actions
-            if (action.type === ActionType.BRANCH) {
-                // Clean condition.stateId (the branch's own routing selector)
-                if (action.condition && action.condition.stateId === deletedStateId) {
-                    action.condition = null;
-                    modified = true;
-                }
-
-                // Recursively clean ifTrue actions
-                if (action.ifTrue && Array.isArray(action.ifTrue)) {
-                    const result = this.cleanActionsStateReferences(action.ifTrue, deletedStateId, deletedStateName);
-                    action.ifTrue = result.actions;
-                    if (result.modified) modified = true;
-                }
-
-                // Recursively clean ifFalse actions
-                if (action.ifFalse && Array.isArray(action.ifFalse)) {
-                    const result = this.cleanActionsStateReferences(action.ifFalse, deletedStateId, deletedStateName);
-                    action.ifFalse = result.actions;
-                    if (result.modified) modified = true;
-                }
-            }
-
-            // Handle LOOP action - recursively clean nested actions
-            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
-                const result = this.cleanActionsStateReferences(action.actions, deletedStateId, deletedStateName);
-                action.actions = result.actions;
-                if (result.modified) modified = true;
-            }
-        }
-
-        return { actions, modified };
-    }
-
-    /**
-     * Clean up all references to a deleted state.
-     * Scans all Generators, Activities, and Connectors for state references.
-     *
-     * @param stateId Unique ID of the deleted state
-     * @param stateName Name of the deleted state (needed for name-based references)
-     * @param page The page to scan for elements
-     * @returns Number of elements that were modified
+     * @param stateId Unique ID of the deleted state (id-keyed references)
+     * @param stateName Name of the deleted state (name-keyed references)
+     * @returns Number of elements rewritten
      */
     private async cleanupStateReferences(
         stateId: string,
         stateName: string,
         page: PageProxy
     ): Promise<number> {
-        let affectedCount = 0;
-
-        // Process all blocks (Generators and Activities)
-        for (const [, block] of page.allBlocks) {
-            const elementData = this.storageAdapter.getElementData<any>(block);
-            if (!elementData) continue;
-
-            // Get element type from q_data
-            const typeInfo = this.storageAdapter.getElementType(block);
-            const elementType = typeInfo?.type;
-
-            let modified = false;
-
-            // Process Generators
-            if (elementType === SimulationObjectType.Generator) {
-                // Clean initialStates. Wire-cleanup Phase B2 Task 5/9:
-                // `EntitySourceConfig` dissolved — `initialStates` is flat
-                // on the stored generator now (not nested under
-                // `generationConfig`); `StateModification.stateUniqueId` ->
-                // `stateId` (Task 6).
-                const modifications = elementData.initialStates;
-                if (modifications && modifications.length > 0) {
-                    const originalLength = modifications.length;
-                    elementData.initialStates =
-                        modifications.filter(
-                            (mod: any) => mod.stateId !== stateId
-                        );
-                    if (elementData.initialStates.length !== originalLength) {
-                        modified = true;
-                    }
-                }
-
-                if (modified) {
-                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
-                    affectedCount++;
-                    this.debug.debug('Cleaned state references from Generator:', block.id);
-                }
-            }
-
-            // Process Activities
-            if (elementType === SimulationObjectType.Activity) {
-                // Clean sourceConfig.initialStates (renamed from
-                // `initialStateModifications`, wire-cleanup Phase B2 Task 5/9).
-                if (elementData.sourceConfig?.initialStates) {
-                    const originalLength = elementData.sourceConfig.initialStates.length;
-                    elementData.sourceConfig.initialStates =
-                        elementData.sourceConfig.initialStates.filter(
-                            (mod: any) => mod.stateId !== stateId
-                        );
-                    if (elementData.sourceConfig.initialStates.length !== originalLength) {
-                        modified = true;
-                    }
-                }
-
-                // Clean actions array
-                if (elementData.actions && Array.isArray(elementData.actions)) {
-                    const result = this.cleanActionsStateReferences(
-                        elementData.actions,
-                        stateId,
-                        stateName
-                    );
-                    elementData.actions = result.actions;
-                    if (result.modified) modified = true;
-                }
-
-                // Clean queueRanking.stateId — the only reference whose
-                // survival BLOCKS the model: QueueRankingValidation grades a
-                // ranking on a missing state as ERROR, so a routine state
-                // delete would leave an unrunnable activity behind. Drop the
-                // whole block rather than the reference — a ranking with no
-                // state is meaningless, and no queueRanking is exactly how
-                // "first come, first served" is stored. Mirrors
-                // @quodsi/shared removeStateReferences, which does the same
-                // for drawio/Visio/Studio. (Final-review finding 2.)
-                //
-                // Wire-cleanup Phase B2 Task 6 fix round F1: QueueRanking
-                // references its state by ID now (`stateId`, not the old
-                // NAME-keyed `stateName`) — compared against `stateId`
-                // (this function's first parameter), not `stateName`.
-                if (elementData.queueRanking?.stateId === stateId) {
-                    delete elementData.queueRanking;
-                    modified = true;
-                }
-
-                if (modified) {
-                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
-                    affectedCount++;
-                    this.debug.debug('Cleaned state references from Activity:', block.id);
-                }
-            }
-        }
-
-        // Process all lines (Connectors)
-        for (const [, line] of page.allLines) {
-            const elementData = this.storageAdapter.getElementData<any>(line);
-            if (!elementData) continue;
-
-            // Get element type from q_data
-            const lineTypeInfo = this.storageAdapter.getElementType(line);
-            if (lineTypeInfo?.type !== SimulationObjectType.Connector) continue;
-
-            let modified = false;
-
-            // Clean legacy stateModifications array
-            if (elementData.stateModifications && Array.isArray(elementData.stateModifications)) {
-                const originalLength = elementData.stateModifications.length;
-                elementData.stateModifications = elementData.stateModifications.filter(
-                    (mod: any) => mod.stateUniqueId !== stateId
-                );
-                if (elementData.stateModifications.length !== originalLength) {
-                    modified = true;
-                }
-            }
-
-            // Clean condition.stateId (routing guard, renamed from
-            // stateCondition.stateName and now id-keyed — wire-cleanup
-            // Phase B2 Task 6/9; sibling of the Activity/Generator loop
-            // above, missed in the initial conversion).
-            if (elementData.condition?.stateId === stateId) {
-                elementData.condition = null;
-                modified = true;
-            }
-
-            // Clean actions array
-            if (elementData.actions && Array.isArray(elementData.actions)) {
-                const result = this.cleanActionsStateReferences(
-                    elementData.actions,
-                    stateId,
-                    stateName
-                );
-                elementData.actions = result.actions;
-                if (result.modified) modified = true;
-            }
-
-            if (modified) {
-                this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
-                affectedCount++;
-                this.debug.debug('Cleaned state references from Connector:', line.id);
-            }
-        }
-
-        return affectedCount;
-    }
-
-    /**
-     * Helper method to clean entity references from an actions array.
-     * Handles CREATE actions that can contain entityTemplateId references.
-     *
-     * Strategy:
-     * - CREATE actions have entityTemplateId NULLIFIED (field is nullable)
-     *
-     * @param actions Array of actions to clean
-     * @param deletedEntityId ID of the deleted entity
-     * @returns Object with cleaned actions array and whether any modifications were made
-     */
-    private cleanActionsEntityReferences(
-        actions: any[],
-        deletedEntityId: string
-    ): { actions: any[]; modified: boolean } {
-        let modified = false;
-
-        for (const action of actions) {
-            if (!action || !action.type) continue;
-
-            // Nullify CREATE action entityTemplateId if it references the deleted entity
-            if (action.type === ActionType.CREATE && action.entityTemplateId === deletedEntityId) {
-                this.debug.debug('Nullifying CREATE action entityTemplateId:', deletedEntityId);
-                action.entityTemplateId = null;
-                modified = true;
-            }
-
-            // Handle BRANCH action - recursively clean nested actions
-            if (action.type === ActionType.BRANCH) {
-                // Recursively clean ifTrue actions
-                if (action.ifTrue && Array.isArray(action.ifTrue)) {
-                    const result = this.cleanActionsEntityReferences(action.ifTrue, deletedEntityId);
-                    action.ifTrue = result.actions;
-                    if (result.modified) modified = true;
-                }
-
-                // Recursively clean ifFalse actions
-                if (action.ifFalse && Array.isArray(action.ifFalse)) {
-                    const result = this.cleanActionsEntityReferences(action.ifFalse, deletedEntityId);
-                    action.ifFalse = result.actions;
-                    if (result.modified) modified = true;
-                }
-            }
-
-            // Handle LOOP action - recursively clean nested actions
-            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
-                const result = this.cleanActionsEntityReferences(action.actions, deletedEntityId);
-                action.actions = result.actions;
-                if (result.modified) modified = true;
-            }
-        }
-
-        return { actions, modified };
+        this.debug.debug('Cleaning up references to state:', { stateId, stateName });
+        return this.applySharedReferenceCleanup(page, (c) =>
+            removeStateReferences(c, stateId, stateName)
+        );
     }
 
     /**
@@ -1376,128 +1112,101 @@ export class ModelManager {
     }
 
     /**
-     * Clean up all references to a deleted Entity.
-     * Scans all Generators, Activities, and Connectors for entity references.
+     * Clean up every reference to a deleted Entity, using the SHARED rule
+     * (@quodsi/shared removeEntityReferences) so LucidChart deletes an entity
+     * exactly the way drawio, Visio and Studio do (spec 2026-09-11):
+     * - Generator.entityId, Activity.sourceConfig.entityId: re-pointed to
+     *   `fallbackEntityId` (required fields)
+     * - Connector.entityId: deleted (optional; absent = no entity-template
+     *   restriction)
+     * - CREATE entityTemplateId: null, inside BRANCH and LOOP bodies too
      *
-     * Reference cleanup strategy:
-     * - Generator.entityId (flat, dissolved EntitySourceConfig): SET TO "" (required field, empty = unset)
-     * - Activity.sourceConfig.entityId: SET TO "" (required field, empty = unset)
-     * - Connector.entityId: DELETED (optional field, absent = no entity-template restriction)
-     * - CreateAction.entityTemplateId: SET TO null (already nullable)
-     *
-     * @param entityId ID of the deleted entity
-     * @param page The page to scan
-     * @returns Number of elements that were modified
+     * @returns Number of elements rewritten
      */
     private async cleanupEntityReferences(
         entityId: string,
+        fallbackEntityId: string,
         page: PageProxy
     ): Promise<number> {
-        this.debug.debug('Cleaning up references to entity:', entityId);
-        let affectedCount = 0;
+        this.debug.debug('Cleaning up references to entity:', { entityId, fallbackEntityId });
+        return this.applySharedReferenceCleanup(page, (c) =>
+            removeEntityReferences(c, entityId, fallbackEntityId)
+        );
+    }
 
-        // Process all blocks (Generators and Activities)
+    /**
+     * Run a shared reference-cleanup rule over this page's stored element data
+     * and write back ONLY the elements the rule reports changed.
+     *
+     * Generator and Activity blocks and Connector lines are gathered with their
+     * stored data, each keyed by its Lucid item id for the round trip. Changed
+     * records are written with setElementData, which re-serializes the whole
+     * envelope -- so a field the rule sets to `undefined` (connector entityId,
+     * activity queueRanking) becomes a deleted key. Each record's stored `id`
+     * field is restored on write so the rule can never rename a record.
+     *
+     * @returns Number of elements rewritten
+     */
+    private applySharedReferenceCleanup(
+        page: PageProxy,
+        run: (collections: SharedCleanupCollections) => SharedCleanupResult
+    ): number {
+        type Origin = { item: ElementProxy; type: SimulationObjectType; storedId: unknown };
+        const origins = new Map<string, Origin>();
+        const collections: SharedCleanupCollections = { generators: [], activities: [], connectors: [] };
+
+        const collect = (
+            item: ElementProxy,
+            type: SimulationObjectType,
+            into: Array<Record<string, unknown>>
+        ) => {
+            const data = this.storageAdapter.getElementData<Record<string, unknown>>(item);
+            if (!data) return;
+            origins.set(item.id, { item, type, storedId: data.id });
+            into.push({ ...data, id: item.id });
+        };
+
         for (const [, block] of page.allBlocks) {
-            const elementData = this.storageAdapter.getElementData<any>(block);
-            if (!elementData) continue;
-
-            // Get element type from q_data
-            const typeInfo = this.storageAdapter.getElementType(block);
-            const elementType = typeInfo?.type;
-
-            let modified = false;
-
-            // Process Generators - clean entityId. Wire-cleanup Phase B2
-            // Task 5/9: EntitySourceConfig dissolved -- entityId is flat on
-            // the stored generator now (not nested under generationConfig).
-            if (elementType === SimulationObjectType.Generator) {
-                if (elementData.entityId === entityId) {
-                    this.debug.debug('Clearing Generator entityId:', entityId);
-                    elementData.entityId = "";
-                    modified = true;
-                }
-
-                if (modified) {
-                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
-                    affectedCount++;
-                    this.debug.debug('Cleaned entity references from Generator:', block.id);
-                }
-            }
-
-            // Process Activities - clean sourceConfig.entityId and actions
-            if (elementType === SimulationObjectType.Activity) {
-                // Clean sourceConfig.entityId
-                if (elementData.sourceConfig?.entityId === entityId) {
-                    this.debug.debug('Clearing Activity sourceConfig.entityId:', entityId);
-                    elementData.sourceConfig.entityId = "";
-                    modified = true;
-                }
-
-                // Clean actions array (for CREATE actions)
-                if (elementData.actions && Array.isArray(elementData.actions)) {
-                    const result = this.cleanActionsEntityReferences(
-                        elementData.actions,
-                        entityId
-                    );
-                    elementData.actions = result.actions;
-                    if (result.modified) modified = true;
-                }
-
-                if (modified) {
-                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
-                    affectedCount++;
-                    this.debug.debug('Cleaned entity references from Activity:', block.id);
-                }
-            }
+            const type = this.storageAdapter.getElementType(block)?.type;
+            if (type === SimulationObjectType.Generator) collect(block, type, collections.generators);
+            else if (type === SimulationObjectType.Activity) collect(block, type, collections.activities);
         }
-
-        // Process all lines (Connectors) - clean actions array
         for (const [, line] of page.allLines) {
-            const elementData = this.storageAdapter.getElementData<any>(line);
-            if (!elementData) continue;
-
-            // Get element type from q_data
-            const lineTypeInfo = this.storageAdapter.getElementType(line);
-            if (lineTypeInfo?.type !== SimulationObjectType.Connector) continue;
-
-            let modified = false;
-
-            // Clean the connector's OWN entity-template routing link. Left out
-            // originally, so deleting an entity left every entity_template edge
-            // pointing at a dead id: the engine's clean loader cross-references
-            // it and rejects the entire document, and the model stops loading
-            // with an error naming an entity the user already deleted.
-            //
-            // DELETED, not set to "": a connector's entityId is OPTIONAL ("no
-            // entity-template restriction"), unlike Generator.entityId and
-            // Activity.sourceConfig.entityId above, which are REQUIRED fields
-            // whose unset sentinel is "". setElementData re-stringifies the
-            // whole envelope, so the delete really clears -- this is not the
-            // updateElementData merge path, which cannot express deletion.
-            if (elementData.entityId === entityId) {
-                this.debug.debug('Clearing Connector entityId:', entityId);
-                delete elementData.entityId;
-                modified = true;
-            }
-
-            // Clean actions array (for CREATE actions)
-            if (elementData.actions && Array.isArray(elementData.actions)) {
-                const result = this.cleanActionsEntityReferences(
-                    elementData.actions,
-                    entityId
-                );
-                elementData.actions = result.actions;
-                if (result.modified) modified = true;
-            }
-
-            if (modified) {
-                this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
-                affectedCount++;
-                this.debug.debug('Cleaned entity references from Connector:', line.id);
-            }
+            const type = this.storageAdapter.getElementType(line)?.type;
+            if (type === SimulationObjectType.Connector) collect(line, type, collections.connectors);
         }
 
-        return affectedCount;
+        const result = run(collections);
+
+        const cleanedById = new Map<string, Record<string, unknown>>();
+        for (const list of [result.collections.generators, result.collections.activities, result.collections.connectors]) {
+            for (const record of list ?? []) cleanedById.set(String(record.id), record);
+        }
+
+        for (const id of result.changedElementIds) {
+            const origin = origins.get(id);
+            const cleaned = cleanedById.get(id);
+            if (!origin || !cleaned) continue;
+            const { id: _itemId, ...rest } = cleaned;
+            const record = origin.storedId === undefined ? rest : { ...rest, id: origin.storedId };
+            this.storageAdapter.setElementData(origin.item, record as { id: string }, origin.type);
+            this.debug.debug('Cleaned references from element:', { id, type: origin.type });
+        }
+
+        return result.changedElementIds.length;
+    }
+
+    /**
+     * The fallback for a deleted entity's required references, given the
+     * entities that REMAIN. Lucid always keeps the Default Entity
+     * (updateEntities re-inserts it), so an empty remainder can only come from
+     * a malformed page -- treat it as "Default Entity" rather than throwing
+     * mid-cascade.
+     */
+    private entityFallbackFor(remaining: ReadonlyArray<{ id: string }>): string {
+        return pickFallbackEntityId(
+            remaining.length > 0 ? remaining : [{ id: ModelDefaults.DEFAULT_ENTITY_ID }]
+        );
     }
 
     /**
@@ -1711,11 +1420,13 @@ export class ModelManager {
         }
 
         // Detect deleted Entities → clean generator/activity/action references
-        const newEntityIds = new Set(newModel.entities.getAll().map(e => e.id));
+        const newEntities = newModel.entities.getAll();
+        const newEntityIds = new Set(newEntities.map(e => e.id));
+        const rebuildFallbackEntityId = this.entityFallbackFor(newEntities);
         for (const oldEntity of oldModel.entities.getAll()) {
             if (!newEntityIds.has(oldEntity.id)) {
                 this.debug.debug('Detected deleted entity during rebuild:', oldEntity.id);
-                await this.cleanupEntityReferences(oldEntity.id, page);
+                await this.cleanupEntityReferences(oldEntity.id, rebuildFallbackEntityId, page);
             }
         }
 
@@ -1857,8 +1568,9 @@ export class ModelManager {
      * Updates the entities array for the model.
      *
      * Entities are stored as a page-level list (q_entities), mirroring updateStates.
-     * Deleting an entity cascades reference cleanup (Generator.entityId (flat),
-     * Activity self-gen sourceConfig.entityId, CREATE-action entityTemplateId).
+     * Deleting an entity cascades reference cleanup through the shared rule (see
+     * cleanupEntityReferences): required references re-point to the Default Entity,
+     * optional ones are cleared.
      *
      * The default entity (ModelDefaults.DEFAULT_ENTITY_ID) is load-bearing: every new
      * Generator defaults its entityId to it, and the model must always have at least one
@@ -1893,7 +1605,9 @@ export class ModelManager {
             // Find deleted entities
             const deletedEntities = currentEntities.filter(e => !newEntityIds.has(e.id));
 
-            // Clean up references for each deleted entity
+            // Clean up references for each deleted entity. entitiesToSave always
+            // holds the Default Entity (re-inserted above), so the fallback is it.
+            const fallbackEntityId = this.entityFallbackFor(entitiesToSave);
             let totalAffected = 0;
             for (const deletedEntity of deletedEntities) {
                 this.debug.debug('Detected deleted entity, cleaning up references:', {
@@ -1902,6 +1616,7 @@ export class ModelManager {
                 });
                 const affectedCount = await this.cleanupEntityReferences(
                     deletedEntity.id,
+                    fallbackEntityId,
                     page
                 );
                 totalAffected += affectedCount;
@@ -1947,7 +1662,7 @@ export class ModelManager {
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'resources', 'resourceRequirements'];
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'entities', 'resources', 'resourceRequirements'];
         const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
@@ -1979,6 +1694,16 @@ export class ModelManager {
                 page,
                 patch.workSchedules as ISerializedWorkSchedule[]
             );
+        }
+
+        // Entities (spec 2026-09-11): Lucid's Entities tab mounts the shared
+        // EntitiesEditor, which writes the WHOLE list. Routed through
+        // updateEntities, never a bare setEntities: that is the one place that
+        // re-inserts the Default Entity and runs the shared delete rule over
+        // stored shape data. Entities and resources reference nothing of each
+        // other, so this position is arbitrary -- but fixed.
+        if ('entities' in patch) {
+            await this.updateEntities(patch.entities as ISerializedEntity[], page);
         }
 
         // `resources` before `resourceRequirements`: a delete patch's cascade

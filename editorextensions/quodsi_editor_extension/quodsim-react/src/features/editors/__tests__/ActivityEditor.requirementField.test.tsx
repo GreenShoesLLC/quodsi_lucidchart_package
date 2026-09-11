@@ -62,7 +62,7 @@ describe('ActivityEditor — shared RequirementField', () => {
   // concurrently), unrelated to the assertions themselves.
   it('renders a picker (not a <select>) for Delay, Seize and Release, with the Studio labels', async () => {
     const user = userEvent.setup()
-    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
     // Tabs are plain buttons (title-derived accessible name), not role="tab".
     await user.click(screen.getByRole('button', { name: /actions/i }))
     // Each SortableActionItem expand toggle is a button titled "Expand"/"Collapse".
@@ -103,7 +103,7 @@ describe('ActivityEditor — shared RequirementField', () => {
   it('picking a requirement writes it into the saved action', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
-    render(<ActivityEditor activity={activity} onSave={onSave} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /actions/i }))
     await expandAllActions(user)
     // navigate to the first action's picker as above
@@ -121,7 +121,7 @@ describe('ActivityEditor — shared RequirementField', () => {
       ...activity,
       actions: [{ id: 'a3', type: 'release', resourceRequirementId: 'req-1' }],
     } as any
-    render(<ActivityEditor activity={activityWithReleaseRequirement} onSave={onSave} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activityWithReleaseRequirement} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /actions/i }))
     await expandAllActions(user)
     await user.click(screen.getByRole('button', { name: /^resource requirement$/i }))
@@ -133,7 +133,7 @@ describe('ActivityEditor — shared RequirementField', () => {
 
   it('Failure tab renders the repair picker with "(none — no resource needed)"', async () => {
     const user = userEvent.setup()
-    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /failure/i }))
     // Repair field is gated behind the "Enable Failure Simulation" checkbox.
     await user.click(screen.getByRole('checkbox', { name: /enable failure simulation/i }))
@@ -148,7 +148,7 @@ describe('ActivityEditor — shared RequirementField', () => {
       ...activity,
       failureProperties: { enabled: true, repairResourceRequirementId: 'req-1' },
     } as any
-    render(<ActivityEditor activity={activityWithRepair} onSave={onSave} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activityWithRepair} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /failure/i }))
     await user.click(screen.getByRole('button', { name: /repair resource requirement/i }))
     await user.click(screen.getByRole('option', { name: /\(none — no resource needed\)/ }))
@@ -165,7 +165,7 @@ describe('ActivityEditor — shared RequirementField', () => {
         { id: 'a2', type: 'seize', resourceRequirementId: 'req-1' },
       ],
     } as any
-    render(<ActivityEditor activity={activityWithRequirement} onSave={vi.fn()} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activityWithRequirement} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /actions/i }))
     // Collapsed (never expanded) — the summary row still resolves the name.
     expect(screen.getByText('Triage team')).toBeInTheDocument()

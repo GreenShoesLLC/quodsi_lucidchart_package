@@ -83,9 +83,7 @@ const baseProps = (model: any) => ({
   model,
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 });
 
 const expandAdvanced = () =>

@@ -63,7 +63,7 @@ const ROUTING_TAB_NAME = /configure how entities are routed/i
 describe('ActivityEditor — Routing Configuration tab renders the shared ConnectorRoutingView', () => {
   it('Routing Configuration tab renders the shared view with four modes', async () => {
     const user = userEvent.setup()
-    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: ROUTING_TAB_NAME }))
     const select = screen.getByRole('combobox') // the view's mode select -- only one <select> renders in Probability mode
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['Probability', 'State Condition', 'Entity Template', 'First Available'])
@@ -73,7 +73,7 @@ describe('ActivityEditor — Routing Configuration tab renders the shared Connec
   it('choosing First Available flows through the editor draft to onSave', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
-    render(<ActivityEditor activity={activity} onSave={onSave} states={new StateListManager()} onStatesChange={vi.fn()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: ROUTING_TAB_NAME }))
     await user.selectOptions(screen.getByRole('combobox'), 'first_available')
     await waitFor(() => expect(onSave).toHaveBeenCalled())

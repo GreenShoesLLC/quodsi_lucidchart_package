@@ -14,8 +14,7 @@ import { getSimulationObjectType } from "../../utils/typeDetection";
 // Levers tabs, source resolution and the not-found/unconnected banners all
 // live there, same as Studio/drawio.
 import { ConnectorEditor } from "quodsi_studio/platforms/shared";
-import ModelEditor, { EditorTab } from "../editors/ModelEditor";
-import { EntityRow } from "../editors/EntitiesEditor";
+import ModelEditor, { EditorTab, EntityRow } from "../editors/ModelEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
@@ -35,9 +34,7 @@ interface ElementEditorProps {
   referenceData: EditorReferenceData;
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
-  onStatesChange: (states: StateListManager) => void;
   entities: EntityRow[];
-  onEntitiesChange: (entities: EntityRow[]) => void;
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
@@ -58,9 +55,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   referenceData,
   currentElement,
   states,
-  onStatesChange,
   entities,
-  onEntitiesChange,
   resourceRequirements,
   outgoingConnectors,
   validationState,
@@ -154,9 +149,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onRemoveModel={onRemoveModel}
             onValidate={onValidate}
             states={states}
-            onStatesChange={onStatesChange}
             entities={entities}
-            onEntitiesChange={onEntitiesChange}
             referenceData={referenceData}
             resourceRequirements={resourceRequirements}
             validationState={validationState}
@@ -174,7 +167,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             referenceData={referenceData}
             states={states}
-            onStatesChange={onStatesChange}
             outgoingConnectors={outgoingConnectors}
           />
         );
@@ -187,7 +179,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             referenceData={referenceData}
             states={states}
-            onStatesChange={onStatesChange}
           />
         );
 

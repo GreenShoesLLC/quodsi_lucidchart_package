@@ -30,7 +30,6 @@ const baseProps = {
   activity: { id: "a1", name: "Triage", capacity: 1, actions: [], levers: [] } as any,
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 

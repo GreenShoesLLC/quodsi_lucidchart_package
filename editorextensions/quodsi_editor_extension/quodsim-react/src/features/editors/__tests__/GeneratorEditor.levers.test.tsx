@@ -38,7 +38,6 @@ const baseProps = {
   generator: { id: "g1", name: "Arrivals", generationConfig: {}, levers: [] } as any,
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 

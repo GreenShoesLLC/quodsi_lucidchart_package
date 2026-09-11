@@ -71,7 +71,6 @@ function setView(view: "basic" | "intermediate" | "advanced") {
 const activityProps = {
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
   activity: { id: "a1", name: "Triage", capacity: 1, actions: [], levers: [] } as any,
 };
@@ -79,7 +78,6 @@ const activityProps = {
 const generatorProps = {
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
   generator: { id: "g1", name: "Arrivals", mode: "frequency", levers: [] } as any,
 };
@@ -88,9 +86,7 @@ const modelProps = {
   model: { id: "m1", name: "My Model", reps: 1, seed: 12345, levers: [] } as any,
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: vi.fn(),
 };
 
 describe("Lucid tab surface maps", () => {

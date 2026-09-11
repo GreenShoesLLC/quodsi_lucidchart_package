@@ -129,7 +129,7 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
             name: a.name,
             workScheduleId: a.workScheduleId,
         })),
-        // id + name ONLY -- exactly what ScheduleModal.tsx:111-114 reads and
+        // States: id + name ONLY -- exactly what ScheduleModal.tsx:111-114 reads and
         // forwards to ScheduleTable/SchedulePasteImport, whose props are typed
         // `{ id: string; name: string }[]` (ScheduleTable.tsx:42-43). NOT
         // `.toJSON()` / whole domain objects: that would put every future
@@ -137,7 +137,15 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
         // Without these two, the per-row Entity and State dropdowns were empty
         // in Lucid, so no scheduled arrival could be given the entityId the
         // engine requires and the document was rejected wholesale.
-        entities: def.entities.getAll().map(e => ({ id: e.id, name: e.name })),
+        //
+        // Entities also carry `description` (spec 2026-09-11): the shared
+        // EntitiesEditor on Lucid's Entities tab shows and edits it. Omitted
+        // when empty, matching Entity.toJSON's sparse description.
+        entities: def.entities.getAll().map(e => ({
+            id: e.id,
+            name: e.name,
+            ...(e.description ? { description: e.description } : {}),
+        })),
         states: def.states.getAll().map(s => ({ id: s.id, name: s.name })),
         // Lucid global resources (Plan 2b). shapeId/shapeLabel/laneRef are
         // TRANSIENT link markers -- stamped in-memory on the Resource

@@ -233,15 +233,15 @@ describe('ModelManager.buildModelRootProjection', () => {
     expect(projection.generators[0]).toHaveProperty('arrivalScheduleId', 'as-a');
   });
 
-  it('projects entities and states as id + name only', async () => {
+  it('projects entities as id + name + description, and states as id + name only', async () => {
     const { mm } = harness();
 
     const projection = await mm.buildModelRootProjection({ id: 'page-A' });
 
-    // Exactly the shape ScheduleTable.tsx:42-43 types its props as -- the
-    // extra `description`/`dataType` on the source objects must NOT ride along
-    // onto the MODEL_ROOT_SNAPSHOT wire.
-    expect(projection.entities).toEqual([{ id: 'ent-a', name: 'Patient' }]);
+    // entities carry `description` for the shared EntitiesEditor (spec
+    // 2026-09-11); ScheduleTable reads only id/name and ignores it. States
+    // stay narrow -- the extra `dataType` must NOT ride along.
+    expect(projection.entities).toEqual([{ id: 'ent-a', name: 'Patient', description: 'noise' }]);
     expect(projection.states).toEqual([{ id: 'st-a', name: 'Priority' }]);
   });
 

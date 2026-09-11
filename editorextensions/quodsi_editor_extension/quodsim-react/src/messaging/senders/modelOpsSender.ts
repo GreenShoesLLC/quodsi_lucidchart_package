@@ -14,6 +14,9 @@ const RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS = 30_000;
 // Same reasoning as RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS above.
 const ELEMENT_UPDATE_TIMEOUT_MS = 30_000;
 
+// Same reasoning as RESOURCE_REQUIREMENTS_UPDATE_TIMEOUT_MS above.
+const STATES_UPDATE_TIMEOUT_MS = 30_000;
+
 /**
  * Custom hook that provides typed functions for sending model operations messages
  *
@@ -127,16 +130,52 @@ export function useModelOpsSender() {
   }, [send]);
 
   /**
-   * Send a request to update the states array
+   * Persist the model-level states list. A confirmed round trip, same shape as
+   * updateResourceRequirements below: resolves only when the host replies
+   * STATES_UPDATE_RESULT for this envelope id, and rejects on a failure reply
+   * or timeout. Studio's shared StatesEditor (Lucid's States tab,
+   * referenceCleanup "host") awaits it so a failed delete can explain itself.
+   * The host (statesHandler) runs the shared state-delete rule and forces a
+   * referenceData rebuild before replying.
    *
    * @param states Array of serialized state definitions
    */
-  const updateStates = useCallback((states: ISerializedState[]) => {
-    // Use STATES_UPDATE for updating states
-    send(EnvelopeMessageType.STATES_UPDATE, {
-      states
-    });
-  }, [send]);
+  const updateStates = useCallback(
+    (states: ISerializedState[]): Promise<void> =>
+      new Promise<void>((resolve, reject) => {
+        if (!window.parent) {
+          reject(new Error('No parent window to send states to'));
+          return;
+        }
+        const correlationId = uuid();
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const handler = (event: MessageEvent) => {
+          const msg = event.data;
+          if (msg?.id === correlationId && msg?.type === EnvelopeMessageType.STATES_UPDATE_RESULT) {
+            window.removeEventListener('message', handler);
+            if (timeoutId !== undefined) clearTimeout(timeoutId);
+            const data = (msg.data || {}) as { success?: boolean; errorMessage?: string };
+            if (data.success) resolve();
+            else reject(new Error(data.errorMessage || 'States update failed'));
+          }
+        };
+        window.addEventListener('message', handler);
+        timeoutId = setTimeout(() => {
+          window.removeEventListener('message', handler);
+          reject(new Error('States update timed out'));
+        }, STATES_UPDATE_TIMEOUT_MS);
+        const envelope: EnvelopeBase = {
+          id: correlationId,
+          type: EnvelopeMessageType.STATES_UPDATE,
+          source: 'model-iframe',
+          target: 'host',
+          version: '1.0',
+          data: { states },
+        };
+        window.parent.postMessage(envelope, '*');
+      }),
+    [],
+  );
 
   /**
    * Send a request to update the entities array

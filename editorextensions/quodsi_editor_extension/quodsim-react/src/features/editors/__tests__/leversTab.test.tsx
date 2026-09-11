@@ -58,14 +58,12 @@ const LEVERS_TAB_NAME = /mark .* as a scenario lever/i;
 const activityProps = {
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 
 const generatorProps = {
   onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 

@@ -60,7 +60,6 @@ const baseProps = {
   onSave,
   referenceData: { entities: [] } as any,
   states: {} as any,
-  onStatesChange: vi.fn(),
 };
 
 function patternGenerator(overrides: Record<string, unknown> = {}) {

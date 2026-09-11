@@ -48,7 +48,6 @@ const baseProps = {
   onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
-  onStatesChange: vi.fn(),
 };
 
 function scheduledGenerator(overrides: Record<string, unknown> = {}) {
