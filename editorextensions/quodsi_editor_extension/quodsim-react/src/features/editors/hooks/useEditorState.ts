@@ -17,13 +17,22 @@ const log = getLogger("useAutoSave");
  * @param extractElementData - Function to extract fresh element data from props
  * @param setLocalDraft - State setter to update the form draft
  * @param setHasPendingChanges - Optional state setter to clear the pending changes flag when switching elements
+ * @param syncKey - Optional identity of the props the draft is extracted from
+ *   (typically the element-data prop itself). When it changes for the SAME
+ *   element and there are no pending edits, the draft is re-extracted. Without
+ *   it the hook only ever synced on an element-id change, so an editor left
+ *   open kept stale values after an external write -- the Advisor's
+ *   run-settings Apply landed on the page, the extension re-sent the selection
+ *   with the new values, and the Model editor still showed the old ones
+ *   (ClickUp 86e34wx7y). Callers that omit it keep the old behaviour.
  */
 export function useFormSync<T>(
   elementId: string,
   hasPendingChanges: boolean,
   extractElementData: () => T,
   setLocalDraft: (element: T) => void,
-  setHasPendingChanges?: (value: boolean) => void
+  setHasPendingChanges?: (value: boolean) => void,
+  syncKey?: unknown
 ) {
   // Track previous element ID to detect when user switches to a different element
   const previousElementIdRef = useRef(elementId);
@@ -49,7 +58,7 @@ export function useFormSync<T>(
       setLocalDraft(extractElementData());
     }
     // If same element AND pending changes - skip sync to preserve user's edits
-  }, [elementId]);
+  }, [elementId, syncKey]);
 }
 
 /**
