@@ -1,10 +1,23 @@
-// Page guard (spec 2026-09-11): the Model editor's settings save must be
-// stamped from the page whose model data the Basic form is actually editing
-// -- documentContext.metadata.modelItemData.id -- not `referenceData.pageId`,
-// which is rebuilt by a different code path and can still be the previous
-// page's after a page switch with nothing selected (final-review.md C1/I1).
-// The host builds a page's modelItemData with id = the LIVE page id
-// (itemDataBuilder.ts), so the form and its page id always travel together.
+// Page guard (spec 2026-09-11, residual round): the Model editor's settings
+// save must be stamped from the id of the DRAFT BEING SAVED (`data.id`), not
+// from documentContext or referenceData read at send time.
+//
+// Both of those are PROPS, refreshed by the host's SELECTION_CHANGED message.
+// ModelEditor's localModelDraft is refreshed from the same source, but one
+// render later -- useFormSync resyncs it inside a passive effect (ModelEditor
+// ~line 293-300; useEditorState.ts useFormSync ~line 41-61). A 500ms autosave
+// debounce (useAutoSave, useEditorState.ts ~161-162 dispatches
+// onSaveRef.current(draftRef.current)) can fire inside that one-render gap
+// after a page switch: documentContext/modelItemData already show the NEW
+// page, but localModelDraft (and the data it saves) still holds the OLD
+// page's content. Stamping from props would tag page A's draft with page B's
+// id and the host would accept a wrong-page overwrite (final-review.md C1(b)
+// data-loss class). data.id is the draft's own id -- ModelPanel.tsx ~302-305
+// builds `elementData = { ...currentElement.data, id: currentElement.id }`,
+// and features/utils/modelEditorHelpers.ts's extractModelData carries that id
+// into localModelDraft.id and then into the saved Model -- so it always names
+// the page the CONTENT being sent actually came from, never a page it raced
+// past.
 import { renderHook } from '@testing-library/react'
 
 const { updateElementData, selectionRef } = vi.hoisted(() => ({
@@ -42,7 +55,12 @@ beforeEach(() => {
 })
 
 describe('useModelPanel model settings save', () => {
-  it("stamps the save with the page id of the model data the form edits, not referenceData's (possibly lagging) page id", () => {
+  it("stamps the save with the DRAFT's own page id, not documentContext/referenceData's (already-switched) page id", () => {
+    // The panel has already moved on to page B (documentContext, modelItemData,
+    // referenceData all say so), but the draft being saved right now is the
+    // one ModelEditor captured before the switch -- its data still carries
+    // page A's id. This is the switch-gap case: a stale debounced flush must
+    // still be tagged with the page its OWN content came from.
     selectionRef.current = {
       selectedElements: [],
       documentContext: {
@@ -60,26 +78,24 @@ describe('useModelPanel model settings save', () => {
           },
         },
       },
-      // Lagging: rebuilt from the previous page by a processor that never
-      // called setCurrentPage (I1). Must NOT be what gets sent.
-      referenceData: { pageId: 'page-A' },
+      referenceData: { pageId: 'page-B' },
       diagramElementType: undefined,
       lastUpdated: undefined,
     }
 
     const { result } = renderHook(() => useModelPanel())
 
-    result.current.onElementUpdate('page-B', { name: 'Renamed' })
+    result.current.onElementUpdate('page-A', { id: 'page-A', name: 'Renamed' })
 
     expect(updateElementData).toHaveBeenCalledTimes(1)
     const call = updateElementData.mock.calls[0]
     expect(call[1]).toBe('Model')
-    expect(call[4]).toBe('page-B')
-    expect(call[4]).not.toBe('page-A')
+    expect(call[4]).toBe('page-A')
+    expect(call[4]).not.toBe('page-B')
     expect(call[4]).not.toBe('stored-model-id')
   })
 
-  it('sends undefined for the placeholder model (no metadata.modelItemData), so a save from it is refused as not tied to a loaded page', () => {
+  it("stamps the save with the draft's id when it matches the current page (the ordinary case)", () => {
     selectionRef.current = {
       selectedElements: [],
       documentContext: {
@@ -87,18 +103,57 @@ describe('useModelPanel model settings save', () => {
         pageId: 'page-B',
         documentTitle: 'Doc',
         isQuodsiModel: true,
-        // No metadata.modelItemData -- useModelPanel builds a placeholder
-        // Model element whose id is the DOCUMENT id, not a page id.
-        metadata: undefined,
+        metadata: {
+          modelItemData: {
+            id: 'page-B',
+            name: 'Model',
+            type: 'Model',
+            metadata: { type: 'Model', id: 'stored-model-id' },
+            data: {},
+          },
+        },
       },
-      referenceData: { pageId: 'page-A' },
+      referenceData: { pageId: 'page-B' },
       diagramElementType: undefined,
       lastUpdated: undefined,
     }
 
     const { result } = renderHook(() => useModelPanel())
 
-    result.current.onElementUpdate('doc-1', { name: 'Renamed' })
+    result.current.onElementUpdate('page-B', { id: 'page-B', name: 'Renamed' })
+
+    expect(updateElementData).toHaveBeenCalledTimes(1)
+    const call = updateElementData.mock.calls[0]
+    expect(call[1]).toBe('Model')
+    expect(call[4]).toBe('page-B')
+  })
+
+  it('sends undefined when the draft carries no id', () => {
+    selectionRef.current = {
+      selectedElements: [],
+      documentContext: {
+        documentId: 'doc-1',
+        pageId: 'page-B',
+        documentTitle: 'Doc',
+        isQuodsiModel: true,
+        metadata: {
+          modelItemData: {
+            id: 'page-B',
+            name: 'Model',
+            type: 'Model',
+            metadata: { type: 'Model', id: 'stored-model-id' },
+            data: {},
+          },
+        },
+      },
+      referenceData: { pageId: 'page-B' },
+      diagramElementType: undefined,
+      lastUpdated: undefined,
+    }
+
+    const { result } = renderHook(() => useModelPanel())
+
+    result.current.onElementUpdate('page-B', { name: 'Renamed' })
 
     expect(updateElementData).toHaveBeenCalledTimes(1)
     const call = updateElementData.mock.calls[0]

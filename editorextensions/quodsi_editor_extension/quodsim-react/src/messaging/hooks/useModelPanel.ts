@@ -211,13 +211,18 @@ export function useModelPanel() {
         data
       });
       // Use the model update method
-      // Page guard (spec 2026-09-11): tie the save to the page whose model
-      // data this form is editing. The host builds the page's modelItemData
-      // with id = the live page id, so the form and its page id always arrive
-      // together. (referenceData can lag a page switch, and the placeholder
-      // model below has a document id, not a page id -- a save from it is
-      // refused as not tied to a loaded page.)
-      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType, documentContext.metadata?.modelItemData?.id);
+      // Page guard (spec 2026-09-11, residual round): tie the save to the id
+      // of the draft being saved, which is the page it was loaded from, so a
+      // debounced save flushed after a page switch carries its own page. Both
+      // documentContext.metadata.modelItemData.id and referenceData.pageId
+      // are read from PROPS at send time and can already reflect a page the
+      // panel switched to *after* this draft was captured -- useFormSync
+      // resyncs the draft in a passive effect one render behind a prop
+      // change, and a 500ms autosave debounce can fire inside that gap.
+      // data.id is the draft's own id (ModelEditor's localModelDraft.id,
+      // itself set from the same modelItemData the draft's content came
+      // from), so it never disagrees with the content it is attached to.
+      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType, typeof data.id === 'string' ? data.id : undefined);
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';

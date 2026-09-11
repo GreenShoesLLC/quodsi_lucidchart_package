@@ -185,9 +185,9 @@ export class ElementOpsHandler {
           pageId: currentPage.id
         });
         // Page guard (spec 2026-09-11): a model settings write must be based
-        // on the current page. Its element id is not a reliable page id -- a
-        // duplicated Lucid page keeps the original page's model id -- so the
-        // panel sends basedOnPageId explicitly.
+        // on the current page, the same as every other guarded write -- the
+        // panel sends basedOnPageId explicitly, taken from the draft's own
+        // page id (see useModelPanel.ts's Model branch).
         assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
         // Model is the Page itself, not a block or line
         element = currentPage;
