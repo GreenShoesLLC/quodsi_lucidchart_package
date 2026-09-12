@@ -34,6 +34,7 @@ import {
   EnvelopeMessageType,
   MessageSource,
   ModelRootProjection,
+  MODEL_FIELD_KEYS,
 } from '@quodsi/lucid-shared'
 import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
 import { useMessaging } from '../messaging/MessageProvider'
@@ -70,6 +71,12 @@ export type ModelRootTransport = {
 // canvas, not the record, so no patch a panel sends ever carries them.
 const TRANSIENT_RESOURCE_KEYS = ['shapeId', 'shapeLabel', 'laneRef'] as const
 
+// The model's own settings (MODEL_FIELD_KEYS minus the host-owned `id`). The
+// snapshot carries each of them twice -- flat, where Lucid's Model editor
+// drafts from, and under `model`, where the shared modals' calendar math reads
+// -- so the echo writes both copies (spec 2026-09-12 §4).
+const MODEL_SETTINGS_KEYS = new Set<string>(MODEL_FIELD_KEYS.filter((key) => key !== 'id'))
+
 export function createModelRootSource(transport: ModelRootTransport) {
   const listeners = new Set<() => void>()
   let projection: ModelRootProjection | null = null
@@ -97,6 +104,7 @@ export function createModelRootSource(transport: ModelRootTransport) {
    * and never on a patch -- survive the echo; otherwise the Resources tab's
    * link column flickers to "no shape" for the length of a round trip. Every
    * other key is replaced wholesale: they carry no host-only fields.
+   * Model settings keys land flat AND in a rebuilt nested `model` block, the two places the snapshot carries them.
    *
    * The projection object is always REBUILT, never mutated: the accessor's
    * getSnapshot cache compares by identity. The authoritative
@@ -131,6 +139,10 @@ export function createModelRootSource(transport: ModelRootTransport) {
         })
       } else {
         next[key] = value
+        if (MODEL_SETTINGS_KEYS.has(key)) {
+          // Rebuilt, never mutated: subscribers compare by identity.
+          next.model = { ...((next.model as Record<string, unknown> | undefined) ?? {}), [key]: value }
+        }
       }
     }
 
@@ -282,6 +294,8 @@ const MODEL_ROOT_UPDATE_TIMEOUT_MS = 30_000
 export function useModelRootSource(): {
   accessor: ModelStateAccessor
   projection: ModelRootProjection | null
+  /** Ask the host for a fresh snapshot (ModelEditorForPage re-requests on selection changes). */
+  request: () => void
 } {
   const { app } = useMessaging()
   const source: MessageSource = SOURCE_BY_PANEL[app.panelType || 'model'] ?? 'model-iframe'
@@ -475,5 +489,5 @@ export function useModelRootSource(): {
     modelRootSource.deps.getModelDefinition,
   ) as unknown as ModelRootProjection | null
 
-  return { accessor, projection }
+  return { accessor, projection, request: modelRootSource.request }
 }

@@ -170,4 +170,39 @@ describe('createModelRootSource', () => {
     expect(send.mock.calls[0]).toEqual([{ resources: [] }, 'page-1', { seizeRelease: 'remove' }])
     expect(send.mock.calls[1]).toEqual([{ resources: [] }, 'page-1'])
   })
+
+  // spec 2026-09-12 §4: the snapshot carries each model setting flat (the
+  // Model editor drafts from it) AND under `model` (the shared modals read
+  // it). An echo that updated only one copy would leave the other stale for a
+  // whole round trip.
+  it('echoes a model-settings patch flat AND into a rebuilt nested model block', () => {
+    const source = createModelRootSource({ send: vi.fn().mockResolvedValue(undefined) })
+    source.acceptSnapshot({
+      generators: [], arrivalPatterns: [], pageId: 'page-1',
+      name: 'Old', replications: 1, levers: [{ leverId: 'lv' }],
+      model: { name: 'Old', replications: 1, levers: [{ leverId: 'lv' }], timeMode: 'clock' },
+    } as any)
+    const before = source.deps.getModelDefinition() as any
+
+    void source.deps.saveModel!({ name: 'New', levers: [] })
+
+    const after = source.deps.getModelDefinition() as any
+    expect(after.name).toBe('New')
+    expect(after.levers).toEqual([])
+    expect(after.model).toEqual({ name: 'New', replications: 1, levers: [], timeMode: 'clock' })
+    expect(after.model).not.toBe(before.model)
+    expect(before.model).toEqual({ name: 'Old', replications: 1, levers: [{ leverId: 'lv' }], timeMode: 'clock' })
+  })
+
+  it('leaves the nested model block untouched for a patch with no model settings', () => {
+    const source = createModelRootSource({ send: vi.fn().mockResolvedValue(undefined) })
+    source.acceptSnapshot({ generators: [], arrivalPatterns: [], pageId: 'page-1', model: { name: 'Clinic' } } as any)
+    const before = source.deps.getModelDefinition() as any
+
+    void source.deps.saveModel!({ arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], states: [] })
+
+    const after = source.deps.getModelDefinition() as any
+    expect(after.model).toBe(before.model)
+    expect(after.states).toEqual([])
+  })
 })

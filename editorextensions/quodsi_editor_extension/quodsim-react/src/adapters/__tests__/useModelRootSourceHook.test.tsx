@@ -14,7 +14,7 @@ vi.mock('../../messaging/MessageProvider', () => ({
 import { useModelRootSource } from '../useModelRootSource'
 
 function Harness() {
-  const { accessor, projection } = useModelRootSource()
+  const { accessor, projection, request } = useModelRootSource()
   // Real consumers (e.g. GeneratorEditor) read the accessor's saveStatus via
   // useSyncExternalStore, not a one-off getSnapshot() call at render time --
   // do the same here so this harness re-renders when updateModel notifies.
@@ -37,6 +37,7 @@ function Harness() {
       >
         delete-remove
       </button>
+      <button onClick={() => request()}>request</button>
     </div>
   )
 }
@@ -252,5 +253,17 @@ describe('useModelRootSource (hook)', () => {
     const updates = posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
     expect(updates[0].data).toEqual({ patch: { resources: [] }, basedOnPageId: 'page-1', seizeRelease: 'remove' })
     expect(updates[1].data).toEqual({ patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' })
+  })
+
+  it('returns request, which asks the host for another snapshot', () => {
+    const postMessageSpy = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {})
+    render(<Harness />)
+
+    act(() => {
+      screen.getByText('request').click()
+    })
+
+    const requests = postMessageSpy.mock.calls.filter(([envelope]) => (envelope as any)?.type === EnvelopeMessageType.MODEL_ROOT_REQUEST)
+    expect(requests).toHaveLength(2)
   })
 })
