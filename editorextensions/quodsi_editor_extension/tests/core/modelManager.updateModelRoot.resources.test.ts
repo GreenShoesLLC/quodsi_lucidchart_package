@@ -21,21 +21,19 @@ describe('updateModelRoot: resources / resourceRequirements', () => {
         expect(mm.changeTracker.modelDefinitionDirty).toBe(true);
     });
 
-    it('removing a resource cascades: its auto + any custom requirement requesting it are dropped from q_res_requirements and actions are cleared', async () => {
+    it('removing a resource prunes q_res_requirements: a requirement that still has another option survives', async () => {
         const { mm, storageAdapter, page } = makeManager();
         storageAdapter.setResources(page, [{ id: 'r1', name: 'Nurse' }, { id: 'r2', name: 'Doctor' }]);
         storageAdapter.setResourceRequirements(page, [
             { id: 'custom', name: 'Either', rootClause: { id: 'c', mode: 'require_any', requests: [{ resourceId: 'r1' }, { resourceId: 'r2' }] } } as any,
             { id: 'r2', name: 'Doctor', rootClause: { id: 'c2', mode: 'require_all', requests: [{ resourceId: 'r2' }] } } as any,
         ]);
-        const cleared: string[] = [];
-        mm.cleanupRequirementReferences = async (reqId: string) => { cleared.push(reqId); return 0; };
 
         await mm.updateModelRoot({ resources: [{ id: 'r2', name: 'Doctor' }] }, page);
 
         expect(storageAdapter.getResources(page)).toEqual([{ id: 'r2', name: 'Doctor' }]);
-        expect(storageAdapter.getResourceRequirements(page).map((r: any) => r.id)).toEqual(['r2']);
-        expect(cleared).toEqual(['custom']);
+        expect(storageAdapter.getResourceRequirements(page).map((r: any) => r.id)).toEqual(['custom', 'r2']);
+        expect((storageAdapter.getResourceRequirements(page)[0] as any).rootClause.requests).toEqual([{ resourceId: 'r2' }]);
     });
 
     it('resourceRequirements: plain autos are stripped before storage; custom and overridden autos are kept', async () => {

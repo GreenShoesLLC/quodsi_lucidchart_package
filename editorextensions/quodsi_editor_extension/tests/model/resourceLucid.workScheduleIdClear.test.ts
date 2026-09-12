@@ -46,8 +46,7 @@ function overTheWire<T>(data: T): any {
 function newManager(storage: StorageAdapter): ModelManager {
     const manager = new ModelManager(storage);
     (manager as any).modelDefinition = { model: { id: 'page-1', name: 'M' } };
-    (manager as any).cleanupResourceReferences = async () => [];
-    (manager as any).cleanupRequirementReferences = async () => undefined;
+    (manager as any).cleanupDeletedResource = () => undefined;
     return manager;
 }
 

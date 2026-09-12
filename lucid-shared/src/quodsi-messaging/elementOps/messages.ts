@@ -116,6 +116,10 @@ export interface ResourceRequirementsUpdateMessage extends EnvelopeBase {
   data: {
     /** Serialized resource requirements array */
     resourceRequirements: ISerializedResourceRequirement[];
+    /** Page the list was based on (spec 2026-09-11 page guard). */
+    basedOnPageId?: string;
+    /** A delete dialog's Seize/Release choice; absent means 'flag' (spec 2026-09-11 resource delete cleanup). */
+    seizeRelease?: 'flag' | 'remove';
   };
 }
 

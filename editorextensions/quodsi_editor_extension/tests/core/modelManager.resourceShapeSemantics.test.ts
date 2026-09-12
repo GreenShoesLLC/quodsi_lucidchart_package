@@ -47,10 +47,11 @@ function customRequirementRequesting(resourceId: string): any {
     };
 }
 
-/** Records every cleanupRequirementReferences call so "no cascade" is provable. */
+/** Records every shared reference cleanup so "no cascade" is provable. */
 function trackRequirementCascade(manager: ModelManager): string[] {
     const seen: string[] = [];
-    (manager as any).cleanupRequirementReferences = async (reqId: string) => { seen.push(reqId); return 0; };
+    const real = (manager as any).applySharedReferenceCleanup.bind(manager);
+    (manager as any).applySharedReferenceCleanup = (page: any, run: any) => { seen.push('cleanup'); return real(page, run); };
     return seen;
 }
 
@@ -207,10 +208,10 @@ describe('ModelManager — a Resource block is a pointer (Plan 2b Task 5)', () =
 
         // Count calls while still letting the real cascade run.
         const cascaded: string[] = [];
-        const realCleanup = (manager as any).cleanupResourceReferences.bind(manager);
-        (manager as any).cleanupResourceReferences = async (resourceId: string, p: any) => {
+        const realCleanup = (manager as any).cleanupDeletedResource.bind(manager);
+        (manager as any).cleanupDeletedResource = (resourceId: string, p: any, o: any) => {
             cascaded.push(resourceId);
-            return realCleanup(resourceId, p);
+            return realCleanup(resourceId, p, o);
         };
 
         await manager.updateModelRoot({ resources: [] }, page);
@@ -243,7 +244,7 @@ describe('ModelManager — a Resource block is a pointer (Plan 2b Task 5)', () =
         expect([first.x, first.y]).toEqual([11, 22]);
 
         const cascaded: string[] = [];
-        (manager as any).cleanupResourceReferences = async (resourceId: string) => { cascaded.push(resourceId); return []; };
+        (manager as any).cleanupDeletedResource = (resourceId: string) => { cascaded.push(resourceId); };
 
         page.allBlocks.delete('blk-1');
         manager.invalidateModelCache();

@@ -4,12 +4,18 @@
 //
 // Under format 1 the lane mapping WAS the resource's only home, so dropping
 // the mapping had to cascade: handleUpdate diffed the old and new lane
-// records and called ModelManager.cleanupDeletedResource for anything that
+// records and called a ModelManager cleanup cascade for anything that
 // disappeared. Under format 2 the record lives in the page's q_resources and
 // outlives every claimant -- a resource with no lane and no block is a
 // perfectly good unclaimed resource. Cascading here would silently destroy
-// model-level data the user never asked to delete, so the whole path (and
-// cleanupDeletedResource itself) is gone.
+// model-level data the user never asked to delete, so the whole path is gone
+// -- that old swimlane-specific cascade method no longer exists.
+//
+// Note (spec 2026-09-11 resource delete cleanup, Task 6): ModelManager since
+// gained an UNRELATED private method that happens to share the old cascade's
+// name, `cleanupDeletedResource` -- the Resources-tab delete flow's cascade,
+// which SwimLaneHandler never calls. The test below checks that directly
+// (via a spy) rather than asserting the name is absent from the prototype.
 //
 // Mocks lucid-extension-sdk's Viewport in place on the SAME module instance
 // swimlaneHandler.ts resolves through jest's moduleNameMapper, and mocks
@@ -89,8 +95,32 @@ describe('SwimLaneHandler.handleUpdate', () => {
     }));
   });
 
-  it('no longer has a resource-deleting cascade to call', () => {
-    expect((ModelManager.prototype as any).cleanupDeletedResource).toBeUndefined();
+  it('no longer has a resource-deleting cascade to call', async () => {
+    const page = makeFakePage('p2');
+    currentPage = page;
+    storage.setResources(page, [{ id: 'res-1', name: 'Nurse', capacity: 1, description: '' }]);
+    const block = addBlock(page, makeFakeBlock('sw-2', {
+      className: 'AdvancedSwimLaneBlock',
+      lanes: ['Nurse'],
+    }));
+    block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify({
+      lanes: [{ laneId: 'lane-1', titleSnapshot: 'Nurse', assignmentMode: 'runtime-derive', resourceId: 'res-1' }],
+      lastSyncedAt: '2026-01-01T00:00:00.000Z',
+    } as SwimLaneQuodsiData));
+
+    const cascadeSpy = jest.spyOn(ModelManager.prototype as any, 'cleanupDeletedResource');
+
+    await (SwimLaneHandler as any).handleUpdate({
+      id: 'msg-3',
+      type: EnvelopeMessageType.SWIMLANE_UPDATE,
+      source: 'model-iframe',
+      target: 'host',
+      version: '1.0',
+      data: { swimlaneBlockId: 'sw-2', swimlaneData: { lanes: [null], lastSyncedAt: '2026-01-02T00:00:00.000Z' } },
+    });
+
+    expect(cascadeSpy).not.toHaveBeenCalled();
+    cascadeSpy.mockRestore();
   });
 });
 

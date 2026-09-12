@@ -115,7 +115,7 @@ describe('MODEL_ROOT_UPDATE', () => {
     await update('model-iframe', { patch: { resources: [] }, basedOnPageId: 'page-B' });
     await flush();
 
-    expect(modelManagerStub.updateModelRoot).toHaveBeenCalledWith({ resources: [] }, currentPage);
+    expect(modelManagerStub.updateModelRoot).toHaveBeenCalledWith({ resources: [] }, currentPage, { seizeRelease: 'flag' });
     expect(resultData(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT)).toEqual({ success: true });
   });
 

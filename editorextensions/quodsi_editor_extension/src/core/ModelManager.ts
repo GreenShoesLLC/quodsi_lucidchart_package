@@ -35,8 +35,11 @@ import {
     resourceLinkIssues,
     removeEntityReferences,
     removeStateReferences,
+    removeRequirementReferences,
+    removeResourceReferences,
     pickFallbackEntityId,
 } from "@quodsi/lucid-shared";
+import type { ReferenceCleanupOptions } from "@quodsi/lucid-shared";
 
 /** Stored element data a shared reference-cleanup rule runs over, keyed by Lucid item id. */
 type SharedCleanupCollections = {
@@ -45,7 +48,7 @@ type SharedCleanupCollections = {
     connectors: Array<Record<string, unknown>>;
 };
 
-/** What @quodsi/shared removeEntityReferences / removeStateReferences return. */
+/** What the @quodsi/shared reference-cleanup rules return. */
 type SharedCleanupResult = {
     collections: {
         generators?: Array<Record<string, unknown>>;
@@ -481,8 +484,8 @@ export class ModelManager {
     /**
      * Removes an element.
      *
-     * For Resources: Cascading cleanup removes associated ResourceRequirements,
-     * which then cascades to clean up actions (SEIZE/RELEASE deleted, DELAY_WITH_RESOURCE nullified).
+     * For Resources: no cascade -- a Resource block is a pointer; a resource is
+     * deleted only through updateModelRoot({ resources }) (see below).
      *
      * For Entities: Cascading cleanup clears entity references in Generators,
      * Activities (sourceConfig), and CreateActions (entityTemplateId).
@@ -999,143 +1002,6 @@ export class ModelManager {
     }
 
     /**
-     * Helper method to clean requirement references from an actions array.
-     * Handles all action types that can contain resource requirement references.
-     *
-     * Strategy:
-     * - SEIZE and RELEASE actions are DELETED (they're useless without a requirement)
-     * - DELAY_WITH_RESOURCE actions have resourceRequirementId NULLIFIED (still valid as pure delay)
-     *
-     * @param actions Array of actions to clean
-     * @param deletedRequirementId ID of the deleted requirement
-     * @returns Object with cleaned actions array and whether any modifications were made
-     */
-    private cleanActionsRequirementReferences(
-        actions: any[],
-        deletedRequirementId: string
-    ): { actions: any[]; modified: boolean } {
-        let modified = false;
-
-        // Filter out SEIZE and RELEASE actions that reference the deleted requirement
-        const filteredActions = actions.filter(action => {
-            if (!action || !action.type) return true;
-
-            // Delete SEIZE actions referencing this requirement
-            if (action.type === ActionType.SEIZE && action.resourceRequirementId === deletedRequirementId) {
-                this.debug.debug('Removing SEIZE action referencing deleted requirement:', deletedRequirementId);
-                modified = true;
-                return false; // Remove this action
-            }
-
-            // Delete RELEASE actions referencing this requirement
-            if (action.type === ActionType.RELEASE && action.resourceRequirementId === deletedRequirementId) {
-                this.debug.debug('Removing RELEASE action referencing deleted requirement:', deletedRequirementId);
-                modified = true;
-                return false; // Remove this action
-            }
-
-            return true; // Keep this action
-        });
-
-        // Process remaining actions for DELAY_WITH_RESOURCE nullification and nested actions
-        for (const action of filteredActions) {
-            if (!action || !action.type) continue;
-
-            // Nullify DELAY_WITH_RESOURCE resourceRequirementId (still valid as pure delay)
-            if (action.type === ActionType.DELAY_WITH_RESOURCE && action.resourceRequirementId === deletedRequirementId) {
-                this.debug.debug('Nullifying DELAY_WITH_RESOURCE resourceRequirementId:', deletedRequirementId);
-                action.resourceRequirementId = null;
-                modified = true;
-            }
-
-            // Handle BRANCH action - recursively clean nested actions
-            if (action.type === ActionType.BRANCH) {
-                // Recursively clean ifTrue actions
-                if (action.ifTrue && Array.isArray(action.ifTrue)) {
-                    const result = this.cleanActionsRequirementReferences(action.ifTrue, deletedRequirementId);
-                    action.ifTrue = result.actions;
-                    if (result.modified) modified = true;
-                }
-
-                // Recursively clean ifFalse actions
-                if (action.ifFalse && Array.isArray(action.ifFalse)) {
-                    const result = this.cleanActionsRequirementReferences(action.ifFalse, deletedRequirementId);
-                    action.ifFalse = result.actions;
-                    if (result.modified) modified = true;
-                }
-            }
-
-            // Handle LOOP action - recursively clean nested actions
-            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
-                const result = this.cleanActionsRequirementReferences(action.actions, deletedRequirementId);
-                action.actions = result.actions;
-                if (result.modified) modified = true;
-            }
-        }
-
-        return { actions: filteredActions, modified };
-    }
-
-    /**
-     * Clean up all references to a deleted resource requirement.
-     *
-     * Action cleanup strategy:
-     * - SEIZE and RELEASE actions: DELETED (cannot function without requirement)
-     * - DELAY_WITH_RESOURCE actions: resourceRequirementId NULLIFIED (still valid as pure delay)
-     */
-    private async cleanupRequirementReferences(requirementId: string, page: PageProxy): Promise<number> {
-        this.debug.debug('Cleaning up references to requirement:', requirementId);
-        let affectedCount = 0;
-
-        // Process all activities - update actions that reference the deleted requirement
-        for (const [, block] of page.allBlocks) {
-            const elementData = this.storageAdapter.getElementData<any>(block);
-            if (!elementData) continue;
-
-            // Get element type from q_data
-            const typeInfo = this.storageAdapter.getElementType(block);
-            const elementType = typeInfo?.type;
-
-            if (elementType === SimulationObjectType.Activity) {
-                let modified = false;
-
-                if (elementData.actions) {
-                    const result = this.cleanActionsRequirementReferences(
-                        elementData.actions,
-                        requirementId
-                    );
-
-                    if (result.modified) {
-                        elementData.actions = result.actions;
-                        modified = true;
-                    }
-                }
-
-                // The Failure tab's repair requirement is a second reference
-                // path that lives outside `actions` -- Task 2 feeds it into
-                // the usage index (referenceDataBuilder's failureProperties
-                // summary), so the delete confirmation counts it and the
-                // extension must actually clear it, same as the actions
-                // cleanup above. "" is the existing empty sentinel (see
-                // cleanupEntityReferences' Generator.entityId precedent).
-                if (elementData.failureProperties?.repairResourceRequirementId === requirementId) {
-                    this.debug.debug('Clearing failureProperties.repairResourceRequirementId:', requirementId);
-                    elementData.failureProperties.repairResourceRequirementId = '';
-                    modified = true;
-                }
-
-                if (modified) {
-                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
-                    affectedCount++;
-                    this.debug.debug('Updated activity after requirement cleanup:', block.id);
-                }
-            }
-        }
-
-        return affectedCount;
-    }
-
-    /**
      * Clean up every reference to a deleted Entity, using the SHARED rule
      * (@quodsi/shared removeEntityReferences) so LucidChart deletes an entity
      * exactly the way drawio, Visio and Studio do (spec 2026-09-11):
@@ -1348,80 +1214,6 @@ export class ModelManager {
         }
 
         return { actions, modified };
-    }
-
-    /**
-     * Helper to check if a clause or its sub-clauses reference a specific resource.
-     */
-    private clauseReferencesResource(clause: any, resourceId: string): boolean {
-        // Check requests in this clause
-        if (clause.requests && Array.isArray(clause.requests)) {
-            if (clause.requests.some((request: any) => request.resourceId === resourceId)) {
-                return true;
-            }
-        }
-
-        // Recursively check sub-clauses. Wire-cleanup Phase B2 Task 6:
-        // `subClauses` -> `clauses`.
-        if (clause.clauses && Array.isArray(clause.clauses)) {
-            for (const subClause of clause.clauses) {
-                if (this.clauseReferencesResource(subClause, resourceId)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Clean up all ResourceRequirements that reference a deleted Resource,
-     * then cascade to clean up actions that reference those requirements.
-     *
-     * Auto-generated ResourceRequirements (where req.id === resourceId) are deleted.
-     * Also removes any ResourceRequirement that has a ResourceRequest referencing the deleted resource.
-     *
-     * @param resourceId ID of the deleted resource
-     * @param page The page to scan
-     * @returns Array of requirement IDs that were deleted (for cascade cleanup)
-     */
-    private async cleanupResourceReferences(
-        resourceId: string,
-        page: PageProxy
-    ): Promise<string[]> {
-        this.debug.debug('Cleaning up references to resource:', resourceId);
-        const deletedRequirementIds: string[] = [];
-
-        // Get current resource requirements
-        const requirements = this.storageAdapter.getResourceRequirements(page) || [];
-
-        // Find requirements to delete
-        const updatedRequirements = requirements.filter(req => {
-            // Delete auto-generated requirement (same ID as resource)
-            if (req.id === resourceId) {
-                this.debug.debug('Removing auto-generated requirement for resource:', resourceId);
-                deletedRequirementIds.push(req.id);
-                return false;
-            }
-
-            // Check if the root clause (wire-cleanup Phase B2 Task 6: single
-            // required `rootClause`, not an array) references this resource
-            if (req.rootClause && this.clauseReferencesResource(req.rootClause, resourceId)) {
-                this.debug.debug('Removing requirement that references deleted resource:', req.id);
-                deletedRequirementIds.push(req.id);
-                return false;
-            }
-
-            return true;
-        });
-
-        // Save updated requirements if any were deleted
-        if (deletedRequirementIds.length > 0) {
-            this.storageAdapter.setResourceRequirements(page, updatedRequirements);
-            this.debug.debug('Deleted requirements count:', deletedRequirementIds.length);
-        }
-
-        return deletedRequirementIds;
     }
 
     /**
@@ -1663,6 +1455,34 @@ export class ModelManager {
     }
 
     /**
+     * A resource was deleted from the Resources tab (spec 2026-09-11 resource
+     * delete cleanup). Runs the SHARED rule drawio, Visio and Studio run:
+     *   1. prune the stored requirements (@quodsi/shared removeResourceReferences):
+     *      a requirement loses only what depended on the resource and is deleted
+     *      only when it can no longer be met;
+     *   2. clean every step that used a deleted requirement -- INCLUDING the
+     *      resource's own requirement, which storage format 2 never stores, so
+     *      the old stored-list cascade never saw it -- through
+     *      applySharedReferenceCleanup over stored activity, generator and
+     *      connector data, with the user's Seize/Release choice.
+     */
+    private cleanupDeletedResource(resourceId: string, page: PageProxy, options: ReferenceCleanupOptions): void {
+        const stored = this.storageAdapter.getResourceRequirements(page) || [];
+        const pruned = removeResourceReferences(
+            { resourceRequirements: stored as unknown as Array<Record<string, unknown>> },
+            resourceId,
+            options
+        );
+        const kept = pruned.collections.resourceRequirements ?? [];
+        if (kept.length !== stored.length || pruned.prunedRequirementIds.length > 0) {
+            this.storageAdapter.setResourceRequirements(page, kept as unknown as ISerializedResourceRequirement[]);
+        }
+        this.applySharedReferenceCleanup(page, (c) =>
+            removeRequirementReferences(c, pruned.deletedRequirementIds, options)
+        );
+    }
+
+    /**
      * Persist a model-ROOT patch. The patch arrives WHOLE from
      * LucidModelStateAccessor.updateModel and is dispatched per key here --
      * the single place in this path that is allowed to know key names.
@@ -1683,7 +1503,7 @@ export class ModelManager {
      * ModelDefinition is never left stale for a caller that reads it without
      * also calling `validateModel()` first.
      */
-    public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
+    public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy, options: ReferenceCleanupOptions = {}): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
         const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'entities', 'resources', 'resourceRequirements'];
@@ -1749,10 +1569,7 @@ export class ModelManager {
             // shared Resources tab is the single path that has to clean up the
             // requirements and actions that referenced it.
             for (const id of removed) {
-                const deletedReqIds = await this.cleanupResourceReferences(id, page);
-                for (const reqId of deletedReqIds) {
-                    await this.cleanupRequirementReferences(reqId, page);
-                }
+                this.cleanupDeletedResource(id, page, options);
             }
         }
 
@@ -1760,7 +1577,8 @@ export class ModelManager {
             const incoming = patch.resourceRequirements as ISerializedResourceRequirement[];
             await this.updateResourceRequirements(
                 incoming.filter(r => !isPlainAutoRequirement(r as any)),
-                page
+                page,
+                options
             );
         }
 
@@ -1799,7 +1617,7 @@ export class ModelManager {
     /**
      * Updates the resource requirements array for the model
      */
-    public async updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy): Promise<void> {
+    public async updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy, options: ReferenceCleanupOptions = {}): Promise<void> {
         this.debug.debug('updateResourceRequirements - Start', {
             requirementsCount: requirements.length,
             pageId: page.id,
@@ -1814,10 +1632,12 @@ export class ModelManager {
             // Find deleted requirements
             const deletedReqs = currentReqs.filter(r => !newReqIds.has(r.id));
 
-            // Clean up references for each deleted requirement
-            for (const deletedReq of deletedReqs) {
-                this.debug.debug('Detected deleted requirement, cleaning up references:', deletedReq.id);
-                await this.cleanupRequirementReferences(deletedReq.id, page);
+            // The shared rule (spec 2026-09-11 resource delete cleanup), with the
+            // user's Seize/Release choice.
+            if (deletedReqs.length > 0) {
+                this.applySharedReferenceCleanup(page, (c) =>
+                    removeRequirementReferences(c, deletedReqs.map(r => r.id), options)
+                );
             }
 
             // Save resource requirements to page storage
