@@ -58,7 +58,7 @@ describe("ModelEditor — Requirements tab uses the shared editor", () => {
     const { transport } = mountModelEditor(requirementsDefinition(), { props: { activeTab: "requirements" } });
 
     await user.click(screen.getByTitle("Delete requirement"));
-    expect(screen.getByText('Delete "Triage team"?')).toBeInTheDocument();
+    expect(screen.getByText('Delete Requirement: "Triage team"?')).toBeInTheDocument();
     expect(screen.getByText("1 Seize/Release step uses it:")).toBeInTheDocument();
 
     await user.click(screen.getByRole("radio", { name: "Remove the steps" }));

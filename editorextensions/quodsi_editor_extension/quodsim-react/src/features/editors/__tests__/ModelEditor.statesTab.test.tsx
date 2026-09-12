@@ -71,7 +71,7 @@ describe("ModelEditor — States tab uses the shared editor", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("a rejected states write reopens the dialog with the error once the host's corrective snapshot lands", async () => {
+  it("a rejected states write keeps the dialog open with the error, before and after the host's corrective snapshot", async () => {
     const seam = mountModelEditor(statesDefinition(), {
       props: { activeTab: "states" },
       transport: { send: vi.fn().mockRejectedValue(new Error("Current page not available")) },
@@ -82,10 +82,15 @@ describe("ModelEditor — States tab uses the shared editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete State" }));
     await waitFor(() => expect(seam.transport.send).toHaveBeenCalledTimes(1));
 
-    // The optimistic echo removed the state; the host's corrective snapshot restores it.
-    await act(async () => { seam.source.acceptSnapshot(original as never); });
-
+    // The optimistic echo removed the state; the box stays and shows the rejection.
     expect(await screen.findByRole("alert")).toHaveTextContent("Current page not available");
     expect(screen.getByRole("button", { name: "Delete State" })).toBeInTheDocument();
+
+    // The host's corrective snapshot restores the state; the box is still open under it.
+    await act(async () => { seam.source.acceptSnapshot(original as never); });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Current page not available");
+    const box = screen.getByTestId("inline-delete-confirm");
+    expect(box.previousElementSibling).toContainElement(screen.getByLabelText("Delete unit_price"));
   });
 });
