@@ -38,6 +38,7 @@ import {
     removeRequirementReferences,
     removeResourceReferences,
     pickFallbackEntityId,
+    isPlainAutoRequirement,
 } from "@quodsi/lucid-shared";
 import type { ReferenceCleanupOptions } from "@quodsi/lucid-shared";
 
@@ -70,7 +71,6 @@ import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
-import { isPlainAutoRequirement } from "./autoRequirements";
 import { LUCID_STORAGE_FORMAT, StorageFormatTooNewError } from "./storageFormat";
 import { migrateResourcesToModelLevel } from "./ResourceStorageMigration";
 
@@ -1582,9 +1582,12 @@ export class ModelManager {
         }
 
         if ('resourceRequirements' in patch) {
+            // Read AFTER the `resources` branch above, so a patch that creates
+            // or renames a resource filters against the list it just stored.
+            const resourcesById = new Map(this.storageAdapter.getResources(page).map(r => [String(r.id), r]));
             const incoming = patch.resourceRequirements as ISerializedResourceRequirement[];
             await this.updateResourceRequirements(
-                incoming.filter(r => !isPlainAutoRequirement(r as any)),
+                incoming.filter(r => !isPlainAutoRequirement(r, resourcesById.get(String(r.id)))),
                 page,
                 options
             );
@@ -1643,8 +1646,8 @@ export class ModelManager {
             // Never clean a LIVE resource's id. A stored record whose id is a
             // live resource id is that resource's own requirement (or an
             // override of it), re-derived at build while the resource exists.
-            // The plain-auto filters (the host's autoRequirements.ts vs the
-            // panel's copy) can strip such a record from the incoming list
+            // A plain-auto filter (isPlainAutoRequirement, @quodsi/shared) strips
+            // a live resource's own derived requirement from the incoming list
             // without the user deleting anything -- the hazard
             // ResourceStorageMigration.ts:171-195 describes -- and cleaning it
             // would flag or remove steps the delete dialog never counted.

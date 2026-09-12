@@ -349,7 +349,7 @@ export type {
   ResourceLinkRejection,
   ResourceLinkResolution,
 } from '@quodsi/shared';
-export { deriveAutoResourceRequirements, reconcileAutoRequirements } from '@quodsi/shared';
+export { deriveAutoResourceRequirements, reconcileAutoRequirements, isPlainAutoRequirement } from '@quodsi/shared';
 // Validation copy for pointers resolveResourceLinks refused (dangling /
 // duplicate). Not a ValidationRule -- a dangling pointer is by definition
 // absent from the model, so hosts append these at model-build time. Lucid's
