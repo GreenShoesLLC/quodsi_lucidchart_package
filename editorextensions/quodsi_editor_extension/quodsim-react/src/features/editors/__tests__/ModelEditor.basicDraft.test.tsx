@@ -1,6 +1,7 @@
 // The Basic tab's draft on the one model-root accessor (spec 2026-09-12 §5),
-// over the REAL hooks (useAutoSave, useFormSync, useSaveInFlight) and the real
-// projection -> source -> accessor chain. Only the transport is faked.
+// over the REAL hooks (useAutoSave, useSaveInFlight, ModelEditor's own
+// snapshot-sequence resync) and the real projection -> source -> accessor
+// chain. Only the transport is faked.
 import React from 'react'
 import { screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react'
 import { MODEL_FIELD_KEYS, ModelDefaults } from '@quodsi/lucid-shared'
@@ -130,6 +131,27 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     const write = deferred()
     const send = vi.fn().mockReturnValueOnce(write.promise)
     const { pushSnapshot } = mountModelEditor(definition(), { transport: { send } })
+
+    typeName('')
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      write.resolve()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      pushSnapshot({ name: 'Emergency Dept' })
+    })
+
+    await waitFor(() => expect(nameInput().value).toBe('Emergency Dept'))
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  // A model that was never renamed is named after its page. Clearing that name
+  // makes the host store the SAME title again, so the snapshot's values equal
+  // what the editor last applied from a snapshot. The editor must still show
+  // the title: its own save (the '') is what it now holds.
+  it('shows the page title once idle when the cleared name was already the page title', async () => {
+    const write = deferred()
+    const send = vi.fn().mockReturnValueOnce(write.promise)
+    const { pushSnapshot } = mountModelEditor(definition({ model: { name: 'Emergency Dept' } }), { transport: { send } })
 
     typeName('')
     await waitFor(() => expect(send).toHaveBeenCalledTimes(1))

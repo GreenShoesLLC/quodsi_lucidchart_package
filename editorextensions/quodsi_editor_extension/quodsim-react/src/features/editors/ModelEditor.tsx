@@ -269,7 +269,9 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
   //      snapshotSeq (stamped by createModelRootSource.acceptSnapshot, kept by
   //      the echo) is newer than the source's seq when that write resolved or
   //      rejected; and
-  //   3. its model-field values differ from the ones last applied.
+  //   3. its model-field values differ from the ones the editor last holds as
+  //      applied -- set when a snapshot is applied AND when this editor's own
+  //      save starts (see onSaveWithDefaults).
   // The effect re-runs when the guard drops, so a snapshot accepted while the
   // guard was still up is applied then: the host posts RESULT and the snapshot
   // back-to-back, so the snapshot lands before React commits saving=false, and
@@ -302,6 +304,16 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
     (draft: Model) => {
       setSaveError(null);
       const write = accessor.updateModel(buildModelSettingsPatch(draft));
+      // Resync rule 3's "applied" mark for this editor's own save. updateModel
+      // echoes the patch into the source synchronously, before its first
+      // await, so the source's projection now holds exactly what was saved.
+      // The snapshot that answers this save is then compared with the save,
+      // not with the last snapshot applied: a model still named after its
+      // page, cleared to '', gets the SAME page title back from the host --
+      // equal to the mount values, but a change from '' -- and it shows.
+      lastAppliedKeyRef.current = modelSettingsSyncKey(
+        accessor.getSnapshot().modelDefinition as unknown as Record<string, unknown>
+      );
       // Resync rule 2's "settled" mark. Read the source's CURRENT projection
       // synchronously, not the rendered `projection` prop, which can lag
       // behind a snapshot that has already been accepted.
