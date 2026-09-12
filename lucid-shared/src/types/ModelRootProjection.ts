@@ -52,6 +52,12 @@ export type ModelRootProjection = ModelRootModelFields & {
     // Stamped by ModelManager.buildModelRootProjection; panel writes echo it
     // back as basedOnPageId so the host can refuse a write aimed at another page.
     pageId?: string;
+    // Panel-local, never sent by the host: stamped by the panel's
+    // createModelRootSource.acceptSnapshot (an increasing counter; an
+    // optimistic echo keeps the current value) so an editor can tell a
+    // snapshot that arrived AFTER its write settled from one that was already
+    // in flight. saveModel sends only the patch, so it never rides the wire.
+    snapshotSeq?: number;
     generators: Array<{
         id: string;
         name: string;

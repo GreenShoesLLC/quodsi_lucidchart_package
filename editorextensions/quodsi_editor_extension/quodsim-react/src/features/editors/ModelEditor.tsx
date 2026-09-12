@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Model,
   ModelDefaults,
@@ -33,7 +33,7 @@ import { ArrivalsTab } from "./ArrivalsTab";
 import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
-import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
+import { useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import { useSaveInFlight } from "./hooks/useSaveInFlight";
 import SaveStatusLine from "./SaveStatusLine";
 import {
@@ -195,12 +195,16 @@ const START_DATE_HINT = "Set the start date first";
  *   Lucid's own modal.
  * - Validation: read-only, from validationState.
  *
- * Draft resync: the draft re-extracts from the snapshot only when the model
- * fields' VALUES change (modelSettingsSyncKey) while nothing is pending, no
- * save is in flight (useSaveInFlight) and the last save did not fail. So an
- * Advisor Apply shows up while idle; our own echo, a stale snapshot during a
- * save, or the corrective snapshot after a refused save never erases what the
- * user typed.
+ * Draft resync: the draft re-extracts from a snapshot only while nothing is
+ * pending, no save is in flight (useSaveInFlight) and the last save did not
+ * fail, and only from a snapshot the source ACCEPTED after the last save
+ * settled (snapshotSeq) whose model-field VALUES (modelSettingsSyncKey) differ
+ * from the ones last applied. So an Advisor Apply shows up while idle, and so
+ * does the host's post-save snapshot (a cleared name stored as the page title)
+ * even though it lands before React commits saving=false; our own echo, a
+ * snapshot that was in flight during a save, or the corrective snapshot after
+ * a refused save never erases what the user typed. Merely re-checking a
+ * skipped snapshot when the guard drops would: see the resync effect.
  *
  * Calendar dates: only the Start Date is stored; Warmup and Finish write
  * `warmupTime`/`runTime`, which is what the clean wire and the engine carry.
@@ -227,7 +231,7 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
 
   // The page this editor was mounted for. ModelEditorForPage is keyed on it,
   // so it never changes for the life of this component -- the constant
-  // "element id" useFormSync and useAutoSave expect.
+  // "element id" useAutoSave expects.
   const pageId = projection.pageId ?? "";
 
   // Basic and Levers edit a local draft of the snapshot's model fields.
@@ -250,21 +254,42 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
   // next save starts (the next edit).
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Resync rule (spec 2026-09-12 §5): a STRING of the snapshot's model-field
-  // values, so the echo and equal snapshots -- new objects, same values --
-  // never re-extract the draft.
+  // A STRING of the snapshot's model-field values (spec 2026-09-12 §5), so a
+  // snapshot that changed only other keys -- a new object, the same values --
+  // never re-extracts the draft.
   const modelSyncKey = useMemo(
     () => modelSettingsSyncKey(projection as unknown as Record<string, unknown>),
     [projection]
   );
-  useFormSync(
-    pageId,
-    hasPendingChanges || saving || saveError !== null,
-    () => extractModelData(projection as unknown as ModelInput),
-    setLocalModelDraft,
-    setHasPendingChanges,
-    modelSyncKey
-  );
+
+  // Draft resync: re-extract from the snapshot only when
+  //   1. nothing is pending, no save is in flight and the last save did not
+  //      fail (the guard);
+  //   2. the snapshot was ACCEPTED after the last save settled -- its
+  //      snapshotSeq (stamped by createModelRootSource.acceptSnapshot, kept by
+  //      the echo) is newer than the source's seq when that write resolved or
+  //      rejected; and
+  //   3. its model-field values differ from the ones last applied.
+  // The effect re-runs when the guard drops, so a snapshot accepted while the
+  // guard was still up is applied then: the host posts RESULT and the snapshot
+  // back-to-back, so the snapshot lands before React commits saving=false, and
+  // no later snapshot carries different values -- without this a cleared name
+  // the host stored as the page title never shows. Rule 2 is what keeps that
+  // safe. Re-checking any skipped key once the guard drops would regress typed
+  // text: with save 1 ('A') in flight the user types 'AB', the trailing save
+  // echoes 'AB', save 1's snapshot ('A') replaces the projection, save 2
+  // settles, and a re-check would re-extract 'A' over the draft. That snapshot
+  // was accepted before save 2 settled, so rule 2 skips it.
+  const lastSettledSeqRef = useRef(projection.snapshotSeq ?? 0);
+  const lastAppliedKeyRef = useRef(modelSyncKey);
+  const draftGuard = hasPendingChanges || saving || saveError !== null;
+  useEffect(() => {
+    if (draftGuard) return;
+    if ((projection.snapshotSeq ?? 0) <= lastSettledSeqRef.current) return;
+    if (modelSyncKey === lastAppliedKeyRef.current) return;
+    lastAppliedKeyRef.current = modelSyncKey;
+    setLocalModelDraft(extractModelData(projection as unknown as ModelInput));
+  }, [draftGuard, modelSyncKey, projection]);
 
   useSaveCompletionDetector(saving, setHasPendingChanges);
 
@@ -277,10 +302,18 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
     (draft: Model) => {
       setSaveError(null);
       const write = accessor.updateModel(buildModelSettingsPatch(draft));
-      track(write);
-      write.catch((err: unknown) => {
+      // Resync rule 2's "settled" mark. Read the source's CURRENT projection
+      // synchronously, not the rendered `projection` prop, which can lag
+      // behind a snapshot that has already been accepted.
+      const markSettled = () => {
+        const current = accessor.getSnapshot().modelDefinition as unknown as ModelRootProjection | null;
+        lastSettledSeqRef.current = current?.snapshotSeq ?? 0;
+      };
+      write.then(markSettled, (err: unknown) => {
+        markSettled();
         setSaveError(err instanceof Error ? err.message : String(err));
       });
+      track(write);
     },
     [accessor, track]
   );

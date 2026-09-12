@@ -11,7 +11,7 @@
 // by the viewer's UTC offset, and the Calendar->Clock clear.
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { definition, mountModelEditor } from "./modelEditorSeam";
 import { setView } from "quodsi_studio/platforms/shared";
 // Replications, Time Mode, Clock Unit and Warmup all moved to the

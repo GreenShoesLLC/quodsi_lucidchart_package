@@ -111,7 +111,10 @@ export interface UseAutoSaveArgs<T> {
   isValid: boolean;
   /** Existing save callback — receives the draft when auto-save fires. */
   onSave: (draft: T) => void;
-  /** True while a save is in flight (from Redux elementOpsState). */
+  /**
+   * True while a save is in flight: Redux elementOpsState for the element
+   * editors, useSaveInFlight for Lucid's Model editor.
+   */
   isSaving: boolean;
   /** ID of the currently selected element. Switching this flushes pending edits. */
   elementId: string;
@@ -136,16 +139,17 @@ export interface UseAutoSaveResult {
  * unmount, and reports status="error" when onSave throws.
  *
  * Contract — REQUIRED of consumers:
- *   onSave MUST trigger a Redux-mediated isSaving transition (false → true →
- *   false). The hook uses the saving→not-saving transition to clear the
+ *   onSave must cause the `isSaving` passed in to render true then false
+ *   (Redux elementOpsState for the element editors; useSaveInFlight for the
+ *   Model editor). The hook uses the saving→not-saving transition to clear the
  *   "saving" status, fire trailing saves, and drain captured pending flushes.
  *   If onSave is synchronous and never causes isSaving to flip, status will
  *   stay at "saving" forever and trailing/captured saves will never fire.
  *
- *   In practice, every editor consumer routes onSave through Redux's
- *   elementOpsState, which dispatches ELEMENT_SAVE_START (sets isSaving=true)
- *   and ELEMENT_SAVE_SUCCESS/ERROR (sets isSaving=false). Honor that pattern.
- *   (Lucid's Model editor uses useSaveInFlight around a promise instead.)
+ *   The element editors get that transition from Redux's elementOpsState
+ *   (ELEMENT_SAVE_START sets isSaving=true, ELEMENT_SAVE_SUCCESS/ERROR set it
+ *   false); Lucid's Model editor gets it from useSaveInFlight around its
+ *   accessor.updateModel promise.
  *
  * Trailing saves: one is scheduled only for a draft that changed after the
  * in-flight save was dispatched -- compared by identity against the last

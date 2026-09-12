@@ -194,6 +194,38 @@ describe('createModelRootSource', () => {
     expect(before.model).toEqual({ name: 'Old', replications: 1, levers: [{ leverId: 'lv' }], timeMode: 'clock' })
   })
 
+  // ModelEditor's draft resync applies only a snapshot accepted after its last
+  // write settled, which it tells apart by this panel-local stamp.
+  it('stamps each accepted snapshot with an increasing snapshotSeq; an echo keeps the current one', () => {
+    const send = vi.fn().mockResolvedValue(undefined)
+    const source = createModelRootSource({ send })
+    const incoming = { generators: [], arrivalPatterns: [], pageId: 'page-1', name: 'Old', model: { name: 'Old' } } as any
+
+    source.acceptSnapshot(incoming)
+    const first = source.deps.getModelDefinition() as any
+    expect(typeof first.snapshotSeq).toBe('number')
+    // A new object: the host's message is never mutated.
+    expect(first).not.toBe(incoming)
+    expect(incoming).not.toHaveProperty('snapshotSeq')
+
+    void source.deps.saveModel!({ name: 'New' })
+    const echoed = source.deps.getModelDefinition() as any
+    expect(echoed).not.toBe(first)
+    expect(echoed.name).toBe('New')
+    expect(echoed.snapshotSeq).toBe(first.snapshotSeq)
+    // Only the patch goes on the wire, never the stamp.
+    expect(send).toHaveBeenCalledWith({ name: 'New' }, 'page-1')
+
+    // A host snapshot that happens to carry a stamp (e.g. a copy of the
+    // current projection) is re-stamped, never trusted.
+    source.acceptSnapshot({ ...echoed })
+    const second = source.deps.getModelDefinition() as any
+    expect(second.snapshotSeq).toBeGreaterThan(first.snapshotSeq)
+
+    source.acceptSnapshot(incoming)
+    expect((source.deps.getModelDefinition() as any).snapshotSeq).toBeGreaterThan(second.snapshotSeq)
+  })
+
   it('leaves the nested model block untouched for a patch with no model settings', () => {
     const source = createModelRootSource({ send: vi.fn().mockResolvedValue(undefined) })
     source.acceptSnapshot({ generators: [], arrivalPatterns: [], pageId: 'page-1', model: { name: 'Clinic' } } as any)

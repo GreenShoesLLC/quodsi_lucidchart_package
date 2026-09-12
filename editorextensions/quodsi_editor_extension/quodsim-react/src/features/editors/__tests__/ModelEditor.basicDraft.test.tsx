@@ -88,6 +88,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
 
     await act(async () => { second.resolve() })
     expect(nameInput().value).toBe('AB')
+    expect(send).toHaveBeenCalledTimes(2)
   })
 
   it('a rejected save keeps the typed value, even under the corrective snapshot, and says so', async () => {
@@ -121,14 +122,53 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     }
   })
 
+  // PRODUCTION ORDER. The host posts MODEL_ROOT_UPDATE_RESULT and then the
+  // snapshot back-to-back, so the write settles and the snapshot is accepted
+  // before React commits saving=false: the editor sees the new values while its
+  // guard is still up, and nothing later carries different values.
   it('shows the page title once idle when the host stores it for a cleared name', async () => {
-    const { transport, pushSnapshot } = mountModelEditor()
+    const write = deferred()
+    const send = vi.fn().mockReturnValueOnce(write.promise)
+    const { pushSnapshot } = mountModelEditor(definition(), { transport: { send } })
 
     typeName('')
-    await waitFor(() => expect(transport.send).toHaveBeenCalledTimes(1))
-    await act(async () => {})
-    act(() => pushSnapshot({ name: 'Emergency Dept' }))
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      write.resolve()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      pushSnapshot({ name: 'Emergency Dept' })
+    })
 
-    expect(nameInput().value).toBe('Emergency Dept')
+    await waitFor(() => expect(nameInput().value).toBe('Emergency Dept'))
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  // The review's A/AB sequence: re-checking a skipped key once the guard drops
+  // would re-extract the stale 'A' over the typed 'AB'.
+  it('a stale snapshot that was in flight during the last save is not applied after the save settles', async () => {
+    const first = deferred()
+    const second = deferred()
+    const send = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    const { pushSnapshot } = mountModelEditor(definition(), { transport: { send } })
+
+    typeName('A')
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
+    fireEvent.change(nameInput(), { target: { value: 'AB' } })
+
+    await act(async () => { first.resolve() })
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(2))
+    expect(send.mock.calls[1][0]).toMatchObject({ name: 'AB' })
+
+    // Save 1's snapshot lands while the trailing save 'AB' is in flight.
+    act(() => pushSnapshot({ name: 'A' }))
+
+    await act(async () => {
+      second.resolve()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    await act(async () => {})
+
+    expect(nameInput().value).toBe('AB')
+    expect(send).toHaveBeenCalledTimes(2)
   })
 })

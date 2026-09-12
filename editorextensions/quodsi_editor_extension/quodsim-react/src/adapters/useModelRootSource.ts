@@ -80,11 +80,15 @@ const MODEL_SETTINGS_KEYS = new Set<string>(MODEL_FIELD_KEYS.filter((key) => key
 export function createModelRootSource(transport: ModelRootTransport) {
   const listeners = new Set<() => void>()
   let projection: ModelRootProjection | null = null
+  // Stamped onto every accepted snapshot (never onto an echo) so an editor can
+  // tell a snapshot that arrived after its write settled from one already in
+  // flight -- see ModelEditor's draft resync.
+  let seq = 0
 
   function acceptSnapshot(next: ModelRootProjection): void {
     // Replace the reference wholesale. Never mutate in place: the accessor's
     // cache compares by identity, so an in-place edit would be invisible.
-    projection = next
+    projection = { ...next, snapshotSeq: ++seq }
     listeners.forEach((l) => l())
   }
 
@@ -281,7 +285,7 @@ const MODEL_ROOT_UPDATE_TIMEOUT_MS = 30_000
  * hands back a ready-to-use ModelStateAccessor plus the current projection.
  *
  * Consumption (Task 10, inside GeneratorEditor's Lucid host component):
- *   const { accessor, projection } = useModelRootSource()
+ *   const { accessor, projection, request } = useModelRootSource()
  *   if (!projection) return <Loading />   // no snapshot has arrived yet
  *   return <GeneratorEditor shapeId={...} accessor={accessor} />
  *
