@@ -158,4 +158,16 @@ describe('createModelRootSource', () => {
 
     expect(send.mock.calls[0][1]).toBe('page-9')
   })
+
+  it('forwards cleanup options to the transport only when given', async () => {
+    const send = vi.fn().mockResolvedValue(undefined)
+    const source = createModelRootSource({ send })
+    source.acceptSnapshot({ generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } as any)
+
+    await source.deps.saveModel!({ resources: [] }, { seizeRelease: 'remove' })
+    await source.deps.saveModel!({ resources: [] })
+
+    expect(send.mock.calls[0]).toEqual([{ resources: [] }, 'page-1', { seizeRelease: 'remove' }])
+    expect(send.mock.calls[1]).toEqual([{ resources: [] }, 'page-1'])
+  })
 })

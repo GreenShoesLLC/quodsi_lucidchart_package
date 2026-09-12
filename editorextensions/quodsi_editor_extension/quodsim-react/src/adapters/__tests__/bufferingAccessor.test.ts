@@ -411,4 +411,16 @@ describe('createBufferingAccessor', () => {
 
     expect((buf.getSnapshot().modelDefinition as any).generators[0].volume).toBe(8500)
   })
+
+  it('sends a write that carries cleanup options at once, after pending edits, never merged', async () => {
+    const { accessor } = makeBase({ generators: [{ id: 'g1', name: 'G', volume: 0 }], arrivalPatterns: [], model: {} })
+    const buf = createBufferingAccessor(accessor as any, { debounceMs: 500 })
+
+    void buf.updateModel({ arrivalPatterns: [] })
+    await buf.updateModel({ resources: [] }, { seizeRelease: 'remove' })
+
+    expect(accessor.updateModel).toHaveBeenCalledTimes(2)
+    expect(accessor.updateModel.mock.calls[0]).toEqual([{ arrivalPatterns: [] }])
+    expect(accessor.updateModel.mock.calls[1]).toEqual([{ resources: [] }, { seizeRelease: 'remove' }])
+  })
 })

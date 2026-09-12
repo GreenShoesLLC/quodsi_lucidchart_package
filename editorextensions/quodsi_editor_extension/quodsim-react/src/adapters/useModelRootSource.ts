@@ -35,6 +35,7 @@ import {
   MessageSource,
   ModelRootProjection,
 } from '@quodsi/lucid-shared'
+import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
 import { useMessaging } from '../messaging/MessageProvider'
 import {
   createLucidModelStateAccessor,
@@ -47,8 +48,11 @@ export type ModelRootTransport = {
   /**
    * Send a model-root patch to the host with the page id of the snapshot it
    * was based on (spec 2026-09-11 page guard). Resolves when the host confirms.
+   *
+   * `options` -- a delete dialog's Seize/Release choice (spec 2026-09-11
+   * resource delete cleanup), present only when the write carries one.
    */
-  send(patch: Record<string, unknown>, basedOnPageId: string | undefined): Promise<void>
+  send(patch: Record<string, unknown>, basedOnPageId: string | undefined, options?: ReferenceCleanupOptions): Promise<void>
   /** Ask the host for a fresh snapshot. Optional -- absent in unit tests. */
   request?(): void
   /**
@@ -213,13 +217,13 @@ export function createModelRootSource(transport: ModelRootTransport) {
     // stored list -- refuse before any echo or message. Otherwise send the
     // page id of the snapshot the patch was based on, captured BEFORE the
     // echo replaces the projection object.
-    saveModel: (patch: Record<string, unknown>) => {
+    saveModel: (patch: Record<string, unknown>, options?: ReferenceCleanupOptions) => {
       if (!projection) {
         return Promise.reject(new Error(MODEL_NOT_LOADED_MESSAGE))
       }
       const basedOnPageId = projection.pageId
       echoPatch(patch)
-      return transport.send(patch, basedOnPageId)
+      return options ? transport.send(patch, basedOnPageId, options) : transport.send(patch, basedOnPageId)
     },
   }
 
@@ -289,7 +293,7 @@ export function useModelRootSource(): {
   const sourceRef = useRef<ReturnType<typeof createModelRootSource> | null>(null)
   if (!sourceRef.current) {
     const transport: ModelRootTransport = {
-      send(patch, basedOnPageId) {
+      send(patch, basedOnPageId, options) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {
             reject(new Error('No parent window to send model-root update to'))
@@ -328,7 +332,7 @@ export function useModelRootSource(): {
             source,
             target: 'host',
             version: '1.0',
-            data: { patch, basedOnPageId },
+            data: { patch, basedOnPageId, ...(options?.seizeRelease ? { seizeRelease: options.seizeRelease } : {}) },
           }
           window.parent.postMessage(envelope, '*')
         })

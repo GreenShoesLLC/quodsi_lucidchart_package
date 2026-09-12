@@ -224,4 +224,14 @@ describe('LucidModelStateAccessor', () => {
     expect(a).toHaveBeenCalledTimes(1)
     expect(b).toHaveBeenCalledTimes(1)
   })
+
+  it('updateModel forwards cleanup options to saveModel only when given', async () => {
+    const deps = makeDeps() as ReturnType<typeof makeDeps> & { saveModel: Mock }
+    deps.saveModel = vi.fn().mockResolvedValue(undefined)
+    const accessor = createLucidModelStateAccessor(deps)
+    await accessor.updateModel({ resources: [] }, { seizeRelease: 'remove' })
+    await accessor.updateModel({ resources: [] })
+    expect(deps.saveModel.mock.calls[0]).toEqual([{ resources: [] }, { seizeRelease: 'remove' }])
+    expect(deps.saveModel.mock.calls[1]).toEqual([{ resources: [] }])
+  })
 })

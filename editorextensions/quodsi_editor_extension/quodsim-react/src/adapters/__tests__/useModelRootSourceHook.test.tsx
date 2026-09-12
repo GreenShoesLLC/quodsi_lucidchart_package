@@ -30,6 +30,13 @@ function Harness() {
       >
         save
       </button>
+      <button
+        onClick={() => {
+          accessor.updateModel({ resources: [] }, { seizeRelease: 'remove' }).catch(() => {})
+        }}
+      >
+        delete-remove
+      </button>
     </div>
   )
 }
@@ -195,5 +202,55 @@ describe('useModelRootSource (hook)', () => {
     })
 
     expect(screen.getByTestId('save-status').textContent).toBe('failed')
+  })
+
+  it('puts seizeRelease on the MODEL_ROOT_UPDATE envelope only when the write carries it', async () => {
+    const posted: any[] = []
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
+      posted.push(envelope)
+      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
+        window.dispatchEvent(
+          new MessageEvent('message', {
+            data: {
+              id: envelope.id,
+              type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
+              source: 'host',
+              target: 'model-iframe',
+              version: '1.0',
+              data: { success: true },
+            },
+          }),
+        )
+      }
+    })
+
+    render(<Harness />)
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            id: 'whatever-id',
+            type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
+            source: 'host',
+            target: 'model-iframe',
+            version: '1.0',
+            data: { projection: { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } },
+          },
+        }),
+      )
+    })
+
+    await act(async () => {
+      screen.getByText('delete-remove').click()
+      await Promise.resolve()
+    })
+    await act(async () => {
+      screen.getByText('save').click()
+      await Promise.resolve()
+    })
+    const updates = posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
+    expect(updates[0].data).toEqual({ patch: { resources: [] }, basedOnPageId: 'page-1', seizeRelease: 'remove' })
+    expect(updates[1].data).toEqual({ patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' })
   })
 })

@@ -58,6 +58,7 @@
 import { useEffect, useRef } from 'react'
 import type { EditorReferenceData, ISerializedResourceRequirement, ISerializedState } from '@quodsi/lucid-shared'
 import { RequirementMode } from '@quodsi/lucid-shared'
+import type { ReferenceCleanupOptions, SeizeReleaseDisposition } from '@quodsi/lucid-shared'
 import type { ModelStateAccessor, ModelStateSnapshot } from 'quodsi_studio/platforms/shared'
 import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
 import {
@@ -68,7 +69,7 @@ import {
 import { MODEL_NOT_LOADED_MESSAGE } from './pageGuardMessages'
 
 export type ReferenceDataSenders = {
-  updateResourceRequirements: (list: ISerializedResourceRequirement[], basedOnPageId: string) => Promise<void>
+  updateResourceRequirements: (list: ISerializedResourceRequirement[], basedOnPageId: string, seizeRelease?: SeizeReleaseDisposition) => Promise<void>
   /** Optional: callers that never write shapes (e.g. the requirement editors) omit it. */
   updateElement?: (elementId: string, type: string, data: Record<string, unknown>) => Promise<void>
   /**
@@ -178,7 +179,7 @@ export function createReferenceDataAccessor(
     listeners.forEach((l) => l())
   }
 
-  const writeRequirements = async (list: RequirementRecord[]) => {
+  const writeRequirements = async (list: RequirementRecord[], options?: ReferenceCleanupOptions) => {
     // Page guard (spec 2026-09-11): no pageId means no real referenceData yet.
     const basedOnPageId = referenceData?.pageId
     if (!basedOnPageId) throw new Error(MODEL_NOT_LOADED_MESSAGE)
@@ -193,7 +194,10 @@ export function createReferenceDataAccessor(
     saveError = null
     notify()
     try {
-      await getSenders().updateResourceRequirements(customs, basedOnPageId)
+      const senders = getSenders()
+      await (options?.seizeRelease
+        ? senders.updateResourceRequirements(customs, basedOnPageId, options.seizeRelease)
+        : senders.updateResourceRequirements(customs, basedOnPageId))
       overlay = list
       saveStatus = 'saved'
       notify()
@@ -251,7 +255,7 @@ export function createReferenceDataAccessor(
     createShape: createShapeUnavailable,
     deleteShape: deleteShapeUnavailable,
     moveShape: moveShapeUnavailable,
-    async updateModel(patch) {
+    async updateModel(patch, options) {
       const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements' && k !== 'states')
       if (unhandled.length > 0) {
         throw new Error(`useReferenceDataAccessor.updateModel: no persistence path for key(s): ${unhandled.join(', ')}`)
@@ -260,7 +264,7 @@ export function createReferenceDataAccessor(
         await writeStates((patch.states as ISerializedState[] | undefined) ?? [])
       }
       if ('resourceRequirements' in patch) {
-        await writeRequirements((patch.resourceRequirements as RequirementRecord[] | undefined) ?? [])
+        await writeRequirements((patch.resourceRequirements as RequirementRecord[] | undefined) ?? [], options)
       }
     },
     async updateShape(shapeId, type, patch) {

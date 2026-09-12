@@ -165,8 +165,8 @@ describe('ResourcesEditor against a real model-root projection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
-    expect(screen.getByText(/Delete Resource: "Nurse"\?/)).toBeInTheDocument()
-    expect(screen.getByText(/will also delete 1 requirement/)).toBeInTheDocument()
+    expect(screen.getByText('Delete "Nurse"?')).toBeInTheDocument()
+    expect(screen.getByText('1 requirement will be deleted.')).toBeInTheDocument()
   })
 
   // Belt-and-braces on the seam itself, so a regression points at the

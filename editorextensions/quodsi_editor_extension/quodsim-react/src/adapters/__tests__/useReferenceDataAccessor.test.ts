@@ -413,4 +413,15 @@ describe('page guard (spec 2026-09-11)', () => {
     expect(states.map((s) => s.id)).toEqual(['s1'])
     expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
   })
+
+  it('passes the delete choice to updateResourceRequirements only when given', async () => {
+    const updateResourceRequirements = vi.fn(async () => {})
+    const source = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements }))
+
+    await source.accessor.updateModel({ resourceRequirements: [] }, { seizeRelease: 'remove' })
+    await source.accessor.updateModel({ resourceRequirements: [] })
+
+    expect(updateResourceRequirements.mock.calls[0]).toEqual([[], 'page-1', 'remove'])
+    expect(updateResourceRequirements.mock.calls[1]).toEqual([[], 'page-1'])
+  })
 })

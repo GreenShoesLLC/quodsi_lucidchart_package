@@ -51,6 +51,7 @@ import {
   moveShapeUnavailable,
 } from 'quodsi_studio/platforms/shared'
 import type { ModelDefinition } from '@quodsi/shared'
+import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
 
 export type { ShapeInfoLike, DomainType, ModelStateSnapshot, ModelStateAccessor }
 
@@ -87,7 +88,8 @@ export interface LucidModelStateAccessorDeps {
    * to storage verbatim; do not branch on individual keys here or in the
    * dep's own implementation (that is exactly bug #1 above).
    */
-  saveModel?(patch: Record<string, unknown>): Promise<void>
+  // options is a delete dialog's Seize/Release choice; forward it only when present.
+  saveModel?(patch: Record<string, unknown>, options?: ReferenceCleanupOptions): Promise<void>
 
   /** Look up cached shape info by id (e.g. for an unclassified-shape picker). */
   getShapeInfo?(shapeId: string): ShapeInfoLike | null
@@ -199,7 +201,7 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     notifyListeners()
   }
 
-  async function updateModel(patch: Record<string, unknown>): Promise<void> {
+  async function updateModel(patch: Record<string, unknown>, options?: ReferenceCleanupOptions): Promise<void> {
     if (!deps.saveModel) {
       // Loud, not silent: this is the failure mode Task 18 fixed elsewhere
       // (a patch that vanishes with no error and no warning). Until the
@@ -219,7 +221,10 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     try {
       // Forwarded verbatim -- see the module doc comment ("bug #1") for why
       // this must never branch on individual patch keys.
-      await deps.saveModel(patch)
+      //
+      // Options travel only when the caller passed them, so a plain write
+      // keeps its one-argument shape end to end.
+      await (options ? deps.saveModel(patch, options) : deps.saveModel(patch))
     } catch (err) {
       saveStatus = 'failed'
       saveError = err instanceof Error ? err.message : String(err)

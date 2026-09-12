@@ -912,7 +912,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
         <StatesTab accessor={accessor} hasStates={referenceData?.states !== undefined} />
       )}
       {activeOrFallback === "entities" && <EntitiesTab />}
-      {activeOrFallback === "resources" && <ResourcesTab />}
+      {activeOrFallback === "resources" && <ResourcesTab referenceSource={accessor} />}
       {activeOrFallback === "arrivals" && <ArrivalsTab />}
       {activeOrFallback === "schedules" && <SchedulesTab />}
       {activeOrFallback === "requirements" && (
