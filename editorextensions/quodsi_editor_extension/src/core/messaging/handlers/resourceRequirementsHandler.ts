@@ -4,6 +4,7 @@ import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { SelectionHandler } from './selection/SelectionHandler';
 import { assertWritePage, isPageMismatch } from '../pageGuard';
+import { readReferenceCleanupOptions } from '../referenceCleanupOptions';
 
 const log = getLogger('ResourceRequirementsHandler');
 
@@ -44,6 +45,7 @@ export class ResourceRequirementsHandler {
     const data = msg.data as {
       resourceRequirements: ISerializedResourceRequirement[];
       basedOnPageId?: string;
+      seizeRelease?: string;
     };
 
     log.debug('Resource requirements update requested', {
@@ -66,7 +68,7 @@ export class ResourceRequirementsHandler {
       assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
 
       // Update resource requirements using ModelManager
-      await modelManager.updateResourceRequirements(data.resourceRequirements, currentPage);
+      await modelManager.updateResourceRequirements(data.resourceRequirements, currentPage, readReferenceCleanupOptions(data));
 
       // Validate the model after update
       await modelManager.validateModel();

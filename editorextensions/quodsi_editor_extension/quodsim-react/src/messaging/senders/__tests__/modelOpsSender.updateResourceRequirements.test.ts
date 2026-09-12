@@ -52,4 +52,12 @@ describe('useModelOpsSender.updateResourceRequirements', () => {
     vi.advanceTimersByTime(30_001)
     await expect(p).rejects.toThrow('Resource requirements update timed out')
   })
+
+  it('adds seizeRelease to the envelope only when given', () => {
+    const { result } = renderHook(() => useModelOpsSender())
+    void result.current.updateResourceRequirements([], 'page-1', 'remove')
+    void result.current.updateResourceRequirements([], 'page-1')
+    expect(posted[0].data).toEqual({ resourceRequirements: [], basedOnPageId: 'page-1', seizeRelease: 'remove' })
+    expect(posted[1].data).toEqual({ resourceRequirements: [], basedOnPageId: 'page-1' })
+  })
 })

@@ -126,6 +126,7 @@ import type {
   DomainType,
 } from 'quodsi_studio/platforms/shared'
 import type { ModelDefinition } from '@quodsi/shared'
+import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
 
 type ShapePatch = { shapeId: string; type: DomainType; patch: Record<string, unknown> }
 
@@ -555,7 +556,14 @@ export function createBufferingAccessor(
     return Promise.resolve()
   }
 
-  function updateModel(patch: Record<string, unknown>): Promise<void> {
+  function updateModel(patch: Record<string, unknown>, options?: ReferenceCleanupOptions): Promise<void> {
+    if (options) {
+      // A write carrying cleanup options (a delete dialog's choice, spec
+      // 2026-09-11 resource delete cleanup) is sent at once, after whatever is
+      // already buffered, and never merged into a batch: merging would drop the
+      // options or apply them to unrelated keys.
+      return flush().then(() => base.updateModel(patch, options))
+    }
     pendingModel = { ...pendingModel, ...patch }
     overlayVersion++
     notify()

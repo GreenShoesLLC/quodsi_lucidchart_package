@@ -12,10 +12,10 @@
 // hook up in ModelEditor: rendering it only while the Resources tab is active
 // keeps the request off every model-panel open.
 //
-// The keys this editor writes -- `resources`, plus `resourceRequirements` /
-// `activities` / `connectors` when a delete cascades -- must all be in
-// updateModelRoot's `knownKeys` on the extension side (core/ModelManager.ts),
-// which THROWS on a key it cannot persist rather than dropping it silently.
+// It writes `resources` (and `workSchedules` from the capacity picker). A
+// delete is `referenceCleanup="host"`: the extension prunes requirements and
+// cleans steps with the user's choice (spec 2026-09-11 resource delete
+// cleanup), so this panel never writes shapes or requirement lists on delete.
 //
 // THE `onEditWorkSchedule` SEAM. A resource that follows a work schedule gets
 // an "Edit schedule" button from the shared CapacitySourcePicker, and without
@@ -32,16 +32,28 @@
 
 import React from 'react'
 import { ResourcesEditor } from 'quodsi_studio/platforms/shared'
+import type { ModelStateAccessor } from 'quodsi_studio/platforms/shared'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { useModelRootSource } from '../../adapters/useModelRootSource'
 import { useMessaging } from '../../messaging/MessageProvider'
 
-export const ResourcesTab: React.FC = () => {
+type ResourcesTabProps = {
+  /**
+   * The Model editor's referenceData accessor: activity and connector action
+   * summaries for the delete dialog's counts (the model-root projection carries
+   * none). Read-only here -- ResourcesEditor never writes to it.
+   */
+  referenceSource?: ModelStateAccessor
+}
+
+export const ResourcesTab: React.FC<ResourcesTabProps> = ({ referenceSource }) => {
   const { accessor } = useModelRootSource()
   const { sendMessage } = useMessaging()
   return (
     <ResourcesEditor
       accessor={accessor}
+      referenceCleanup="host"
+      referenceSource={referenceSource}
       onEditWorkSchedule={(id) =>
         sendMessage(EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL, { scheduleId: id })
       }

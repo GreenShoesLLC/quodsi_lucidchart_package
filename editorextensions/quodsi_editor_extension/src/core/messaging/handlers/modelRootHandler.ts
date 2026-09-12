@@ -9,6 +9,7 @@ import { WorkScheduleEditorModal } from '../../../panels/WorkScheduleEditorModal
 import { SettingsModal } from '../../../panels/SettingsModal';
 import { SelectionHandler } from './selection/SelectionHandler';
 import { assertWritePage } from '../pageGuard';
+import { readReferenceCleanupOptions } from '../referenceCleanupOptions';
 
 const log = getLogger('ModelRootHandler');
 
@@ -338,7 +339,7 @@ export class ModelRootHandler {
     // Guarded the same way the log line below already was: an unwrapped or
     // missing payload must not throw a confusing `Object.keys(undefined)`
     // TypeError out of this handler.
-    const data = msg.data as { patch?: Record<string, unknown>; basedOnPageId?: string };
+    const data = msg.data as { patch?: Record<string, unknown>; basedOnPageId?: string; seizeRelease?: string };
     const patch = data.patch ?? {};
 
     log.debug('Model-root update requested', { keys: Object.keys(patch) });
@@ -358,7 +359,7 @@ export class ModelRootHandler {
       // replies with the failure and pushes a corrective snapshot.
       assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
 
-      await modelManager.updateModelRoot(patch, currentPage);
+      await modelManager.updateModelRoot(patch, currentPage, readReferenceCleanupOptions(data));
       await modelManager.validateModel();
 
       router.send(channel, {

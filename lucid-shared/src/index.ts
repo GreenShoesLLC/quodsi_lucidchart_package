@@ -509,3 +509,8 @@ export { findExpressionsReferencingState } from '@quodsi/shared';
 // LucidChart deletes a state exactly the way drawio, Visio and Studio do.
 export { removeStateReferences } from '@quodsi/shared';
 export type { ExpressionStateReference, StateReferenceScope } from '@quodsi/shared';
+
+// Resource / requirement delete rule (spec 2026-09-11 resource delete cleanup)
+// — the same pure rule drawio, Visio and Studio run in the browser.
+export { removeRequirementReferences, removeResourceReferences } from '@quodsi/shared';
+export type { ReferenceCleanupOptions, SeizeReleaseDisposition, RequirementCleanupImpact, ResourceCleanupResult } from '@quodsi/shared';

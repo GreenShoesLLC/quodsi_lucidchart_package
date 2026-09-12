@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { v4 as uuid } from 'uuid';
 import { EnvelopeBase, EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
+import type { SeizeReleaseDisposition } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
@@ -194,9 +195,15 @@ export function useModelOpsSender() {
    * mint-your-own-correlation-id idiom in useModelRootSource.transport.send.
    * The handler replies to target 'model-iframe' regardless of source; these
    * editors only ever live in the model panel.
+   *
+   * `seizeRelease` is a delete dialog's choice, sent only when given.
    */
   const updateResourceRequirements = useCallback(
-    (resourceRequirements: ISerializedResourceRequirement[], basedOnPageId: string): Promise<void> =>
+    (
+      resourceRequirements: ISerializedResourceRequirement[],
+      basedOnPageId: string,
+      seizeRelease?: SeizeReleaseDisposition,
+    ): Promise<void> =>
       new Promise<void>((resolve, reject) => {
         if (!window.parent) {
           reject(new Error('No parent window to send resource requirements to'));
@@ -225,7 +232,7 @@ export function useModelOpsSender() {
           source: 'model-iframe',
           target: 'host',
           version: '1.0',
-          data: { resourceRequirements, basedOnPageId },
+          data: { resourceRequirements, basedOnPageId, ...(seizeRelease ? { seizeRelease } : {}) },
         };
         window.parent.postMessage(envelope, '*');
       }),
