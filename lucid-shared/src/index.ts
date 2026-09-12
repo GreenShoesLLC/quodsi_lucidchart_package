@@ -350,6 +350,10 @@ export type {
   ResourceLinkResolution,
 } from '@quodsi/shared';
 export { deriveAutoResourceRequirements, reconcileAutoRequirements, isPlainAutoRequirement } from '@quodsi/shared';
+// The Model's own field roster -- the Lucid model-root snapshot and the Model
+// editor's settings patch are both built from it (spec 2026-09-12).
+export { MODEL_FIELD_KEYS, MODEL_DATE_FIELD_KEYS } from '@quodsi/shared';
+export type { ModelFieldKey } from '@quodsi/shared';
 // Validation copy for pointers resolveResourceLinks refused (dangling /
 // duplicate). Not a ValidationRule -- a dangling pointer is by definition
 // absent from the model, so hosts append these at model-build time. Lucid's

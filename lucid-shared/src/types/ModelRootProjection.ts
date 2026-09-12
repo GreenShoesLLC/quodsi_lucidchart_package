@@ -2,23 +2,52 @@ import { ISerializedArrivalPattern } from '../serialization/interfaces/ISerializ
 import { ISerializedArrivalSchedule } from '../serialization/interfaces/ISerializedArrivalSchedule';
 import { ISerializedWorkSchedule } from '../serialization/interfaces/ISerializedWorkSchedule';
 import { ISerializedResourceRequirement } from '../serialization/interfaces/ISerializedResourceRequirement';
+import { ISerializedDuration } from '../serialization/interfaces/ISerializedDuration';
+import type { EditorReferenceActionSummary, EditorReferenceStateModification } from './EditorReferenceData';
+
+/**
+ * The model's own fields as a MODEL_ROOT_SNAPSHOT carries them: the
+ * MODEL_FIELD_KEYS roster (@quodsi/shared modelFields.ts) as plain data.
+ * Dates are ISO strings or null; `levers` is always an array. The snapshot
+ * carries them flat (what Lucid's Model editor drafts from) AND under `model`
+ * (what the shared modals' calendar math reads).
+ */
+export type ModelRootModelFields = {
+    id?: string;
+    name?: string;
+    description?: string;
+    replications?: number;
+    seed?: number;
+    timeUnit?: string;
+    timeMode?: string;
+    warmupTime?: ISerializedDuration;
+    runTime?: ISerializedDuration;
+    warmupDateTime?: string | null;
+    startDateTime?: string | null;
+    finishDateTime?: string | null;
+    levers?: unknown[];
+};
 
 /**
  * Plain-data projection of the model root read by shared cross-platform
- * panels (starting with `GeneratorPatternTab`). NOT `ISerializedModel`: that
- * wire shape is flat by design (no nested `model` block) and carries
- * `warmupTime`/`runTime` as Durations, not the `warmupDateTime`/
- * `finishDateTime` the cascade editor's date math needs. This mirrors
- * drawio's `wrapProjectionAsModelDefinition`.
+ * panels, and since 2026-09-12 the ONLY data source of Lucid's Model editor
+ * (spec lucid-model-accessor). NOT `ISerializedModel`: that wire shape is flat
+ * by design and carries no collections. This mirrors drawio's
+ * `wrapProjectionAsModelDefinition`.
  *
  * Lives in `lucid-shared` (not the editor extension) so both ends of the
  * MODEL_ROOT_SNAPSHOT seam -- the host, which builds it in
- * `ModelManager.buildModelRootProjection`, and `quodsim-react`, which reads
- * it out of the message -- reference one definition. A hand-redeclared copy
- * on either side can drift silently: the React panel would read the wrong
- * key and just render blank rather than error.
+ * `projectModelRoot`, and `quodsim-react`, which reads it out of the message
+ * -- reference one definition. A hand-redeclared copy on either side can drift
+ * silently: the React panel would read the wrong key and render blank rather
+ * than error.
+ *
+ * Activity, generator and connector rows are SUMMARIES (the shapes
+ * referenceDataBuilder sends, built by the extension's referenceSummaries.ts),
+ * never whole domain records: the snapshot is posted after every model-root
+ * write, so every field added here rides the wire each time.
  */
-export type ModelRootProjection = {
+export type ModelRootProjection = ModelRootModelFields & {
     // The Lucid page this snapshot was built for (spec 2026-09-11 page guard).
     // Stamped by ModelManager.buildModelRootProjection; panel writes echo it
     // back as basedOnPageId so the host can refuse a write aimed at another page.
@@ -30,55 +59,37 @@ export type ModelRootProjection = {
         entityId?: string;
         mode?: string;
         arrivalPatternId?: string;
-        // The SCHEDULED-mode sibling of arrivalPatternId. Absent from this
-        // projection until 2026-08-19, which made ScheduleModal
-        // (quodsi_studio/src/platforms/shared/panels/ScheduleModal.tsx:119,
-        // `const scheduleId = generator.arrivalScheduleId`) resolve
-        // `undefined` for EVERY generator in Lucid: the existing schedule was
-        // never found, the table rendered empty, and the first edit took
-        // updateSchedule's create-branch -- minting a second schedule and
-        // relinking the generator to it, orphaning the original beyond the
-        // reach of either cleanup path (both key off the generator's CURRENT
-        // arrivalScheduleId).
+        // The SCHEDULED-mode sibling of arrivalPatternId. Without it
+        // ScheduleModal resolves no schedule for any generator, and its first
+        // edit mints a duplicate schedule and orphans the original.
         arrivalScheduleId?: string;
         volume?: number;
+        interarrivalTime?: ISerializedDuration;
+        initialStates?: EditorReferenceStateModification[];
+        routing?: string;
     }>;
     arrivalPatterns: ISerializedArrivalPattern[];
-    // STILL optional, unlike arrivalPatterns -- NOT because it can genuinely
-    // be absent. ModelManager.buildModelRootProjection populates it on every
-    // path, same guarantee as arrivalPatterns.
-    //
-    // The original reason for the `?` ("no UI consumer exists yet") is now
-    // STALE: ScheduleModal reads it
-    // (quodsi_studio/src/platforms/shared/panels/ScheduleModal.tsx:109).
-    // Keeping it optional is a deliberate, separate deferral: making it
-    // required invalidates ~65 ModelRootProjection fixture literals across
-    // quodsim-react, which is mechanical churn unrelated to the missing-field
-    // bug this file's other fields were added to fix. Widen it in its own
-    // change and let the fixtures fail until updated.
+    // Optional only to avoid churning ~65 fixture literals; projectModelRoot
+    // populates this and every optional list below on every path.
     arrivalSchedules?: ISerializedArrivalSchedule[];
-    // Read by ScheduleModal.tsx:111-114 and handed straight to
-    // ScheduleTable/SchedulePasteImport, whose props are literally
-    // `{ id: string; name: string }[]` (ScheduleTable.tsx:42-43). Deliberately
-    // NOT the full Entity/State domain objects: `states` carries id + name and
-    // nothing else, and projecting whole objects would put every future field
-    // on those classes onto the MODEL_ROOT_SNAPSHOT wire for free. `entities`
-    // additionally carries `description` -- see the comment on that field below.
-    //
-    // Both were absent until 2026-08-19, so ScheduleModal's `?? []` fallbacks
-    // silently produced empty dropdowns in Lucid: no scheduled-arrival row
-    // could be given an entityId, and the engine rejects a document whose
-    // scheduled arrivals have none.
-    // `description` added 2026-09-11 for the shared EntitiesEditor, which Lucid's
-    // Entities tab mounts (spec 2026-09-11). ScheduleTable/SchedulePasteImport
-    // read only id + name and ignore it. Still a narrow row, not the domain object.
+    // Entities carry `description` for the shared EntitiesEditor;
+    // ScheduleTable/SchedulePasteImport read only id + name.
     entities?: Array<{ id: string; name: string; description?: string }>;
-    states?: Array<{ id: string; name: string }>;
-    // Lucid global resources (Plan 2b). Optional for the same fixture-churn
-    // reason as arrivalSchedules; projectModelRoot populates both on every
-    // path. shapeId/shapeLabel/laneRef are TRANSIENT link markers stamped at
-    // build time for the Resources tab's status column -- this projection is
-    // a panel view, not the engine wire, which drops them by construction.
+    // Full rows (ISerializedState without the class tag): the Model editor's
+    // States tab lists and edits them. ScheduleTable reads only id + name.
+    states?: Array<{
+        id: string;
+        name: string;
+        componentType?: string;
+        dataType?: string;
+        initialValue?: unknown;
+        categoryValues?: unknown;
+        description?: string;
+        collectStatistics?: boolean;
+    }>;
+    // Lucid global resources (Plan 2b). shapeId/shapeLabel/laneRef are
+    // TRANSIENT link markers stamped at build time for the Resources tab's
+    // status column -- this projection is a panel view, not the engine wire.
     resources?: Array<{
         id: string;
         name: string;
@@ -91,40 +102,47 @@ export type ModelRootProjection = {
             costPerHourIdle: number;
         };
         levers?: unknown[];
-        // The resource half of the work-schedule link. Read by
-        // CapacitySourcePicker (via ResourceBasicTab) to decide between
-        // "Fixed capacity" and "Follow a schedule", and by
-        // `workScheduleUsage` for the Schedules tab's usage/delete guard.
-        // Omitting it would put the picker permanently in the Fixed state
-        // for an already-linked resource -- and the first edit would then
-        // look like a brand-new link. That is exactly the duplicate-schedule
-        // trap `generators[].arrivalScheduleId` above documents.
+        // The resource half of the work-schedule link (CapacitySourcePicker,
+        // workScheduleUsage). Absent means fixed capacity.
         workScheduleId?: string;
         shapeId?: string;
         shapeLabel?: string;
         laneRef?: { blockId: string; laneId: string };
     }>;
     resourceRequirements?: ISerializedResourceRequirement[];
-    // Model-level work schedules (spec 2026-08-27 §3.1), read by Studio's
-    // WorkSchedulesEditor / WorkScheduleModal / CapacitySourcePicker off
-    // `modelDefinition.workSchedules`. Optional for the same fixture-churn
-    // reason as arrivalSchedules; projectModelRoot populates it on every path.
+    // Model-level work schedules (spec 2026-08-27 §3.1).
     workSchedules?: ISerializedWorkSchedule[];
-    // Activity rows exist in this projection for ONE reason: a WorkSchedule
-    // can be followed by an Activity as well as a Resource, and
-    // `workScheduleUsage` (quodsi_studio) counts BOTH collections to produce
-    // the Schedules tab's usage line and its delete guard. Projecting only
-    // resources would under-report usage and offer Delete on a schedule an
-    // activity still follows -- leaving that activity with a dangling
-    // `workScheduleId`, an ERROR-severity `work_schedule_reference` that
-    // blocks simulate. id + name + workScheduleId is everything the shared
-    // consumers read; deliberately NOT `.toJSON()` (see `entities`/`states`
-    // above for the same reasoning).
-    activities?: Array<{ id: string; name: string; workScheduleId?: string }>;
-    model: {
-        timeMode?: string;
-        startDateTime?: string | null;
-        warmupDateTime?: string | null;
-        finishDateTime?: string | null;
-    };
+    // Activity summaries plus what the Model editor's tabs count off them:
+    // the work-schedule link (Schedules usage and delete guard), the arrival
+    // links of a self-generating activity (Arrivals usage), and levers (the
+    // delete dialogs' lever count).
+    activities?: Array<{
+        id: string;
+        name: string;
+        workScheduleId?: string;
+        routing?: string;
+        actions?: EditorReferenceActionSummary[];
+        sourceConfig?: {
+            initialStates?: EditorReferenceStateModification[];
+            arrivalPatternId?: string;
+            arrivalScheduleId?: string;
+        };
+        failureProperties?: { repairResourceRequirementId?: string };
+        levers?: unknown[];
+    }>;
+    // Geometry-free connector summaries: routing fields, action summaries and
+    // levers, for the delete dialogs and the state-delete preview.
+    connectors?: Array<{
+        id: string;
+        name: string;
+        sourceId: string;
+        targetId: string;
+        weight?: number;
+        priority?: number;
+        entityId?: string;
+        condition?: unknown;
+        actions?: EditorReferenceActionSummary[];
+        levers?: unknown[];
+    }>;
+    model: ModelRootModelFields;
 };
