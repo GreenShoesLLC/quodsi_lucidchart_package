@@ -29,7 +29,6 @@ vi.mock("../../../messaging/hooks/useModelPanel", () => ({
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
-    updateStates: vi.fn(),
     requestModelJson: vi.fn(),
   }),
 }));

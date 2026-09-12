@@ -46,6 +46,27 @@ describe('updateModelRoot: resources / resourceRequirements', () => {
         expect(storageAdapter.getResourceRequirements(page).map((r: any) => r.id)).toEqual(['r1x']);
     });
 
+    // spec 2026-09-12 §3: the host's old filter stripped a renamed override,
+    // the panel's stripped a priority-only one. The shared predicate keeps both.
+    it('resourceRequirements: a priority-only override and a renamed override of a resource\'s own requirement are both kept', async () => {
+        const { mm, storageAdapter, page } = makeManager();
+        storageAdapter.setResources(page, [{ id: 'r1', name: 'Nurse' }, { id: 'r2', name: 'Doctor' }]);
+        await mm.updateModelRoot({ resourceRequirements: [
+            { id: 'r1', name: 'Nurse', rootClause: { id: 'a', mode: 'require_all', requests: [{ resourceId: 'r1', priority: 2 }] } },
+            { id: 'r2', name: 'Senior Doctor', rootClause: { id: 'b', mode: 'require_all', requests: [{ resourceId: 'r2' }] } },
+        ] }, page);
+        expect(storageAdapter.getResourceRequirements(page).map((r: any) => r.id)).toEqual(['r1', 'r2']);
+    });
+
+    it('resourceRequirements: a plain-auto-shaped row for a resource that does not exist is kept', async () => {
+        const { mm, storageAdapter, page } = makeManager();
+        storageAdapter.setResources(page, [{ id: 'r1', name: 'Nurse' }]);
+        await mm.updateModelRoot({ resourceRequirements: [
+            { id: 'gone', name: 'Gone', rootClause: { id: 'a', mode: 'require_all', requests: [{ resourceId: 'gone' }] } },
+        ] }, page);
+        expect(storageAdapter.getResourceRequirements(page).map((r: any) => r.id)).toEqual(['gone']);
+    });
+
     it('still throws on an unknown key before writing anything', async () => {
         const { mm, page } = makeManager();
         await expect(mm.updateModelRoot({ resources: [{ id: 'r1', name: 'N' }], bogus: 1 }, page)).rejects.toThrow(/bogus/);

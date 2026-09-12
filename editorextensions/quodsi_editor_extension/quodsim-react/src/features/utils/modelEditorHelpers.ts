@@ -1,8 +1,11 @@
 import {
   Model,
   Duration,
+  ModelDefaults,
   PeriodUnit,
   SimulationTimeType,
+  MODEL_FIELD_KEYS,
+  MODEL_DATE_FIELD_KEYS,
 } from "@quodsi/lucid-shared";
 
 /**
@@ -116,3 +119,63 @@ export const updateModelImmutably = (
 
   return updated;
 };
+
+/** A model date as the model-root route carries it: an ISO string, or null. */
+const toIsoOrNull = (value: unknown): string | null => {
+  const date = coerceStoredDate(value);
+  return date ? date.toISOString() : null;
+};
+
+/**
+ * The model-settings patch Lucid's Basic and Levers tabs save through
+ * accessor.updateModel (spec 2026-09-12 §5): every Model field except `id`,
+ * with the defaults this editor has always applied on save. Never `id` (the
+ * host owns identity) and never `scenarios` (not a model field) --
+ * updateModelRoot refuses both. Dates travel as ISO strings or null, so the
+ * optimistic echo and the host's next snapshot carry identical values.
+ */
+export const buildModelSettingsPatch = (draft: Model): Record<string, unknown> => ({
+  name: draft.name,
+  description: draft.description ?? "",
+  replications: draft.replications || 1,
+  seed: draft.seed || ModelDefaults.DEFAULT_SEED,
+  timeUnit: draft.timeUnit || PeriodUnit.HOURS,
+  timeMode: draft.timeMode || SimulationTimeType.Clock,
+  warmupTime: draft.warmupTime ?? Duration.constant(0, PeriodUnit.HOURS),
+  runTime: draft.runTime ?? Duration.constant(24, PeriodUnit.HOURS),
+  warmupDateTime: toIsoOrNull(draft.warmupDateTime),
+  startDateTime: toIsoOrNull(draft.startDateTime),
+  finishDateTime: toIsoOrNull(draft.finishDateTime),
+  levers: draft.levers ?? [],
+});
+
+/** Plain data with object keys sorted and undefined dropped, for a stable JSON string. */
+const sortKeysDeep = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      const inner = (value as Record<string, unknown>)[key];
+      if (inner !== undefined) out[key] = sortKeysDeep(inner);
+    }
+    return out;
+  }
+  return value === undefined ? null : value;
+};
+
+/**
+ * A STRING that changes only when a snapshot's model-field VALUES change
+ * (spec 2026-09-12 §5 resync rule). Object identity cannot be the key: the
+ * optimistic echo and every snapshot replace the projection object even when
+ * nothing the Basic tab shows changed. Fields in MODEL_FIELD_KEYS order,
+ * nested keys sorted, dates normalized to ISO; every other key is ignored.
+ */
+export const modelSettingsSyncKey = (fields: Record<string, unknown>): string =>
+  JSON.stringify(
+    MODEL_FIELD_KEYS.map((key) => [
+      key,
+      (MODEL_DATE_FIELD_KEYS as readonly string[]).includes(key)
+        ? toIsoOrNull(fields[key])
+        : sortKeysDeep(fields[key]),
+    ])
+  );

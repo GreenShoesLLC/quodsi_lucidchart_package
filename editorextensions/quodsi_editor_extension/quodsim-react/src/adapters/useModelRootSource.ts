@@ -34,6 +34,7 @@ import {
   EnvelopeMessageType,
   MessageSource,
   ModelRootProjection,
+  MODEL_FIELD_KEYS,
 } from '@quodsi/lucid-shared'
 import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
 import { useMessaging } from '../messaging/MessageProvider'
@@ -70,14 +71,24 @@ export type ModelRootTransport = {
 // canvas, not the record, so no patch a panel sends ever carries them.
 const TRANSIENT_RESOURCE_KEYS = ['shapeId', 'shapeLabel', 'laneRef'] as const
 
+// The model's own settings (MODEL_FIELD_KEYS minus the host-owned `id`). The
+// snapshot carries each of them twice -- flat, where Lucid's Model editor
+// drafts from, and under `model`, where the shared modals' calendar math reads
+// -- so the echo writes both copies (spec 2026-09-12 §4).
+const MODEL_SETTINGS_KEYS = new Set<string>(MODEL_FIELD_KEYS.filter((key) => key !== 'id'))
+
 export function createModelRootSource(transport: ModelRootTransport) {
   const listeners = new Set<() => void>()
   let projection: ModelRootProjection | null = null
+  // Stamped onto every accepted snapshot (never onto an echo) so an editor can
+  // tell a snapshot that arrived after its write settled from one already in
+  // flight -- see ModelEditor's draft resync.
+  let seq = 0
 
   function acceptSnapshot(next: ModelRootProjection): void {
     // Replace the reference wholesale. Never mutate in place: the accessor's
     // cache compares by identity, so an in-place edit would be invisible.
-    projection = next
+    projection = { ...next, snapshotSeq: ++seq }
     listeners.forEach((l) => l())
   }
 
@@ -97,6 +108,7 @@ export function createModelRootSource(transport: ModelRootTransport) {
    * and never on a patch -- survive the echo; otherwise the Resources tab's
    * link column flickers to "no shape" for the length of a round trip. Every
    * other key is replaced wholesale: they carry no host-only fields.
+   * Model settings keys land flat AND in a rebuilt nested `model` block, the two places the snapshot carries them.
    *
    * The projection object is always REBUILT, never mutated: the accessor's
    * getSnapshot cache compares by identity. The authoritative
@@ -131,6 +143,10 @@ export function createModelRootSource(transport: ModelRootTransport) {
         })
       } else {
         next[key] = value
+        if (MODEL_SETTINGS_KEYS.has(key)) {
+          // Rebuilt, never mutated: subscribers compare by identity.
+          next.model = { ...((next.model as Record<string, unknown> | undefined) ?? {}), [key]: value }
+        }
       }
     }
 
@@ -269,7 +285,7 @@ const MODEL_ROOT_UPDATE_TIMEOUT_MS = 30_000
  * hands back a ready-to-use ModelStateAccessor plus the current projection.
  *
  * Consumption (Task 10, inside GeneratorEditor's Lucid host component):
- *   const { accessor, projection } = useModelRootSource()
+ *   const { accessor, projection, request } = useModelRootSource()
  *   if (!projection) return <Loading />   // no snapshot has arrived yet
  *   return <GeneratorEditor shapeId={...} accessor={accessor} />
  *
@@ -282,6 +298,8 @@ const MODEL_ROOT_UPDATE_TIMEOUT_MS = 30_000
 export function useModelRootSource(): {
   accessor: ModelStateAccessor
   projection: ModelRootProjection | null
+  /** Ask the host for a fresh snapshot (ModelEditorForPage re-requests on selection changes). */
+  request: () => void
 } {
   const { app } = useMessaging()
   const source: MessageSource = SOURCE_BY_PANEL[app.panelType || 'model'] ?? 'model-iframe'
@@ -475,5 +493,5 @@ export function useModelRootSource(): {
     modelRootSource.deps.getModelDefinition,
   ) as unknown as ModelRootProjection | null
 
-  return { accessor, projection }
+  return { accessor, projection, request: modelRootSource.request }
 }

@@ -20,9 +20,9 @@ import {
     SwimLaneQuodsiData,
     generateUniqueName,
     getLogger,
+    isPlainAutoRequirement,
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from './StorageAdapter';
-import { isPlainAutoRequirement } from './autoRequirements';
 import { LUCID_STORAGE_FORMAT } from './storageFormat';
 
 const log = getLogger('ResourceStorageMigration');
@@ -183,10 +183,10 @@ export function migrateResourcesToModelLevel(page: PageProxy, sa: StorageAdapter
         // shaped row pointing at no resource is left alone -- nothing would
         // bring it back. Idempotent: a second pass finds nothing to drop and
         // does not write.
-        const recordIds = new Set(records.map((r) => String(r.id)));
+        const recordsById = new Map(records.map((r) => [String(r.id), r]));
         const storedRequirements = sa.getResourceRequirements(page);
         const keptRequirements = storedRequirements.filter(
-            (r) => !(recordIds.has(String(r.id)) && isPlainAutoRequirement(r as unknown as Parameters<typeof isPlainAutoRequirement>[0])),
+            (r) => !isPlainAutoRequirement(r as unknown as { id: string; name?: string; rootClause?: unknown }, recordsById.get(String(r.id))),
         );
         if (keptRequirements.length !== storedRequirements.length) {
             sa.setResourceRequirements(page, keptRequirements);

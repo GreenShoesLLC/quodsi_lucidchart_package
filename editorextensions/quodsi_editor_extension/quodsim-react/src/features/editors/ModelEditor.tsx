@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Model,
   ModelDefaults,
   Duration,
   PeriodUnit,
   SimulationTimeType,
-  StateListManager,
   ValidationResult,
   ScenarioObjectType,
   resolveCalendarWindow,
   msToCoarsestDuration,
   eligibleLeverProperties,
   countActiveLevers,
+  type ModelRootProjection,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes, Briefcase, CalendarClock, SlidersHorizontal } from "lucide-react";
@@ -27,46 +27,37 @@ import {
   // Complexity views (Task 11a): the same hook + tell Studio's ModelEditor uses.
   useView, ViewTell, ViewGated,
 } from "quodsi_studio/platforms/shared";
+import type { ModelStateAccessor } from "quodsi_studio/platforms/shared";
 import { LUCID_MODEL_TAB_SURFACE, LUCID_MODEL_EXTRA_SURFACES } from "./viewSurfaceMaps";
 import { ArrivalsTab } from "./ArrivalsTab";
 import { SchedulesTab } from "./SchedulesTab";
 import { ResourcesTab } from "./ResourcesTab";
-import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
-import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
-import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
+import { useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
+import { useSaveInFlight } from "./hooks/useSaveInFlight";
 import SaveStatusLine from "./SaveStatusLine";
 import {
   extractModelData,
   updateModelImmutably,
+  buildModelSettingsPatch,
+  modelSettingsSyncKey,
   type ModelInput,
 } from "../utils/modelEditorHelpers";
 import { ValidationDashboard } from "./ValidationDashboard";
-import { EditorReferenceData, ResourceRequirement } from "@quodsi/lucid-shared";
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-/** An entity row as the panel receives it (referenceData.entities). Still
- *  needed after the Entities tab moved to the shared editor: the ViewTell
- *  context below reads it. */
-export type EntityRow = { id: string; name: string; description?: string };
-
 interface Props {
-  model: Model;
-  onSave: (model: Model) => void;
-  onRemoveModel?: () => void;
+  /** The page's one model-root accessor (ModelEditorForPage). Every tab writes through it. */
+  accessor: ModelStateAccessor;
+  /** The snapshot that accessor serves. Never null: ModelEditorForPage waits for the first one. */
+  projection: ModelRootProjection;
   onValidate?: () => void;
-  states: StateListManager;
-  entities: EntityRow[];
-  referenceData?: EditorReferenceData;
-  resourceRequirements?: ResourceRequirement[];
   validationState?: ValidationResult | null;
   activeTab?: EditorTab;
   onTabChange?: (tab: EditorTab) => void;
-  onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
 export type EditorTab = "basic" | "states" | "entities" | "resources" | "requirements" | "arrivals" | "schedules" | "scenarios" | "levers" | "validation";
@@ -155,12 +146,6 @@ function hasMappedSurface(
 }
 
 /**
- * Default random seed value used when no seed is specified.
- * This provides reproducible simulation results for testing and debugging.
- */
-const DEFAULT_RANDOM_SEED = ModelDefaults.DEFAULT_SEED;
-
-/**
  * Maximum replications a model may run — single-sourced from @quodsi/shared
  * (re-exported via @quodsi/lucid-shared). Enforced in the UI and the backend.
  */
@@ -194,54 +179,41 @@ const FINISH_DATE_HELP =
 const START_DATE_HINT = "Set the start date first";
 
 /**
- * ModelEditor - Component for editing model-level simulation settings
+ * ModelEditor - Lucid's editor for model-level simulation settings.
  *
- * The ModelEditor orchestrates the configuration of simulation model settings across
- * multiple tabs, including basic properties, state variables, resource requirements,
- * simulation scenarios, and validation. It acts as a container for specialized sub-editors.
- *
- * Features:
- * - Four-tab interface: Basic Settings, State Definitions, Resource Requirements, and Validation
- * - Controlled component with immediate UI updates
- * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush;
- *   useFlushOnChange flush for select dropdowns)
+ * Data (spec 2026-09-12): every tab reads ONE MODEL_ROOT_SNAPSHOT
+ * (`projection`) and writes through ONE model-root accessor (`accessor`),
+ * both owned by ModelEditorForPage, which remounts this editor per Lucid page.
  *
  * Tabs:
- * - Basic: Model name, simulation parameters (reps, seed), and time configuration
- * - States: Model-level state variables accessible throughout the simulation
- * - Requirements: Reusable resource requirement templates for activities
- * - Validation: View and resolve model validation issues
+ * - Basic and Levers: a local draft of the snapshot's model fields, saved whole
+ *   by useAutoSave (500 ms debounce; onBlur and select changes flush) as
+ *   accessor.updateModel(buildModelSettingsPatch(draft)).
+ * - States, Entities, Resources, Requirements: Studio's shared list editors in
+ *   host-cleanup mode -- ModelManager.updateModelRoot runs the delete rules.
+ * - Arrivals, Schedules: Studio's shared editors; work-schedule editing opens
+ *   Lucid's own modal.
+ * - Validation: read-only, from validationState.
  *
- * State Management:
- * - Maintains local draft state (localModelDraft) for immediate UI updates
- * - Syncs with Redux for save state tracking (isSaving)
- * - Uses custom hooks for model switching and save completion detection
- * - Single save path: all Basic-tab field changes route through useAutoSave (debounced)
+ * Draft resync: the draft re-extracts from a snapshot only while nothing is
+ * pending, no save is in flight (useSaveInFlight) and the last save did not
+ * fail, and only from a snapshot the source ACCEPTED after the last save
+ * settled (snapshotSeq) whose model-field VALUES (modelSettingsSyncKey) differ
+ * from the ones last applied. So an Advisor Apply shows up while idle, and so
+ * does the host's post-save snapshot (a cleared name stored as the page title)
+ * even though it lands before React commits saving=false; our own echo, a
+ * snapshot that was in flight during a save, or the corrective snapshot after
+ * a refused save never erases what the user typed. Merely re-checking a
+ * skipped snapshot when the guard drops would: see the resync effect.
  *
- * Save Behavior:
- * - Basic tab — Typed inputs (name, reps, runClockPeriod, warmupClockPeriod):
- *   debounced auto-save on edit; immediate save on blur or element switch.
- * - Basic tab — Calendar dates (Warmup/Start/Finish): each pick commits at
- *   once through CalendarDateTimeField and rides the same debounce. Only the
- *   Start Date is stored; Warmup and Finish write `warmupTime`/`runTime`,
- *   which is what the clean wire and the engine actually carry.
- * - Basic tab — Selects (simulationTimeType, runClockPeriodUnit, oneClockUnit,
- *   warmupClockPeriodUnit): immediate save via useFlushOnChange (selects have no
- *   useful onBlur).
- * - Save defaulting: onSave is wrapped in onSaveWithDefaults that applies fallbacks
- *   for falsy fields (DEFAULT_RANDOM_SEED for seed, PeriodUnit.HOURS for unit
- *   selectors, etc.) so every saved Model is fully populated even if the user
- *   blanked optional fields.
- * - States tab: Studio's shared StatesEditor over the referenceData accessor; writes go through updateStates (STATES_UPDATE round trip), the host cleans references.
- * - Requirements tab: Auto-saves immediately via updateResourceRequirements.
- * - Validation tab: Read-only.
- * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Save failed —
- *   keep typing to retry"). Native LucidChart Ctrl+Z reverses saved changes.
+ * Calendar dates: only the Start Date is stored; Warmup and Finish write
+ * `warmupTime`/`runTime`, which is what the clean wire and the engine carry.
+ * Switching back to Clock clears all three dates in the same draft update.
  *
- * @param props - Component props
- * @returns Rendered model editor component
+ * Status: SaveStatusLine ("Saved" / "Saving…" / "Save failed — keep typing to
+ * retry"). Native LucidChart Ctrl+Z reverses saved changes.
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, entities, referenceData, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
+const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -254,77 +226,96 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const setActiveTab = onTabChangeProp ?? setLocalActiveTab;
   const { visible } = useView();
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
-  const { updateResourceRequirements, updateStates } = useModelOpsSender();
   // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
   const { openSettingsModal } = useSimulationRunSender();
-  const accessor = useReferenceDataAccessor(referenceData, { updateResourceRequirements, updateStates });
 
-  // Direct form state management
-  const [localModelDraft, setLocalModelDraft] = useState<Model>(() => extractModelData(model));
+  // The page this editor was mounted for. ModelEditorForPage is keyed on it,
+  // so it never changes for the life of this component -- the constant
+  // "element id" useAutoSave expects.
+  const pageId = projection.pageId ?? "";
+
+  // Basic and Levers edit a local draft of the snapshot's model fields.
+  const [localModelDraft, setLocalModelDraft] = useState<Model>(() =>
+    extractModelData(projection as unknown as ModelInput)
+  );
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
   // Why an out-of-order calendar pick needs somewhere to report itself: a
   // finish at/before the start cannot be expressed as a duration at all.
-  // Silently writing nothing left the rejected date sitting in the field with
-  // the user believing it had saved.
-  // (WarmupDateField reports its own refused pick; only Finish still needs a
-  // slot here.)
+  // (WarmupDateField reports its own refused pick; only Finish needs a slot.)
   const [finishDateError, setFinishDateError] = useState<string | null>(null);
 
-  // Get element operations state from Redux
-  const elementOpsState = useElementOpsState();
+  // useAutoSave's `isSaving`: true while a draft save is in flight. See
+  // useSaveInFlight for why a plain useState would break useAutoSave.
+  const { saving, track } = useSaveInFlight();
+  // The last save's failure. While set, no snapshot may overwrite the draft:
+  // the host's corrective snapshot after a refused write would otherwise erase
+  // exactly the values the user is being told did not save. Cleared when the
+  // next save starts (the next edit).
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  /**
-   * Redux-managed state for save operation tracking.
-   *
-   * isSaving: true when save is in progress (shows loading state)
-   *
-   * This is managed by Redux elementOpsState to coordinate saves across
-   * multiple editor instances.
-   */
-  const isSaving = localModelDraft.id ? elementOpsState.isSaving(localModelDraft.id) : false;
-
-  // Custom hooks for state synchronization
-  // `model` doubles as the sync key: the extension re-sends the selection
-  // with a fresh object after any page write, including one it did not
-  // originate (the Advisor's run-settings Apply), and the open editor must
-  // pick those values up rather than show the pre-write ones (86e34wx7y).
-  useFormSync(
-    model.id,
-    hasPendingChanges,
-    () => extractModelData(model),
-    setLocalModelDraft,
-    setHasPendingChanges,
-    model
+  // A STRING of the snapshot's model-field values (spec 2026-09-12 §5), so a
+  // snapshot that changed only other keys -- a new object, the same values --
+  // never re-extracts the draft.
+  const modelSyncKey = useMemo(
+    () => modelSettingsSyncKey(projection as unknown as Record<string, unknown>),
+    [projection]
   );
 
-  useSaveCompletionDetector(isSaving, setHasPendingChanges);
+  // Draft resync: re-extract from the snapshot only when
+  //   1. nothing is pending, no save is in flight and the last save did not
+  //      fail (the guard);
+  //   2. the snapshot was ACCEPTED after the last save settled -- its
+  //      snapshotSeq (stamped by createModelRootSource.acceptSnapshot, kept by
+  //      the echo) is newer than the source's seq when that write resolved or
+  //      rejected; and
+  //   3. its model-field values differ from the ones last applied.
+  // The effect re-runs when the guard drops, so a snapshot accepted while the
+  // guard was still up is applied then: the host posts RESULT and the snapshot
+  // back-to-back, so the snapshot lands before React commits saving=false, and
+  // no later snapshot carries different values -- without this a cleared name
+  // the host stored as the page title never shows. Rule 2 is what keeps that
+  // safe. Re-checking any skipped key once the guard drops would regress typed
+  // text: with save 1 ('A') in flight the user types 'AB', the trailing save
+  // echoes 'AB', save 1's snapshot ('A') replaces the projection, save 2
+  // settles, and a re-check would re-extract 'A' over the draft. That snapshot
+  // was accepted before save 2 settled, so rule 2 skips it.
+  const lastSettledSeqRef = useRef(projection.snapshotSeq ?? 0);
+  const lastAppliedKeyRef = useRef(modelSyncKey);
+  const draftGuard = hasPendingChanges || saving || saveError !== null;
+  useEffect(() => {
+    if (draftGuard) return;
+    if ((projection.snapshotSeq ?? 0) <= lastSettledSeqRef.current) return;
+    if (modelSyncKey === lastAppliedKeyRef.current) return;
+    lastAppliedKeyRef.current = modelSyncKey;
+    setLocalModelDraft(extractModelData(projection as unknown as ModelInput));
+  }, [draftGuard, modelSyncKey, projection]);
 
-  // Wrap onSave with defaulting logic preserved from the deleted handleSave.
-  // Auto-save dispatches the raw draft; this callback applies fallbacks for
-  // fields that may be falsy (e.g., seed has no UI input — always defaults).
+  useSaveCompletionDetector(saving, setHasPendingChanges);
+
+  // Auto-save hands this the raw draft. buildModelSettingsPatch applies the
+  // defaults and leaves out `id` and `scenarios`, which updateModelRoot
+  // refuses. The rejection is always caught -- including the unmount flush
+  // after a page switch, which the page guard refuses (that edit is lost, as
+  // it was on the old ELEMENT_UPDATE route).
   const onSaveWithDefaults = useCallback(
     (draft: Model) => {
-      const modelToSave = new Model(
-        draft.id,
-        draft.name,
-        draft.replications || 1,
-        draft.seed || DEFAULT_RANDOM_SEED,
-        draft.timeUnit || PeriodUnit.HOURS,
-        draft.timeMode || SimulationTimeType.Clock,
-        draft.warmupTime ?? Duration.constant(0, PeriodUnit.HOURS),
-        draft.runTime ?? DEFAULT_RUN_TIME,
-        draft.warmupDateTime || null,
-        draft.startDateTime || null,
-        draft.finishDateTime || null
-      );
-      modelToSave.description = draft.description;
-      modelToSave.levers = draft.levers;
-      modelToSave.scenarios = draft.scenarios;
-      onSave(modelToSave);
+      setSaveError(null);
+      const write = accessor.updateModel(buildModelSettingsPatch(draft));
+      // Resync rule 2's "settled" mark. Read the source's CURRENT projection
+      // synchronously, not the rendered `projection` prop, which can lag
+      // behind a snapshot that has already been accepted.
+      const markSettled = () => {
+        const current = accessor.getSnapshot().modelDefinition as unknown as ModelRootProjection | null;
+        lastSettledSeqRef.current = current?.snapshotSeq ?? 0;
+      };
+      write.then(markSettled, (err: unknown) => {
+        markSettled();
+        setSaveError(err instanceof Error ? err.message : String(err));
+      });
+      track(write);
     },
-    [onSave]
+    [accessor, track]
   );
 
   const { status, lastSavedAt, saveNow } = useAutoSave<Model>({
@@ -332,8 +323,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     hasPendingChanges,
     isValid: true, // No validation: only one Model per document, no name-uniqueness check needed.
     onSave: onSaveWithDefaults,
-    isSaving,
-    elementId: localModelDraft.id,
+    isSaving: saving,
+    elementId: pageId,
   });
 
   // Decisive selects (no useful onBlur): flush save on change.
@@ -502,16 +493,11 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   );
   const activeOrFallback: EditorTab = tabs.some((t) => t.id === activeTab) ? activeTab : "basic";
 
-  // The tell only names surfaces this editor can actually back with live
-  // usage data. Arrivals and Schedules are deliberately left out: Lucid
-  // fetches the model root lazily inside ArrivalsTab/SchedulesTab, and
-  // lifting that read up here just to power a notice would change fetch
-  // behaviour in a repo that ships by manual package upload. States stays
-  // in, since `states` is already a prop this component holds.
+  // The tell names every mapped tab surface: the snapshot carries arrival
+  // patterns and work schedules to this editor too (spec 2026-09-12
+  // decision 9), so Arrivals and Schedules are backed like the rest.
   const tellSurfaces = [
-    ...TAB_CONFIG.filter(hasMappedSurface)
-      .filter((t) => t.id !== "arrivals" && t.id !== "schedules")
-      .map((t) => LUCID_MODEL_TAB_SURFACE[t.id]),
+    ...TAB_CONFIG.filter(hasMappedSurface).map((t) => LUCID_MODEL_TAB_SURFACE[t.id]),
     ...LUCID_MODEL_EXTRA_SURFACES,
   ];
 
@@ -563,24 +549,17 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
 
       <ViewTell
         surfaces={tellSurfaces}
-        // Model-level predicates in @quodsi/shared read `ctx.model` shaped
-        // like a ModelDefinition (see usage.ts): collections at the top level,
-        // the Model's own fields under `model`. `localModelDraft` is a `Model`,
-        // so it supplies that inner record, and the collections come from the
-        // props this editor already holds. Until 2026-09-04 this passed
-        // `{ states }` only, so no other predicate could fire in this host
-        // (Daniel's Lucid smoke: a Basic model with resources showed no tell).
-        // Still NOT covered: workSchedules / arrivalPatterns /
-        // arrivalSchedules -- those live behind SchedulesTab's and
-        // ArrivalsTab's own useModelRootSource subscriptions.
+        // Model-level predicates in @quodsi/shared read `ctx.model` shaped like
+        // a ModelDefinition (see usage.ts): collections at the top level, the
+        // Model's own fields under `model`. The snapshot is that shape; the
+        // draft's unsaved levers and settings are laid over it so the tell
+        // tracks what the user sees.
         ctx={{
           model: {
-            states,
-            entities,
-            resources: referenceData?.resources,
-            resourceRequirements: referenceData?.resourceRequirements,
+            ...projection,
             levers: localModelDraft.levers,
             model: {
+              ...projection.model,
               warmupTime: localModelDraft.warmupTime,
               timeMode: localModelDraft.timeMode,
               replications: localModelDraft.replications,
@@ -900,21 +879,18 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
 
 
                 {/* Auto-save status */}
-                <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
+                <SaveStatusLine status={saveError ? "error" : status} lastSavedAt={lastSavedAt} />
               </div>
           </div>
       )}
-      {/* States: StatesTab mounts Studio's shared StatesEditor over this
-          editor's own referenceData accessor (spec 2026-09-11 States). The
-          loading gate and the per-page-switch remount both live in StatesTab
-          now -- see its header comment. */}
-      {activeOrFallback === "states" && (
-        <StatesTab accessor={accessor} hasStates={referenceData?.states !== undefined} />
-      )}
-      {activeOrFallback === "entities" && <EntitiesTab />}
-      {activeOrFallback === "resources" && <ResourcesTab referenceSource={accessor} />}
-      {activeOrFallback === "arrivals" && <ArrivalsTab />}
-      {activeOrFallback === "schedules" && <SchedulesTab />}
+      {/* Every list tab takes the editor's one model-root accessor (spec
+          2026-09-12). ModelEditorForPage owns the loading gate; ElementEditor
+          owns the per-page remount. */}
+      {activeOrFallback === "states" && <StatesTab accessor={accessor} />}
+      {activeOrFallback === "entities" && <EntitiesTab accessor={accessor} />}
+      {activeOrFallback === "resources" && <ResourcesTab accessor={accessor} />}
+      {activeOrFallback === "arrivals" && <ArrivalsTab accessor={accessor} />}
+      {activeOrFallback === "schedules" && <SchedulesTab accessor={accessor} />}
       {activeOrFallback === "requirements" && (
         <ResourceRequirementsEditor accessor={accessor} referenceCleanup="host" />
       )}

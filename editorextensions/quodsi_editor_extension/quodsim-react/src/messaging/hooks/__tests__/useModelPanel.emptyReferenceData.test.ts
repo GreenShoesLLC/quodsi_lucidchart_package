@@ -1,13 +1,8 @@
 // quodsim-react/src/messaging/hooks/__tests__/useModelPanel.emptyReferenceData.test.ts
 //
-// Final fix wave I1: before the host's first real referenceData arrives,
-// useModelPanel substitutes a frozen EMPTY_REFERENCE_DATA. That fallback used
-// to carry `states: []`, which is indistinguishable from a loaded model with
-// zero states -- ModelEditor's States-tab loading gate
-// (`referenceData?.states === undefined`) never fired in production, so the
-// tab rendered an empty list with "Add State" enabled before the host's real
-// data ever arrived. `states` must be ABSENT from the fallback (spec
-// 2026-09-11 States, loading gate).
+// Before the host's first real referenceData arrives, useModelPanel
+// substitutes a frozen EMPTY_REFERENCE_DATA. It carries no `states` key, so
+// "not loaded yet" stays distinguishable from a loaded model with zero states.
 
 import { renderHook } from '@testing-library/react'
 

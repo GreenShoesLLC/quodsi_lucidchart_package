@@ -41,6 +41,10 @@ describe('ModelManager.buildModelRootProjection', () => {
               entityId: 'e',
               mode: 'SCHEDULED',
               arrivalScheduleId: 'as-a',
+              routing: 'probability',
+              interarrivalTime: { value: 10, unit: 'minutes' },
+              initialStates: [{ stateId: 'st-a', operation: 'assign', expression: 'rand()', value: 9 }],
+              x: 100,
             },
           ],
         },
@@ -63,17 +67,36 @@ describe('ModelManager.buildModelRootProjection', () => {
             },
           ],
         },
-        // Activities exist in the projection ONLY so workScheduleUsage can
-        // count the activity half of a schedule's referrers -- id, name and
-        // the link, nothing else.
+        // Activity rows are the referenceDataBuilder SUMMARY (spec 2026-09-12
+        // §1) plus the work-schedule link, arrival links and levers: the Model
+        // editor's tabs count usage, delete impact and levers off them.
+        // capacity and the branch `condition` are noise that must NOT ride along.
         activities: {
           getAll: () => [
-            { id: 'act-triage', name: 'Triage', workScheduleId: 'ws-a', capacity: 3, actions: ['noise'] },
+            {
+              id: 'act-triage',
+              name: 'Triage',
+              workScheduleId: 'ws-a',
+              capacity: 3,
+              routing: 'probability',
+              actions: [
+                { id: 'seize-1', type: 'seize', resourceRequirementId: 'req-custom', modifications: [{ stateId: 'st-a', operation: 'assign', expression: 'x + 1', value: 3 }] },
+                { id: 'branch-1', type: 'branch', condition: 'noise', ifTrue: [{ id: 'release-1', type: 'release', resourceRequirementId: 'req-custom' }], ifFalse: [] },
+                { id: 'loop-1', type: 'loop', actions: [{ id: 'delay-1', type: 'delay', duration: { value: 5, unit: 'minutes' } }] },
+              ],
+              sourceConfig: { entityId: 'ent-a', arrivalPatternId: 'ap-self', initialStates: [{ stateId: 'st-a', operation: 'assign', value: 1 }] },
+              failureProperties: { enabled: true, repairResourceRequirementId: 'req-custom' },
+              levers: [{ leverId: 'lv-1', propertyName: 'SEIZE_PRIORITY', actionId: 'seize-1' }],
+            },
             { id: 'act-xray', name: 'X-ray' },
           ],
         },
         entities: { getAll: () => [{ id: 'ent-a', name: 'Patient', description: 'noise' }] },
-        states: { getAll: () => [{ id: 'st-a', name: 'Priority', dataType: 'NUMBER' }] },
+        states: {
+          getAll: () => [
+            { id: 'st-a', name: 'Priority', componentType: 'model', dataType: 'NUMBER', initialValue: 0, description: 'triage', collectStatistics: true, type: 'None' },
+          ],
+        },
         // Plan 2b, Task 7: a shape-linked resource (shapeId + shapeLabel
         // stamped the way the builder stamps them), a lane-linked one
         // (laneRef, no shapeId), and an unclaimed one (neither) -- proves
@@ -130,7 +153,25 @@ describe('ModelManager.buildModelRootProjection', () => {
             },
           ],
         },
-        model: {},
+        connectors: {
+          getAll: () => [
+            {
+              id: 'con-1', name: 'To X-ray', sourceId: 'act-triage', targetId: 'act-xray', weight: 2, priority: 1,
+              entityId: 'ent-a', condition: { stateId: 'st-a', comparison: 'eq', value: 1 },
+              actions: [{ id: 'assign-1', type: 'assign', modifications: [{ stateId: 'st-a', operation: 'assign', expression: 'y' }] }],
+              levers: [{ leverId: 'lv-2', propertyName: 'CONNECTOR_WEIGHT' }],
+              sourceX: 10, sourceY: 20, targetX: 30, targetY: 40, path: [[10, 20], [30, 40]],
+            },
+          ],
+        },
+        model: {
+          id: 'model-a', name: 'Clinic', description: 'desc', replications: 3, seed: 42,
+          timeUnit: 'minutes', timeMode: 'calendar',
+          warmupTime: { value: 1, unit: 'hours' }, runTime: { value: 8, unit: 'hours' },
+          warmupDateTime: null, startDateTime: new Date('2026-06-01T08:00:00.000Z'),
+          levers: [{ leverId: 'lv-m', propertyName: 'REPLICATIONS' }],
+          scenarios: ['noise'], type: 'Model',
+        },
       },
       'page-B': {
         generators: { getAll: () => [{ id: 'gen-b', name: 'B', levers: [], entityId: 'e', mode: 'FREQUENCY' }] },
@@ -138,6 +179,7 @@ describe('ModelManager.buildModelRootProjection', () => {
         arrivalSchedules: { getAll: () => [] },
         workSchedules: { getAll: () => [] },
         activities: { getAll: () => [] },
+        connectors: { getAll: () => [] },
         entities: { getAll: () => [] },
         states: { getAll: () => [] },
         resources: { getAll: () => [] },
@@ -197,15 +239,78 @@ describe('ModelManager.buildModelRootProjection', () => {
     expect(tech.workScheduleId).toBeUndefined();
   });
 
-  it('projects activities as id + name + workScheduleId, for the usage count', async () => {
+  it('projects activities as summaries plus the work-schedule link, arrival links and levers', async () => {
     const { mm } = harness();
 
     const projection = await mm.buildModelRootProjection({ id: 'page-A' });
 
     expect(projection.activities).toEqual([
-      { id: 'act-triage', name: 'Triage', workScheduleId: 'ws-a' },
-      { id: 'act-xray', name: 'X-ray', workScheduleId: undefined },
+      {
+        id: 'act-triage',
+        name: 'Triage',
+        workScheduleId: 'ws-a',
+        routing: 'probability',
+        actions: [
+          { id: 'seize-1', type: 'seize', resourceRequirementId: 'req-custom', modifications: [{ stateId: 'st-a', operation: 'assign', expression: 'x + 1' }] },
+          { id: 'branch-1', type: 'branch', ifTrue: [{ id: 'release-1', type: 'release', resourceRequirementId: 'req-custom' }] },
+          { id: 'loop-1', type: 'loop', actions: [{ id: 'delay-1', type: 'delay', duration: { value: 5, unit: 'minutes' } }] },
+        ],
+        // arrivalPatternId: an arrival pattern used only by a self-generating
+        // activity must not look unused on the Arrivals tab.
+        sourceConfig: { initialStates: [{ stateId: 'st-a', operation: 'assign' }], arrivalPatternId: 'ap-self' },
+        failureProperties: { repairResourceRequirementId: 'req-custom' },
+        levers: [{ leverId: 'lv-1', propertyName: 'SEIZE_PRIORITY', actionId: 'seize-1' }],
+      },
+      { id: 'act-xray', name: 'X-ray', actions: [], levers: [] },
     ]);
+  });
+
+  it('projects connectors as geometry-free summaries', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.connectors).toEqual([
+      {
+        id: 'con-1', name: 'To X-ray', sourceId: 'act-triage', targetId: 'act-xray', weight: 2, priority: 1,
+        entityId: 'ent-a', condition: { stateId: 'st-a', comparison: 'eq', value: 1 },
+        actions: [{ id: 'assign-1', type: 'assign', modifications: [{ stateId: 'st-a', operation: 'assign', expression: 'y' }] }],
+        levers: [{ leverId: 'lv-2', propertyName: 'CONNECTOR_WEIGHT' }],
+      },
+    ]);
+  });
+
+  it('projects generators with their initial states, routing and interarrival time', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.generators).toEqual([
+      {
+        id: 'gen-a', name: 'A', levers: [], entityId: 'e', mode: 'SCHEDULED', arrivalScheduleId: 'as-a',
+        routing: 'probability', interarrivalTime: { value: 10, unit: 'minutes' },
+        initialStates: [{ stateId: 'st-a', operation: 'assign', expression: 'rand()' }],
+      },
+    ]);
+  });
+
+  it("projects the model's own fields flat and under `model`: ISO dates, null for unset, never scenarios or type", async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    const fields = {
+      id: 'model-a', name: 'Clinic', description: 'desc', replications: 3, seed: 42,
+      timeUnit: 'minutes', timeMode: 'calendar',
+      warmupTime: { value: 1, unit: 'hours' }, runTime: { value: 8, unit: 'hours' },
+      warmupDateTime: null, startDateTime: '2026-06-01T08:00:00.000Z', finishDateTime: null,
+      levers: [{ leverId: 'lv-m', propertyName: 'REPLICATIONS' }],
+    };
+    expect(projection).toMatchObject(fields);
+    expect(projection.model).toEqual(fields);
+    expect('scenarios' in projection).toBe(false);
+    expect('scenarios' in projection.model).toBe(false);
+    expect('type' in projection.model).toBe(false);
   });
 
   it('includes arrivalSchedules in the projection, serialized via toJSON', async () => {
@@ -233,16 +338,16 @@ describe('ModelManager.buildModelRootProjection', () => {
     expect(projection.generators[0]).toHaveProperty('arrivalScheduleId', 'as-a');
   });
 
-  it('projects entities as id + name + description, and states as id + name only', async () => {
+  it('projects entities as id + name + description, and states as full rows without the class tag', async () => {
     const { mm } = harness();
 
     const projection = await mm.buildModelRootProjection({ id: 'page-A' });
 
-    // entities carry `description` for the shared EntitiesEditor (spec
-    // 2026-09-11); ScheduleTable reads only id/name and ignores it. States
-    // stay narrow -- the extra `dataType` must NOT ride along.
     expect(projection.entities).toEqual([{ id: 'ent-a', name: 'Patient', description: 'noise' }]);
-    expect(projection.states).toEqual([{ id: 'st-a', name: 'Priority' }]);
+    // Full rows since 2026-09-12: the Model editor's States tab edits them.
+    expect(projection.states).toEqual([
+      { id: 'st-a', name: 'Priority', componentType: 'model', dataType: 'NUMBER', initialValue: 0, description: 'triage', collectStatistics: true },
+    ]);
   });
 
   // Plan 2b, Task 7: projectModelRoot maps def.resources.getAll() to rows
@@ -309,16 +414,21 @@ describe('ModelManager.buildModelRootProjection', () => {
 
     expect(projection).toEqual({
       pageId: 'page-A',
+      warmupDateTime: null,
+      startDateTime: null,
+      finishDateTime: null,
+      levers: [],
       generators: [],
       arrivalPatterns: [],
       arrivalSchedules: [],
       workSchedules: [],
       activities: [],
+      connectors: [],
       entities: [],
       states: [],
       resources: [],
       resourceRequirements: [],
-      model: {},
+      model: { warmupDateTime: null, startDateTime: null, finishDateTime: null, levers: [] },
     });
   });
 

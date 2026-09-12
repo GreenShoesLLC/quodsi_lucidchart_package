@@ -19,16 +19,10 @@ const logger = getLogger('useModelPanel');
 // clearing its optimistic overlay each time. Frozen so nothing can
 // accidentally mutate the shared fallback.
 //
-// `states` is deliberately ABSENT here (not `[]`) so the Model editor's
-// States tab can tell "not loaded yet" from "no states" (spec 2026-09-11
-// States, loading gate; final fix wave I1). `[]` reads identically to a
-// loaded model that genuinely has zero states, which used to defeat
-// ModelEditor's loading gate (`referenceData?.states === undefined`) before
-// the host's first real referenceData arrived -- the States tab rendered an
-// empty list with "Add State" enabled, and an Add there sent a one-row list
-// that ModelManager.updateStates treated as deleting every other state.
-// Exported for the States loading-gate test
-// (messaging/hooks/__tests__/useModelPanel.emptyReferenceData.test.ts).
+// `states` is ABSENT (not `[]`) so "not loaded yet" stays distinguishable
+// from "no states". Since 2026-09-12 the Model editor's States tab reads the
+// model-root snapshot, so no loading gate depends on this any more.
+// Exported for messaging/hooks/__tests__/useModelPanel.emptyReferenceData.test.ts.
 export const EMPTY_REFERENCE_DATA: EditorReferenceData = Object.freeze({
   activities: [],
   generators: [],
@@ -193,46 +187,17 @@ export function useModelPanel() {
     isQuodsiModel: documentContext?.isQuodsiModel
   });
   
-  // Create action handlers using the sender hooks
+  // Create action handlers using the sender hooks. The Model editor no longer
+  // saves through here -- its settings go through the model-root accessor
+  // (spec 2026-09-12) -- so every call is a shape write.
   const onElementUpdate = (elementId: string, data: JsonObject) => {
+    const type = modelItemData?.metadata?.type as string || '';
     logger.debug('onElementUpdate CALLED:', {
       elementId,
-      data,
+      type,
       dataKeys: data ? Object.keys(data) : [],
-      runClockPeriod: data.runClockPeriod,
-      isModel: modelItemData?.metadata?.type === SimulationObjectType.Model
     });
-
-    // For model type, we need special handling
-    if (modelItemData?.metadata?.type === SimulationObjectType.Model) {
-      logger.debug('Updating MODEL properties:', {
-        elementId,
-        type: 'Model',
-        data
-      });
-      // Use the model update method
-      // Page guard (spec 2026-09-11, residual round): tie the save to the id
-      // of the draft being saved, which is the page it was loaded from, so a
-      // debounced save flushed after a page switch carries its own page. Both
-      // documentContext.metadata.modelItemData.id and referenceData.pageId
-      // are read from PROPS at send time and can already reflect a page the
-      // panel switched to *after* this draft was captured -- useFormSync
-      // resyncs the draft in a passive effect one render behind a prop
-      // change, and a 500ms autosave debounce can fire inside that gap.
-      // data.id is the draft's own id (ModelEditor's localModelDraft.id,
-      // itself set from the same modelItemData the draft's content came
-      // from), so it never disagrees with the content it is attached to.
-      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType, typeof data.id === 'string' ? data.id : undefined);
-    } else {
-      // For regular elements
-      const type = modelItemData?.metadata?.type as string || '';
-      logger.debug('Updating ELEMENT properties:', {
-        elementId,
-        type,
-        data
-      });
-      modelOpsSender.updateElementData(elementId, type, data, typedDiagramElementType);
-    }
+    modelOpsSender.updateElementData(elementId, type, data, typedDiagramElementType);
   };
   
   const onElementTypeChange = (elementId: string, newType: SimulationObjectType) => {

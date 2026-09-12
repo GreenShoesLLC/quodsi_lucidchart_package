@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import type { EditorReferenceData, ISerializedResourceRequirement } from '@quodsi/lucid-shared'
-import { createReferenceDataAccessor, useReferenceDataAccessor, isPlainAutoRequirement } from '../useReferenceDataAccessor'
+import { createReferenceDataAccessor, useReferenceDataAccessor } from '../useReferenceDataAccessor'
 import type { ReferenceDataSource } from '../useReferenceDataAccessor'
 import { MODEL_NOT_LOADED_MESSAGE } from '../pageGuardMessages'
 
@@ -84,6 +84,13 @@ describe('createReferenceDataAccessor', () => {
     expect(updateResourceRequirements).not.toHaveBeenCalled()
   })
 
+  it('updateModel refuses a states patch -- the Model editor writes states through the model root', async () => {
+    const updateResourceRequirements = vi.fn()
+    const { accessor } = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements }))
+    await expect(accessor.updateModel({ states: [] })).rejects.toThrow('no persistence path for key(s): states')
+    expect(updateResourceRequirements).not.toHaveBeenCalled()
+  })
+
   it('updateShape throws for an unknown type with no writer', async () => {
     const { accessor } = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements: vi.fn() }))
     await expect(accessor.updateShape('e1', 'Entity', {})).rejects.toThrow('no persistence path for type Entity')
@@ -94,44 +101,6 @@ describe('createReferenceDataAccessor', () => {
     expect(def(accessor.getSnapshot())).toEqual({
       resources: [], resourceRequirements: [], activities: [],
       connectors: [], generators: [], entities: [], states: [],
-    })
-  })
-
-  // C1: an entry whose id collides with a resource id is NOT automatically
-  // the plain auto-requirement — the extension supports a custom override
-  // stored under an auto id (ModelDefinitionPageBuilder.
-  // loadAndMergeResourceRequirements), and stripping it on save would
-  // silently revert that override on the next reload.
-  describe('isPlainAutoRequirement', () => {
-    const doctor = { id: 'doc', name: 'Doctor' }
-
-    it('is true for the plain auto shape', () => {
-      expect(isPlainAutoRequirement(auto('doc', 'Doctor'), doctor)).toBe(true)
-    })
-
-    it('is true for a sparse auto (requests only, no clauses/quantity keys)', () => {
-      const sparseAuto = { id: 'doc', name: 'Doctor', rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'doc' }] } }
-      expect(isPlainAutoRequirement(sparseAuto, doctor)).toBe(true)
-    })
-
-    it('is false when the name differs from the resource (a custom override stored under the auto id)', () => {
-      const renamed = { id: 'doc', name: 'Senior Doctor', rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'doc' }] } }
-      expect(isPlainAutoRequirement(renamed, doctor)).toBe(false)
-    })
-
-    it('is false when quantity is not 1 (a custom override stored under the auto id)', () => {
-      const qty2 = { id: 'doc', name: 'Doctor', rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'doc', quantity: 2 }] } }
-      expect(isPlainAutoRequirement(qty2, doctor)).toBe(false)
-    })
-
-    it('is false when there are sub-clauses', () => {
-      const withClauses = { id: 'doc', name: 'Doctor', rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'doc' }], clauses: [{ id: 'c2', mode: 'require_all' }] } }
-      expect(isPlainAutoRequirement(withClauses, doctor)).toBe(false)
-    })
-
-    it('is false when mode is not require_all', () => {
-      const requireAny = { id: 'doc', name: 'Doctor', rootClause: { id: 'clause-1', mode: 'require_any', requests: [{ resourceId: 'doc' }] } }
-      expect(isPlainAutoRequirement(requireAny, doctor)).toBe(false)
     })
   })
 
@@ -153,6 +122,18 @@ describe('createReferenceDataAccessor', () => {
     const source = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements }))
     const qty2Doc = { id: 'doc', name: 'Doctor', rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'doc', quantity: 2 }] } }
     const next = [qty2Doc, auto('nurse', 'Nurse'), custom]
+
+    await source.accessor.updateModel({ resourceRequirements: next })
+
+    const sent = updateResourceRequirements.mock.calls[0][0] as Array<{ id: string }>
+    expect(sent.map((r) => r.id)).toEqual(['doc', 'req-1'])
+  })
+
+  it('updateModel sends an id-colliding entry through when only its priority differs (custom override survives)', async () => {
+    const updateResourceRequirements = vi.fn<(list: ISerializedResourceRequirement[]) => Promise<void>>(async () => {})
+    const source = createReferenceDataAccessor(refData(), () => ({ updateResourceRequirements }))
+    const priorityDoc = { id: 'doc', name: 'Doctor', rootClause: { id: 'clause-1', mode: 'require_all', requests: [{ resourceId: 'doc', priority: 2 }] } }
+    const next = [priorityDoc, auto('nurse', 'Nurse'), custom]
 
     await source.accessor.updateModel({ resourceRequirements: next })
 
@@ -288,97 +269,7 @@ describe('useReferenceDataAccessor', () => {
   })
 })
 
-describe('states writes', () => {
-  const st = (id: string, name: string) => ({ id, name, componentType: 'model', dataType: 'number', initialValue: 0, collectStatistics: true })
-  const statesOf = (s: ReferenceDataSource) =>
-    (s.accessor.getSnapshot().modelDefinition as unknown as { states: Array<{ id: string }> }).states.map((x) => x.id)
-  const withStates = () => ({ pageId: 'page-1', states: [st('s1', 'A'), st('s2', 'B')] } as unknown as EditorReferenceData)
-
-  it('overlays the new list immediately, sends it, and resolves on the host result', async () => {
-    let resolveSend!: () => void
-    const updateStates = vi.fn(() => new Promise<void>((r) => { resolveSend = r }))
-    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
-
-    const p = source.accessor.updateModel({ states: [st('s2', 'B')] })
-
-    expect(updateStates).toHaveBeenCalledWith([st('s2', 'B')], 'page-1')
-    expect(statesOf(source)).toEqual(['s2'])
-    expect(source.accessor.getSnapshot().saveStatus).toBe('saving')
-    resolveSend()
-    await p
-    expect(source.accessor.getSnapshot().saveStatus).toBe('saved')
-  })
-
-  it('restores the previous list and reports failure when the host rejects', async () => {
-    const updateStates = vi.fn(async () => { throw new Error('Current page not available') })
-    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
-
-    await expect(source.accessor.updateModel({ states: [st('s2', 'B')] })).rejects.toThrow('Current page not available')
-
-    expect(statesOf(source)).toEqual(['s1', 's2'])
-    expect(source.accessor.getSnapshot().saveStatus).toBe('failed')
-    expect(source.accessor.getSnapshot().saveError).toBe('Current page not available')
-  })
-
-  it('a new referenceData replaces the overlay', async () => {
-    const updateStates = vi.fn(async () => {})
-    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
-    await source.accessor.updateModel({ states: [st('s2', 'B')] })
-
-    source.setReferenceData({ states: [st('s9', 'Z')] } as unknown as EditorReferenceData)
-
-    expect(statesOf(source)).toEqual(['s9'])
-  })
-
-  it('a states-only patch never sends resource requirements', async () => {
-    const updateResourceRequirements = vi.fn(async () => {})
-    const updateStates = vi.fn(async () => {})
-    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements, updateStates }))
-
-    await source.accessor.updateModel({ states: [] })
-
-    expect(updateStates).toHaveBeenCalledTimes(1)
-    expect(updateResourceRequirements).not.toHaveBeenCalled()
-  })
-
-  it('throws when no updateStates sender is configured, without touching the snapshot', async () => {
-    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn() }))
-
-    await expect(source.accessor.updateModel({ states: [] })).rejects.toThrow(/no updateStates sender/)
-
-    expect(statesOf(source)).toEqual(['s1', 's2'])
-    expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
-  })
-
-  it('does not resurrect a stale overlay over a fresher referenceData that lands mid-write, on rejection', async () => {
-    // First write succeeds, leaving a non-null overlay behind -- the case
-    // that actually exercises the bug: `previous` captured by the SECOND
-    // write is that non-null overlay, not the initial null.
-    const updateStates = vi.fn(async () => {})
-    const source = createReferenceDataAccessor(withStates(), () => ({ updateResourceRequirements: vi.fn(), updateStates }))
-    await source.accessor.updateModel({ states: [st('s2', 'B')] })
-    expect(statesOf(source)).toEqual(['s2'])
-
-    let rejectSend!: (err: Error) => void
-    updateStates.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { rejectSend = reject }))
-    const p = source.accessor.updateModel({ states: [st('s3', 'C')] })
-
-    // A fresher referenceData lands while the second write is still in
-    // flight (e.g. an unrelated write elsewhere triggers a selection
-    // rebuild) -- it clears the overlay.
-    source.setReferenceData({ states: [st('s9', 'Z')] } as unknown as EditorReferenceData)
-    expect(statesOf(source)).toEqual(['s9'])
-
-    rejectSend(new Error('Current page not available'))
-    await expect(p).rejects.toThrow('Current page not available')
-
-    expect(statesOf(source)).toEqual(['s9'])
-    expect(source.accessor.getSnapshot().saveStatus).toBe('failed')
-  })
-})
-
 describe('page guard (spec 2026-09-11)', () => {
-  const st = (id: string, name: string) => ({ id, name, componentType: 'model', dataType: 'number', initialValue: 0, collectStatistics: true })
 
   it('passes referenceData.pageId to updateResourceRequirements', async () => {
     const updateResourceRequirements = vi.fn(async () => {})
@@ -396,21 +287,6 @@ describe('page guard (spec 2026-09-11)', () => {
     await expect(source.accessor.updateModel({ resourceRequirements: [] })).rejects.toThrow(MODEL_NOT_LOADED_MESSAGE)
 
     expect(updateResourceRequirements).not.toHaveBeenCalled()
-    expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
-  })
-
-  it('refuses a states write before referenceData carries a pageId: no overlay, nothing sent', async () => {
-    const updateStates = vi.fn(async () => {})
-    const source = createReferenceDataAccessor(
-      { states: [st('s1', 'A')] } as unknown as EditorReferenceData,
-      () => ({ updateResourceRequirements: vi.fn(), updateStates }),
-    )
-
-    await expect(source.accessor.updateModel({ states: [] })).rejects.toThrow(MODEL_NOT_LOADED_MESSAGE)
-
-    expect(updateStates).not.toHaveBeenCalled()
-    const states = (source.accessor.getSnapshot().modelDefinition as unknown as { states: Array<{ id: string }> }).states
-    expect(states.map((s) => s.id)).toEqual(['s1'])
     expect(source.accessor.getSnapshot().saveStatus).toBe('idle')
   })
 

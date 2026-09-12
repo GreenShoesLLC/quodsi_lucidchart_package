@@ -17,15 +17,11 @@
 //  - updateModel resolves only when the host has replied RESULT (the sender
 //    is a confirmed round trip), which is what keeps Studio's
 //    flush-then-repoint ordering without a flushModelImmediate.
-//  - Before sending, the list is filtered by isPlainAutoRequirement — it
-//    strips PLAIN auto-requirements; custom overrides stored under an auto
-//    id are preserved. An id colliding with a resource id is NOT by itself
-//    proof of "plain auto": the extension explicitly supports storing a
-//    custom override under an auto id (ModelDefinitionPageBuilder.
-//    loadAndMergeResourceRequirements merges "custom overrides auto by
-//    matching ID"), so only a *structurally* plain auto-requirement is
-//    dropped; anything else with a colliding id is sent through as the
-//    override it is.
+//  - Before sending, the list is filtered by @quodsi/shared's
+//    isPlainAutoRequirement, which strips only the exact derived
+//    auto-requirement of an existing resource. A custom override stored under
+//    a resource's id (a different name, mode, quantity, priority or
+//    keepResource) is sent through as the override it is.
 //  - After a successful write the snapshot OVERLAYS the sent list until the
 //    next referenceData prop lands, so the picker never flashes
 //    "(missing requirement: …)" between the RESULT and the selection refresh.
@@ -46,18 +42,13 @@
 //    On the shape-writer path the host editor's own autosave is a separate,
 //    later ELEMENT_UPDATE, so the overlay also bridges that window. See
 //    spec docs/superpowers/specs/2026-08-22-lucid-routing-tab-design.md.
-//  - updateModel also accepts `states` (the Model editor's States tab, spec
-//    2026-09-11 States): the list overlays modelDefinition.states at once,
-//    is sent through senders.updateStates (awaited), and is rolled back on
-//    rejection. The next referenceData prop replaces the overlay -- the host
-//    rebuilds referenceData before it replies.
-//  - Page guard (spec 2026-09-11): states and requirements writes echo
+//  - Page guard (spec 2026-09-11): requirements writes echo
 //    referenceData.pageId to their senders, and are refused before the
 //    optimistic overlay when referenceData carries no pageId (not loaded yet).
 
 import { useEffect, useRef } from 'react'
-import type { EditorReferenceData, ISerializedResourceRequirement, ISerializedState } from '@quodsi/lucid-shared'
-import { RequirementMode } from '@quodsi/lucid-shared'
+import type { EditorReferenceData, ISerializedResourceRequirement } from '@quodsi/lucid-shared'
+import { isPlainAutoRequirement } from '@quodsi/lucid-shared'
 import type { ReferenceCleanupOptions, SeizeReleaseDisposition } from '@quodsi/lucid-shared'
 import type { ModelStateAccessor, ModelStateSnapshot } from 'quodsi_studio/platforms/shared'
 import { createModelUnavailable } from 'quodsi_studio/platforms/shared'
@@ -72,12 +63,6 @@ export type ReferenceDataSenders = {
   updateResourceRequirements: (list: ISerializedResourceRequirement[], basedOnPageId: string, seizeRelease?: SeizeReleaseDisposition) => Promise<void>
   /** Optional: callers that never write shapes (e.g. the requirement editors) omit it. */
   updateElement?: (elementId: string, type: string, data: Record<string, unknown>) => Promise<void>
-  /**
-   * Optional: the Model editor's States tab supplies it. Confirmed round trip
-   * (STATES_UPDATE -> STATES_UPDATE_RESULT); the host runs the shared delete
-   * rule and rebuilds referenceData before replying.
-   */
-  updateStates?: (states: ISerializedState[], basedOnPageId: string) => Promise<void>
 }
 
 /** A host-implemented writer for a specific shape's own shape-data (no envelope, no round trip). */
@@ -89,49 +74,6 @@ export type ReferenceDataAccessorOptions = {
 }
 
 type RequirementRecord = { id: string; name: string; rootClause?: unknown }
-
-type RootClauseShape = {
-  mode?: string
-  requests?: Array<{ resourceId?: string; quantity?: number }>
-  clauses?: unknown[]
-}
-
-/**
- * True when `entry` is structurally the plain, single-resource auto-requirement
- * `ResourceRequirement.createForSingleResource` mints for `resource`: a
- * REQUIRE_ALL root clause with exactly one request against `resource.id` at
- * quantity 1 (or omitted, its sparse-wire default), no sub-clauses, and
- * `entry.name === resource.name`.
- *
- * An id colliding with a resource id is NOT by itself proof of this shape —
- * the extension explicitly supports storing a CUSTOM override under an auto
- * id (`ModelDefinitionPageBuilder.loadAndMergeResourceRequirements` merges
- * "custom overrides auto by matching ID … custom takes precedence", and
- * Lucid's ModelEditor save path deliberately minted such records). Stripping
- * every id-colliding entry — the bug this predicate fixes — silently
- * reverts that override on the next save: the extension re-mints the plain
- * auto on reload once the override is gone from `q_res_requirements`.
- *
- * `requests`/`clauses` are treated as absent-means-empty (the sparse wire
- * omits them at their defaults), matching `ISerializedRequirementClause`.
- */
-export function isPlainAutoRequirement(
-  entry: RequirementRecord,
-  resource: { id: string; name: string },
-): boolean {
-  if (entry.id !== resource.id) return false
-  if (entry.name !== resource.name) return false
-  const clause = entry.rootClause as RootClauseShape | undefined
-  if (!clause) return false
-  if (clause.mode !== RequirementMode.REQUIRE_ALL) return false
-  if ((clause.clauses ?? []).length !== 0) return false
-  const requests = clause.requests ?? []
-  if (requests.length !== 1) return false
-  const [request] = requests
-  if (request.resourceId !== entry.id) return false
-  if (request.quantity !== undefined && request.quantity !== 1) return false
-  return true
-}
 
 export type ReferenceDataSource = {
   accessor: ModelStateAccessor
@@ -147,7 +89,6 @@ export function createReferenceDataAccessor(
 ): ReferenceDataSource {
   let referenceData = initial
   let overlay: RequirementRecord[] | null = null
-  let statesOverlay: ISerializedState[] | null = null
   // id -> merged patch. Object.create(null): shapeId is host-controlled data,
   // not a trusted key set, so a plain {} risks a prototype-chain lookup
   // (e.g. shapeId === 'constructor') resolving to something other than
@@ -168,7 +109,7 @@ export function createReferenceDataAccessor(
       generators: withOverlay(referenceData?.generators as unknown as ElementRecord[] | undefined),
       connectors: withOverlay(referenceData?.connectors as unknown as ElementRecord[] | undefined),
       entities: referenceData?.entities ?? [],
-      states: statesOverlay ?? referenceData?.states ?? [],
+      states: referenceData?.states ?? [],
     } as unknown as ModelStateSnapshot['modelDefinition'],
     saveStatus,
     saveError,
@@ -185,10 +126,7 @@ export function createReferenceDataAccessor(
     if (!basedOnPageId) throw new Error(MODEL_NOT_LOADED_MESSAGE)
     const resourcesById = new Map((referenceData?.resources ?? []).map((r) => [r.id, r]))
     const customs = list
-      .filter((r) => {
-        const resource = resourcesById.get(r.id)
-        return !resource || !isPlainAutoRequirement(r, resource)
-      })
+      .filter((r) => !isPlainAutoRequirement(r, resourcesById.get(r.id)))
       .map((r) => ({ id: r.id, name: r.name, rootClause: r.rootClause })) as ISerializedResourceRequirement[]
     saveStatus = 'saving'
     saveError = null
@@ -202,39 +140,6 @@ export function createReferenceDataAccessor(
       saveStatus = 'saved'
       notify()
     } catch (err) {
-      saveStatus = 'failed'
-      saveError = err instanceof Error ? err.message : String(err)
-      notify()
-      throw err
-    }
-  }
-
-  const writeStates = async (next: ISerializedState[]) => {
-    const send = getSenders().updateStates
-    if (!send) {
-      throw new Error('useReferenceDataAccessor.updateModel: no updateStates sender configured')
-    }
-    // Page guard (spec 2026-09-11): refuse before overlaying when referenceData
-    // carries no pageId (not loaded yet).
-    const basedOnPageId = referenceData?.pageId
-    if (!basedOnPageId) throw new Error(MODEL_NOT_LOADED_MESSAGE)
-    // Overlay BEFORE the round trip so the list (and an open delete dialog's
-    // row) reflects the edit at once; roll back to the previous overlay if the
-    // host rejects.
-    const previous = statesOverlay
-    statesOverlay = next
-    saveStatus = 'saving'
-    saveError = null
-    notify()
-    try {
-      await send(next, basedOnPageId)
-      saveStatus = 'saved'
-      notify()
-    } catch (err) {
-      // Only roll back if this write's overlay is still current -- a fresher
-      // referenceData may have landed (and cleared it) while the send was
-      // in flight; resurrecting `previous` over that would overwrite it.
-      if (statesOverlay === next) statesOverlay = previous
       saveStatus = 'failed'
       saveError = err instanceof Error ? err.message : String(err)
       notify()
@@ -256,12 +161,9 @@ export function createReferenceDataAccessor(
     deleteShape: deleteShapeUnavailable,
     moveShape: moveShapeUnavailable,
     async updateModel(patch, options) {
-      const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements' && k !== 'states')
+      const unhandled = Object.keys(patch).filter((k) => k !== 'resourceRequirements')
       if (unhandled.length > 0) {
         throw new Error(`useReferenceDataAccessor.updateModel: no persistence path for key(s): ${unhandled.join(', ')}`)
-      }
-      if ('states' in patch) {
-        await writeStates((patch.states as ISerializedState[] | undefined) ?? [])
       }
       if ('resourceRequirements' in patch) {
         await writeRequirements((patch.resourceRequirements as RequirementRecord[] | undefined) ?? [], options)
@@ -320,7 +222,6 @@ export function createReferenceDataAccessor(
       if (next === referenceData) return
       referenceData = next
       overlay = null
-      statesOverlay = null
       elementOverlays = Object.create(null)
       notify()
     },

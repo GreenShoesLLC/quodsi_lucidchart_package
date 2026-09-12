@@ -190,10 +190,10 @@ describe('ScheduleModal against a real model-root projection', () => {
       expect.arrayContaining(['generators', 'arrivalSchedules', 'entities', 'states', 'model']),
     )
     expect(projection.generators[0]).toHaveProperty('arrivalScheduleId', SCHEDULE_ID)
-    // id + name ONLY -- ScheduleTable.tsx:42-43 types both props as
-    // `{ id: string; name: string }[]`; projecting whole domain objects would
-    // widen the wire payload for no consumer.
+    // Entities stay id + name (+ description when set). States are full rows
+    // since 2026-09-12 (the Model editor's States tab reads this snapshot);
+    // ScheduleTable reads only id + name off them.
     expect(projection.entities).toContainEqual({ id: VIP_ENTITY_ID, name: 'VIP Patient' })
-    expect(projection.states).toEqual([{ id: 'state-priority', name: 'Priority' }])
+    expect(projection.states).toEqual([expect.objectContaining({ id: 'state-priority', name: 'Priority' })])
   })
 })

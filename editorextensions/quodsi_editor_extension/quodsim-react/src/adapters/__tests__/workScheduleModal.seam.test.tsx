@@ -123,7 +123,10 @@ describe('work-schedule panels against a real model-root projection', () => {
   // Belt-and-braces on the seam itself, so a regression points at the
   // projection rather than at the panels' rendering.
   it('projects every key the work-schedule panels read', () => {
-    const projection = projectModelRoot(buildModelDefinition())
+    const def = buildModelDefinition()
+    const projection = projectModelRoot(def)
+    // Activity.createDefault mints its default action with a random id.
+    const triageActionId = def.activities.getAll().find((a) => a.id === ACTIVITY_ID)!.actions[0].id
 
     expect(Object.keys(projection)).toEqual(
       expect.arrayContaining(['workSchedules', 'activities', 'resources', 'model']),
@@ -142,10 +145,28 @@ describe('work-schedule panels against a real model-root projection', () => {
     expect(projection.resources).toContainEqual(
       expect.objectContaining({ id: RESOURCE_ID, workScheduleId: SCHEDULE_ID }),
     )
-    // id + name + the link ONLY -- projecting whole Activity objects would put
-    // every action onto the MODEL_ROOT_SNAPSHOT wire for no consumer.
+    // The enriched activity SUMMARY projectModelRoot emits since spec
+    // 2026-09-12 (Task 3): id, name and the schedule link, plus routing,
+    // levers and action summaries for the Model editor's delete dialogs --
+    // still a summary, not the whole Activity object.
     expect(projection.activities).toEqual([
-      { id: ACTIVITY_ID, name: 'Triage', workScheduleId: SCHEDULE_ID },
+      {
+        id: ACTIVITY_ID,
+        name: 'Triage',
+        workScheduleId: SCHEDULE_ID,
+        routing: 'probability',
+        levers: [],
+        failureProperties: undefined,
+        sourceConfig: undefined,
+        actions: [
+          {
+            id: triageActionId,
+            type: 'delay_with_resource',
+            duration: { value: 1, unit: 'minutes' },
+            resourceRequirementId: null,
+          },
+        ],
+      },
     ])
   })
 })

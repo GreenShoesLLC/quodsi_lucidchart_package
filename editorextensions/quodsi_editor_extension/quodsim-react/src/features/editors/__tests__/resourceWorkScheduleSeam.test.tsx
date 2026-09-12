@@ -41,6 +41,18 @@ vi.mock('../../../messaging/MessageContext', () => ({
 import ResourcesTab from '../ResourcesTab'
 import { ResourceBlockEditor } from '../ResourceBlockEditor'
 import SwimLaneEditor from '../SwimLaneEditor'
+import { useModelRootSource } from '../../../adapters/useModelRootSource'
+
+/**
+ * ResourcesTab takes the Model editor's model-root accessor since spec
+ * 2026-09-12. This is ModelEditorForPage's role in miniature: the REAL
+ * useModelRootSource against the fake host below, rendering the tab once the
+ * first snapshot has landed.
+ */
+function ResourcesTabOnModelRoot() {
+  const { accessor, projection } = useModelRootSource()
+  return projection ? <ResourcesTab accessor={accessor} /> : null
+}
 
 /** Staffs 3, so the picker's nominal-seeding branch is live rather than inert. */
 const NT = {
@@ -126,7 +138,7 @@ describe('Lucid resource mounts route "Edit schedule" to the Lucid modal', () =>
   it('the Resources tab (ResourcesEditor -> ResourceEditor)', async () => {
     installHost([SCHEDULED_NURSE])
 
-    render(<ResourcesTab />)
+    render(<ResourcesTabOnModelRoot />)
 
     fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit schedule' }))
