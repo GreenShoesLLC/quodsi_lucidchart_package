@@ -208,8 +208,8 @@ describe('ModelManager — a Resource block is a pointer (Plan 2b Task 5)', () =
 
         // Count calls while still letting the real cascade run.
         const cascaded: string[] = [];
-        const realCleanup = (manager as any).cleanupDeletedResource.bind(manager);
-        (manager as any).cleanupDeletedResource = (resourceId: string, p: any, o: any) => {
+        const realCleanup = (manager as any).applyResourceDeleteRule.bind(manager);
+        (manager as any).applyResourceDeleteRule = (resourceId: string, p: any, o: any) => {
             cascaded.push(resourceId);
             return realCleanup(resourceId, p, o);
         };
@@ -244,7 +244,7 @@ describe('ModelManager — a Resource block is a pointer (Plan 2b Task 5)', () =
         expect([first.x, first.y]).toEqual([11, 22]);
 
         const cascaded: string[] = [];
-        (manager as any).cleanupDeletedResource = (resourceId: string) => { cascaded.push(resourceId); };
+        (manager as any).applyResourceDeleteRule = (resourceId: string) => { cascaded.push(resourceId); };
 
         page.allBlocks.delete('blk-1');
         manager.invalidateModelCache();

@@ -1466,7 +1466,7 @@ export class ModelManager {
      *      applySharedReferenceCleanup over stored activity, generator and
      *      connector data, with the user's Seize/Release choice.
      */
-    private cleanupDeletedResource(resourceId: string, page: PageProxy, options: ReferenceCleanupOptions): void {
+    private applyResourceDeleteRule(resourceId: string, page: PageProxy, options: ReferenceCleanupOptions): void {
         const stored = this.storageAdapter.getResourceRequirements(page) || [];
         const pruned = removeResourceReferences(
             { resourceRequirements: stored as unknown as Array<Record<string, unknown>> },
@@ -1569,7 +1569,7 @@ export class ModelManager {
             // shared Resources tab is the single path that has to clean up the
             // requirements and actions that referenced it.
             for (const id of removed) {
-                this.cleanupDeletedResource(id, page, options);
+                this.applyResourceDeleteRule(id, page, options);
             }
         }
 
