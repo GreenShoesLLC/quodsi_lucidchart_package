@@ -145,3 +145,35 @@ describe('handleDataUpdate name resolution (Task 10b)', () => {
         expect(after.volume).toBe(1000);
     });
 });
+
+// spec 2026-09-12 decision 7: a Model's element IS the page, and
+// getDefaultElementName has no page branch -- a cleared model name used to be
+// stored as 'Unnamed Connector'. It takes the page title now, as on the
+// updateModelRoot route.
+describe('handleDataUpdate: a blank Model name takes the page title', () => {
+    function modelPage(title: string) {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        page.getTitle = () => title;
+        storage.setElementData(page, { id: 'page-1', name: 'Clinic' } as any, SimulationObjectType.Model);
+        return { storage, page, manager: newManager(storage) };
+    }
+
+    it('stores the trimmed page title when the patch clears the name', async () => {
+        const { storage, page, manager } = modelPage('  Emergency Dept ');
+        await manager.saveElementData(page, overTheWire({ id: 'page-1', name: '' }), SimulationObjectType.Model, page);
+        expect(storedData(storage, page).name).toBe('Emergency Dept');
+    });
+
+    it("stores 'Untitled Model' when the page has no title and the name is whitespace", async () => {
+        const { storage, page, manager } = modelPage('   ');
+        await manager.saveElementData(page, overTheWire({ id: 'page-1', name: '   ' }), SimulationObjectType.Model, page);
+        expect(storedData(storage, page).name).toBe('Untitled Model');
+    });
+
+    it('keeps a non-blank Model name', async () => {
+        const { storage, page, manager } = modelPage('Emergency Dept');
+        await manager.saveElementData(page, overTheWire({ id: 'page-1', name: 'Renamed' }), SimulationObjectType.Model, page);
+        expect(storedData(storage, page).name).toBe('Renamed');
+    });
+});

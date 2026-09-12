@@ -39,6 +39,7 @@ import {
     removeResourceReferences,
     pickFallbackEntityId,
     isPlainAutoRequirement,
+    MODEL_FIELD_KEYS,
 } from "@quodsi/lucid-shared";
 import type { ReferenceCleanupOptions } from "@quodsi/lucid-shared";
 
@@ -82,6 +83,21 @@ interface ChangeTracker {
     lastModelDefinitionUpdate: number;     // Timestamp of last ModelDefinition rebuild
     lastValidationUpdate: number;          // Timestamp of last validation
     pendingChanges: Set<string>;          // IDs of elements with pending changes
+}
+
+/**
+ * updateModelRoot keys that write the page's own model settings: the Model
+ * field roster minus `id` (the host owns identity). spec 2026-09-12 §2.
+ */
+const MODEL_SETTINGS_KEYS: readonly string[] = MODEL_FIELD_KEYS.filter(key => key !== 'id');
+
+/** A blank model name takes the page title, else 'Untitled Model' (spec 2026-09-12 decision 7). */
+function blankModelNameFallback(page: PageProxy): string {
+    return (page.getTitle() ?? '').trim() || 'Untitled Model';
+}
+
+function isBlankName(name: unknown): boolean {
+    return typeof name !== 'string' || name.trim() === '';
 }
 
 export class ModelManager {
@@ -1510,17 +1526,46 @@ export class ModelManager {
      * `markModelDirty()` after writing, and this does too, so the cached
      * ModelDefinition is never left stale for a caller that reads it without
      * also calling `validateModel()` first.
+     *
+     * Model settings (spec 2026-09-12 §2): the Model editor's Basic and Levers
+     * tabs send the model's own fields here. They MERGE into the page's q_data
+     * (StorageAdapter.updateElementData), written first, and are refused --
+     * before any key of the patch is written -- when the page has no model
+     * data. A blank name becomes the page title. No registerElement: the
+     * cached ModelDefinition is invalidated by markModelDirty like every other
+     * key, and a registerElement swap would reset the rebuild-diff baseline.
+     * `states` routes through updateStates, which runs the shared state-delete
+     * rule over stored shape data.
      */
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy, options: ReferenceCleanupOptions = {}): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const knownKeys = ['arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'entities', 'resources', 'resourceRequirements'];
+        const knownKeys = [
+            ...MODEL_SETTINGS_KEYS,
+            'arrivalPatterns', 'arrivalSchedules', 'workSchedules', 'states', 'entities', 'resources', 'resourceRequirements',
+        ];
         const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
                 `updateModelRoot: no persistence path for model-root key(s): ${unhandled.join(', ')}. ` +
                 'The patch was NOT persisted. Add a case above rather than ignoring it.'
             );
+        }
+
+        const settingsKeys = Object.keys(patch).filter(key => MODEL_SETTINGS_KEYS.includes(key));
+        if (settingsKeys.length > 0 && this.storageAdapter.getElementData(page) == null) {
+            throw new Error('updateModelRoot: this page has no model data; convert it before editing settings.');
+        }
+
+        if (settingsKeys.length > 0) {
+            const settings: Record<string, unknown> = {};
+            for (const key of settingsKeys) {
+                settings[key] = patch[key];
+            }
+            if ('name' in settings && isBlankName(settings.name)) {
+                settings.name = blankModelNameFallback(page);
+            }
+            this.storageAdapter.updateElementData(page, { id: page.id, ...settings });
         }
 
         if ('arrivalPatterns' in patch) {
@@ -1546,6 +1591,12 @@ export class ModelManager {
                 page,
                 patch.workSchedules as ISerializedWorkSchedule[]
             );
+        }
+
+        // States (spec 2026-09-12): the Model editor's States tab writes the
+        // WHOLE list. Before entities, which reference no states.
+        if ('states' in patch) {
+            await this.updateStates(patch.states as ISerializedState[], page);
         }
 
         // Entities (spec 2026-09-11): Lucid's Entities tab mounts the shared
@@ -2060,7 +2111,15 @@ export class ModelManager {
             }
 
             // Determine element name
-            const elementName = this.getDefaultElementName(element);
+            //
+            // A Model's element IS the page (elementOpsHandler passes
+            // currentPage), and getDefaultElementName has no page branch -- it
+            // returned 'Unnamed Connector'. A blank model name takes the page
+            // title instead (spec 2026-09-12 decision 7).
+            const isModel = type === SimulationObjectType.Model;
+            const elementName = isModel
+                ? blankModelNameFallback(page)
+                : this.getDefaultElementName(element);
             // Fetched once, up front, so both the name resolution below and the
             // create-vs-update branch further down (~line 2229) see the same
             // snapshot of storage.
@@ -2084,8 +2143,12 @@ export class ModelManager {
             //   element's first save / creation -- does it default to the canvas
             //   label, matching StorageAdapter.setElementData's create path (see
             //   the getElementData(element) != null branch below).
+            // - A Model's blank (or whitespace) explicit name takes the page title.
+            const explicitName = hasExplicitName ? (updateData as { name?: unknown }).name : undefined;
             const resolvedName: string = hasExplicitName
-                ? ((updateData as { name?: string }).name || elementName)
+                ? (isModel
+                    ? (isBlankName(explicitName) ? elementName : (explicitName as string))
+                    : ((explicitName as string) || elementName))
                 : (existingElementData?.name || elementName);
 
             // Prepare element data.
