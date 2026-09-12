@@ -1,55 +1,51 @@
-// Lucid's Resources tab mounts the shared ResourcesEditor in host mode (spec
-// 2026-09-11 resource delete cleanup): the dialog counts from the Model
-// editor's referenceData accessor, and the delete goes to the host with the
-// user's choice -- no shape writes from the panel.
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+// Lucid's Resources tab mounts the shared ResourcesEditor in host mode on the
+// Model editor's ONE model-root accessor (spec 2026-09-12). The dialog counts
+// steps AND levers from that accessor's activity summaries -- no separate
+// referenceData source -- and the delete goes to the host with the user's
+// choice, with no shape writes from the panel.
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 
-const NURSE = 'r1'
-
-// vi.mock factories are hoisted above module-level consts; build the shared
-// accessor in vi.hoisted so the mock can reference it.
-const { makeAccessor, modelRoot } = vi.hoisted(() => {
-  const makeAccessor = (modelDefinition: Record<string, unknown>) => {
-    const snapshot = { modelDefinition, saveStatus: 'idle' as const, saveError: null }
-    return {
-      subscribe: () => () => {},
-      getSnapshot: () => snapshot,
-      updateShape: vi.fn(async () => {}),
-      updateModel: vi.fn(async () => {}),
-    }
-  }
-  return {
-    makeAccessor,
-    modelRoot: makeAccessor({ resources: [{ id: 'r1', name: 'Nurse', capacity: 1 }], resourceRequirements: [] }),
-  }
-})
-
-vi.mock('../../../adapters/useModelRootSource', () => ({
-  useModelRootSource: () => ({ accessor: modelRoot, projection: {} }),
-}))
 vi.mock('../../../messaging/MessageProvider', () => ({
-  useMessaging: () => ({ sendMessage: vi.fn() }),
+  useMessaging: () => ({ app: { panelType: 'model' }, selection: {}, sendMessage: vi.fn() }),
 }))
 
 import { ResourcesTab } from '../ResourcesTab'
+import { definition, modelRootSeam } from './modelEditorSeam'
+
+const NURSE = 'r1'
 
 describe('ResourcesTab (host cleanup)', () => {
-  it('counts from referenceSource and sends the delete with the choice, never writing shapes', async () => {
-    const referenceSource = makeAccessor({
-      resources: [{ id: NURSE, name: 'Nurse' }],
-      resourceRequirements: [{ id: NURSE, name: 'Nurse', rootClause: { id: 'c', mode: 'require_all', requests: [{ resourceId: NURSE }] } }],
-      activities: [{ id: 'a1', name: 'Intake', actions: [{ id: 's1', type: 'seize', resourceRequirementId: NURSE }] }],
-    })
-    render(<ResourcesTab referenceSource={referenceSource as never} />)
+  afterEach(() => cleanup())
+
+  it('counts steps and levers from the one accessor and sends the delete with the choice, never writing shapes', async () => {
+    const { accessor, transport } = modelRootSeam(
+      definition({
+        resources: [{ id: NURSE, name: 'Nurse', capacity: 1 }],
+        resourceRequirements: [
+          { id: NURSE, name: 'Nurse', rootClause: { id: 'c', mode: 'require_all', requests: [{ resourceId: NURSE }] } },
+        ],
+        activities: [
+          {
+            id: 'a1',
+            name: 'Intake',
+            actions: [{ id: 's1', type: 'seize', resourceRequirementId: NURSE }],
+            levers: [{ leverId: 'lv-1', propertyName: 'SEIZE_PRIORITY', actionId: 's1' }],
+          },
+        ],
+      }),
+    )
+    render(<ResourcesTab accessor={accessor} />)
 
     fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
     expect(screen.getByText('1 Seize/Release step uses them:')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('radio', { name: 'Remove the steps' }))
+    expect(screen.getByText('Also removes 1 lever on them.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /delete resource/i }))
 
-    await waitFor(() => expect(modelRoot.updateModel).toHaveBeenCalledWith({ resources: [] }, { seizeRelease: 'remove' }))
-    expect(modelRoot.updateShape).not.toHaveBeenCalled()
-    expect(referenceSource.updateShape).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(transport.send).toHaveBeenCalledWith({ resources: [] }, 'page-1', { seizeRelease: 'remove' }),
+    )
+    expect(transport.saveShape).not.toHaveBeenCalled()
   })
 })

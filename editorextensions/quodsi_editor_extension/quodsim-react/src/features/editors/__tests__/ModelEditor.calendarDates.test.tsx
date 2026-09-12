@@ -12,7 +12,7 @@
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ModelEditor from "../ModelEditor";
+import { definition, mountModelEditor } from "./modelEditorSeam";
 import { setView } from "quodsi_studio/platforms/shared";
 // Replications, Time Mode, Clock Unit and Warmup all moved to the
 // INTERMEDIATE view on 2026-09-01 (Renee's simple-version spec: a Basic
@@ -25,22 +25,8 @@ afterEach(() => setView('basic'));
 import { extractModelData } from "../../utils/modelEditorHelpers";
 import { PeriodUnit, SimulationTimeType } from "@quodsi/lucid-shared";
 
-// The mocked useAutoSave records every draft it is handed, which is the only
-// way to see what the editor actually WROTE: the real save path needs a Redux
-// isSaving flip that no test harness here provides.
+// The mocked useAutoSave records every draft it is handed: these tests pin what the editor WROTE into its draft, not the save round trip (ModelEditor.basicDraft.test.tsx covers that).
 const h = vi.hoisted(() => ({ drafts: [] as any[] }));
-
-vi.mock("../../../messaging/senders/modelOpsSender", () => ({
-  useModelOpsSender: () => ({
-    updateResourceRequirements: vi.fn(),
-    selectElement: vi.fn(),
-    updateElementData: vi.fn(),
-  }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
-}));
 
 vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
@@ -79,19 +65,12 @@ const calendarModel = (over: Record<string, unknown> = {}) =>
     ...over,
   }) as any;
 
-const baseProps = (model: any) => ({
-  model,
-  onSave: vi.fn(),
-  states: {} as any,
-  entities: [],
-});
-
 const expandAdvanced = () =>
   fireEvent.click(screen.getByRole("button", { name: /advanced settings/i }));
 
 const renderCalendar = (over: Record<string, unknown> = {}) => {
   h.drafts.length = 0;
-  render(<ModelEditor {...baseProps(calendarModel(over))} />);
+  mountModelEditor(definition({ model: calendarModel(over) }));
   expandAdvanced();
 };
 

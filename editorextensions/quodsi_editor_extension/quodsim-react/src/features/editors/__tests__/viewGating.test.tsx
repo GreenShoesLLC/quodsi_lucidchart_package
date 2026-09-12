@@ -24,10 +24,9 @@ import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { resolveVisibleSurfaces } from "@quodsi/shared";
-import { State, ComponentType, StateType, StateListManager, PeriodUnit } from "@quodsi/lucid-shared";
 import ActivityEditor from "../ActivityEditor";
 import GeneratorEditor from "../GeneratorEditor";
-import ModelEditor from "../ModelEditor";
+import { definition, mountModelEditor } from "./modelEditorSeam";
 import {
   LUCID_ACTIVITY_TAB_SURFACE,
   LUCID_GENERATOR_TAB_SURFACE,
@@ -80,13 +79,6 @@ const generatorProps = {
   states: {} as any,
   referenceData: {} as any,
   generator: { id: "g1", name: "Arrivals", mode: "frequency", levers: [] } as any,
-};
-
-const modelProps = {
-  model: { id: "m1", name: "My Model", reps: 1, seed: 12345, levers: [] } as any,
-  onSave: vi.fn(),
-  states: {} as any,
-  entities: [],
 };
 
 describe("Lucid tab surface maps", () => {
@@ -211,66 +203,51 @@ describe("The tell: never silently hide live behaviour", () => {
 
   it("ModelEditor: shows the tell when the model has states but States is hidden in Basic", () => {
     setView("basic");
-    const states = new StateListManager();
-    states.add(new State("unit_price_MODEL_1", "unit_price", ComponentType.MODEL, StateType.NUMBER, 0));
-    render(<ModelEditor {...modelProps} states={states} />);
-    const note = screen.getByRole("note");
-    expect(note).toHaveTextContent(/states/i);
+    mountModelEditor(
+      definition({ states: [{ id: "unit_price_MODEL_1", name: "unit_price", componentType: "model", dataType: "number", initialValue: 0 }] })
+    );
+    expect(screen.getByRole("note")).toHaveTextContent(/states/i);
   });
 
-  // Daniel's Lucid smoke, 2026-09-04: the Model editor's tell context was
-  // `{ states }` only, so no other model-level predicate could ever fire in
-  // this host. It now carries everything the editor holds (resources,
-  // entities, requirements, levers, the model fields); work schedules and
-  // arrivals live behind their tabs' own model-root subscriptions and are
-  // still not covered here.
   it("ModelEditor: shows the tell when the model has resources but Resources is hidden in Basic", () => {
     setView("basic");
-    render(
-      <ModelEditor
-        {...modelProps}
-        states={new StateListManager()}
-        referenceData={{ resources: [{ id: "r1", name: "Nurse" }] } as any}
-      />
-    );
+    mountModelEditor(definition({ resources: [{ id: "r1", name: "Nurse" }] }));
     expect(screen.getByRole("note")).toHaveTextContent(/resources/i);
   });
 
-  it("ModelEditor: shows no tell when the model has no states", () => {
+  // spec 2026-09-12 decision 9: the snapshot now carries arrival patterns and
+  // work schedules to the editor itself, so their tells are on, as in Studio.
+  it("ModelEditor: shows the tell when the model has arrival patterns but Arrivals is hidden", () => {
     setView("basic");
-    // At the shared defaults (10 replications, minutes). The tell context now
-    // carries the model fields too, so a fixture at Lucid's own fallbacks
-    // (1 replication, hours -- see extractModelData) would legitimately trip
-    // the replications and clock-unit tells and hide what this test pins.
-    const atDefaults = { ...modelProps.model, replications: 10, timeUnit: PeriodUnit.MINUTES };
-    render(<ModelEditor {...modelProps} model={atDefaults} states={new StateListManager()} />);
+    mountModelEditor(definition({ arrivalPatterns: [{ id: "ap-1", name: "Morning rush" }] }));
+    expect(screen.getByRole("note")).toHaveTextContent(/arrival/i);
+  });
+
+  it("ModelEditor: shows the tell when the model has work schedules but Schedules is hidden", () => {
+    setView("basic");
+    mountModelEditor(definition({ workSchedules: [{ id: "ws-1", name: "Nursing team" }] }));
+    expect(screen.getByRole("note")).toHaveTextContent(/schedule/i);
+  });
+
+  it("ModelEditor: shows no tell for a model at the shared defaults with nothing hidden in use", () => {
+    setView("basic");
+    // definition() defaults to 10 replications, minutes, clock, no warmup.
+    mountModelEditor();
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 });
 
 describe("ModelEditor — view gates the model-level FIELDS", () => {
-  // Lucid renders its own copies of these controls rather than mounting
-  // quodsi_studio's BasicSettingsTab, so the shared package's gating does not
-  // reach them -- these wrappers are Lucid-local and need Lucid-local proof.
-  // Hiding a field writes nothing: the stored value still reaches the engine,
-  // which is why the model.field.* surfaces are also in
-  // LUCID_MODEL_EXTRA_SURFACES so the tell can explain a non-default one.
+  // Lucid renders its own copies of these controls, so the shared package's
+  // gating does not reach them -- Lucid-local proof. Hiding a field writes
+  // nothing; the model.field.* surfaces are in LUCID_MODEL_EXTRA_SURFACES so
+  // the tell can explain a non-default one.
   beforeEach(() => localStorage.clear());
-
-  // All four live inside the DEFAULT-COLLAPSED "Advanced Settings" accordion,
-  // so an absence assertion that skips this click passes whether the gate
-  // exists or not. Open it first, or the Basic test below is vacuous.
-  function renderModelEditorWithAdvancedOpen() {
-    render(<ModelEditor {...modelProps} />);
-    fireEvent.click(screen.getByText("Advanced Settings"));
-  }
 
   it("hides Replications, Time Mode, Clock Unit and Warmup in Basic", () => {
     setView("basic");
-    // No accordion to open in Basic any more (2026-09-04): every control in
-    // it is intermediate, so the whole section is withheld -- see the
-    // "empty Advanced Settings" test below. Render plainly and assert.
-    render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    // No accordion in Basic (every control in it is intermediate).
+    mountModelEditor();
     expect(screen.queryByTestId("reps-input")).not.toBeInTheDocument();
     expect(screen.queryByText("Time Mode")).not.toBeInTheDocument();
     expect(screen.queryByText("Clock Unit")).not.toBeInTheDocument();
@@ -279,7 +256,9 @@ describe("ModelEditor — view gates the model-level FIELDS", () => {
 
   it("shows all four in Intermediate", () => {
     setView("intermediate");
-    renderModelEditorWithAdvancedOpen();
+    // All four live inside the DEFAULT-COLLAPSED accordion: open it first.
+    mountModelEditor();
+    fireEvent.click(screen.getByText("Advanced Settings"));
     expect(screen.getByTestId("reps-input")).toBeInTheDocument();
     expect(screen.getByText("Time Mode")).toBeInTheDocument();
     expect(screen.getByText("Clock Unit")).toBeInTheDocument();
@@ -288,7 +267,7 @@ describe("ModelEditor — view gates the model-level FIELDS", () => {
 
   it("keeps Run Time visible in Basic", () => {
     setView("basic");
-    render(<ModelEditor {...modelProps} />);
+    mountModelEditor();
     expect(screen.getByText("Run Time")).toBeInTheDocument();
   });
 });
@@ -298,41 +277,32 @@ describe("ModelEditor — view gates the Schedules tab", () => {
 
   it("hides Schedules in Basic", () => {
     setView("basic");
-    render(<ModelEditor {...modelProps} />);
-    expect(
-      screen.queryByRole("button", { name: /Define work schedules/i })
-    ).not.toBeInTheDocument();
+    mountModelEditor();
+    expect(screen.queryByRole("button", { name: /Define work schedules/i })).not.toBeInTheDocument();
   });
 
   it("shows Schedules in Advanced", () => {
     setView("advanced");
-    render(<ModelEditor {...modelProps} />);
-    expect(
-      screen.getByRole("button", { name: /Define work schedules/i })
-    ).toBeInTheDocument();
+    mountModelEditor();
+    expect(screen.getByRole("button", { name: /Define work schedules/i })).toBeInTheDocument();
   });
 
   it("never gates the diagnostics-only Validation tab", () => {
     setView("basic");
-    render(<ModelEditor {...modelProps} />);
-    expect(
-      screen.getByRole("button", { name: /View comprehensive model validation/i })
-    ).toBeInTheDocument();
+    mountModelEditor();
+    expect(screen.getByRole("button", { name: /View comprehensive model validation/i })).toBeInTheDocument();
   });
 
-  // Daniel's Lucid smoke, 2026-09-04: in Basic the Model editor showed an
-  // "Advanced Settings" disclosure that opened onto nothing -- every control
-  // inside it (Replications, Time Mode, Clock Unit, Warmup) is intermediate.
-  // Studio's BasicSettingsTab already drops the accordion when it has no
-  // content; this is the Lucid twin of that rule.
+  // Daniel's Lucid smoke, 2026-09-04: Basic showed an "Advanced Settings"
+  // disclosure that opened onto nothing. Studio's BasicSettingsTab drops it.
   it("ModelEditor: hides the empty Advanced Settings accordion in Basic, shows it in Intermediate", () => {
     setView("basic");
-    const basic = render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    const basic = mountModelEditor();
     expect(screen.queryByRole("button", { name: /advanced settings/i })).not.toBeInTheDocument();
     basic.unmount();
 
     setView("intermediate");
-    render(<ModelEditor {...modelProps} states={new StateListManager()} />);
+    mountModelEditor();
     expect(screen.getByRole("button", { name: /advanced settings/i })).toBeInTheDocument();
   });
 });

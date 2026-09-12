@@ -12,7 +12,6 @@ import { EditorTab } from '../editors/ModelEditor';
 import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
 import { consumePendingModelEditorTab } from '../../utils/pendingNavigation';
-import { setPendingSubmission } from '../../utils/pendingSubmission';
 
 const log = getLogger('ModelPanel');
 
@@ -32,14 +31,11 @@ export const ModelPanel: React.FC = () => {
     referenceData,
     simulationStatus,
     states: serializedStates,
-    entities: serializedEntities,
-    resourceRequirements: serializedResourceRequirements,
     outgoingConnectors,
     // Actions
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onSimulate,
     onRemoveModel,
     onConvertPage
   } = useModelPanel();
@@ -80,14 +76,6 @@ export const ModelPanel: React.FC = () => {
   // State for Model JSON viewer modal
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
   const [modelJson, setModelJson] = useState<object | null>(null);
-
-  // Wrap onSimulate to auto-switch to scenarios tab after simulation starts
-  const handleSimulate = (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => {
-    // Set pending submission so the scenarios panel can show a placeholder immediately
-    setPendingSubmission(scenarioName || 'New Simulation');
-    onSimulate(scenarioName, scenarioDefinitionId, enableAnimation);
-    setActiveTab("scenarios");
-  };
 
   // Handler for viewing model JSON
   const handleViewModelJson = () => {
@@ -309,18 +297,14 @@ export const ModelPanel: React.FC = () => {
               currentElement.data
             )}
             onSave={handleElementSave}
-            onRemoveModel={onRemoveModel}
             onValidate={onValidate}
             referenceData={referenceData}
             currentElement={currentElement}
             states={states}
-            entities={serializedEntities}
-            resourceRequirements={serializedResourceRequirements}
             outgoingConnectors={outgoingConnectors}
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            onSimulate={handleSimulate}
           />
         )}
       </div>

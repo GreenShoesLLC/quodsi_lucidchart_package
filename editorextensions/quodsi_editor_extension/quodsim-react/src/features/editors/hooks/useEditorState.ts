@@ -145,6 +145,14 @@ export interface UseAutoSaveResult {
  *   In practice, every editor consumer routes onSave through Redux's
  *   elementOpsState, which dispatches ELEMENT_SAVE_START (sets isSaving=true)
  *   and ELEMENT_SAVE_SUCCESS/ERROR (sets isSaving=false). Honor that pattern.
+ *   (Lucid's Model editor uses useSaveInFlight around a promise instead.)
+ *
+ * Trailing saves: one is scheduled only for a draft that changed after the
+ * in-flight save was dispatched -- compared by identity against the last
+ * draft handed to onSave. Consumers keep hasPendingChanges true until the
+ * save completes (useSaveCompletionDetector), and isSaving flips false one
+ * render before that flag clears; flagging on the isSaving flip alone
+ * re-sent the in-flight draft, a duplicate save in every Lucid editor.
  */
 export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
@@ -169,6 +177,9 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const trailingSaveNeededRef = useRef(false);
   const prevElementIdRef = useRef(elementId);
   const pendingFlushDraftRef = useRef<T | null>(null);
+  // The last draft handed to onSave. A trailing save is needed only for a
+  // draft that differs from it -- see the contract note above.
+  const dispatchedDraftRef = useRef<T | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -180,6 +191,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const dispatchSave = useCallback(() => {
     setStatus("saving");
     try {
+      dispatchedDraftRef.current = draftRef.current;
       onSaveRef.current(draftRef.current);
     } catch (err) {
       log.error("save failed:", err);
@@ -215,7 +227,13 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
       return;
     }
     if (isSaving) {
-      trailingSaveNeededRef.current = true;
+      // Only an edit made AFTER the in-flight save was dispatched needs a
+      // trailing save. This effect also re-runs on the isSaving flip itself,
+      // while hasPendingChanges is still true for the draft being saved --
+      // flagging that re-sent the same draft once the save completed.
+      if (draft !== dispatchedDraftRef.current) {
+        trailingSaveNeededRef.current = true;
+      }
       setStatus("saving");
       return;
     }
@@ -230,7 +248,9 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
         // Save raced into flight between schedule and timer firing.
         // setStatus("saving") omitted — status is already "saving" because
         // dispatchSave() set it before the in-flight save started.
-        trailingSaveNeededRef.current = true;
+        if (draftRef.current !== dispatchedDraftRef.current) {
+          trailingSaveNeededRef.current = true;
+        }
         return;
       }
       dispatchSave();
@@ -261,6 +281,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
         const captured = pendingFlushDraftRef.current;
         pendingFlushDraftRef.current = null;
         try {
+          dispatchedDraftRef.current = captured;
           onSaveRef.current(captured);
         } catch (err) {
           log.error("pending flush failed:", err);
@@ -320,6 +341,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
       }
       if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
         try {
+          dispatchedDraftRef.current = draftRef.current;
           onSaveRef.current(draftRef.current);
         } catch (err) {
           // Cannot update React state during unmount — log for diagnosability.

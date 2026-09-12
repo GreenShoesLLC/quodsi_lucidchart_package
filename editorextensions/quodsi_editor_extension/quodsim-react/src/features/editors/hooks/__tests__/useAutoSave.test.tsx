@@ -288,6 +288,41 @@ describe("useAutoSave", () => {
       expect(result.current.status).toBe("saved");
       expect(result.current.lastSavedAt).not.toBeNull();
     });
+
+    // The duplicate-save bug (2026-09-12): the isSaving flip itself used to set
+    // the trailing flag, because hasPendingChanges stays true until the save
+    // completes. In real usage isSaving flips false one render BEFORE
+    // useSaveCompletionDetector clears hasPendingChanges, so the transition
+    // effect saw pending=true and re-sent the draft that was already in flight.
+    it("does not re-send the in-flight draft when isSaving flips before pending clears", () => {
+      const onSave = vi.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // One edit, saved by the debounce. The SAME draft object is kept below:
+      // nothing was edited after this save was dispatched.
+      const edited = { id: "e1", name: "v1" };
+      rerender(baseArgs({ onSave, draft: edited, hasPendingChanges: true }));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Parent reflects the in-flight save; pending is still set.
+      rerender(baseArgs({ onSave, draft: edited, hasPendingChanges: true, isSaving: true }));
+
+      // Save completes: isSaving flips false while pending is STILL true...
+      rerender(baseArgs({ onSave, draft: edited, hasPendingChanges: true, isSaving: false }));
+      // ...and pending is cleared only in a later, separate render.
+      rerender(baseArgs({ onSave, draft: edited, hasPendingChanges: false, isSaving: false }));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("element-switch flush", () => {

@@ -14,7 +14,9 @@ import { getSimulationObjectType } from "../../utils/typeDetection";
 // Levers tabs, source resolution and the not-found/unconnected banners all
 // live there, same as Studio/drawio.
 import { ConnectorEditor } from "quodsi_studio/platforms/shared";
-import ModelEditor, { EditorTab, EntityRow } from "../editors/ModelEditor";
+import type { EditorTab } from "../editors/ModelEditor";
+import { ModelEditorForPage } from "../editors/ModelEditorForPage";
+import { useMessaging } from "../../messaging/MessageProvider";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
@@ -29,18 +31,14 @@ interface ElementEditorProps {
   elementType: SimulationObjectType | string;
   elementData: any;
   onSave: (data: any) => void;
-  onRemoveModel?: () => void;
   onValidate?: () => void;
   referenceData: EditorReferenceData;
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
-  entities: EntityRow[];
-  resourceRequirements?: any[];
   outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
   activeTab?: EditorTab;
   onTabChange?: (tab: EditorTab) => void;
-  onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string) => void;
 }
 
 /**
@@ -50,18 +48,14 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   elementType,
   elementData,
   onSave,
-  onRemoveModel,
   onValidate,
   referenceData,
   currentElement,
   states,
-  entities,
-  resourceRequirements,
   outgoingConnectors,
   validationState,
   activeTab,
   onTabChange,
-  onSimulate,
 }) => {
   // Track editor type for fade transition
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -77,6 +71,9 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorEditor (its
   // routing cards' ViewTell mounts) below.
   const { openSettingsModal } = useSimulationRunSender();
+  // The Model case keys its editor on the Lucid page (spec 2026-09-12): a
+  // page switch remounts the whole Model editor and its model-root source.
+  const pageId = useMessaging()?.selection?.documentContext?.pageId;
   const connectorAccessor = useReferenceDataAccessor(referenceData, {
     updateResourceRequirements,
     updateElement,
@@ -143,19 +140,12 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
       case SimulationObjectType.Model:
       case "Model":
         return (
-          <ModelEditor
-            model={safeElementData}
-            onSave={onSave}
-            onRemoveModel={onRemoveModel}
+          <ModelEditorForPage
+            key={pageId}
             onValidate={onValidate}
-            states={states}
-            entities={entities}
-            referenceData={referenceData}
-            resourceRequirements={resourceRequirements}
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={onTabChange}
-            onSimulate={onSimulate}
           />
         );
 
