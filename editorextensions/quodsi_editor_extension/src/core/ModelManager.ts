@@ -1469,7 +1469,15 @@ export class ModelManager {
     private applyResourceDeleteRule(resourceId: string, page: PageProxy, options: ReferenceCleanupOptions): void {
         const stored = this.storageAdapter.getResourceRequirements(page) || [];
         const pruned = removeResourceReferences(
-            { resourceRequirements: stored as unknown as Array<Record<string, unknown>> },
+            {
+                resourceRequirements: stored as unknown as Array<Record<string, unknown>>,
+                // Already written by updateModelRoot, so the deleted resource is
+                // absent. A stored override of a SURVIVING resource that this
+                // delete makes unmeetable is dropped (the resource reverts to its
+                // plain own requirement, re-derived at build), but its id is never
+                // treated as deleted, so that resource's steps keep working.
+                resources: this.storageAdapter.getResources(page) as unknown as Array<Record<string, unknown>>,
+            },
             resourceId,
             options
         );
@@ -1632,11 +1640,22 @@ export class ModelManager {
             // Find deleted requirements
             const deletedReqs = currentReqs.filter(r => !newReqIds.has(r.id));
 
+            // Never clean a LIVE resource's id. A stored record whose id is a
+            // live resource id is that resource's own requirement (or an
+            // override of it), re-derived at build while the resource exists.
+            // The plain-auto filters (the host's autoRequirements.ts vs the
+            // panel's copy) can strip such a record from the incoming list
+            // without the user deleting anything -- the hazard
+            // ResourceStorageMigration.ts:171-195 describes -- and cleaning it
+            // would flag or remove steps the delete dialog never counted.
+            const liveResourceIds = new Set(this.storageAdapter.getResources(page).map(r => String(r.id)));
+            const deletedIds = deletedReqs.map(r => r.id).filter(id => !liveResourceIds.has(String(id)));
+
             // The shared rule (spec 2026-09-11 resource delete cleanup), with the
             // user's Seize/Release choice.
-            if (deletedReqs.length > 0) {
+            if (deletedIds.length > 0) {
                 this.applySharedReferenceCleanup(page, (c) =>
-                    removeRequirementReferences(c, deletedReqs.map(r => r.id), options)
+                    removeRequirementReferences(c, deletedIds, options)
                 );
             }
 

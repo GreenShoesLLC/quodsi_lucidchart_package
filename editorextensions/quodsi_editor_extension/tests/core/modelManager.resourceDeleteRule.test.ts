@@ -79,6 +79,33 @@ describe('updateModelRoot resource delete uses the shared rule', () => {
         expect(activity.failureProperties.repairResourceRequirementId).toBe('');
         expect(activity.levers).toEqual([]);
     });
+
+    it("drops a stored override of surviving r2 that needed r1, but never cleans r2's steps", async () => {
+        const { mm, storage, page } = setup();
+        storage.setResourceRequirements(page, [
+            ...storage.getResourceRequirements(page),
+            { id: 'r2', name: 'Aide', rootClause: { id: 'c-r2', mode: 'require_all', requests: [{ resourceId: 'r1' }, { resourceId: 'r2' }] } },
+        ] as any);
+        const other = addBlock(page, makeFakeBlock('act-2'));
+        storage.setElementData(other, {
+            id: 'act-2',
+            name: 'Treat',
+            actions: [
+                { id: 's-r2', type: 'seize', resourceRequirementId: 'r2' },
+                { id: 'd-r2', type: 'delay_with_resource', resourceRequirementId: 'r2' },
+                { id: 's-r1', type: 'seize', resourceRequirementId: 'r1' },
+            ],
+        } as any, SimulationObjectType.Activity);
+
+        await mm.updateModelRoot({ resources: [{ id: 'r2', name: 'Aide' }] }, page, { seizeRelease: 'remove' });
+
+        expect(storage.getResourceRequirements(page).map((r: any) => r.id)).not.toContain('r2');
+        const activity = storage.getElementData<any>(other);
+        expect(activity.actions.map((a: any) => [a.id, a.resourceRequirementId])).toEqual([
+            ['s-r2', 'r2'],
+            ['d-r2', 'r2'],
+        ]);
+    });
 });
 
 describe('updateResourceRequirements requirement delete uses the shared rule', () => {
@@ -96,6 +123,31 @@ describe('updateResourceRequirements requirement delete uses the shared rule', (
         expect(activity.actions.find((a: any) => a.id === 'd-both').resourceRequirementId).toBeNull();
         expect(activity.failureProperties.repairResourceRequirementId).toBe('');
         expect(activity.actions.find((a: any) => a.id === 's-own').resourceRequirementId).toBe('r1');
+    });
+
+    it("never cleans a live resource's id when its stored record is missing from the incoming list", async () => {
+        const { mm, storage, page, block } = setup();
+        // A stored override of live resource r2 (id === resource id). The
+        // plain-auto filters can strip such a record from an incoming list
+        // without the user having deleted anything.
+        const override = { id: 'r2', name: 'Aide', rootClause: { id: 'c-r2', mode: 'require_all', requests: [{ resourceId: 'r2', quantity: 2 }] } };
+        storage.setResourceRequirements(page, [...storage.getResourceRequirements(page), override] as any);
+        const activity = storage.getElementData<any>(block);
+        storage.setElementData(block, {
+            ...activity,
+            actions: [
+                ...activity.actions,
+                { id: 's-r2', type: 'seize', resourceRequirementId: 'r2' },
+                { id: 'd-r2', type: 'delay_with_resource', resourceRequirementId: 'r2' },
+            ],
+        } as any, SimulationObjectType.Activity);
+
+        const incoming = storage.getResourceRequirements(page).filter((r: any) => r.id !== 'r2');
+        await mm.updateResourceRequirements(incoming, page, { seizeRelease: 'remove' });
+
+        const after = storage.getElementData<any>(block);
+        expect(after.actions.find((a: any) => a.id === 's-r2')?.resourceRequirementId).toBe('r2');
+        expect(after.actions.find((a: any) => a.id === 'd-r2')?.resourceRequirementId).toBe('r2');
     });
 
     it("defaults to 'flag' when no options are passed", async () => {

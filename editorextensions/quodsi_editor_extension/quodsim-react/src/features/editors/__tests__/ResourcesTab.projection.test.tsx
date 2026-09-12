@@ -155,9 +155,10 @@ describe('ResourcesEditor against a real model-root projection', () => {
 
   // Guards `resourceRequirements` on the projection root. ResourcesEditor's
   // delete-confirmation dialog dry-runs the SAME removeResourceReferences
-  // cascade the confirm button executes, reading its requirement count off
-  // `def.resourceRequirements` (ResourcesEditor.tsx:135) -- so the dialog
-  // copy can only be right if the projected requirements are right.
+  // cascade the confirm button executes, counting the deleted requirements it
+  // finds in `def.resourceRequirements` (ResourcesEditor's `deleteImpact`) --
+  // so the dialog copy can only be right if the projected requirements are
+  // right.
   it('delete confirmation counts requirements from the projected resourceRequirements', () => {
     const projection = projectModelRoot(buildModelDefinitionWithCustomRequirement())
     const { accessor } = accessorFor(projection)
