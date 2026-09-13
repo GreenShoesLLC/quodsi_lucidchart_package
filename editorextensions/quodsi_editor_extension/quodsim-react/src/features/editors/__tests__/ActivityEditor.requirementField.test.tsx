@@ -20,10 +20,6 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   }),
 }));
 
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
-}));
-
 // The editor now saves through the model-root source's batched shape queue
 // (spec 2026-09-13 lucid-shape-writes §3), not a plain onSave prop. This fake
 // source stands in for useModelRootSource so the two writing tests below can

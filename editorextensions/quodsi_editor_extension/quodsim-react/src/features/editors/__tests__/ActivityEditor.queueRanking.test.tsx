@@ -21,10 +21,6 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   }),
 }));
 
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
-}));
-
 // NOTE: unlike ActivityEditor.levers.test.tsx, this file does NOT stub
 // "../hooks/useEditorState". That mock replaces useAutoSave with a static,
 // disconnected object (a fresh no-op saveNow on every render), which never
