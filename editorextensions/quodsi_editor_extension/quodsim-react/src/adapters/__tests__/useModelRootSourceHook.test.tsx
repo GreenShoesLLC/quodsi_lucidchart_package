@@ -11,7 +11,7 @@ vi.mock('../../messaging/MessageProvider', () => ({
   useMessaging: () => ({ app: { panelType: 'model' } }),
 }))
 
-import { useModelRootSource } from '../useModelRootSource'
+import { useModelRootSource, MODEL_ROOT_DEBOUNCE_MS } from '../useModelRootSource'
 
 function Harness() {
   const { accessor, projection, request } = useModelRootSource()
@@ -22,6 +22,7 @@ function Harness() {
   return (
     <div>
       <div data-testid="projection">{projection ? 'has-projection' : 'no-projection'}</div>
+      <div data-testid="pattern-count">{(projection as any)?.arrivalPatterns?.length ?? ''}</div>
       <div data-testid="save-status">{state.saveStatus}</div>
       <button
         onClick={() => {
@@ -42,8 +43,30 @@ function Harness() {
   )
 }
 
+function pushSnapshot(
+  id = 'whatever-id',
+  projection: Record<string, unknown> = { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' },
+) {
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { id, type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT, source: 'host', target: 'model-iframe', version: '1.0', data: { projection } },
+      }),
+    )
+  })
+}
+
+function reply(envelope: any, data: Record<string, unknown>) {
+  window.dispatchEvent(
+    new MessageEvent('message', {
+      data: { id: envelope.id, type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT, source: 'host', target: 'model-iframe', version: '1.0', data },
+    }),
+  )
+}
+
 describe('useModelRootSource (hook)', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -108,151 +131,87 @@ describe('useModelRootSource (hook)', () => {
     expect(screen.getByTestId('projection').textContent).toBe('has-projection')
   })
 
-  it('updateModel round-trips through MODEL_ROOT_UPDATE / MODEL_ROOT_UPDATE_RESULT and flips saveStatus to saved', async () => {
+  it('batches updateModel into one MODEL_ROOT_UPDATE after the debounce and flips saveStatus to saved', async () => {
+    vi.useFakeTimers()
     const posted: any[] = []
     vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
       posted.push(envelope)
-      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
-        window.dispatchEvent(
-          new MessageEvent('message', {
-            data: {
-              id: envelope.id,
-              type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
-              source: 'host',
-              target: 'model-iframe',
-              version: '1.0',
-              data: { success: true },
-            },
-          }),
-        )
-      }
+      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) reply(envelope, { success: true })
     })
-
     render(<Harness />)
-
-    // Page guard (spec 2026-09-11): saveModel now refuses a write before any
-    // snapshot has arrived, so feed one first -- same idiom as 'feeds an
-    // incoming MODEL_ROOT_SNAPSHOT' above.
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent('message', {
-          data: {
-            id: 'whatever-id',
-            type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
-            source: 'host',
-            target: 'model-iframe',
-            version: '1.0',
-            data: { projection: { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } },
-          },
-        }),
-      )
-    })
+    pushSnapshot()
 
     await act(async () => {
       screen.getByText('save').click()
-      await Promise.resolve()
+      screen.getByText('save').click()
     })
+    expect(posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)).toHaveLength(0)
+    expect(screen.getByTestId('save-status').textContent).toBe('saving')
 
+    await act(async () => { await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS) })
+
+    const updates = posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
+    expect(updates).toHaveLength(1)
+    expect(updates[0].data).toEqual({ patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' })
     expect(screen.getByTestId('save-status').textContent).toBe('saved')
-
-    const update = posted.find((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
-    expect(update?.data).toEqual({ patch: expect.any(Object), basedOnPageId: 'page-1' })
   })
 
-  it('updateModel rejects and flips saveStatus to failed when the host reports failure', async () => {
+  it("flips saveStatus to failed when the host refuses the batch, and the corrective snapshot tagged with the write's id restores the stored value", async () => {
+    vi.useFakeTimers()
+    const stored = { generators: [], arrivalPatterns: [{ id: 'stored' }], model: {}, pageId: 'page-1' }
     vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
       if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
+        reply(envelope, { success: false, errorMessage: 'boom' })
         window.dispatchEvent(
           new MessageEvent('message', {
-            data: {
-              id: envelope.id,
-              type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
-              source: 'host',
-              target: 'model-iframe',
-              version: '1.0',
-              data: { success: false, errorMessage: 'boom' },
-            },
+            data: { id: envelope.id, type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT, source: 'host', target: 'model-iframe', version: '1.0', data: { projection: stored } },
           }),
         )
       }
     })
-
     render(<Harness />)
+    pushSnapshot('whatever-id', stored)
 
-    // Page guard (spec 2026-09-11): saveModel now refuses a write before any
-    // snapshot has arrived, so feed one first -- same idiom as 'feeds an
-    // incoming MODEL_ROOT_SNAPSHOT' above.
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent('message', {
-          data: {
-            id: 'whatever-id',
-            type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
-            source: 'host',
-            target: 'model-iframe',
-            version: '1.0',
-            data: { projection: { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } },
-          },
-        }),
-      )
-    })
+    await act(async () => { screen.getByText('save').click() })
+    expect(screen.getByTestId('pattern-count').textContent).toBe('0')
 
-    await act(async () => {
-      screen.getByText('save').click()
-      await Promise.resolve()
-    })
+    await act(async () => { await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS) })
 
     expect(screen.getByTestId('save-status').textContent).toBe('failed')
+    expect(screen.getByTestId('pattern-count').textContent).toBe('1')
   })
 
   it('puts seizeRelease on the MODEL_ROOT_UPDATE envelope only when the write carries it', async () => {
+    vi.useFakeTimers()
     const posted: any[] = []
     vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
       posted.push(envelope)
-      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
-        window.dispatchEvent(
-          new MessageEvent('message', {
-            data: {
-              id: envelope.id,
-              type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
-              source: 'host',
-              target: 'model-iframe',
-              version: '1.0',
-              data: { success: true },
-            },
-          }),
-        )
-      }
+      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) reply(envelope, { success: true })
     })
-
     render(<Harness />)
+    pushSnapshot()
 
-    act(() => {
-      window.dispatchEvent(
-        new MessageEvent('message', {
-          data: {
-            id: 'whatever-id',
-            type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
-            source: 'host',
-            target: 'model-iframe',
-            version: '1.0',
-            data: { projection: { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } },
-          },
-        }),
-      )
-    })
+    await act(async () => { screen.getByText('delete-remove').click() })
+    await act(async () => { screen.getByText('save').click() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS) })
 
-    await act(async () => {
-      screen.getByText('delete-remove').click()
-      await Promise.resolve()
-    })
-    await act(async () => {
-      screen.getByText('save').click()
-      await Promise.resolve()
-    })
     const updates = posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
     expect(updates[0].data).toEqual({ patch: { resources: [] }, basedOnPageId: 'page-1', seizeRelease: 'remove' })
     expect(updates[1].data).toEqual({ patch: { arrivalPatterns: [] }, basedOnPageId: 'page-1' })
+  })
+
+  it('marks a write with no reply failed and asks for a fresh snapshot', async () => {
+    vi.useFakeTimers()
+    const posted: any[] = []
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => { posted.push(envelope) })
+    render(<Harness />)
+    pushSnapshot()
+
+    await act(async () => { screen.getByText('save').click() })
+    await act(async () => { await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS + 30_000) })
+
+    expect(screen.getByTestId('save-status').textContent).toBe('failed')
+    expect(posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_REQUEST)).toHaveLength(2)
   })
 
   it('returns request, which asks the host for another snapshot', () => {

@@ -79,7 +79,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     fireEvent.change(nameInput(), { target: { value: 'AB' } })
 
     await act(async () => { first.resolve() })
-    await waitFor(() => expect(send).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(2), { timeout: 3000 })
     expect(send.mock.calls[1][0]).toMatchObject({ name: 'AB' })
 
     // The first save's snapshot arrives while the trailing save is in flight
@@ -93,14 +93,14 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
   })
 
   it('a refused save says why, and the corrective snapshot restores the stored values', async () => {
-    const { pushSnapshot } = mountModelEditor(definition(), {
+    const { transport, pushSnapshot } = mountModelEditor(definition(), {
       transport: { send: vi.fn().mockRejectedValue(new Error('Model changed on another page')) },
     })
 
     typeName('Mine')
 
     expect(await screen.findByText('Save failed: Model changed on another page')).toBeInTheDocument()
-    act(() => pushSnapshot({ name: 'My Model' }))
+    act(() => pushSnapshot({ name: 'My Model' }, {}, transport.send.mock.calls[0][3]))
     await waitFor(() => expect(nameInput().value).toBe('My Model'))
   })
 
@@ -118,7 +118,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     expect(screen.queryByText(/Save failed/)).toBeNull()
   })
 
-  it("catches the unmount flush's rejection", async () => {
+  it('a batch refused after unmount raises no unhandled rejection', async () => {
     const unhandled = vi.fn()
     process.on('unhandledRejection', unhandled)
     try {
@@ -129,7 +129,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
       typeName('Mine', false)
       unmount()
 
-      expect(transport.send).toHaveBeenCalledTimes(1)
+      await waitFor(() => expect(transport.send).toHaveBeenCalledTimes(1))
       await new Promise((resolve) => setTimeout(resolve, 0))
       expect(unhandled).not.toHaveBeenCalled()
     } finally {
@@ -151,7 +151,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     await act(async () => {
       write.resolve()
       await new Promise((resolve) => setTimeout(resolve, 0))
-      pushSnapshot({ name: 'Emergency Dept' })
+      pushSnapshot({ name: 'Emergency Dept' }, {}, send.mock.calls[0][3])
     })
 
     await waitFor(() => expect(nameInput().value).toBe('Emergency Dept'))
@@ -172,7 +172,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     await act(async () => {
       write.resolve()
       await new Promise((resolve) => setTimeout(resolve, 0))
-      pushSnapshot({ name: 'Emergency Dept' })
+      pushSnapshot({ name: 'Emergency Dept' }, {}, send.mock.calls[0][3])
     })
 
     await waitFor(() => expect(nameInput().value).toBe('Emergency Dept'))
@@ -192,7 +192,7 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     fireEvent.change(nameInput(), { target: { value: 'AB' } })
 
     await act(async () => { first.resolve() })
-    await waitFor(() => expect(send).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(2), { timeout: 3000 })
     expect(send.mock.calls[1][0]).toMatchObject({ name: 'AB' })
 
     // Save 1's snapshot lands while the trailing save 'AB' is in flight.

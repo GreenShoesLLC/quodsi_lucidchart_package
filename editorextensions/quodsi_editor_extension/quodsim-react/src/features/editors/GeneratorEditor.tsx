@@ -780,6 +780,9 @@ const GeneratorEditor: React.FC<Props> = ({
           });
           if (ensured.model !== model) {
             await accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
+            // The pattern list lands right behind the generator's link, as
+            // before batching (spec 2026-09-12 lucid-model-root-batching §3).
+            await accessor.flushModelImmediate?.();
           }
         })().catch(err => {
           // accessor.updateShape/updateModel can reject (host error, or the
@@ -832,6 +835,7 @@ const GeneratorEditor: React.FC<Props> = ({
           );
           if (removed !== model) {
             await accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
+            await accessor.flushModelImmediate?.();
           }
         })().catch(err => {
           // See the switch-to-PATTERN branch's identical .catch above for

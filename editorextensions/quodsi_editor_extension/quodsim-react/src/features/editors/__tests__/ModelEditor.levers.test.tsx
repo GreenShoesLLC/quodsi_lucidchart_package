@@ -34,7 +34,7 @@ describe("ModelEditor — scenario lever authoring", () => {
 
     expect((screen.getByLabelText(/use Replications as a scenario lever/i) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByTestId("tab-badge-levers")).toHaveTextContent("1");
-    await waitFor(() => expect(transport.send).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(transport.send).toHaveBeenCalledTimes(1), { timeout: 3000 });
     expect((transport.send.mock.calls[0][0] as { levers: unknown[] }).levers).toHaveLength(1);
   });
 });

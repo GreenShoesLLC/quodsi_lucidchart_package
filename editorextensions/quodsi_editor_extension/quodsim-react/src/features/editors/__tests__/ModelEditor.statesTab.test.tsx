@@ -87,7 +87,7 @@ describe("ModelEditor — States tab uses the shared editor", () => {
     expect(screen.getByRole("button", { name: "Delete State" })).toBeInTheDocument();
 
     // The host's corrective snapshot restores the state; the box is still open under it.
-    await act(async () => { seam.source.acceptSnapshot(original as never); });
+    await act(async () => { seam.source.acceptSnapshot(original as never, seam.transport.send.mock.calls[0][3]); });
 
     expect(screen.getByRole("alert")).toHaveTextContent("Current page not available");
     const box = screen.getByTestId("inline-delete-confirm");
