@@ -13,8 +13,7 @@ import { getSimulationObjectType } from "../../utils/typeDetection";
 // The Connector case renders the SHARED ConnectorEditor (2026-09-03): Routing |
 // Levers tabs, source resolution and the not-found/unconnected banners all
 // live there, same as Studio/drawio.
-import { ConnectorEditor } from "quodsi_studio/platforms/shared";
-import type { EditorTab } from "../editors/ModelEditor";
+import { ConnectorEditor, type ModelEditorTab } from "quodsi_studio/platforms/shared";
 import { ModelEditorForPage } from "../editors/ModelEditorForPage";
 import { useMessaging } from "../../messaging/MessageProvider";
 import ActivityEditor from "../editors/ActivityEditor";
@@ -31,14 +30,13 @@ interface ElementEditorProps {
   elementType: SimulationObjectType | string;
   elementData: any;
   onSave: (data: any) => void;
-  onValidate?: () => void;
   referenceData: EditorReferenceData;
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
   outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
-  activeTab?: EditorTab;
-  onTabChange?: (tab: EditorTab) => void;
+  activeTab?: ModelEditorTab;
+  onTabChange?: (tab: ModelEditorTab) => void;
 }
 
 /**
@@ -48,7 +46,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   elementType,
   elementData,
   onSave,
-  onValidate,
   referenceData,
   currentElement,
   states,
@@ -142,7 +139,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         return (
           <ModelEditorForPage
             key={pageId}
-            onValidate={onValidate}
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={onTabChange}

@@ -238,10 +238,10 @@ describe("The tell: never silently hide live behaviour", () => {
 });
 
 describe("ModelEditor — view gates the model-level FIELDS", () => {
-  // Lucid renders its own copies of these controls, so the shared package's
-  // gating does not reach them -- Lucid-local proof. Hiding a field writes
-  // nothing; the model.field.* surfaces are in LUCID_MODEL_EXTRA_SURFACES so
-  // the tell can explain a non-default one.
+  // The shared BasicSettingsTab gates these; this pins it in Lucid's host
+  // (spec 2026-09-13). Hiding a field writes nothing; the model.field.*
+  // surfaces are in the shared MODEL_EXTRA_SURFACES so the tell can explain a
+  // non-default one.
   beforeEach(() => localStorage.clear());
 
   it("hides Replications, Time Mode, Clock Unit and Warmup in Basic", () => {
@@ -278,19 +278,19 @@ describe("ModelEditor — view gates the Schedules tab", () => {
   it("hides Schedules in Basic", () => {
     setView("basic");
     mountModelEditor();
-    expect(screen.queryByRole("button", { name: /Define work schedules/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Schedules" })).not.toBeInTheDocument();
   });
 
   it("shows Schedules in Advanced", () => {
     setView("advanced");
     mountModelEditor();
-    expect(screen.getByRole("button", { name: /Define work schedules/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Schedules" })).toBeInTheDocument();
   });
 
   it("never gates the diagnostics-only Validation tab", () => {
     setView("basic");
     mountModelEditor();
-    expect(screen.getByRole("button", { name: /View comprehensive model validation/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Validation" })).toBeInTheDocument();
   });
 
   // Daniel's Lucid smoke, 2026-09-04: Basic showed an "Advanced Settings"

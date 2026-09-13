@@ -1,25 +1,28 @@
-// Lucid's Resources tab mounts the shared ResourcesEditor in host mode on the
-// Model editor's ONE model-root accessor (spec 2026-09-12). The dialog counts
-// steps AND levers from that accessor's activity summaries -- no separate
-// referenceData source -- and the delete goes to the host with the user's
-// choice, with no shape writes from the panel.
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+// The shared Model editor's Resources tab in Lucid's host (spec 2026-09-13):
+// Studio's shared ResourcesEditor in host mode on the ONE model-root accessor.
+// The dialog counts steps AND levers from that accessor's activity summaries,
+// and the delete goes to the host with the user's choice, with no shape writes.
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { setView } from 'quodsi_studio/platforms/shared'
 
 vi.mock('../../../messaging/MessageProvider', () => ({
   useMessaging: () => ({ app: { panelType: 'model' }, selection: {}, sendMessage: vi.fn() }),
 }))
 
-import { ResourcesTab } from '../ResourcesTab'
-import { definition, modelRootSeam } from './modelEditorSeam'
+import { definition, mountModelEditor } from './modelEditorSeam'
 
 const NURSE = 'r1'
 
-describe('ResourcesTab (host cleanup)', () => {
-  afterEach(() => cleanup())
+describe('Model editor — Resources tab (host cleanup)', () => {
+  beforeEach(() => setView('advanced'))
+  afterEach(() => {
+    cleanup()
+    setView('basic')
+  })
 
   it('counts steps and levers from the one accessor and sends the delete with the choice, never writing shapes', async () => {
-    const { accessor, transport } = modelRootSeam(
+    const { transport } = mountModelEditor(
       definition({
         resources: [{ id: NURSE, name: 'Nurse', capacity: 1 }],
         resourceRequirements: [
@@ -34,8 +37,8 @@ describe('ResourcesTab (host cleanup)', () => {
           },
         ],
       }),
+      { props: { activeTab: 'Resources' } },
     )
-    render(<ResourcesTab accessor={accessor} />)
 
     fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
     expect(screen.getByText('1 Seize/Release step uses them:')).toBeInTheDocument()

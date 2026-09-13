@@ -68,7 +68,7 @@ const props = (pageId: string) => ({
   onSave: vi.fn(),
   referenceData: {} as any,
   states: new StateListManager(),
-  activeTab: 'states' as const,
+  activeTab: 'States' as const,
   onTabChange: vi.fn(),
 })
 

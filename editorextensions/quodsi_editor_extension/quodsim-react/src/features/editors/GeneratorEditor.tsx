@@ -1403,7 +1403,7 @@ const GeneratorEditor: React.FC<Props> = ({
             states={states}
             title="Initial State Modifications"
             description="Applied to new entities"
-            onNavigateToModelEditor={() => selectElement('model', { targetTab: 'states' })}
+            onNavigateToModelEditor={() => selectElement('model', { targetTab: 'States' })}
           />
         )}
 

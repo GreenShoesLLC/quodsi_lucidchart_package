@@ -1,4 +1,4 @@
-// ModelEditor's Requirements tab: Studio's shared ResourceRequirementsEditor
+// The shared Model editor's Requirements tab: Studio's shared ResourceRequirementsEditor
 // on the editor's ONE model-root accessor, in host-cleanup mode (spec
 // 2026-09-12). The delete dialog counts levers because the snapshot's activity
 // summaries now carry them.
@@ -34,14 +34,14 @@ function requirementsDefinition() {
   });
 }
 
-describe("ModelEditor — Requirements tab uses the shared editor", () => {
+describe("Model editor — Requirements tab uses the shared editor", () => {
   // model.tab.requirements is intermediate as of 2026-09-03.
   beforeEach(() => setView("intermediate"));
   afterEach(() => { cleanup(); setView("basic"); });
 
   it("lists custom first with usage, then the resource row with the Resource pill", async () => {
     const user = userEvent.setup();
-    mountModelEditor(requirementsDefinition(), { props: { activeTab: "requirements" } });
+    mountModelEditor(requirementsDefinition(), { props: { activeTab: "Requirements" } });
 
     expect(screen.getByRole("button", { name: "Add New" })).toBeInTheDocument();
     const rows = screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent);
@@ -55,7 +55,7 @@ describe("ModelEditor — Requirements tab uses the shared editor", () => {
 
   it("the delete dialog counts the steps and their levers, and sends the choice to the host", async () => {
     const user = userEvent.setup();
-    const { transport } = mountModelEditor(requirementsDefinition(), { props: { activeTab: "requirements" } });
+    const { transport } = mountModelEditor(requirementsDefinition(), { props: { activeTab: "Requirements" } });
 
     await user.click(screen.getByTitle("Delete requirement"));
     expect(screen.getByText('Delete Requirement: "Triage team"?')).toBeInTheDocument();

@@ -1344,7 +1344,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           (a) => a.id !== localActivityDraft.id
                         )}
                         states={states}
-                        onNavigateToModelEditor={() => selectElement('model', { targetTab: 'states' })}
+                        onNavigateToModelEditor={() => selectElement('model', { targetTab: 'States' })}
                       />
                     ))}
                   </div>

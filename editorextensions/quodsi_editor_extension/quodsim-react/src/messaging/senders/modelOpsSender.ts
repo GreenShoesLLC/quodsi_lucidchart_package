@@ -4,6 +4,7 @@ import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } fro
 import type { SeizeReleaseDisposition } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
+import type { ModelEditorTab } from 'quodsi_studio/platforms/shared';
 
 // Generous but bounded — a local ModelManager mutation + re-validate, not a
 // network call (same reasoning as useModelRootSource's MODEL_ROOT_UPDATE).
@@ -237,7 +238,7 @@ export function useModelOpsSender() {
    * @param elementId Optional element ID to select. If 'model' or undefined, clears selection to show Model Editor.
    * @param options Optional configuration including targetTab for Model Editor navigation
    */
-  const selectElement = useCallback((elementId?: string, options?: { targetTab?: 'basic' | 'states' | 'entities' | 'requirements' | 'scenarios' | 'validation' }) => {
+  const selectElement = useCallback((elementId?: string, options?: { targetTab?: ModelEditorTab }) => {
     // If a target tab is specified, store it for the Model Editor to consume
     if (options?.targetTab) {
       const { setPendingModelEditorTab } = require('../../utils/pendingNavigation');

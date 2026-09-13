@@ -1,32 +1,32 @@
 /**
  * Simple module-level store for pending navigation state.
- * Used to communicate the desired tab when navigating to Model Editor.
+ * Used to communicate the desired tab when navigating to the Model editor.
  */
 
-import { EditorTab } from '../features/editors/ModelEditor';
+import type { ModelEditorTab } from 'quodsi_studio/platforms/shared';
 
-let pendingModelEditorTab: EditorTab | null = null;
+let pendingModelEditorTab: ModelEditorTab | null = null;
 
 /**
- * Set the pending Model Editor tab.
- * Call this before triggering navigation to Model Editor.
+ * Set the pending Model editor tab.
+ * Call this before triggering navigation to the Model editor.
  */
-export function setPendingModelEditorTab(tab: EditorTab): void {
+export function setPendingModelEditorTab(tab: ModelEditorTab): void {
   pendingModelEditorTab = tab;
 }
 
 /**
- * Get and clear the pending Model Editor tab.
+ * Get and clear the pending Model editor tab.
  * Returns the pending tab (if any) and clears it so it's only used once.
  */
-export function consumePendingModelEditorTab(): EditorTab | null {
+export function consumePendingModelEditorTab(): ModelEditorTab | null {
   const tab = pendingModelEditorTab;
   pendingModelEditorTab = null;
   return tab;
 }
 
 /**
- * Check if there's a pending Model Editor tab without consuming it.
+ * Check if there's a pending Model editor tab without consuming it.
  */
 export function hasPendingModelEditorTab(): boolean {
   return pendingModelEditorTab !== null;
