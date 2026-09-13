@@ -88,14 +88,21 @@ export function modelRootSeam(def: ModelDefinition, transportOverrides: Partial<
    * `modelChanges` applied flat and under `model`, and `rootChanges` applied
    * at the root. Call inside act().
    */
-  const pushSnapshot = (modelChanges: Record<string, unknown> = {}, rootChanges: Record<string, unknown> = {}) => {
+  const pushSnapshot = (
+    modelChanges: Record<string, unknown> = {},
+    rootChanges: Record<string, unknown> = {},
+    envelopeId?: string,
+  ) => {
     const current = source.deps.getModelDefinition() as Record<string, unknown>
-    source.acceptSnapshot({
-      ...current,
-      ...rootChanges,
-      ...modelChanges,
-      model: { ...(current.model as Record<string, unknown>), ...modelChanges },
-    } as unknown as ModelRootProjection)
+    source.acceptSnapshot(
+      {
+        ...current,
+        ...rootChanges,
+        ...modelChanges,
+        model: { ...(current.model as Record<string, unknown>), ...modelChanges },
+      } as unknown as ModelRootProjection,
+      envelopeId,
+    )
   }
 
   return { transport, source, accessor, pushSnapshot }

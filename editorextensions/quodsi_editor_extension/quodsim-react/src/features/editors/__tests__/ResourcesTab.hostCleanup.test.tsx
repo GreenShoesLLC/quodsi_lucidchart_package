@@ -44,7 +44,7 @@ describe('ResourcesTab (host cleanup)', () => {
     fireEvent.click(screen.getByRole('button', { name: /delete resource/i }))
 
     await waitFor(() =>
-      expect(transport.send).toHaveBeenCalledWith({ resources: [] }, 'page-1', { seizeRelease: 'remove' }),
+      expect(transport.send).toHaveBeenCalledWith({ resources: [] }, 'page-1', { seizeRelease: 'remove' }, expect.any(String)),
     )
     expect(transport.saveShape).not.toHaveBeenCalled()
   })

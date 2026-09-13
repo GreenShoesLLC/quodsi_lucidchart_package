@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import {
   Model,
   ModelDefaults,
@@ -196,22 +196,27 @@ const START_DATE_HINT = "Set the start date first";
  * - Validation: read-only, from validationState.
  *
  * Draft resync: the draft re-extracts from a snapshot only while nothing is
- * pending, no save is in flight (useSaveInFlight) and the last save did not
- * fail, and only from a snapshot the source ACCEPTED after the last save
- * settled (snapshotSeq) whose model-field VALUES (modelSettingsSyncKey) differ
- * from the ones last applied. So an Advisor Apply shows up while idle, and so
- * does the host's post-save snapshot (a cleared name stored as the page title)
- * even though it lands before React commits saving=false; our own echo, a
- * snapshot that was in flight during a save, or the corrective snapshot after
- * a refused save never erases what the user typed. Merely re-checking a
- * skipped snapshot when the guard drops would: see the resync effect.
+ * pending and no save is in flight (useSaveInFlight), and only from a
+ * snapshot the source ACCEPTED after the last save settled (snapshotSeq)
+ * whose model-field VALUES (modelSettingsSyncKey) differ from the ones last
+ * applied. So an Advisor Apply shows up while idle, and so does the host's
+ * post-save snapshot (a cleared name stored as the page title) even though it
+ * lands before React commits saving=false; our own echo, or a snapshot that
+ * was in flight during a save, never erases what the user typed. Merely
+ * re-checking a skipped snapshot when the guard drops would: see the resync
+ * effect. A REFUSED save is different: it shows through the accessor's save
+ * status ("Save failed: <reason>", read via useSyncExternalStore below), and
+ * the guard drops immediately -- the host's corrective snapshot that follows
+ * is then just another snapshot, and it resyncs the draft to the stored
+ * values like any other.
  *
  * Calendar dates: only the Start Date is stored; Warmup and Finish write
  * `warmupTime`/`runTime`, which is what the clean wire and the engine carry.
  * Switching back to Clock clears all three dates in the same draft update.
  *
  * Status: SaveStatusLine ("Saved" / "Saving…" / "Save failed — keep typing to
- * retry"). Native LucidChart Ctrl+Z reverses saved changes.
+ * retry", or "Save failed: <reason>" once the host names why it refused).
+ * Native LucidChart Ctrl+Z reverses saved changes.
  */
 const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
   // ============================================================================
@@ -248,11 +253,14 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
   // useAutoSave's `isSaving`: true while a draft save is in flight. See
   // useSaveInFlight for why a plain useState would break useAutoSave.
   const { saving, track } = useSaveInFlight();
-  // The last save's failure. While set, no snapshot may overwrite the draft:
-  // the host's corrective snapshot after a refused write would otherwise erase
-  // exactly the values the user is being told did not save. Cleared when the
-  // next save starts (the next edit).
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // A refused write surfaces through the accessor's save status (spec
+  // 2026-09-12 lucid-model-root-batching: updateModel resolves once the edit is
+  // accepted). The host's corrective snapshot then restores the stored values,
+  // and the draft resyncs to them like any other snapshot.
+  const { saveStatus: accessorSaveStatus, saveError: accessorSaveError } = useSyncExternalStore(
+    accessor.subscribe,
+    accessor.getSnapshot
+  );
 
   // A STRING of the snapshot's model-field values (spec 2026-09-12 §5), so a
   // snapshot that changed only other keys -- a new object, the same values --
@@ -263,8 +271,7 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
   );
 
   // Draft resync: re-extract from the snapshot only when
-  //   1. nothing is pending, no save is in flight and the last save did not
-  //      fail (the guard);
+  //   1. nothing is pending and no save is in flight (the guard);
   //   2. the snapshot was ACCEPTED after the last save settled -- its
   //      snapshotSeq (stamped by createModelRootSource.acceptSnapshot, kept by
   //      the echo) is newer than the source's seq when that write resolved or
@@ -284,7 +291,7 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
   // was accepted before save 2 settled, so rule 2 skips it.
   const lastSettledSeqRef = useRef(projection.snapshotSeq ?? 0);
   const lastAppliedKeyRef = useRef(modelSyncKey);
-  const draftGuard = hasPendingChanges || saving || saveError !== null;
+  const draftGuard = hasPendingChanges || saving;
   useEffect(() => {
     if (draftGuard) return;
     if ((projection.snapshotSeq ?? 0) <= lastSettledSeqRef.current) return;
@@ -297,12 +304,10 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
 
   // Auto-save hands this the raw draft. buildModelSettingsPatch applies the
   // defaults and leaves out `id` and `scenarios`, which updateModelRoot
-  // refuses. The rejection is always caught -- including the unmount flush
-  // after a page switch, which the page guard refuses (that edit is lost, as
-  // it was on the old ELEMENT_UPDATE route).
+  // refuses. A rejection is always caught; the failure itself shows through
+  // the accessor's save status.
   const onSaveWithDefaults = useCallback(
     (draft: Model) => {
-      setSaveError(null);
       const write = accessor.updateModel(buildModelSettingsPatch(draft));
       // Resync rule 3's "applied" mark for this editor's own save. updateModel
       // echoes the patch into the source synchronously, before its first
@@ -321,10 +326,7 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
         const current = accessor.getSnapshot().modelDefinition as unknown as ModelRootProjection | null;
         lastSettledSeqRef.current = current?.snapshotSeq ?? 0;
       };
-      write.then(markSettled, (err: unknown) => {
-        markSettled();
-        setSaveError(err instanceof Error ? err.message : String(err));
-      });
+      write.then(markSettled, markSettled);
       track(write);
     },
     [accessor, track]
@@ -891,7 +893,11 @@ const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, valida
 
 
                 {/* Auto-save status */}
-                <SaveStatusLine status={saveError ? "error" : status} lastSavedAt={lastSavedAt} />
+                <SaveStatusLine
+                  status={accessorSaveStatus === "failed" ? "error" : status}
+                  lastSavedAt={lastSavedAt}
+                  message={accessorSaveStatus === "failed" ? accessorSaveError : null}
+                />
               </div>
           </div>
       )}

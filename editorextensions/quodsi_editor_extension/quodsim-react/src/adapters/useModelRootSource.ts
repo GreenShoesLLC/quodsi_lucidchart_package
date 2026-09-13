@@ -15,17 +15,25 @@
 //
 // TWO DELIVERABLES IN THIS FILE:
 //   1. createModelRootSource(transport) -- a pure, testable factory. No
-//      knowledge of window/postMessage/React; it just tracks a cached
-//      projection and forwards writes through the injected `transport`.
+//      knowledge of window/postMessage/React. Plain model-root edits are
+//      BATCHED (spec 2026-09-12 lucid-model-root-batching): they merge into a
+//      pending overlay and go out as one MODEL_ROOT_UPDATE after a quiet
+//      period (or on flush()), one batch in flight at a time. Each unreleased
+//      batch shields the projection from a stale snapshot until the host's
+//      OWN write is released by the tagged snapshot it stamps with that
+//      batch's envelope id (a safety-net grace timer releases it outright if
+//      no tagged snapshot ever arrives). flush() sends everything due now and
+//      resolves once every batch pending or in flight at the moment of the
+//      call has landed, saved or refused.
 //   2. useModelRootSource() -- the React hook that wires that factory to
 //      THIS package's actual messaging idiom (mint-your-own-correlation-id,
 //      one-shot window.postMessage RPC), the same pattern usePortalSender
 //      and useUpgradeInterestSender use for host round-trips that need a
 //      resolved/rejected Promise rather than a Redux-broadcast update.
 //      MODEL_ROOT_SNAPSHOT is NOT one-shot -- it arrives unsolicited after
-//      every write in addition to replying to MODEL_ROOT_REQUEST -- so unlike
-//      those two senders, the snapshot listener here is never torn down
-//      until the hook unmounts.
+//      every write (not just this realm's own) in addition to replying to
+//      MODEL_ROOT_REQUEST -- so unlike those two senders, the snapshot
+//      listener here is never torn down until the hook unmounts.
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -42,20 +50,63 @@ import {
   createLucidModelStateAccessor,
   type LucidModelStateAccessorDeps,
   type ModelStateAccessor,
+  type ModelWriteStatus,
 } from './LucidModelStateAccessor'
 import { MODEL_NOT_LOADED_MESSAGE } from './pageGuardMessages'
+import { registerModelRootSource } from './modelRootWrites'
+
+/** Quiet time before a batch of plain model-root edits is sent (spec 2026-09-12 lucid-model-root-batching). */
+export const MODEL_ROOT_DEBOUNCE_MS = 400
+
+/**
+ * How long a settled batch waits for the snapshot the host tags with its id
+ * before asking for one: the host only logs a failed snapshot build.
+ */
+export const TAGGED_SNAPSHOT_GRACE_MS = 2_000
+
+// Ids of released batches, kept so a late snapshot for one of them is
+// recognised as older than what is already shown. Only the last few batches
+// can still have a snapshot in the air.
+const RELEASED_IDS_KEPT = 50
+
+/**
+ * A model-root write that can never get a reply (the timeout, or no parent
+ * window). No corrective snapshot will follow, so the source drops the batch
+ * at once and asks for a fresh snapshot.
+ */
+export class ModelRootNoReplyError extends Error {
+  readonly noReply = true
+  constructor(message: string) {
+    super(message)
+    this.name = 'ModelRootNoReplyError'
+  }
+}
+
+function isNoReplyError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { noReply?: unknown }).noReply === true
+}
 
 export type ModelRootTransport = {
   /**
-   * Send a model-root patch to the host with the page id of the snapshot it
-   * was based on (spec 2026-09-11 page guard). Resolves when the host confirms.
-   *
-   * `options` -- a delete dialog's Seize/Release choice (spec 2026-09-11
-   * resource delete cleanup), present only when the write carries one.
+   * Send one model-root batch. `basedOnPageId` is the page id of the snapshot
+   * the batch's first edit was based on (page guard, spec 2026-09-11);
+   * `options` is a delete dialog's Seize/Release choice, present only on a
+   * write that carries one; `id` is the envelope id -- the host tags its
+   * post-write AND corrective snapshots with it. Resolves when the host
+   * confirms; rejects with the host's message, or with ModelRootNoReplyError
+   * when no reply can come.
    */
-  send(patch: Record<string, unknown>, basedOnPageId: string | undefined, options?: ReferenceCleanupOptions): Promise<void>
-  /** Ask the host for a fresh snapshot. Optional -- absent in unit tests. */
-  request?(): void
+  send(
+    patch: Record<string, unknown>,
+    basedOnPageId: string | undefined,
+    options: ReferenceCleanupOptions | undefined,
+    id: string,
+  ): Promise<void>
+  /**
+   * Ask the host for a fresh snapshot; returns the request's envelope id,
+   * which tags the reply. Optional -- absent in unit tests.
+   */
+  request?(): string | void
   /**
    * Persist a shape-scoped patch (e.g. the arrival-pattern editor modal's
    * GeneratorPatternTab volume slider, or its fork-on-edit linking, both via
@@ -64,6 +115,13 @@ export type ModelRootTransport = {
    * silently no-opping (see createModelRootSource's own comment).
    */
   saveShape?(shapeId: string, type: string, patch: Record<string, unknown>): Promise<void>
+}
+
+export type ModelRootSourceOptions = {
+  /** Quiet time before a batch of plain edits is sent. Default MODEL_ROOT_DEBOUNCE_MS. */
+  debounceMs?: number
+  /** How long a settled batch waits for its tagged snapshot. Default TAGGED_SNAPSHOT_GRACE_MS. */
+  taggedSnapshotGraceMs?: number
 }
 
 // Markers the HOST stamps onto each projected resource row at build time
@@ -77,81 +135,296 @@ const TRANSIENT_RESOURCE_KEYS = ['shapeId', 'shapeLabel', 'laneRef'] as const
 // -- so the echo writes both copies (spec 2026-09-12 §4).
 const MODEL_SETTINGS_KEYS = new Set<string>(MODEL_FIELD_KEYS.filter((key) => key !== 'id'))
 
-export function createModelRootSource(transport: ModelRootTransport) {
+/**
+ * Lay a model-root patch over a projection, returning a NEW object (the
+ * accessor's getSnapshot cache compares by identity).
+ *
+ * `resources` merges PER ROW BY ID rather than replacing rows, so the
+ * transient link markers -- which exist only on the host's projection and
+ * never on a patch -- survive; otherwise the Resources tab's link column
+ * flickers to "no shape". Every other key is replaced wholesale. Model
+ * settings keys land flat AND in a rebuilt nested `model` block, the two
+ * places the snapshot carries them.
+ */
+function applyPatch(current: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...current }
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === 'resources' && Array.isArray(value)) {
+      const cachedById = new Map<string, Record<string, unknown>>()
+      for (const row of (current.resources as Array<Record<string, unknown>> | undefined) ?? []) {
+        if (row) cachedById.set(String(row.id), row)
+      }
+      next.resources = value.map((row: Record<string, unknown>) => {
+        const prev = row ? cachedById.get(String(row.id)) : undefined
+        if (!prev) return row
+        const merged: Record<string, unknown> = { ...prev, ...row }
+        for (const k of TRANSIENT_RESOURCE_KEYS) {
+          // An explicit `shapeId: undefined` on the patch row still means
+          // "the patch did not carry it" -- only the host can clear a marker.
+          if (merged[k] === undefined && prev[k] !== undefined) merged[k] = prev[k]
+        }
+        return merged
+      })
+    } else {
+      next[key] = value
+      if (MODEL_SETTINGS_KEYS.has(key)) {
+        next.model = { ...((next.model as Record<string, unknown> | undefined) ?? {}), [key]: value }
+      }
+    }
+  }
+
+  return next
+}
+
+/** A group of model-root edits sent as one MODEL_ROOT_UPDATE. */
+type Batch = {
+  id: string
+  order: number
+  patch: Record<string, unknown>
+  basedOnPageId: string | undefined
+  options: ReferenceCleanupOptions | undefined
+  /** Envelope ids whose snapshot releases this batch: its own, plus a safety-net request's. */
+  releaseIds: Set<string>
+  run: Promise<void> | null
+  graceTimer: ReturnType<typeof setTimeout> | null
+  requested: boolean
+}
+
+const IDLE: ModelWriteStatus = { status: 'idle', error: null }
+const SAVING: ModelWriteStatus = { status: 'saving', error: null }
+const SAVED: ModelWriteStatus = { status: 'saved', error: null }
+
+export function createModelRootSource(transport: ModelRootTransport, sourceOptions: ModelRootSourceOptions = {}) {
+  const debounceMs = sourceOptions.debounceMs ?? MODEL_ROOT_DEBOUNCE_MS
+  const graceMs = sourceOptions.taggedSnapshotGraceMs ?? TAGGED_SNAPSHOT_GRACE_MS
   const listeners = new Set<() => void>()
+
+  // BATCHING (spec 2026-09-12 lucid-model-root-batching). Every write costs
+  // the extension a storage write, a validate, two snapshots and a selection
+  // re-process, so plain edits merge into a pending batch and go out as one
+  // MODEL_ROOT_UPDATE after a quiet period. updateModel resolves once an edit
+  // is accepted, like drawio and Visio; flush() waits for the host.
+  //
+  // SHIELDING. `base` is the last snapshot the host sent; `projection` is it
+  // with every unreleased batch and then the pending edits laid over it, so a
+  // stale snapshot never overwrites typed text. A batch is released by the
+  // snapshot the host tags with its envelope id -- the stored result of that
+  // write, whether it was saved or refused.
+  let base: ModelRootProjection | null = null
   let projection: ModelRootProjection | null = null
   // Stamped onto every accepted snapshot (never onto an echo) so an editor can
   // tell a snapshot that arrived after its write settled from one already in
   // flight -- see ModelEditor's draft resync.
   let seq = 0
 
-  function acceptSnapshot(next: ModelRootProjection): void {
-    // Replace the reference wholesale. Never mutate in place: the accessor's
-    // cache compares by identity, so an in-place edit would be invisible.
-    projection = { ...next, snapshotSeq: ++seq }
+  let pending: Record<string, unknown> = {}
+  let pendingPageId: string | undefined
+  let hasPending = false
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  let batchOrder = 0
+  let unreleased: Batch[] = []
+  const outstanding = new Set<Batch>()
+  // Serial: one batch in flight at a time, in the order batches were made.
+  // Kept never-rejecting; each batch's own run carries its outcome.
+  let queue: Promise<void> = Promise.resolve()
+
+  const releasedOrders = new Map<string, number>()
+  let highestReleasedOrder = 0
+
+  let lastOutcome: ModelWriteStatus = IDLE
+  let writeStatus: ModelWriteStatus = IDLE
+
+  function notify(): void {
     listeners.forEach((l) => l())
   }
 
-  /**
-   * OPTIMISTIC ECHO. Folds an outgoing model-root patch into the cached
-   * projection immediately, before the host has seen it.
-   *
-   * Without this, a controlled input whose value is read out of the projection
-   * and whose onChange calls accessor.updateModel is a full postMessage round
-   * trip per keystroke: React re-renders the input with the PRE-keystroke
-   * value the instant the change event settles, and only the eventual
-   * MODEL_ROOT_SNAPSHOT catches it up. Type "Radiology Technician" at speed
-   * into Studio's ResourceBasicTab name field and characters drop and reorder.
-   *
-   * `resources` merges PER ROW BY ID rather than replacing rows, so the
-   * transient link markers above -- which exist only on the host's projection
-   * and never on a patch -- survive the echo; otherwise the Resources tab's
-   * link column flickers to "no shape" for the length of a round trip. Every
-   * other key is replaced wholesale: they carry no host-only fields.
-   * Model settings keys land flat AND in a rebuilt nested `model` block, the two places the snapshot carries them.
-   *
-   * The projection object is always REBUILT, never mutated: the accessor's
-   * getSnapshot cache compares by identity. The authoritative
-   * MODEL_ROOT_SNAPSHOT that follows replaces whatever this guessed.
-   */
-  function echoPatch(patch: Record<string, unknown>): void {
-    // No snapshot yet means nothing to echo into -- and nothing is rendering
-    // off the projection either, so the first snapshot is the whole answer.
-    if (!projection) return
+  function recompute(): void {
+    if (!base) {
+      projection = null
+      return
+    }
+    if (unreleased.length === 0 && !hasPending) {
+      projection = base
+      return
+    }
+    let next = base as unknown as Record<string, unknown>
+    for (const batch of unreleased) next = applyPatch(next, batch.patch)
+    if (hasPending) next = applyPatch(next, pending)
+    projection = next as unknown as ModelRootProjection
+  }
 
-    const current = projection as unknown as Record<string, unknown>
-    const next: Record<string, unknown> = { ...current }
+  // Callers notify once after all their changes.
+  function syncStatus(): void {
+    writeStatus = hasPending || outstanding.size > 0 ? SAVING : lastOutcome
+  }
 
-    for (const [key, value] of Object.entries(patch)) {
-      if (key === 'resources' && Array.isArray(value)) {
-        const cachedById = new Map<string, Record<string, unknown>>()
-        for (const row of (current.resources as Array<Record<string, unknown>> | undefined) ?? []) {
-          if (row) cachedById.set(String(row.id), row)
+  function clearTimer(): void {
+    if (timer !== null) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+
+  function makeBatch(
+    patch: Record<string, unknown>,
+    basedOnPageId: string | undefined,
+    options: ReferenceCleanupOptions | undefined,
+  ): Batch {
+    const id = uuid()
+    return {
+      id,
+      order: ++batchOrder,
+      patch,
+      basedOnPageId,
+      options,
+      releaseIds: new Set([id]),
+      run: null,
+      graceTimer: null,
+      requested: false,
+    }
+  }
+
+  // Pending edits become a batch the moment they are due (timer, flush, or a
+  // cleanup-option write); later edits form the next batch. The projection is
+  // unchanged: the same patch moves from the pending overlay to the end of the
+  // batch overlays.
+  function promotePending(): Batch | null {
+    clearTimer()
+    if (!hasPending) return null
+    const batch = makeBatch(pending, pendingPageId, undefined)
+    pending = {}
+    pendingPageId = undefined
+    hasPending = false
+    unreleased.push(batch)
+    return batch
+  }
+
+  function enqueue(batch: Batch): Promise<void> {
+    outstanding.add(batch)
+    syncStatus()
+    const run = queue.then(() => send(batch))
+    batch.run = run
+    queue = run.catch(() => {})
+    return run
+  }
+
+  function send(batch: Batch): Promise<void> {
+    return new Promise<void>((resolve) => {
+      resolve(transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id))
+    }).then(
+      () => {
+        settle(batch, SAVED)
+      },
+      (err: unknown) => {
+        settle(batch, { status: 'failed', error: err instanceof Error ? err.message : String(err) })
+        if (isNoReplyError(err)) {
+          releaseThrough(batch.order)
+          recompute()
+          notify()
+          transport.request?.()
         }
-        next.resources = value.map((row: Record<string, unknown>) => {
-          const prev = row ? cachedById.get(String(row.id)) : undefined
-          if (!prev) return row
-          const merged: Record<string, unknown> = { ...prev, ...row }
-          for (const k of TRANSIENT_RESOURCE_KEYS) {
-            // Covers the spread's blind spot: an explicit `shapeId: undefined`
-            // on the patch row overwrites the cached marker with undefined,
-            // and that still means "the patch did not carry it", not "clear
-            // it" -- only the host can clear a marker.
-            if (merged[k] === undefined && prev[k] !== undefined) merged[k] = prev[k]
-          }
-          return merged
-        })
-      } else {
-        next[key] = value
-        if (MODEL_SETTINGS_KEYS.has(key)) {
-          // Rebuilt, never mutated: subscribers compare by identity.
-          next.model = { ...((next.model as Record<string, unknown> | undefined) ?? {}), [key]: value }
+        throw err
+      },
+    )
+  }
+
+  function settle(batch: Batch, outcome: ModelWriteStatus): void {
+    outstanding.delete(batch)
+    lastOutcome = outcome
+    if (unreleased.includes(batch)) armGrace(batch)
+    syncStatus()
+    notify()
+  }
+
+  // Safety net: the host sends a tagged snapshot after every write, but only
+  // logs a failed build. Ask once, then release outright.
+  function armGrace(batch: Batch): void {
+    batch.graceTimer = setTimeout(() => {
+      batch.graceTimer = null
+      if (!unreleased.includes(batch)) return
+      if (!batch.requested) {
+        const requestId = transport.request?.()
+        if (typeof requestId === 'string') {
+          batch.requested = true
+          batch.releaseIds.add(requestId)
+          armGrace(batch)
+          return
         }
       }
-    }
+      releaseThrough(batch.order)
+      recompute()
+      notify()
+    }, graceMs)
+  }
 
-    projection = next as unknown as ModelRootProjection
-    listeners.forEach((l) => l())
+  // Release this batch and every batch sent before it: the host applied those
+  // first, so a snapshot that reflects this write reflects them too.
+  function releaseThrough(order: number): void {
+    const keep: Batch[] = []
+    for (const batch of unreleased) {
+      if (batch.order > order) {
+        keep.push(batch)
+        continue
+      }
+      if (batch.graceTimer !== null) {
+        clearTimeout(batch.graceTimer)
+        batch.graceTimer = null
+      }
+      for (const id of batch.releaseIds) releasedOrders.set(id, batch.order)
+      if (batch.order > highestReleasedOrder) highestReleasedOrder = batch.order
+    }
+    unreleased = keep
+    while (releasedOrders.size > RELEASED_IDS_KEPT) {
+      const oldest = releasedOrders.keys().next().value as string
+      releasedOrders.delete(oldest)
+    }
+  }
+
+  function acceptSnapshot(next: ModelRootProjection, envelopeId?: string): void {
+    if (envelopeId !== undefined) {
+      const releasedOrder = releasedOrders.get(envelopeId)
+      // The answer to a write older than one whose stored result is already
+      // shown: it was built before that result, so applying it would step back.
+      if (releasedOrder !== undefined && releasedOrder < highestReleasedOrder) return
+    }
+    // Replace the base wholesale. Never mutate in place: the accessor's cache
+    // compares by identity, so an in-place edit would be invisible.
+    base = { ...next, snapshotSeq: ++seq }
+    if (envelopeId !== undefined) {
+      const hit = unreleased.find((batch) => batch.releaseIds.has(envelopeId))
+      if (hit) releaseThrough(hit.order)
+    }
+    recompute()
+    notify()
+  }
+
+  /**
+   * Send every pending edit now; resolve when everything pending or in flight
+   * AT THE MOMENT OF THE CALL has landed, whether saved or refused.
+   *
+   * NOT Promise.all(runs): Promise.all settles the instant the FIRST run
+   * rejects, while a later batch in the serial queue is still sending (or
+   * hasn't even reached transport.send yet) -- so a caller awaiting flush()
+   * could act on "everything is flushed" while a batch is still in flight
+   * underneath it. Every run is waited out to completion first; only then, if
+   * any failed, does flush() reject -- with the earliest one BY BATCH ORDER,
+   * so a caller always sees the same failure regardless of which batch
+   * happened to settle first.
+   */
+  function flush(): Promise<void> {
+    const promoted = promotePending()
+    if (promoted) void enqueue(promoted).catch(() => {})
+    const batches = Array.from(outstanding).sort((a, b) => a.order - b.order)
+    return Promise.allSettled(batches.map((batch) => batch.run as Promise<void>)).then((results) => {
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (failed) throw failed.reason
+    })
+  }
+
+  function hasPendingWrites(): boolean {
+    return hasPending || outstanding.size > 0
   }
 
   const deps: LucidModelStateAccessorDeps = {
@@ -223,30 +496,59 @@ export function createModelRootSource(transport: ModelRootTransport) {
       }
     },
 
-    // Forwarded VERBATIM. Never branch on keys here -- see the module doc on
-    // LucidModelStateAccessor for the bug this prevents. (echoPatch above
-    // does branch on keys, but only over the LOCAL cache; what goes on the
-    // wire is untouched.)
-    //
     // Page guard (spec 2026-09-11): with no snapshot yet, an editor is looking
     // at an empty list, and a whole-list write from it would overwrite the
-    // stored list -- refuse before any echo or message. Otherwise send the
-    // page id of the snapshot the patch was based on, captured BEFORE the
-    // echo replaces the projection object.
+    // stored list -- refuse before any echo or message.
+    //
+    // A plain write joins the pending batch and resolves at once; its page id
+    // is the one the batch started with. A write carrying cleanup options is
+    // never merged: pending edits go first, then it is sent alone and the
+    // call settles with the host's answer.
+    //
+    // WIRE WARNING: `patch` here is forwarded to transport.send (and so onto
+    // the wire) VERBATIM, whole, never branched on by key -- neither here nor
+    // in a future merge step. See LucidModelStateAccessor's module doc,
+    // "bug #1", for the failure mode that comes from doing it the other way.
     saveModel: (patch: Record<string, unknown>, options?: ReferenceCleanupOptions) => {
-      if (!projection) {
+      if (!base) {
         return Promise.reject(new Error(MODEL_NOT_LOADED_MESSAGE))
       }
-      const basedOnPageId = projection.pageId
-      echoPatch(patch)
-      return options ? transport.send(patch, basedOnPageId, options) : transport.send(patch, basedOnPageId)
+      if (options) {
+        const promoted = promotePending()
+        if (promoted) void enqueue(promoted).catch(() => {})
+        const batch = makeBatch(patch, base.pageId, options)
+        unreleased.push(batch)
+        recompute()
+        const result = enqueue(batch)
+        notify()
+        return result
+      }
+      if (!hasPending) pendingPageId = base.pageId
+      pending = { ...pending, ...patch }
+      hasPending = true
+      clearTimer()
+      timer = setTimeout(() => {
+        timer = null
+        const batch = promotePending()
+        if (batch) void enqueue(batch).catch(() => {})
+      }, debounceMs)
+      syncStatus()
+      recompute()
+      notify()
+      return Promise.resolve()
     },
+
+    flushModel: flush,
+
+    getModelWriteStatus: () => writeStatus,
   }
 
   return {
     deps,
     acceptSnapshot,
     request: () => transport.request?.(),
+    flush,
+    hasPendingWrites,
   }
 }
 
@@ -311,14 +613,16 @@ export function useModelRootSource(): {
   const sourceRef = useRef<ReturnType<typeof createModelRootSource> | null>(null)
   if (!sourceRef.current) {
     const transport: ModelRootTransport = {
-      send(patch, basedOnPageId, options) {
+      send(patch, basedOnPageId, options, id) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {
-            reject(new Error('No parent window to send model-root update to'))
+            reject(new ModelRootNoReplyError('No parent window to send model-root update to'))
             return
           }
 
-          const correlationId = uuid()
+          // The source's batch id is the envelope id: the host tags its
+          // post-write and corrective snapshots with it.
+          const correlationId = id
           let timeoutId: ReturnType<typeof setTimeout> | undefined
 
           const handler = (event: MessageEvent) => {
@@ -341,7 +645,7 @@ export function useModelRootSource(): {
           window.addEventListener('message', handler)
           timeoutId = setTimeout(() => {
             window.removeEventListener('message', handler)
-            reject(new Error('Model-root update timed out'))
+            reject(new ModelRootNoReplyError('Model-root update timed out'))
           }, MODEL_ROOT_UPDATE_TIMEOUT_MS)
 
           const envelope: EnvelopeBase = {
@@ -367,6 +671,8 @@ export function useModelRootSource(): {
           data: {},
         }
         window.parent.postMessage(envelope, '*')
+        // The reply is tagged with this id (the source's safety net uses it).
+        return envelope.id
       },
 
       // Real confirmed round trip -- mirrors send()'s MODEL_ROOT_UPDATE
@@ -450,19 +756,17 @@ export function useModelRootSource(): {
   }
   const modelRootSource = sourceRef.current
 
-  // Persistent listener for MODEL_ROOT_SNAPSHOT. NOT correlated by message
-  // id: a post-write push carries the WRITE's envelope id, not any request
-  // id (see modelRootHandler.ts's handleUpdate -- it reuses msg.id from the
-  // MODEL_ROOT_UPDATE it's replying to). So this accepts every snapshot the
-  // host sends for the life of the component, unlike the one-shot handlers
-  // in usePortalSender / useUpgradeInterestSender.
+  // Persistent listener for MODEL_ROOT_SNAPSHOT: every snapshot the host sends
+  // is accepted for the life of the component. Its envelope id is handed to
+  // the source -- a post-write or corrective push carries the WRITE's id
+  // (modelRootHandler.ts reuses msg.id), which releases that batch's overlay.
   useEffect(() => {
     function handleSnapshot(event: MessageEvent) {
       const msg = event.data
       if (msg?.type === EnvelopeMessageType.MODEL_ROOT_SNAPSHOT) {
         const data = (msg.data || {}) as { projection?: ModelRootProjection }
         if (data.projection) {
-          modelRootSource.acceptSnapshot(data.projection)
+          modelRootSource.acceptSnapshot(data.projection, typeof msg.id === 'string' ? msg.id : undefined)
         }
       }
     }
@@ -476,6 +780,29 @@ export function useModelRootSource(): {
   // reference with equivalent content), so no skip-once guard is needed.
   useEffect(() => {
     modelRootSource.request()
+  }, [modelRootSource])
+
+  // Flush points (spec 2026-09-12 lucid-model-root-batching §3): register for
+  // the panel-wide blur / page-hide / before-send flushes, and send anything
+  // still pending on unmount -- a page switch remounts this source, and a
+  // different selection swaps the editor out. After a page switch the page
+  // guard refuses the late write, as before batching; blur normally sent it
+  // earlier. StrictMode's dev remount finds nothing to send and re-registers.
+  //
+  // ORDERING WITH A CHILD EDITOR'S OWN UNMOUNT SAVE. React runs the cleanup
+  // effects of a deleted subtree PARENT-FIRST, so this flush can run BEFORE a
+  // child editor's own unmount-time save (e.g. ModelEditor's useAutoSave
+  // flush) has written anything into this source's pending overlay -- that
+  // edit simply isn't here yet when this flush fires. It is not lost: it
+  // still lands in the overlay a moment later and goes out on the source's
+  // own debounce timer instead (or, if a page switch is what's unmounting
+  // everything, is refused by the page guard like any other late write).
+  useEffect(() => {
+    const unregister = registerModelRootSource(modelRootSource)
+    return () => {
+      unregister()
+      void modelRootSource.flush().catch(() => {})
+    }
   }, [modelRootSource])
 
   const accessor = useMemo(

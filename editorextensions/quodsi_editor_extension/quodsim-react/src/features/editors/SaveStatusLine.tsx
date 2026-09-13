@@ -6,9 +6,11 @@ import type { SaveStatus } from "./hooks/useEditorState";
 interface Props {
   status: SaveStatus;
   lastSavedAt: number | null;
+  /** The host's reason, shown after "Save failed:" when the status is "error". */
+  message?: string | null;
 }
 
-const SaveStatusLine: React.FC<Props> = ({ status }) => {
+const SaveStatusLine: React.FC<Props> = ({ status, message }) => {
   // TODO(Phase 1): render `lastSavedAt` as "Saved Xs ago" when non-null.
   if (status === "saving") {
     return (
@@ -30,7 +32,7 @@ const SaveStatusLine: React.FC<Props> = ({ status }) => {
     return (
       <div role="status" className="flex items-center justify-end gap-1 pt-2 border-t text-xs text-red-600">
         <AlertTriangle className="w-3 h-3" />
-        <span>Save failed — keep typing to retry</span>
+        <span>{message ? `Save failed: ${message}` : "Save failed — keep typing to retry"}</span>
       </div>
     );
   }

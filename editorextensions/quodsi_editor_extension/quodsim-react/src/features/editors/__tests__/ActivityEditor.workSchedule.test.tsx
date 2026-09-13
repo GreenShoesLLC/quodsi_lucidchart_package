@@ -253,11 +253,11 @@ describe("ActivityEditor — capacity source picker", () => {
     fireEvent.click(screen.getByRole("button", { name: "New schedule" }));
 
     const sent = () => postMessageSpy.mock.calls.map(([envelope]: any[]) => envelope);
-    const modelRootUpdates = sent().filter(
-      (e: any) => e?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE
-    );
-    expect(modelRootUpdates).toHaveLength(1);
-    const patch = modelRootUpdates[0].data.patch;
+    const modelRootUpdates = () =>
+      sent().filter((e: any) => e?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE);
+    // Batched (spec 2026-09-12 lucid-model-root-batching): the create goes out after the debounce.
+    await waitFor(() => expect(modelRootUpdates()).toHaveLength(1));
+    const patch = modelRootUpdates()[0].data.patch;
     // Appended to the model-level list, never replacing it, and never nested
     // under a `model` key.
     expect(Object.keys(patch)).toEqual(["workSchedules"]);

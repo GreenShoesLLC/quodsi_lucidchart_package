@@ -56,6 +56,16 @@ import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
 export type { ShapeInfoLike, DomainType, ModelStateSnapshot, ModelStateAccessor }
 
 /**
+ * A batching model-root source's own save status (spec 2026-09-12
+ * lucid-model-root-batching §1): `saving` while anything is pending or in
+ * flight, then `saved`, or `failed` with the host's message.
+ */
+export type ModelWriteStatus = {
+  status: 'idle' | 'saving' | 'saved' | 'failed'
+  error: string | null
+}
+
+/**
  * Dependencies this adapter needs from whatever Lucid-side host wires it up.
  * Deliberately small and duck-typed -- no Redux, no message-router types --
  * so this module stays testable with a plain fake and so the same factory
@@ -91,6 +101,20 @@ export interface LucidModelStateAccessorDeps {
   // options is a delete dialog's Seize/Release choice; forward it only when present.
   saveModel?(patch: Record<string, unknown>, options?: ReferenceCleanupOptions): Promise<void>
 
+  /**
+   * Send every pending or in-flight model-root batch now and wait for the
+   * host. Present when saveModel batches (it then resolves once the edit is
+   * accepted). Exposed on the accessor as flushModelImmediate.
+   */
+  flushModel?(): Promise<void>
+
+  /**
+   * The batching source's save status. When supplied it replaces the
+   * per-call status updateModel would otherwise set; changes are notified
+   * through onModelChanged.
+   */
+  getModelWriteStatus?(): ModelWriteStatus
+
   /** Look up cached shape info by id (e.g. for an unclassified-shape picker). */
   getShapeInfo?(shapeId: string): ShapeInfoLike | null
 
@@ -120,39 +144,58 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
   const listeners = new Set<() => void>()
   let depsUnsubscribe: (() => void) | null = null
 
-  let saveStatus: ModelStateSnapshot['saveStatus'] = 'idle'
-  let saveError: string | null = null
+  // This accessor's OWN writes: every updateShape, and updateModel when the
+  // deps have no batching source (no getModelWriteStatus).
+  let ownStatus: ModelStateSnapshot['saveStatus'] = 'idle'
+  let ownError: string | null = null
+  let ownBusy = 0
+
+  // With a batching source, the snapshot shows whichever outcome settled
+  // last. Ticks order the two: own settles are stamped when they happen,
+  // source settles when getSnapshot first sees them.
+  let tick = 0
+  let ownSettledTick = 0
+  let modelSettledTick = 0
+  let lastModelWrite: ModelWriteStatus | undefined
 
   let lastRawModelDefinition: Record<string, unknown> | null | undefined
   let lastSaveStatus: ModelStateSnapshot['saveStatus'] | undefined
   let lastSaveError: string | null | undefined
   let cachedSnapshot: ModelStateSnapshot | undefined
 
-  function buildSnapshot(raw: Record<string, unknown> | null): ModelStateSnapshot {
-    lastRawModelDefinition = raw
-    lastSaveStatus = saveStatus
-    lastSaveError = saveError
-    // The real ModelStateAccessor contract types modelDefinition as
-    // `ModelDefinition | null` (the mirror this file carried until
-    // 2026-08-18 had it as `Record<string, unknown> | null`). `deps` stays
-    // untyped here -- every current deps implementation is JSON-shaped data
-    // from a different JS realm (postMessage) or from Lucid shape storage,
-    // not a real ModelDefinition instance -- so the cast happens at this one
-    // site, matching what every other ModelStateAccessor host does
-    // internally (e.g. `as unknown as ModelDefinition` in Visio's
-    // ModelManager and lucid-embed's composeModelDefinition).
-    return { modelDefinition: raw as unknown as ModelDefinition, saveStatus, saveError }
+  function errorMessage(err: unknown): string {
+    return err instanceof Error ? err.message : String(err)
+  }
+
+  function currentSaveState(): { saveStatus: ModelStateSnapshot['saveStatus']; saveError: string | null } {
+    const model = deps.getModelWriteStatus?.()
+    if (!model) return { saveStatus: ownStatus, saveError: ownError }
+    if (model !== lastModelWrite) {
+      const firstLook = lastModelWrite === undefined
+      lastModelWrite = model
+      if (!firstLook && model.status !== 'saving') modelSettledTick = ++tick
+    }
+    if (ownBusy > 0 || model.status === 'saving') return { saveStatus: 'saving', saveError: null }
+    if (ownSettledTick > modelSettledTick) return { saveStatus: ownStatus, saveError: ownError }
+    return { saveStatus: model.status, saveError: model.error }
   }
 
   function getSnapshot(): ModelStateSnapshot {
     const raw = deps.getModelDefinition()
+    const { saveStatus, saveError } = currentSaveState()
     if (
       cachedSnapshot === undefined ||
       raw !== lastRawModelDefinition ||
       saveStatus !== lastSaveStatus ||
       saveError !== lastSaveError
     ) {
-      cachedSnapshot = buildSnapshot(raw)
+      lastRawModelDefinition = raw
+      lastSaveStatus = saveStatus
+      lastSaveError = saveError
+      // The contract types modelDefinition as `ModelDefinition | null`; every
+      // deps implementation hands JSON-shaped data from another realm, so the
+      // cast happens at this one site (as in every other host).
+      cachedSnapshot = { modelDefinition: raw as unknown as ModelDefinition, saveStatus, saveError }
     }
     return cachedSnapshot
   }
@@ -161,11 +204,8 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     listeners.forEach((listener) => listener())
   }
 
-  // Ref-counted subscription to the underlying host: only actually listens
-  // to deps.onModelChanged while at least one consumer (React, via
-  // useSyncExternalStore) is subscribed, and tears the link down again once
-  // the last one unsubscribes -- so a host-level listener never outlives
-  // every consumer of this accessor.
+  // Ref-counted subscription to the underlying host: only listens while at
+  // least one consumer is subscribed.
   function subscribe(listener: () => void): () => void {
     listeners.add(listener)
     if (listeners.size === 1) {
@@ -180,60 +220,77 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     }
   }
 
+  function startOwnWrite(): void {
+    ownBusy++
+    ownStatus = 'saving'
+    ownError = null
+    notifyListeners()
+  }
+
+  function recordOwnOutcome(err?: unknown): void {
+    ownStatus = err === undefined ? 'saved' : 'failed'
+    ownError = err === undefined ? null : errorMessage(err)
+    ownSettledTick = ++tick
+    notifyListeners()
+  }
+
+  function finishOwnWrite(err?: unknown): void {
+    ownBusy = Math.max(0, ownBusy - 1)
+    recordOwnOutcome(err)
+  }
+
   async function updateShape(
     shapeId: string,
     type: DomainType,
     patch: Record<string, unknown>,
   ): Promise<void> {
-    saveStatus = 'saving'
-    saveError = null
-    notifyListeners()
+    startOwnWrite()
     try {
       await deps.save(shapeId, type, patch)
     } catch (err) {
-      saveStatus = 'failed'
-      saveError = err instanceof Error ? err.message : String(err)
-      notifyListeners()
+      finishOwnWrite(err)
       throw err
     }
-    saveStatus = 'saved'
-    saveError = null
-    notifyListeners()
+    finishOwnWrite()
   }
 
   async function updateModel(patch: Record<string, unknown>, options?: ReferenceCleanupOptions): Promise<void> {
     if (!deps.saveModel) {
-      // Loud, not silent: this is the failure mode Task 18 fixed elsewhere
-      // (a patch that vanishes with no error and no warning). Until the
-      // host wires deps.saveModel, a model-level write (e.g. the Pattern
-      // editor's `{ arrivalPatterns }`) surfaces as a visible 'failed'
-      // saveStatus and a rejected promise rather than doing nothing.
-      saveStatus = 'failed'
-      saveError =
+      // Loud, not silent: a model-level write with no persistence path
+      // surfaces as 'failed' and a rejection rather than doing nothing.
+      const message =
         'LucidModelStateAccessor.updateModel: no saveModel dependency configured -- ' +
         'this model-level patch was NOT persisted'
-      notifyListeners()
-      throw new Error(saveError)
+      recordOwnOutcome(new Error(message))
+      throw new Error(message)
     }
-    saveStatus = 'saving'
-    saveError = null
-    notifyListeners()
+    const saveModel = deps.saveModel
+    // Forwarded verbatim -- see the module doc comment ("bug #1"). Options
+    // travel only when the caller passed them.
+    const write = () => (options ? saveModel(patch, options) : saveModel(patch))
+
+    if (deps.getModelWriteStatus) {
+      // The batching source reports this write's progress itself (it resolves
+      // once the edit is accepted). Only a refusal it throws straight back --
+      // the model not loaded yet, or an options write the host refused -- is
+      // recorded here.
+      try {
+        await write()
+      } catch (err) {
+        recordOwnOutcome(err)
+        throw err
+      }
+      return
+    }
+
+    startOwnWrite()
     try {
-      // Forwarded verbatim -- see the module doc comment ("bug #1") for why
-      // this must never branch on individual patch keys.
-      //
-      // Options travel only when the caller passed them, so a plain write
-      // keeps its one-argument shape end to end.
-      await (options ? deps.saveModel(patch, options) : deps.saveModel(patch))
+      await write()
     } catch (err) {
-      saveStatus = 'failed'
-      saveError = err instanceof Error ? err.message : String(err)
-      notifyListeners()
+      finishOwnWrite(err)
       throw err
     }
-    saveStatus = 'saved'
-    saveError = null
-    notifyListeners()
+    finishOwnWrite()
   }
 
   const accessor: ModelStateAccessor = {
@@ -252,15 +309,17 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     moveShape: moveShapeUnavailable,
   }
 
+  // Durability on demand for a batching source (spec 2026-09-12
+  // lucid-model-root-batching): absent otherwise, so callers' `?.()` treat it
+  // as "nothing to wait for".
+  if (deps.flushModel) {
+    const flushModel = deps.flushModel
+    accessor.flushModelImmediate = () => flushModel()
+  }
+
   // Optional members: only attached when the host actually supports the
-  // capability, matching the posture every existing ModelStateAccessor host
-  // already takes for its own optional members (e.g. Visio's ModelManager
-  // omits runScenario/cancelScenarioRun/loadScenarios/refreshScenarios
-  // entirely rather than defining them as no-ops). Attaching a fake here
-  // that quietly does nothing would be exactly the silent-no-op failure
-  // mode this task is guarding against -- omitting the property lets
-  // `accessor.classifyShape?.(...)` at call sites correctly treat the
-  // capability as absent.
+  // capability -- omitting the property lets `accessor.classifyShape?.(...)`
+  // correctly treat the capability as absent.
   if (deps.getShapeInfo) {
     const getShapeInfo = deps.getShapeInfo
     accessor.getShapeInfo = (shapeId: string) => getShapeInfo(shapeId)

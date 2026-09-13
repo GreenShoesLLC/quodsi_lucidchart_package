@@ -1,5 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
-import { createModelRootSource } from '../useModelRootSource'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  createModelRootSource,
+  MODEL_ROOT_DEBOUNCE_MS,
+  TAGGED_SNAPSHOT_GRACE_MS,
+  ModelRootNoReplyError,
+} from '../useModelRootSource'
 import { MODEL_NOT_LOADED_MESSAGE } from '../pageGuardMessages'
 
 describe('createModelRootSource', () => {
@@ -86,8 +91,8 @@ describe('createModelRootSource', () => {
     // so an in-place edit would be invisible to every subscriber.
     expect(after).not.toBe(before)
     expect(listener).toHaveBeenCalledTimes(1)
-    // Still forwarded verbatim. This snapshot carries no pageId.
-    expect(send).toHaveBeenCalledWith({ resources: [{ id: 'r1', name: 'Renamed' }] }, undefined)
+    // Nothing goes on the wire until the batch is due.
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('echo replaces non-resource keys wholesale and drops rows the patch omits', async () => {
@@ -111,16 +116,19 @@ describe('createModelRootSource', () => {
     expect(after.arrivalPatterns).toEqual([{ id: 'ap-1', name: 'P1' }])
   })
 
-  it('a later snapshot still replaces the echoed projection', async () => {
-    const source = createModelRootSource({ send: vi.fn().mockResolvedValue(undefined) })
+  it('the snapshot tagged with a batch id replaces that batch', async () => {
+    const send = vi.fn().mockResolvedValue(undefined)
+    const source = createModelRootSource({ send })
     source.acceptSnapshot({
       generators: [], arrivalPatterns: [], resources: [{ id: 'r1', name: 'Nurse', shapeId: 'blk-9' }], model: {},
     } as any)
-    await source.deps.saveModel!({ resources: [{ id: 'r1', name: 'Renamed' }] })
+    void source.deps.saveModel!({ resources: [{ id: 'r1', name: 'Renamed' }] })
+    await source.flush()
 
-    source.acceptSnapshot({
-      generators: [], arrivalPatterns: [], resources: [{ id: 'r1', name: 'Host Wins', shapeId: 'blk-9' }], model: {},
-    } as any)
+    source.acceptSnapshot(
+      { generators: [], arrivalPatterns: [], resources: [{ id: 'r1', name: 'Host Wins', shapeId: 'blk-9' }], model: {} } as any,
+      send.mock.calls[0][3],
+    )
 
     expect((source.deps.getModelDefinition() as any).resources[0].name).toBe('Host Wins')
   })
@@ -141,11 +149,14 @@ describe('createModelRootSource', () => {
     const source = createModelRootSource({ send })
     source.acceptSnapshot({ generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } as any)
 
-    await source.deps.saveModel!({ arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], future: 42 })
+    void source.deps.saveModel!({ arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], future: 42 })
+    await source.flush()
 
     expect(send).toHaveBeenCalledWith(
       { arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], future: 42 },
       'page-1',
+      undefined,
+      expect.any(String),
     )
   })
 
@@ -154,7 +165,8 @@ describe('createModelRootSource', () => {
     const source = createModelRootSource({ send })
     source.acceptSnapshot({ generators: [], arrivalPatterns: [], model: {}, pageId: 'page-9' } as any)
 
-    await source.deps.saveModel!({ pageId: 'not-a-real-key' } as any)
+    void source.deps.saveModel!({ pageId: 'not-a-real-key' } as any)
+    await source.flush()
 
     expect(send.mock.calls[0][1]).toBe('page-9')
   })
@@ -165,10 +177,11 @@ describe('createModelRootSource', () => {
     source.acceptSnapshot({ generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1' } as any)
 
     await source.deps.saveModel!({ resources: [] }, { seizeRelease: 'remove' })
-    await source.deps.saveModel!({ resources: [] })
+    void source.deps.saveModel!({ resources: [] })
+    await source.flush()
 
-    expect(send.mock.calls[0]).toEqual([{ resources: [] }, 'page-1', { seizeRelease: 'remove' }])
-    expect(send.mock.calls[1]).toEqual([{ resources: [] }, 'page-1'])
+    expect(send.mock.calls[0].slice(0, 3)).toEqual([{ resources: [] }, 'page-1', { seizeRelease: 'remove' }])
+    expect(send.mock.calls[1].slice(0, 3)).toEqual([{ resources: [] }, 'page-1', undefined])
   })
 
   // spec 2026-09-12 §4: the snapshot carries each model setting flat (the
@@ -196,7 +209,7 @@ describe('createModelRootSource', () => {
 
   // ModelEditor's draft resync applies only a snapshot accepted after its last
   // write settled, which it tells apart by this panel-local stamp.
-  it('stamps each accepted snapshot with an increasing snapshotSeq; an echo keeps the current one', () => {
+  it('stamps each accepted snapshot with an increasing snapshotSeq; an echo keeps the current one', async () => {
     const send = vi.fn().mockResolvedValue(undefined)
     const source = createModelRootSource({ send })
     const incoming = { generators: [], arrivalPatterns: [], pageId: 'page-1', name: 'Old', model: { name: 'Old' } } as any
@@ -214,7 +227,8 @@ describe('createModelRootSource', () => {
     expect(echoed.name).toBe('New')
     expect(echoed.snapshotSeq).toBe(first.snapshotSeq)
     // Only the patch goes on the wire, never the stamp.
-    expect(send).toHaveBeenCalledWith({ name: 'New' }, 'page-1')
+    await source.flush()
+    expect(send.mock.calls[0][0]).toEqual({ name: 'New' })
 
     // A host snapshot that happens to carry a stamp (e.g. a copy of the
     // current projection) is re-stamped, never trusted.
@@ -236,5 +250,388 @@ describe('createModelRootSource', () => {
     const after = source.deps.getModelDefinition() as any
     expect(after.model).toBe(before.model)
     expect(after.states).toEqual([])
+  })
+})
+
+describe('createModelRootSource — batching (spec 2026-09-12 lucid-model-root-batching)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const SNAPSHOT = { generators: [], arrivalPatterns: [], model: {}, pageId: 'page-1', name: 'Clinic' } as any
+
+  function deferred() {
+    let resolve!: () => void
+    let reject!: (err: Error) => void
+    const promise = new Promise<void>((res, rej) => { resolve = res; reject = rej })
+    return { promise, resolve, reject }
+  }
+
+  function loadedSource(send = vi.fn().mockResolvedValue(undefined), request?: () => string | void) {
+    const source = createModelRootSource({ send, request })
+    source.acceptSnapshot(SNAPSHOT)
+    return { source, send }
+  }
+
+  const current = (source: ReturnType<typeof createModelRootSource>) => source.deps.getModelDefinition() as any
+
+  it('sends a burst of plain writes as ONE merged update after 400 ms of quiet', async () => {
+    const { source, send } = loadedSource()
+
+    await expect(source.deps.saveModel!({ name: 'A' })).resolves.toBeUndefined()
+    void source.deps.saveModel!({ name: 'AB', replications: 3 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS - 1)
+    expect(send).not.toHaveBeenCalled()
+
+    void source.deps.saveModel!({ description: 'x' })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS - 1)
+    expect(send).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(send.mock.calls[0].slice(0, 3)).toEqual([{ name: 'AB', replications: 3, description: 'x' }, 'page-1', undefined])
+  })
+
+  it('resolves at once and shows the edit before anything is sent', async () => {
+    const { source, send } = loadedSource()
+    let resolved = false
+
+    void source.deps.saveModel!({ name: 'New' }).then(() => { resolved = true })
+
+    expect(current(source).name).toBe('New')
+    await Promise.resolve()
+    expect(resolved).toBe(true)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('keeps the page id captured when the batch started', async () => {
+    const { source, send } = loadedSource()
+
+    void source.deps.saveModel!({ name: 'A' })
+    source.acceptSnapshot({ ...SNAPSHOT, pageId: 'page-2' })
+    void source.deps.saveModel!({ name: 'AB' })
+    await source.flush()
+
+    expect(send.mock.calls[0][1]).toBe('page-1')
+  })
+
+  it('sends one batch at a time; edits made during a flight go out after it settles', async () => {
+    const first = deferred()
+    const send = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue(undefined)
+    const { source } = loadedSource(send)
+
+    void source.deps.saveModel!({ name: 'A' })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+
+    void source.deps.saveModel!({ name: 'AB' })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+
+    first.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(send.mock.calls[1][0]).toEqual({ name: 'AB' })
+  })
+
+  it('a cleanup-option write sends pending edits first, then goes alone with the host result', async () => {
+    const send = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('refused'))
+    const { source } = loadedSource(send)
+
+    void source.deps.saveModel!({ name: 'A' })
+    await expect(source.deps.saveModel!({ resources: [] }, { seizeRelease: 'remove' })).rejects.toThrow('refused')
+
+    expect(send.mock.calls.map((call) => call.slice(0, 3))).toEqual([
+      [{ name: 'A' }, 'page-1', undefined],
+      [{ resources: [] }, 'page-1', { seizeRelease: 'remove' }],
+    ])
+  })
+
+  it('a cleanup-option write is sent even when the batch before it was refused, and is never merged', async () => {
+    const send = vi.fn().mockRejectedValueOnce(new Error('page changed')).mockResolvedValue(undefined)
+    const { source } = loadedSource(send)
+
+    void source.deps.saveModel!({ name: 'A' })
+    await expect(source.deps.saveModel!({ resources: [] }, { seizeRelease: 'flag' })).resolves.toBeUndefined()
+    await expect(source.deps.saveModel!({ resourceRequirements: [] }, { seizeRelease: 'remove' })).resolves.toBeUndefined()
+
+    expect(send).toHaveBeenCalledTimes(3)
+    expect(send.mock.calls[1].slice(0, 3)).toEqual([{ resources: [] }, 'page-1', { seizeRelease: 'flag' }])
+    expect(send.mock.calls[2].slice(0, 3)).toEqual([{ resourceRequirements: [] }, 'page-1', { seizeRelease: 'remove' }])
+  })
+
+  it('flush sends now and resolves when the host confirms', async () => {
+    const write = deferred()
+    const { source, send } = loadedSource(vi.fn().mockReturnValueOnce(write.promise))
+
+    void source.deps.saveModel!({ name: 'A' })
+    let flushed = false
+    const done = source.flush().then(() => { flushed = true })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(flushed).toBe(false)
+
+    write.resolve()
+    await done
+    expect(flushed).toBe(true)
+  })
+
+  it('flush rejects with the host message when the batch is refused', async () => {
+    const { source } = loadedSource(vi.fn().mockRejectedValue(new Error('The model page changed')))
+
+    void source.deps.saveModel!({ name: 'A' })
+
+    await expect(source.flush()).rejects.toThrow('The model page changed')
+  })
+
+  it('flush waits for EVERY outstanding batch before settling, then rejects with the FIRST refusal by batch order', async () => {
+    // B1 (the promoted 'A' edit) is refused; B2 (the cleanup-options write
+    // right behind it) is still in flight -- neither has landed at the moment
+    // flush() is called. Promise.all(runs) would reject the instant B1's run
+    // rejects, without waiting for B2 to settle at all -- this pins the
+    // spec's stronger promise: flush() settles only once EVERY batch pending
+    // or in flight at call time has landed.
+    const b1 = deferred()
+    const b2 = deferred()
+    const send = vi.fn().mockReturnValueOnce(b1.promise).mockReturnValueOnce(b2.promise)
+    const { source } = loadedSource(send)
+
+    void source.deps.saveModel!({ name: 'A' })
+    // The cleanup-options write promotes 'A' into its own batch (B1) and
+    // enqueues a second batch (B2) synchronously right behind it -- both are
+    // already outstanding before either's transport.send settles.
+    void source.deps.saveModel!({ resources: [] }, { seizeRelease: 'remove' }).catch(() => {})
+
+    // Attached to flush()'s OWN promise, synchronously and without
+    // re-throwing, so this promise itself is never left rejected-with-no-
+    // handler while the test goes on to await a separately derived one --
+    // the `expect(...).rejects` assertion below reads the SAME promise
+    // reference, it just does so later.
+    const p = source.flush()
+    let settled = false
+    p.then(() => { settled = true }, () => { settled = true })
+
+    b1.reject(new Error('B1 refused'))
+    await vi.advanceTimersByTimeAsync(0)
+    // B1 has already been refused by now; B2 is still outstanding. Against
+    // Promise.all(runs) `settled` is already true here -- RED.
+    expect(settled).toBe(false)
+
+    b2.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await expect(p).rejects.toThrow('B1 refused')
+  })
+
+  it('flush with nothing pending or in flight resolves at once and sends nothing', async () => {
+    const { source, send } = loadedSource()
+
+    await expect(source.flush()).resolves.toBeUndefined()
+
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('flush waits for a batch already in flight', async () => {
+    const write = deferred()
+    const { source } = loadedSource(vi.fn().mockReturnValueOnce(write.promise))
+
+    void source.deps.saveModel!({ name: 'A' })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    let flushed = false
+    const done = source.flush().then(() => { flushed = true })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(flushed).toBe(false)
+
+    write.resolve()
+    await done
+    expect(flushed).toBe(true)
+  })
+
+  it('reports saving while anything is pending or in flight, then saved', async () => {
+    const write = deferred()
+    const { source } = loadedSource(vi.fn().mockReturnValueOnce(write.promise))
+    expect(source.deps.getModelWriteStatus!().status).toBe('idle')
+    expect(source.hasPendingWrites()).toBe(false)
+
+    void source.deps.saveModel!({ name: 'A' })
+    expect(source.deps.getModelWriteStatus!().status).toBe('saving')
+    expect(source.hasPendingWrites()).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(source.deps.getModelWriteStatus!().status).toBe('saving')
+
+    write.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(source.deps.getModelWriteStatus!()).toEqual({ status: 'saved', error: null })
+    expect(source.hasPendingWrites()).toBe(false)
+  })
+
+  it('an untagged or unknown-id snapshot keeps pending and in-flight edits', async () => {
+    const write = deferred()
+    const { source } = loadedSource(vi.fn().mockReturnValueOnce(write.promise))
+
+    void source.deps.saveModel!({ name: 'A' })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    void source.deps.saveModel!({ replications: 5 })
+
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stale', replications: 1 })
+    expect(current(source)).toMatchObject({ name: 'A', replications: 5 })
+
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stale', replications: 1 }, 'some-other-write')
+    expect(current(source)).toMatchObject({ name: 'A', replications: 5 })
+  })
+
+  it("the snapshot tagged with a batch id shows the host's stored value; newer pending edits still win", async () => {
+    const { source, send } = loadedSource()
+
+    void source.deps.saveModel!({ name: '' })
+    await source.flush()
+    void source.deps.saveModel!({ replications: 5 })
+
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Emergency Dept', replications: 1 }, send.mock.calls[0][3])
+
+    expect(current(source)).toMatchObject({ name: 'Emergency Dept', replications: 5 })
+  })
+
+  it('a tagged snapshot also releases the batches sent before it', async () => {
+    const { source, send } = loadedSource()
+
+    void source.deps.saveModel!({ name: 'A' })
+    await source.flush()
+    void source.deps.saveModel!({ description: 'B' })
+    await source.flush()
+
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stored A', description: 'Stored B' }, send.mock.calls[1][3])
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Later', description: 'Later' })
+
+    expect(current(source)).toMatchObject({ name: 'Later', description: 'Later' })
+  })
+
+  it('ignores a late snapshot for a write older than one whose stored result is already shown', async () => {
+    const { source, send } = loadedSource()
+
+    void source.deps.saveModel!({ name: 'A' })
+    await source.flush()
+    void source.deps.saveModel!({ name: 'AB' })
+    await source.flush()
+
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'AB' }, send.mock.calls[1][3])
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'A' }, send.mock.calls[0][3])
+
+    expect(current(source).name).toBe('AB')
+  })
+
+  it("resource rows under an overlay keep the new snapshot's link markers", () => {
+    const { source } = loadedSource()
+
+    void source.deps.saveModel!({ resources: [{ id: 'r1', name: 'Renamed' }] })
+    source.acceptSnapshot({ ...SNAPSHOT, resources: [{ id: 'r1', name: 'Nurse', shapeId: 'blk-2', shapeLabel: 'Triage' }] })
+
+    expect(current(source).resources[0]).toMatchObject({ name: 'Renamed', shapeId: 'blk-2', shapeLabel: 'Triage' })
+  })
+
+  it('a refused batch reports failed, and its corrective snapshot restores the stored value', async () => {
+    const { source, send } = loadedSource(vi.fn().mockRejectedValue(new Error('The model page changed')))
+
+    void source.deps.saveModel!({ name: 'Refused' })
+    await expect(source.flush()).rejects.toThrow('The model page changed')
+
+    expect(source.deps.getModelWriteStatus!()).toEqual({ status: 'failed', error: 'The model page changed' })
+    expect(current(source).name).toBe('Refused')
+
+    source.acceptSnapshot(SNAPSHOT, send.mock.calls[0][3])
+    expect(current(source).name).toBe('Clinic')
+  })
+
+  it('edits made after a refused batch was sent survive its corrective snapshot and go out next', async () => {
+    const write = deferred()
+    const send = vi.fn().mockReturnValueOnce(write.promise).mockResolvedValue(undefined)
+    const { source } = loadedSource(send)
+
+    void source.deps.saveModel!({ name: 'Refused' })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    void source.deps.saveModel!({ replications: 7 })
+
+    write.reject(new Error('The model page changed'))
+    await vi.advanceTimersByTimeAsync(0)
+    source.acceptSnapshot({ ...SNAPSHOT, replications: 1 }, send.mock.calls[0][3])
+
+    expect(current(source)).toMatchObject({ name: 'Clinic', replications: 7 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send.mock.calls[1][0]).toEqual({ replications: 7 })
+  })
+
+  it('no reply: drops the overlay at once and asks for a fresh snapshot', async () => {
+    const request = vi.fn(() => 'req-1')
+    const { source } = loadedSource(
+      vi.fn().mockRejectedValue(new ModelRootNoReplyError('Model-root update timed out')),
+      request,
+    )
+
+    void source.deps.saveModel!({ name: 'Lost' })
+    await expect(source.flush()).rejects.toThrow('timed out')
+
+    expect(current(source).name).toBe('Clinic')
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(source.deps.getModelWriteStatus!()).toEqual({ status: 'failed', error: 'Model-root update timed out' })
+  })
+
+  it('a confirmed batch whose tagged snapshot never comes asks for one after the grace period', async () => {
+    const request = vi.fn(() => 'req-1')
+    const { source } = loadedSource(vi.fn().mockResolvedValue(undefined), request)
+
+    void source.deps.saveModel!({ name: 'Saved' })
+    await source.flush()
+
+    await vi.advanceTimersByTimeAsync(TAGGED_SNAPSHOT_GRACE_MS - 1)
+    expect(request).not.toHaveBeenCalled()
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stale' })
+    expect(current(source).name).toBe('Saved')
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(request).toHaveBeenCalledTimes(1)
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stored' }, 'req-1')
+    expect(current(source).name).toBe('Stored')
+  })
+
+  it('a second grace period with no reply releases the batch outright', async () => {
+    const request = vi.fn(() => 'req-1')
+    const { source } = loadedSource(vi.fn().mockResolvedValue(undefined), request)
+
+    void source.deps.saveModel!({ name: 'Saved' })
+    await source.flush()
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stored' })
+
+    await vi.advanceTimersByTimeAsync(TAGGED_SNAPSHOT_GRACE_MS * 2)
+
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(current(source).name).toBe('Stored')
+  })
+
+  it('without a request transport, the grace period alone releases the batch', async () => {
+    const { source } = loadedSource()
+
+    void source.deps.saveModel!({ name: 'Saved' })
+    await source.flush()
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Stored' })
+    expect(current(source).name).toBe('Saved')
+
+    await vi.advanceTimersByTimeAsync(TAGGED_SNAPSHOT_GRACE_MS)
+    expect(current(source).name).toBe('Stored')
+  })
+
+  it('a tagged snapshot that arrives in time cancels the safety net', async () => {
+    const request = vi.fn(() => 'req-1')
+    const { source, send } = loadedSource(vi.fn().mockResolvedValue(undefined), request)
+
+    void source.deps.saveModel!({ name: 'Saved' })
+    await source.flush()
+    source.acceptSnapshot({ ...SNAPSHOT, name: 'Saved' }, send.mock.calls[0][3])
+
+    await vi.advanceTimersByTimeAsync(TAGGED_SNAPSHOT_GRACE_MS * 2)
+    expect(request).not.toHaveBeenCalled()
   })
 })

@@ -91,8 +91,9 @@ describe('EntitiesTab against a real model-root projection', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('no current page')
     expect(screen.getByRole('button', { name: 'Delete Entity' })).toBeInTheDocument()
 
+    // The host's corrective snapshot carries the refused write's envelope id.
     await act(async () => {
-      source.acceptSnapshot({ ...projection, pageId: 'page-1' })
+      source.acceptSnapshot({ ...projection, pageId: 'page-1' }, (send.mock.calls[0] as unknown[])[3] as string)
     })
 
     expect(screen.getByRole('alert')).toHaveTextContent('no current page')
