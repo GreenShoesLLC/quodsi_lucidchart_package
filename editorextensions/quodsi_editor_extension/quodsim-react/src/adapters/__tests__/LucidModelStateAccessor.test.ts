@@ -1,4 +1,4 @@
-import { createLucidModelStateAccessor, ShapeInfoLike } from '../LucidModelStateAccessor'
+import { createLucidModelStateAccessor, ShapeInfoLike, type ModelWriteStatus } from '../LucidModelStateAccessor'
 import type { Mock } from 'vitest'
 
 function makeDeps() {
@@ -233,5 +233,91 @@ describe('LucidModelStateAccessor', () => {
     await accessor.updateModel({ resources: [] })
     expect(deps.saveModel.mock.calls[0]).toEqual([{ resources: [] }, { seizeRelease: 'remove' }])
     expect(deps.saveModel.mock.calls[1]).toEqual([{ resources: [] }])
+  })
+})
+
+describe('batching source hooks (spec 2026-09-12 lucid-model-root-batching)', () => {
+  function makeBatchingDeps() {
+    const deps = makeDeps() as ReturnType<typeof makeDeps> & {
+      saveModel: Mock
+      flushModel: Mock
+      getModelWriteStatus: () => ModelWriteStatus
+    }
+    let status: ModelWriteStatus = { status: 'idle', error: null }
+    deps.saveModel = vi.fn().mockResolvedValue(undefined)
+    deps.flushModel = vi.fn().mockResolvedValue(undefined)
+    deps.getModelWriteStatus = () => status
+    return {
+      deps,
+      setStatus: (next: ModelWriteStatus) => {
+        status = next
+        deps._emit()
+      },
+    }
+  }
+
+  it('exposes flushModelImmediate only when the deps supply flushModel', async () => {
+    expect(createLucidModelStateAccessor(makeDeps()).flushModelImmediate).toBeUndefined()
+
+    const { deps } = makeBatchingDeps()
+    const accessor = createLucidModelStateAccessor(deps)
+    await accessor.flushModelImmediate!()
+
+    expect(deps.flushModel).toHaveBeenCalledTimes(1)
+  })
+
+  it('takes model-write status from the source, not from the updateModel call', async () => {
+    const { deps, setStatus } = makeBatchingDeps()
+    const accessor = createLucidModelStateAccessor(deps)
+
+    await accessor.updateModel({ name: 'New' })
+    expect(accessor.getSnapshot().saveStatus).toBe('idle')
+
+    setStatus({ status: 'saving', error: null })
+    expect(accessor.getSnapshot().saveStatus).toBe('saving')
+
+    setStatus({ status: 'failed', error: 'The model page changed' })
+    expect(accessor.getSnapshot()).toMatchObject({ saveStatus: 'failed', saveError: 'The model page changed' })
+  })
+
+  it('shows saving while a shape write is busy', async () => {
+    const { deps } = makeBatchingDeps()
+    let finish!: () => void
+    deps.save.mockReturnValueOnce(new Promise<void>((resolve) => { finish = resolve }))
+    const accessor = createLucidModelStateAccessor(deps)
+
+    const write = accessor.updateShape('g1', 'Generator', { name: 'x' })
+    expect(accessor.getSnapshot().saveStatus).toBe('saving')
+
+    finish()
+    await write
+    expect(accessor.getSnapshot().saveStatus).toBe('saved')
+  })
+
+  it('reports whichever outcome settled last', async () => {
+    const { deps, setStatus } = makeBatchingDeps()
+    const accessor = createLucidModelStateAccessor(deps)
+    expect(accessor.getSnapshot().saveStatus).toBe('idle')
+
+    setStatus({ status: 'failed', error: 'refused' })
+    expect(accessor.getSnapshot().saveStatus).toBe('failed')
+
+    await accessor.updateShape('g1', 'Generator', { name: 'x' })
+    expect(accessor.getSnapshot()).toMatchObject({ saveStatus: 'saved', saveError: null })
+
+    setStatus({ status: 'failed', error: 'refused again' })
+    expect(accessor.getSnapshot()).toMatchObject({ saveStatus: 'failed', saveError: 'refused again' })
+  })
+
+  it('records a refusal the source throws straight back', async () => {
+    const { deps } = makeBatchingDeps()
+    deps.saveModel.mockRejectedValueOnce(new Error("The model hasn't finished loading"))
+    const accessor = createLucidModelStateAccessor(deps)
+
+    await expect(accessor.updateModel({ name: 'New' })).rejects.toThrow("hasn't finished loading")
+    expect(accessor.getSnapshot()).toMatchObject({
+      saveStatus: 'failed',
+      saveError: "The model hasn't finished loading",
+    })
   })
 })
