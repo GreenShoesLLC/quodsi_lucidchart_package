@@ -45,6 +45,7 @@ import {
   type ModelWriteStatus,
 } from './LucidModelStateAccessor'
 import { MODEL_NOT_LOADED_MESSAGE } from './pageGuardMessages'
+import { registerModelRootSource } from './modelRootWrites'
 
 /** Quiet time before a batch of plain model-root edits is sent (spec 2026-09-12 lucid-model-root-batching). */
 export const MODEL_ROOT_DEBOUNCE_MS = 400
@@ -751,6 +752,20 @@ export function useModelRootSource(): {
   // reference with equivalent content), so no skip-once guard is needed.
   useEffect(() => {
     modelRootSource.request()
+  }, [modelRootSource])
+
+  // Flush points (spec 2026-09-12 lucid-model-root-batching §3): register for
+  // the panel-wide blur / page-hide / before-send flushes, and send anything
+  // still pending on unmount -- a page switch remounts this source, and a
+  // different selection swaps the editor out. After a page switch the page
+  // guard refuses the late write, as before batching; blur normally sent it
+  // earlier. StrictMode's dev remount finds nothing to send and re-registers.
+  useEffect(() => {
+    const unregister = registerModelRootSource(modelRootSource)
+    return () => {
+      unregister()
+      void modelRootSource.flush().catch(() => {})
+    }
   }, [modelRootSource])
 
   const accessor = useMemo(

@@ -225,4 +225,25 @@ describe('useModelRootSource (hook)', () => {
     const requests = postMessageSpy.mock.calls.filter(([envelope]) => (envelope as any)?.type === EnvelopeMessageType.MODEL_ROOT_REQUEST)
     expect(requests).toHaveLength(2)
   })
+
+  it('sends a pending batch when the panel loses focus, and on unmount', async () => {
+    vi.useFakeTimers()
+    const posted: any[] = []
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
+      posted.push(envelope)
+      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) reply(envelope, { success: true })
+    })
+    const { unmount } = render(<Harness />)
+    pushSnapshot()
+    const updates = () => posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
+
+    await act(async () => { screen.getByText('save').click() })
+    await act(async () => { window.dispatchEvent(new Event('blur')) })
+    expect(updates()).toHaveLength(1)
+
+    await act(async () => { screen.getByText('save').click() })
+    unmount()
+    await act(async () => {})
+    expect(updates()).toHaveLength(2)
+  })
 })

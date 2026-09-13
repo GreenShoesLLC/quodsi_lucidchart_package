@@ -1,8 +1,28 @@
 import { useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
 import { EnvelopeBase, EnvelopeMessageType, MessageSource, getLogger } from '@quodsi/lucid-shared';
+import { flushAllModelRootWrites, hasPendingModelRootWrites } from '../../adapters/modelRootWrites';
 
 const logger = getLogger('useSendMessage');
+
+/**
+ * Messages whose host handler reads the stored model. While a model-root
+ * batch is pending or in flight they wait for it, so the host sees the latest
+ * edit (spec 2026-09-12 lucid-model-root-batching §3). Every other message
+ * posts at once.
+ */
+export const FLUSH_BEFORE_SEND: ReadonlySet<EnvelopeMessageType> = new Set([
+  EnvelopeMessageType.MODEL_RUN_REQUEST,
+  EnvelopeMessageType.MODEL_VALIDATE,
+  EnvelopeMessageType.MODEL_JSON_REQUEST,
+  EnvelopeMessageType.RUN_SCENARIO,
+  EnvelopeMessageType.OPEN_STUDIES_MODAL,
+  EnvelopeMessageType.OPEN_ADVISOR_MODAL,
+  EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL,
+  EnvelopeMessageType.OPEN_PATTERN_MODAL,
+  EnvelopeMessageType.OPEN_SCHEDULE_MODAL,
+  EnvelopeMessageType.OPEN_WORK_SCHEDULE_MODAL,
+]);
 
 /**
  * Hook for sending messages to the host application
@@ -46,11 +66,19 @@ export function useSendMessage(
       }
 
       // Send message to parent window
-      if (window.parent) {
-        logger.debug(`Sending message: ${type}`, envelope);
-        window.parent.postMessage(envelope, "*");
+      const post = () => {
+        if (window.parent) {
+          logger.debug(`Sending message: ${type}`, envelope);
+          window.parent.postMessage(envelope, "*");
+        } else {
+          logger.error("No parent window found to send message to");
+        }
+      };
+
+      if (FLUSH_BEFORE_SEND.has(type) && hasPendingModelRootWrites()) {
+        void flushAllModelRootWrites().then(post);
       } else {
-        logger.error("No parent window found to send message to");
+        post();
       }
     },
     [state.app.panelType, dispatch]

@@ -3,7 +3,7 @@
 // selection message lands (canvas edits, the Advisor's Apply and embedded
 // Studio writes push no MODEL_ROOT_SNAPSHOT of their own).
 import React from 'react'
-import { render, screen, act, cleanup } from '@testing-library/react'
+import { render, screen, act, cleanup, fireEvent } from '@testing-library/react'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 
 const messaging = vi.hoisted(() => ({ current: {} as any }))
@@ -75,5 +75,22 @@ describe('ModelEditorForPage', () => {
     rerender(<ModelEditorForPage />)
 
     expect(requests()).toBe(2)
+  })
+
+  it('sends a pending Model edit when the editor unmounts (page switch)', async () => {
+    const { unmount } = render(<ModelEditorForPage />)
+    pushSnapshot()
+
+    const input = screen.getByPlaceholderText('Enter model name')
+    fireEvent.change(input, { target: { value: 'Renamed' } })
+    fireEvent.blur(input)
+    expect(posted.filter((e) => e?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)).toHaveLength(0)
+
+    unmount()
+    await act(async () => {})
+
+    const updates = posted.filter((e) => e?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
+    expect(updates).toHaveLength(1)
+    expect(updates[0].data.patch).toMatchObject({ name: 'Renamed' })
   })
 })
