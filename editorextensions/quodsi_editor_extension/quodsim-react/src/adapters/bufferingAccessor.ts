@@ -696,6 +696,11 @@ export function createBufferingAccessor(
       }
       if (Object.keys(batch.model).length > 0) {
         await base.updateModel(batch.model)
+        // A batching base (Lucid's model-root source, spec 2026-09-12
+        // lucid-model-root-batching) resolves updateModel once the edit is
+        // accepted. Flushing keeps this batch's success meaning "the host
+        // stored it", which flush() and the close path promise.
+        await base.flushModelImmediate?.()
       }
     } catch (err) {
       rollback()

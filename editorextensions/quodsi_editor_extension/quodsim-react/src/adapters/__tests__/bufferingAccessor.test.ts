@@ -423,4 +423,35 @@ describe('createBufferingAccessor', () => {
     expect(accessor.updateModel.mock.calls[0]).toEqual([{ arrivalPatterns: [] }])
     expect(accessor.updateModel.mock.calls[1]).toEqual([{ resources: [] }, { seizeRelease: 'remove' }])
   })
+
+  it("waits for a batching base's flush, so flush() still means the host stored it", async () => {
+    const { accessor } = makeBase()
+    let finishFlush!: () => void
+    const flushModelImmediate = vi.fn(() => new Promise<void>((resolve) => { finishFlush = resolve }))
+    const buf = createBufferingAccessor({ ...accessor, flushModelImmediate } as any, { debounceMs: 500 })
+
+    void buf.updateModel({ arrivalPatterns: [] })
+    let flushed = false
+    const done = buf.flush().then(() => { flushed = true })
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(accessor.updateModel).toHaveBeenCalledWith({ arrivalPatterns: [] })
+    expect(flushModelImmediate).toHaveBeenCalledTimes(1)
+    expect(flushed).toBe(false)
+
+    finishFlush()
+    await done
+    expect(flushed).toBe(true)
+  })
+
+  it("keeps the edit when a batching base's flush is refused", async () => {
+    const { accessor } = makeBase()
+    const flushModelImmediate = vi.fn().mockRejectedValue(new Error('refused'))
+    const buf = createBufferingAccessor({ ...accessor, flushModelImmediate } as any, { debounceMs: 500 })
+
+    void buf.updateModel({ arrivalPatterns: [{ id: 'ap-1' }] })
+    await expect(buf.flush()).rejects.toThrow('refused')
+
+    expect((buf.getSnapshot().modelDefinition as any).arrivalPatterns).toEqual([{ id: 'ap-1' }])
+  })
 })
