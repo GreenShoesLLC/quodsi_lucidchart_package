@@ -76,10 +76,11 @@ describe('EntitiesTab against a real model-root projection', () => {
     expect(transport.saveShape).not.toHaveBeenCalled()
   })
 
-  // The optimistic echo hides the confirm box before the host replies; the
-  // host's corrective snapshot after the rejection brings the entity -- and
-  // the confirm box, now with the error -- back.
-  it('keeps the confirm box open with an explanation after the host rejects the delete', async () => {
+  // The optimistic echo removes the entity from the projection before the host
+  // replies. The confirm box stays -- in the row's old place -- and shows the
+  // host's rejection; the corrective snapshot brings the row back with the box
+  // still open under it.
+  it('keeps the confirm box open, with the error, through the optimistic echo and the corrective snapshot', async () => {
     const send = vi.fn().mockRejectedValue(new Error('no current page'))
     const { source, projection } = mountWithProjection({ send })
 
@@ -87,17 +88,17 @@ describe('EntitiesTab against a real model-root projection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete Entity' }))
 
     await waitFor(() => expect(send).toHaveBeenCalledTimes(1))
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Delete Entity' })).toBeNull()
-    )
+    expect(await screen.findByRole('alert')).toHaveTextContent('no current page')
+    expect(screen.getByRole('button', { name: 'Delete Entity' })).toBeInTheDocument()
 
     await act(async () => {
       source.acceptSnapshot({ ...projection, pageId: 'page-1' })
     })
 
-    const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('no current page')
-    expect(screen.getByRole('button', { name: 'Delete Entity' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('no current page')
+    // Back under its row: the row's own Delete comes right before the box.
+    const box = screen.getByTestId('inline-delete-confirm')
+    expect(box.previousElementSibling).toContainElement(screen.getByRole('button', { name: 'Delete' }))
   })
 
   it('projects entities with description for the panel', () => {
