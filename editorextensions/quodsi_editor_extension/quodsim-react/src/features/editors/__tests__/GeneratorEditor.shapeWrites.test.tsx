@@ -134,4 +134,48 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
 
     expect(screen.getByDisplayValue("Stored name")).toBeInTheDocument();
   });
+
+  // Controller ruling (Task 3 review): a SHAPE-ONLY lifecycle write -- the
+  // arrival-pattern model list does NOT change because the generator's
+  // arrivalPatternId already resolves to a pattern already present in the
+  // snapshot (ensurePatternForGenerator's idempotent "existing" branch,
+  // ensured.model === model) -- must still surface a host refusal. Before
+  // this task's fix, `accessor.flushModelImmediate?.()` sat INSIDE the
+  // `if (ensured.model !== model)` block, so this exact case never flushed:
+  // the refused write would only reach the panel after the model-root
+  // source's own debounce timer eventually promoted and sent it.
+  it("surfaces a SHAPE-ONLY refusal immediately, without waiting for the model-root debounce", async () => {
+    vi.useFakeTimers();
+    const posted = installHost({ refuse: true });
+    // arrivalPatternId already set from a prior PATTERN stint (per
+    // DEFAULT_PATTERN_VOLUME's own comment: "PATTERN -> FREQUENCY -> PATTERN
+    // keeps whatever was there") and the pattern it points at is already in
+    // the snapshot -- ensurePatternForGenerator finds it and returns the
+    // SAME model reference, so the `if (ensured.model !== model)` branch
+    // (and, pre-fix, its flush) never runs.
+    const reusesExistingPattern = {
+      id: "g1",
+      name: "Arrivals",
+      entityId: "e1",
+      mode: GeneratorType.FREQUENCY,
+      arrivalPatternId: "ap-1",
+      levers: [],
+    } as any;
+    renderEditor(reusesExistingPattern);
+    pushSnapshot([reusesExistingPattern], [{ id: "ap-1", name: "Arrivals pattern" }]);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /generator type/i }), {
+      target: { value: GeneratorType.PATTERN },
+    });
+
+    // Well under MODEL_ROOT_DEBOUNCE_MS: if the write only reached the host
+    // via the debounce timer (no flush), nothing would be posted yet and the
+    // error would not have appeared.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS / 4);
+    });
+
+    expect(updates(posted).some((e) => "arrivalPatterns" in e.data.patch)).toBe(false);
+    expect(screen.getByText("Could not save the pattern switch. Try again.")).toBeInTheDocument();
+  });
 });
