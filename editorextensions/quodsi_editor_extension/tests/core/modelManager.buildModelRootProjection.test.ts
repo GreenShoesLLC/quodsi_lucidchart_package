@@ -70,7 +70,8 @@ describe('ModelManager.buildModelRootProjection', () => {
         // Activity rows are the referenceDataBuilder SUMMARY (spec 2026-09-12
         // §1) plus the work-schedule link, arrival links and levers: the Model
         // editor's tabs count usage, delete impact and levers off them.
-        // capacity and the branch `condition` are noise that must NOT ride along.
+        // Plain rows (no toJSON) copy their own fields onto the projection
+        // (spec 2026-09-13 lucid-shape-writes §1).
         activities: {
           getAll: () => [
             {
@@ -239,7 +240,7 @@ describe('ModelManager.buildModelRootProjection', () => {
     expect(tech.workScheduleId).toBeUndefined();
   });
 
-  it('projects activities as summaries plus the work-schedule link, arrival links and levers', async () => {
+  it('projects activities as full records over the summary, keeping the work-schedule link, arrival links and levers', async () => {
     const { mm } = harness();
 
     const projection = await mm.buildModelRootProjection({ id: 'page-A' });
@@ -249,19 +250,70 @@ describe('ModelManager.buildModelRootProjection', () => {
         id: 'act-triage',
         name: 'Triage',
         workScheduleId: 'ws-a',
+        capacity: 3,
         routing: 'probability',
         actions: [
-          { id: 'seize-1', type: 'seize', resourceRequirementId: 'req-custom', modifications: [{ stateId: 'st-a', operation: 'assign', expression: 'x + 1' }] },
-          { id: 'branch-1', type: 'branch', ifTrue: [{ id: 'release-1', type: 'release', resourceRequirementId: 'req-custom' }] },
+          { id: 'seize-1', type: 'seize', resourceRequirementId: 'req-custom', modifications: [{ stateId: 'st-a', operation: 'assign', expression: 'x + 1', value: 3 }] },
+          { id: 'branch-1', type: 'branch', condition: 'noise', ifTrue: [{ id: 'release-1', type: 'release', resourceRequirementId: 'req-custom' }], ifFalse: [] },
           { id: 'loop-1', type: 'loop', actions: [{ id: 'delay-1', type: 'delay', duration: { value: 5, unit: 'minutes' } }] },
         ],
-        // arrivalPatternId: an arrival pattern used only by a self-generating
-        // activity must not look unused on the Arrivals tab.
-        sourceConfig: { initialStates: [{ stateId: 'st-a', operation: 'assign' }], arrivalPatternId: 'ap-self' },
-        failureProperties: { repairResourceRequirementId: 'req-custom' },
+        sourceConfig: { entityId: 'ent-a', arrivalPatternId: 'ap-self', initialStates: [{ stateId: 'st-a', operation: 'assign', value: 1 }] },
+        failureProperties: { enabled: true, repairResourceRequirementId: 'req-custom' },
         levers: [{ leverId: 'lv-1', propertyName: 'SEIZE_PRIORITY', actionId: 'seize-1' }],
       },
       { id: 'act-xray', name: 'X-ray', actions: [], levers: [] },
+    ]);
+  });
+
+  // Spec 2026-09-13 lucid-shape-writes §1: the shared Activity/Generator
+  // editors read full records off the snapshot. Real domain instances
+  // serialize themselves with toJSON(); the projection lays that over the
+  // summary so every summary key stays for today's consumers.
+  it('projects activities and generators as full records when the domain objects serialize themselves', async () => {
+    const { mm } = harness();
+    const empty = { getAll: () => [] };
+    mm.getModelDefinition = async () => ({
+      generators: {
+        getAll: () => [{
+          id: 'gen-f', name: 'F', mode: 'FREQUENCY', levers: [],
+          toJSON: () => ({
+            id: 'gen-f', name: 'F', entityId: 'e', batchSize: 5, maxCycles: 3, maxEntities: 0,
+            startDelay: { value: 2, unit: 'minutes' }, interarrivalTime: { value: 10, unit: 'minutes' },
+          }),
+        }],
+      },
+      activities: {
+        getAll: () => [{
+          id: 'act-f', name: 'Full', levers: [],
+          toJSON: () => ({
+            id: 'act-f', name: 'Full', capacity: 4, inboundCapacity: 2, outboundCapacity: 6,
+            queueRanking: { stateId: 'st-a', order: 'ascending' },
+            financialProperties: { enabled: true, fixedCost: 5 },
+            failureProperties: { enabled: true, repairResourceRequirementId: 'req-x', mtbfDuration: { value: 8, unit: 'hours' } },
+            actions: [{ id: 'seize-1', type: 'seize', resourceRequirementId: 'req-x', priority: 3 }],
+          }),
+        }],
+      },
+      arrivalPatterns: empty, arrivalSchedules: empty, workSchedules: empty, connectors: empty,
+      entities: empty, states: empty, resources: empty, resourceRequirements: empty, model: {},
+    });
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.activities).toEqual([
+      expect.objectContaining({
+        id: 'act-f', capacity: 4, inboundCapacity: 2, outboundCapacity: 6,
+        queueRanking: { stateId: 'st-a', order: 'ascending' },
+        financialProperties: { enabled: true, fixedCost: 5 },
+        failureProperties: { enabled: true, repairResourceRequirementId: 'req-x', mtbfDuration: { value: 8, unit: 'hours' } },
+        actions: [{ id: 'seize-1', type: 'seize', resourceRequirementId: 'req-x', priority: 3 }],
+        levers: [],
+      }),
+    ]);
+    expect(projection.generators).toEqual([
+      expect.objectContaining({
+        id: 'gen-f', batchSize: 5, maxCycles: 3, maxEntities: 0, startDelay: { value: 2, unit: 'minutes' },
+      }),
     ]);
   });
 
@@ -289,7 +341,8 @@ describe('ModelManager.buildModelRootProjection', () => {
       {
         id: 'gen-a', name: 'A', levers: [], entityId: 'e', mode: 'SCHEDULED', arrivalScheduleId: 'as-a',
         routing: 'probability', interarrivalTime: { value: 10, unit: 'minutes' },
-        initialStates: [{ stateId: 'st-a', operation: 'assign', expression: 'rand()' }],
+        initialStates: [{ stateId: 'st-a', operation: 'assign', expression: 'rand()', value: 9 }],
+        x: 100,
       },
     ]);
   });
