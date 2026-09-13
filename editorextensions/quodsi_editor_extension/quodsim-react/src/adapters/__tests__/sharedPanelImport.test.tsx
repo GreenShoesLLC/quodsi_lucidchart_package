@@ -25,6 +25,7 @@ import {
   SettingsPanel,
   applyViewUrlOverride,
   ModelEditor, MODEL_EDITOR_TABS, EntitlementsSourceProvider,
+  StateModificationsEditor,
 } from 'quodsi_studio/platforms/shared'
 import { isModelLevelIssue, isEntityIssue } from '@quodsi/shared'
 
@@ -85,6 +86,11 @@ describe('shared panel import', () => {
     expect(typeof EntitlementsSourceProvider).toBe('function')
     expect(typeof isModelLevelIssue).toBe('function')
     expect(typeof isEntityIssue).toBe('function')
+    // spec 2026-09-13 lucid-state-modifications-editor: Lucid's action and
+    // generator state-modification sections mount the shared editor through
+    // LucidStateModificationsEditor; Lucid deleted its own editor, dialog,
+    // list row and sample/ distribution editors.
+    expect(typeof StateModificationsEditor).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {
