@@ -226,6 +226,38 @@ describe('useModelRootSource (hook)', () => {
     expect(requests).toHaveLength(2)
   })
 
+  // Finding F4 (final review, model-root batching): "StrictMode remount
+  // re-registers" is the claim the flush-points effect's own comment makes
+  // ("StrictMode's dev remount finds nothing to send and re-registers"), but
+  // nothing exercised it -- React 18 StrictMode (dev builds) mounts, runs
+  // every effect's cleanup, then mounts again, so the flush-points effect's
+  // registerModelRootSource(...) / unregister() cycle runs TWICE on a single
+  // real mount. If the second registration were ever skipped or wired to a
+  // stale reference, a later blur would silently stop flushing this source.
+  it('is still registered for the panel-wide blur flush after a React StrictMode mount -> cleanup -> remount', async () => {
+    vi.useFakeTimers()
+    const posted: any[] = []
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
+      posted.push(envelope)
+      if (envelope.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) reply(envelope, { success: true })
+    })
+
+    render(
+      <React.StrictMode>
+        <Harness />
+      </React.StrictMode>,
+    )
+    pushSnapshot()
+
+    await act(async () => { screen.getByText('save').click() })
+    // Fake timers are never advanced -- only the blur flush (not the 400ms
+    // debounce timer) can be what sends this.
+    await act(async () => { window.dispatchEvent(new Event('blur')) })
+
+    const updates = posted.filter((e) => e.type === EnvelopeMessageType.MODEL_ROOT_UPDATE)
+    expect(updates).toHaveLength(1)
+  })
+
   it('sends a pending batch when the panel loses focus, and on unmount', async () => {
     vi.useFakeTimers()
     const posted: any[] = []

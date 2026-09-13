@@ -15,17 +15,25 @@
 //
 // TWO DELIVERABLES IN THIS FILE:
 //   1. createModelRootSource(transport) -- a pure, testable factory. No
-//      knowledge of window/postMessage/React; it just tracks a cached
-//      projection and forwards writes through the injected `transport`.
+//      knowledge of window/postMessage/React. Plain model-root edits are
+//      BATCHED (spec 2026-09-12 lucid-model-root-batching): they merge into a
+//      pending overlay and go out as one MODEL_ROOT_UPDATE after a quiet
+//      period (or on flush()), one batch in flight at a time. Each unreleased
+//      batch shields the projection from a stale snapshot until the host's
+//      OWN write is released by the tagged snapshot it stamps with that
+//      batch's envelope id (a safety-net grace timer releases it outright if
+//      no tagged snapshot ever arrives). flush() sends everything due now and
+//      resolves once every batch pending or in flight at the moment of the
+//      call has landed, saved or refused.
 //   2. useModelRootSource() -- the React hook that wires that factory to
 //      THIS package's actual messaging idiom (mint-your-own-correlation-id,
 //      one-shot window.postMessage RPC), the same pattern usePortalSender
 //      and useUpgradeInterestSender use for host round-trips that need a
 //      resolved/rejected Promise rather than a Redux-broadcast update.
 //      MODEL_ROOT_SNAPSHOT is NOT one-shot -- it arrives unsolicited after
-//      every write in addition to replying to MODEL_ROOT_REQUEST -- so unlike
-//      those two senders, the snapshot listener here is never torn down
-//      until the hook unmounts.
+//      every write (not just this realm's own) in addition to replying to
+//      MODEL_ROOT_REQUEST -- so unlike those two senders, the snapshot
+//      listener here is never torn down until the hook unmounts.
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { v4 as uuid } from 'uuid'
@@ -392,12 +400,27 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     notify()
   }
 
-  /** Send every pending edit now; resolve when everything pending or in flight has landed. */
+  /**
+   * Send every pending edit now; resolve when everything pending or in flight
+   * AT THE MOMENT OF THE CALL has landed, whether saved or refused.
+   *
+   * NOT Promise.all(runs): Promise.all settles the instant the FIRST run
+   * rejects, while a later batch in the serial queue is still sending (or
+   * hasn't even reached transport.send yet) -- so a caller awaiting flush()
+   * could act on "everything is flushed" while a batch is still in flight
+   * underneath it. Every run is waited out to completion first; only then, if
+   * any failed, does flush() reject -- with the earliest one BY BATCH ORDER,
+   * so a caller always sees the same failure regardless of which batch
+   * happened to settle first.
+   */
   function flush(): Promise<void> {
     const promoted = promotePending()
     if (promoted) void enqueue(promoted).catch(() => {})
-    const runs = Array.from(outstanding, (batch) => batch.run as Promise<void>)
-    return Promise.all(runs).then(() => undefined)
+    const batches = Array.from(outstanding).sort((a, b) => a.order - b.order)
+    return Promise.allSettled(batches.map((batch) => batch.run as Promise<void>)).then((results) => {
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (failed) throw failed.reason
+    })
   }
 
   function hasPendingWrites(): boolean {
@@ -481,6 +504,11 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     // is the one the batch started with. A write carrying cleanup options is
     // never merged: pending edits go first, then it is sent alone and the
     // call settles with the host's answer.
+    //
+    // WIRE WARNING: `patch` here is forwarded to transport.send (and so onto
+    // the wire) VERBATIM, whole, never branched on by key -- neither here nor
+    // in a future merge step. See LucidModelStateAccessor's module doc,
+    // "bug #1", for the failure mode that comes from doing it the other way.
     saveModel: (patch: Record<string, unknown>, options?: ReferenceCleanupOptions) => {
       if (!base) {
         return Promise.reject(new Error(MODEL_NOT_LOADED_MESSAGE))
@@ -760,6 +788,15 @@ export function useModelRootSource(): {
   // different selection swaps the editor out. After a page switch the page
   // guard refuses the late write, as before batching; blur normally sent it
   // earlier. StrictMode's dev remount finds nothing to send and re-registers.
+  //
+  // ORDERING WITH A CHILD EDITOR'S OWN UNMOUNT SAVE. React runs the cleanup
+  // effects of a deleted subtree PARENT-FIRST, so this flush can run BEFORE a
+  // child editor's own unmount-time save (e.g. ModelEditor's useAutoSave
+  // flush) has written anything into this source's pending overlay -- that
+  // edit simply isn't here yet when this flush fires. It is not lost: it
+  // still lands in the overlay a moment later and goes out on the source's
+  // own debounce timer instead (or, if a page switch is what's unmounting
+  // everything, is refused by the page guard like any other late write).
   useEffect(() => {
     const unregister = registerModelRootSource(modelRootSource)
     return () => {

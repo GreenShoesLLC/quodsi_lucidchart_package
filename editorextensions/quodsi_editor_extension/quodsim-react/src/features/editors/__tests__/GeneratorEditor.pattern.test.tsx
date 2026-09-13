@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
 import { GeneratorType, EnvelopeMessageType, DEFAULT_MODAL_SIZE } from "@quodsi/lucid-shared";
+import { MODEL_ROOT_DEBOUNCE_MS } from "../../../adapters/useModelRootSource";
 
 // Hoisted so the "populated projection" describe block below can assert on
 // calls made to updateElementData -- a plain `() => ({ updateElementData:
@@ -538,5 +539,54 @@ describe("GeneratorEditor PATTERN mode — PATTERN -> FREQUENCY -> PATTERN in on
     const final = fakeHost.snapshot();
     expect(final.arrivalPatterns).toHaveLength(1);
     expect(final.generators[0].arrivalPatternId).toBe(final.arrivalPatterns[0].id);
+  });
+});
+
+// Finding F3 (final review, model-root batching): the PATTERN mode-switch's
+// `await accessor.flushModelImmediate?.()` right after `updateModel` is what
+// makes the arrivalPatterns write reach the host in the same breath as the
+// shape-half write, rather than sitting in the model-root source's own 400ms
+// batching window (MODEL_ROOT_DEBOUNCE_MS) with everything else. Nothing
+// above proves that line does anything: every round-trip test in this file
+// waits well past the debounce (150ms real-time waits, or `waitFor` with no
+// timeout ceiling), so a version of GeneratorEditor.tsx with the flush lines
+// deleted would still pass every one of them, just slower. This test checks
+// the write lands well UNDER the debounce window instead.
+describe("GeneratorEditor PATTERN mode — mode-switch flush (spec 2026-09-12 lucid-model-root-batching)", () => {
+  beforeEach(() => {
+    mockUpdateElementData.mockClear();
+    mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
+  });
+
+  it("posts the arrivalPatterns MODEL_ROOT_UPDATE without waiting for the model-root debounce", async () => {
+    const fakeHost = createFakeHost();
+    fakeHost.setInitial([{ id: "g1", name: "Arrivals", mode: "frequency" }], []);
+    const postMessageSpy = vi
+      .spyOn(window.parent, "postMessage")
+      .mockImplementation((envelope: any) => {
+        fakeHost.handlePostMessage(envelope);
+      });
+
+    render(
+      <GeneratorEditor
+        {...baseProps}
+        generator={{ id: "g1", name: "Arrivals", mode: GeneratorType.FREQUENCY, levers: [] } as any}
+      />
+    );
+
+    const select = screen.getByRole("combobox", { name: /generator type/i });
+    await act(async () => {
+      fireEvent.change(select, { target: { value: GeneratorType.PATTERN } });
+      // Well under MODEL_ROOT_DEBOUNCE_MS -- if the write only reached the
+      // host via the debounce timer, this would see nothing yet.
+      await new Promise((resolve) => setTimeout(resolve, MODEL_ROOT_DEBOUNCE_MS / 4));
+    });
+
+    const modelRootUpdateCalls = postMessageSpy.mock.calls.filter(
+      ([envelope]: any) => envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE
+    );
+    expect(modelRootUpdateCalls).toHaveLength(1);
+    expect((modelRootUpdateCalls[0][0] as any).data.patch.arrivalPatterns).toHaveLength(1);
   });
 });

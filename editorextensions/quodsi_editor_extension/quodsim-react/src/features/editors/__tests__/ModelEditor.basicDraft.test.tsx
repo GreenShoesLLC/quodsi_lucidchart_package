@@ -83,7 +83,10 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     expect(send.mock.calls[1][0]).toMatchObject({ name: 'AB' })
 
     // The first save's snapshot arrives while the trailing save is in flight
-    // and nothing is pending any more: only the in-flight guard protects "AB".
+    // and nothing is pending any more: it is the source's own overlay -- the
+    // trailing save's unreleased batch, not yet released by a snapshot tagged
+    // with ITS envelope id -- that protects "AB" here now, not a ModelEditor-
+    // local in-flight guard.
     act(() => pushSnapshot({ name: 'A' }))
     expect(nameInput().value).toBe('AB')
 

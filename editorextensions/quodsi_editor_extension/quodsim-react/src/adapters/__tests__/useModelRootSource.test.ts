@@ -387,6 +387,45 @@ describe('createModelRootSource — batching (spec 2026-09-12 lucid-model-root-b
     await expect(source.flush()).rejects.toThrow('The model page changed')
   })
 
+  it('flush waits for EVERY outstanding batch before settling, then rejects with the FIRST refusal by batch order', async () => {
+    // B1 (the promoted 'A' edit) is refused; B2 (the cleanup-options write
+    // right behind it) is still in flight -- neither has landed at the moment
+    // flush() is called. Promise.all(runs) would reject the instant B1's run
+    // rejects, without waiting for B2 to settle at all -- this pins the
+    // spec's stronger promise: flush() settles only once EVERY batch pending
+    // or in flight at call time has landed.
+    const b1 = deferred()
+    const b2 = deferred()
+    const send = vi.fn().mockReturnValueOnce(b1.promise).mockReturnValueOnce(b2.promise)
+    const { source } = loadedSource(send)
+
+    void source.deps.saveModel!({ name: 'A' })
+    // The cleanup-options write promotes 'A' into its own batch (B1) and
+    // enqueues a second batch (B2) synchronously right behind it -- both are
+    // already outstanding before either's transport.send settles.
+    void source.deps.saveModel!({ resources: [] }, { seizeRelease: 'remove' }).catch(() => {})
+
+    // Attached to flush()'s OWN promise, synchronously and without
+    // re-throwing, so this promise itself is never left rejected-with-no-
+    // handler while the test goes on to await a separately derived one --
+    // the `expect(...).rejects` assertion below reads the SAME promise
+    // reference, it just does so later.
+    const p = source.flush()
+    let settled = false
+    p.then(() => { settled = true }, () => { settled = true })
+
+    b1.reject(new Error('B1 refused'))
+    await vi.advanceTimersByTimeAsync(0)
+    // B1 has already been refused by now; B2 is still outstanding. Against
+    // Promise.all(runs) `settled` is already true here -- RED.
+    expect(settled).toBe(false)
+
+    b2.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+
+    await expect(p).rejects.toThrow('B1 refused')
+  })
+
   it('flush with nothing pending or in flight resolves at once and sends nothing', async () => {
     const { source, send } = loadedSource()
 

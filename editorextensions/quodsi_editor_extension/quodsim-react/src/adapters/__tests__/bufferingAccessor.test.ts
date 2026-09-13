@@ -454,4 +454,40 @@ describe('createBufferingAccessor', () => {
 
     expect((buf.getSnapshot().modelDefinition as any).arrivalPatterns).toEqual([{ id: 'ap-1' }])
   })
+
+  // Finding F2 (final review, model-root batching): `{ ...base, ..., flush,
+  // dispose }` spread the base FIRST, so a base that implements its own
+  // flushModelImmediate (a batching model-root source) passed straight
+  // through untouched -- calling the WRAPPER's flushModelImmediate() would
+  // flush only what the base already holds, skipping this wrapper's own
+  // 500ms buffer entirely. flushModelImmediate must be wired to the SAME
+  // `flush` this wrapper already exposes, which promotes/sends the buffered
+  // edit through base.updateModel and, via sendBatch, awaits the base's own
+  // flushModelImmediate too.
+  it("flushModelImmediate flushes the WRAPPER's own buffered edit through base.updateModel, not just the base's own flush", async () => {
+    const { accessor } = makeBase()
+    let finishBaseFlush!: () => void
+    const flushModelImmediate = vi.fn(
+      () => new Promise<void>((resolve) => { finishBaseFlush = resolve }),
+    )
+    const buf = createBufferingAccessor({ ...accessor, flushModelImmediate } as any, { debounceMs: 500 })
+
+    void buf.updateModel({ arrivalPatterns: [] })   // buffered -- not yet sent to the base at all
+    expect(accessor.updateModel).not.toHaveBeenCalled()
+
+    let settled = false
+    const done = buf.flushModelImmediate!().then(() => { settled = true })
+    await vi.advanceTimersByTimeAsync(0)
+
+    // The wrapper's own buffer was sent through base.updateModel, and its
+    // flush() then awaited the base's own flushModelImmediate too -- exactly
+    // what buf.flush() itself does.
+    expect(accessor.updateModel).toHaveBeenCalledWith({ arrivalPatterns: [] })
+    expect(flushModelImmediate).toHaveBeenCalledTimes(1)
+    expect(settled).toBe(false)
+
+    finishBaseFlush()
+    await done
+    expect(settled).toBe(true)
+  })
 })

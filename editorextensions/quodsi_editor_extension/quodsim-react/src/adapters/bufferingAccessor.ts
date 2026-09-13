@@ -809,6 +809,16 @@ export function createBufferingAccessor(
     updateShape,
     updateModel,
     flush,
+    // Overrides the spread-through base.flushModelImmediate. Passing the
+    // base's own straight through would skip THIS wrapper's buffer entirely --
+    // a caller asking to flush "everything this accessor holds" would flush
+    // only what has already reached the base, silently leaving whatever is
+    // still sitting in `pending`/`inFlight` here behind. This wrapper's own
+    // `flush` already does the right thing: it promotes/sends the buffered
+    // edit through base.updateModel and, via sendBatch, awaits the base's own
+    // flushModelImmediate too -- so flushModelImmediate and flush are the same
+    // operation here, both meaning "the host has stored it".
+    flushModelImmediate: flush,
     dispose,
   }
 }

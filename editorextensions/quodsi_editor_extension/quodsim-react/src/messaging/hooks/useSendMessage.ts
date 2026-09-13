@@ -9,7 +9,10 @@ const logger = getLogger('useSendMessage');
  * Messages whose host handler reads the stored model. While a model-root
  * batch is pending or in flight they wait for it, so the host sees the latest
  * edit (spec 2026-09-12 lucid-model-root-batching §3). Every other message
- * posts at once.
+ * posts at once. Because the wait is asynchronous, a listed message issued
+ * now can still reach the host AFTER an unlisted message sent later in the
+ * same tick -- callers that need strict ordering between the two cannot rely
+ * on call order alone.
  */
 export const FLUSH_BEFORE_SEND: ReadonlySet<EnvelopeMessageType> = new Set([
   EnvelopeMessageType.MODEL_RUN_REQUEST,
