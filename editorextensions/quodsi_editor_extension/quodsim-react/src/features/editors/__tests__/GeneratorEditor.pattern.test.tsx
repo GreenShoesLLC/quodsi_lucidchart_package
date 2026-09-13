@@ -463,6 +463,52 @@ describe("GeneratorEditor PATTERN mode — switch-to-PATTERN lifecycle round tri
   });
 });
 
+// Controller ruling (Task 3 review, carried into Task 5): the switch-away
+// clear has to be verifiable against a host that actually removes the field
+// -- not just a wire assertion that clearedFields NAMED it -- otherwise the
+// "genuine" bar isn't met. createFakeHost's MODEL_ROOT_UPDATE branch already
+// applies `shape.clearedFields` by deleting those keys from its own
+// generator record (see its own comment above), which is what makes the
+// round-trip assertion below a real check rather than a restatement of the
+// envelope shape.
+describe("GeneratorEditor PATTERN mode — switch-away-from-PATTERN lifecycle round trip", () => {
+  beforeEach(() => {
+    mockUpdateElementData.mockClear();
+    mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
+  });
+
+  it("removes the generator's arrivalPatternId and drops the now-orphaned pattern", async () => {
+    const fakeHost = createFakeHost();
+    fakeHost.setInitial(
+      [{ id: "g1", name: "Arrivals", mode: "pattern", arrivalPatternId: "ap-1" }],
+      [{ id: "ap-1", name: "Arrivals pattern" }]
+    );
+    vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
+      fakeHost.handlePostMessage(envelope);
+    });
+
+    render(
+      <GeneratorEditor
+        {...baseProps}
+        generator={{ id: "g1", name: "Arrivals", mode: GeneratorType.PATTERN, arrivalPatternId: "ap-1", levers: [] } as any}
+      />
+    );
+
+    const select = screen.getByRole("combobox", { name: /generator type/i });
+    fireEvent.change(select, { target: { value: GeneratorType.FREQUENCY } });
+
+    await waitFor(() => {
+      expect(fakeHost.snapshot().arrivalPatterns).toHaveLength(0);
+    });
+
+    // The generator record itself no longer carries the key at all -- this
+    // is only true because the fake host actually deletes it on a cleared
+    // field, not merely because the wire declared it cleared.
+    expect("arrivalPatternId" in fakeHost.snapshot().generators[0]).toBe(false);
+  });
+});
+
 // Task 10 review round 3 -- Important: "split-brain projection". Every test
 // above either never dispatches a snapshot, or dispatches exactly one before
 // the ONE mode switch under test -- none of them exercise a SECOND lifecycle
