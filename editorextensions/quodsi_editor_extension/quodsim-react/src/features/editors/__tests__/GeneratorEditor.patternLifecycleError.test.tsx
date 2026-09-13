@@ -35,11 +35,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: mockSelectElement,
     updateElementData: mockUpdateElementData,
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 // Real useFormSync (NOT mocked) -- this suite is specifically about
@@ -71,7 +69,6 @@ afterEach(() => {
 });
 
 const baseProps = {
-  onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
 };

@@ -34,11 +34,8 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
     updateResourceRequirements: vi.fn(),
     selectElement: vi.fn(),
     updateElementData: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -70,7 +67,6 @@ const activityProps = {
 };
 
 const generatorProps = {
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
   generator: { id: "g1", name: "Arrivals", mode: "frequency", levers: [] } as any,

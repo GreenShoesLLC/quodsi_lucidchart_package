@@ -28,11 +28,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: mockSelectElement,
     updateElementData: mockUpdateElementData,
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -69,7 +67,6 @@ function patternGenerator() {
 }
 
 const baseProps = {
-  onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
 };
@@ -115,15 +112,13 @@ function dispatchSnapshot(projection: Record<string, unknown>) {
  * applied here before the one post-write snapshot is pushed, which is what
  * makes the split-brain race this file used to reproduce via a delayed
  * ELEMENT_UPDATE (Task 10 review round 3) structurally impossible now: there
- * is no second, separately-timed envelope for the shape half any more.
- * ELEMENT_UPDATE handling is kept for any caller that still uses the
- * confirmed round trip (e.g. a Resource write).
+ * is no second, separately-timed envelope for the shape half any more --
+ * there is no ELEMENT_UPDATE branch left to delay.
  *
  * Register with `vi.spyOn(window.parent, 'postMessage').mockImplementation
  * ((envelope) => fakeHost.handlePostMessage(envelope))`.
  */
-function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
-  const elementUpdateDelayMs = options.elementUpdateDelayMs ?? 0;
+function createFakeHost() {
   let generators: any[] = [];
   let arrivalPatterns: any[] = [];
 
@@ -152,29 +147,6 @@ function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
       target: "model-iframe",
       version: "1.0",
       data: { projection: snapshot() },
-    });
-  }
-
-  function applyElementUpdate(envelope: any) {
-    const idx = generators.findIndex((g) => g.id === envelope.data.elementId);
-    if (idx >= 0) {
-      const incoming = envelope.data.data ?? {};
-      const cleared: string[] = incoming.__clearedFields ?? [];
-      const merged: any = { ...generators[idx] };
-      for (const [k, v] of Object.entries(incoming)) {
-        if (k === "__clearedFields" || v === undefined) continue;
-        merged[k] = v;
-      }
-      for (const key of cleared) delete merged[key];
-      generators[idx] = merged;
-    }
-    dispatch({
-      id: envelope.id,
-      type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT,
-      source: "host",
-      target: "model-iframe",
-      version: "1.0",
-      data: { success: true, elementId: envelope.data.elementId },
     });
   }
 
@@ -215,14 +187,6 @@ function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
         data: { success: true },
       });
       pushSnapshot(envelope.id);
-      return;
-    }
-    if (envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE) {
-      if (elementUpdateDelayMs > 0) {
-        setTimeout(() => applyElementUpdate(envelope), elementUpdateDelayMs);
-      } else {
-        applyElementUpdate(envelope);
-      }
       return;
     }
   }
