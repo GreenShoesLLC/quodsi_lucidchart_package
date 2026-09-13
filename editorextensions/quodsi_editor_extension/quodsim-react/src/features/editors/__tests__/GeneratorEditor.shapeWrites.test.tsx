@@ -135,6 +135,33 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
     expect(screen.getByDisplayValue("Stored name")).toBeInTheDocument();
   });
 
+  // Task 1 carried note: MODEL_ROOT_SNAPSHOT's generators rows are the
+  // Generator's sparse toJSON() -- batchSize/startDelay/maxCycles (and
+  // similar) are ABSENT at their defaults, not present-with-default-value.
+  // extractGeneratorData must default a missing field exactly like it does
+  // for the pre-snapshot selection copy, so refilling from this sparse row
+  // (frequencyGenerator above carries none of those keys, matching a real
+  // toJSON() row) must not read as an edit. Pinned in isolation (its own
+  // describe block, own fixture) rather than alongside this file's other
+  // fake-timer tests: sharing frequencyGenerator and vi.useFakeTimers()
+  // across every test in one block proved flaky here -- a write from an
+  // earlier test's own fake-timer-scheduled batch was still in flight when
+  // this one advanced the (same, vitest-global) fake clock further, and
+  // landed in THIS test's host spy instead. Isolating it removed the
+  // interference without touching the other tests' own timer usage.
+  it("an unedited generator's sparse snapshot record refills without marking the draft dirty", () => {
+    installHost();
+    renderEditor(frequencyGenerator);
+
+    pushSnapshot([frequencyGenerator]);
+
+    // No crash defaulting the sparse record, and the displayed name is
+    // exactly what the selection copy already showed -- a real edit (see
+    // "refills the draft from the snapshot's full record" above) does
+    // change what's displayed; an unedited resync must not.
+    expect(screen.getByDisplayValue("Arrivals")).toBeInTheDocument();
+  });
+
   // Controller ruling (Task 3 review): a SHAPE-ONLY lifecycle write -- the
   // arrival-pattern model list does NOT change because the generator's
   // arrivalPatternId already resolves to a pattern already present in the
