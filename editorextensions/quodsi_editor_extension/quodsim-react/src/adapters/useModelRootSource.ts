@@ -86,21 +86,41 @@ function isNoReplyError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { noReply?: unknown }).noReply === true
 }
 
+/** A shape edit as it travels on MODEL_ROOT_UPDATE (spec 2026-09-13 lucid-shape-writes §1). */
+export type ShapeWriteEntry = {
+  shapeId: string
+  type: 'Activity' | 'Generator'
+  /** Defined values only. */
+  patch: Record<string, unknown>
+  /** Fields the panel cleared (`undefined` in the queued patch). */
+  clearedFields: string[]
+}
+
+/** A shape's queued edits: `undefined` values mark clears until sent. */
+type PendingShape = { type: 'Activity' | 'Generator'; patch: Record<string, unknown> }
+
+const SHAPE_LIST_KEY: Record<PendingShape['type'], 'activities' | 'generators'> = {
+  Activity: 'activities',
+  Generator: 'generators',
+}
+
 export type ModelRootTransport = {
   /**
    * Send one model-root batch. `basedOnPageId` is the page id of the snapshot
    * the batch's first edit was based on (page guard, spec 2026-09-11);
    * `options` is a delete dialog's Seize/Release choice, present only on a
    * write that carries one; `id` is the envelope id -- the host tags its
-   * post-write AND corrective snapshots with it. Resolves when the host
-   * confirms; rejects with the host's message, or with ModelRootNoReplyError
-   * when no reply can come.
+   * post-write AND corrective snapshots with it; `shapes` is present only
+   * when the batch carries Activity/Generator edits (spec 2026-09-13
+   * lucid-shape-writes). Resolves when the host confirms; rejects with the
+   * host's message, or with ModelRootNoReplyError when no reply can come.
    */
   send(
     patch: Record<string, unknown>,
     basedOnPageId: string | undefined,
     options: ReferenceCleanupOptions | undefined,
     id: string,
+    shapes?: ShapeWriteEntry[],
   ): Promise<void>
   /**
    * Ask the host for a fresh snapshot; returns the request's envelope id,
@@ -177,11 +197,51 @@ function applyPatch(current: Record<string, unknown>, patch: Record<string, unkn
   return next
 }
 
+/**
+ * Lay queued shape edits over a projection's `activities` / `generators`
+ * rows by id, returning a NEW object. An `undefined` value removes the key
+ * (a clear). A shape the projection does not list is left alone; its edit is
+ * still sent.
+ */
+function applyShapes(current: Record<string, unknown>, shapes: Map<string, PendingShape>): Record<string, unknown> {
+  if (shapes.size === 0) return current
+  const next: Record<string, unknown> = { ...current }
+  for (const [shapeId, { type, patch }] of shapes) {
+    const key = SHAPE_LIST_KEY[type]
+    const rows = (next[key] as Array<Record<string, unknown>> | undefined) ?? []
+    next[key] = rows.map((row) => {
+      if (!row || row.id !== shapeId) return row
+      const merged: Record<string, unknown> = { ...row }
+      for (const [field, value] of Object.entries(patch)) {
+        if (value === undefined) delete merged[field]
+        else merged[field] = value
+      }
+      return merged
+    })
+  }
+  return next
+}
+
+/** Queued shape edits as the wire carries them: defined values, plus cleared field names. */
+function toWireShapes(shapes: Map<string, PendingShape>): ShapeWriteEntry[] {
+  return Array.from(shapes, ([shapeId, { type, patch }]) => {
+    const defined: Record<string, unknown> = {}
+    const clearedFields: string[] = []
+    for (const [field, value] of Object.entries(patch)) {
+      if (value === undefined) clearedFields.push(field)
+      else defined[field] = value
+    }
+    return { shapeId, type, patch: defined, clearedFields }
+  })
+}
+
 /** A group of model-root edits sent as one MODEL_ROOT_UPDATE. */
 type Batch = {
   id: string
   order: number
   patch: Record<string, unknown>
+  /** Activity/Generator edits sent with this batch. */
+  shapes: Map<string, PendingShape>
   basedOnPageId: string | undefined
   options: ReferenceCleanupOptions | undefined
   /** Envelope ids whose snapshot releases this batch: its own, plus a safety-net request's. */
@@ -219,6 +279,7 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
   let seq = 0
 
   let pending: Record<string, unknown> = {}
+  let pendingShapes = new Map<string, PendingShape>()
   let pendingPageId: string | undefined
   let hasPending = false
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -250,8 +311,8 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
       return
     }
     let next = base as unknown as Record<string, unknown>
-    for (const batch of unreleased) next = applyPatch(next, batch.patch)
-    if (hasPending) next = applyPatch(next, pending)
+    for (const batch of unreleased) next = applyShapes(applyPatch(next, batch.patch), batch.shapes)
+    if (hasPending) next = applyShapes(applyPatch(next, pending), pendingShapes)
     projection = next as unknown as ModelRootProjection
   }
 
@@ -271,12 +332,14 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     patch: Record<string, unknown>,
     basedOnPageId: string | undefined,
     options: ReferenceCleanupOptions | undefined,
+    shapes: Map<string, PendingShape> = new Map(),
   ): Batch {
     const id = uuid()
     return {
       id,
       order: ++batchOrder,
       patch,
+      shapes,
       basedOnPageId,
       options,
       releaseIds: new Set([id]),
@@ -293,8 +356,9 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
   function promotePending(): Batch | null {
     clearTimer()
     if (!hasPending) return null
-    const batch = makeBatch(pending, pendingPageId, undefined)
+    const batch = makeBatch(pending, pendingPageId, undefined, pendingShapes)
     pending = {}
+    pendingShapes = new Map()
     pendingPageId = undefined
     hasPending = false
     unreleased.push(batch)
@@ -312,7 +376,13 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
 
   function send(batch: Batch): Promise<void> {
     return new Promise<void>((resolve) => {
-      resolve(transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id))
+      const shapes = toWireShapes(batch.shapes)
+      // Model-only batches keep the four-argument call (and envelope) exactly.
+      resolve(
+        shapes.length > 0
+          ? transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id, shapes)
+          : transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id),
+      )
     }).then(
       () => {
         settle(batch, SAVED)
@@ -427,6 +497,21 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     return hasPending || outstanding.size > 0
   }
 
+  // One pending batch for model and shape edits: (re)arm the quiet-period
+  // timer and show the edit at once.
+  function schedulePending(): void {
+    hasPending = true
+    clearTimer()
+    timer = setTimeout(() => {
+      timer = null
+      const batch = promotePending()
+      if (batch) void enqueue(batch).catch(() => {})
+    }, debounceMs)
+    syncStatus()
+    recompute()
+    notify()
+  }
+
   const deps: LucidModelStateAccessorDeps = {
     getModelDefinition: () => projection as unknown as Record<string, unknown> | null,
 
@@ -525,16 +610,22 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
       }
       if (!hasPending) pendingPageId = base.pageId
       pending = { ...pending, ...patch }
-      hasPending = true
-      clearTimer()
-      timer = setTimeout(() => {
-        timer = null
-        const batch = promotePending()
-        if (batch) void enqueue(batch).catch(() => {})
-      }, debounceMs)
-      syncStatus()
-      recompute()
-      notify()
+      schedulePending()
+      return Promise.resolve()
+    },
+
+    // Activity/Generator shape edits (spec 2026-09-13 lucid-shape-writes §2):
+    // merged per shape and key into the SAME pending batch as model edits, so
+    // a shape write and the model write it goes with always land in order.
+    // Refused before any echo when no snapshot has arrived, like saveModel.
+    queueShape: (shapeId: string, type: 'Activity' | 'Generator', patch: Record<string, unknown>) => {
+      if (!base) {
+        return Promise.reject(new Error(MODEL_NOT_LOADED_MESSAGE))
+      }
+      if (!hasPending) pendingPageId = base.pageId
+      const prev = pendingShapes.get(shapeId)
+      pendingShapes.set(shapeId, { type, patch: { ...(prev?.patch ?? {}), ...patch } })
+      schedulePending()
       return Promise.resolve()
     },
 
@@ -613,7 +704,7 @@ export function useModelRootSource(): {
   const sourceRef = useRef<ReturnType<typeof createModelRootSource> | null>(null)
   if (!sourceRef.current) {
     const transport: ModelRootTransport = {
-      send(patch, basedOnPageId, options, id) {
+      send(patch, basedOnPageId, options, id, shapes) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {
             reject(new ModelRootNoReplyError('No parent window to send model-root update to'))
@@ -654,7 +745,12 @@ export function useModelRootSource(): {
             source,
             target: 'host',
             version: '1.0',
-            data: { patch, basedOnPageId, ...(options?.seizeRelease ? { seizeRelease: options.seizeRelease } : {}) },
+            data: {
+              patch,
+              basedOnPageId,
+              ...(options?.seizeRelease ? { seizeRelease: options.seizeRelease } : {}),
+              ...(shapes && shapes.length > 0 ? { shapes } : {}),
+            },
           }
           window.parent.postMessage(envelope, '*')
         })
