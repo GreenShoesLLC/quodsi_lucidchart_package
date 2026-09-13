@@ -1,23 +1,24 @@
 // quodsim-react/src/features/editors/__tests__/modelEditorSeam.tsx
 //
-// Test seam for the Model editor (spec 2026-09-12): the REAL production chain
-// -- the extension's own projectModelRoot -> createModelRootSource ->
-// createLucidModelStateAccessor -- with only the postMessage transport faked.
-// projectModelRoot only calls .getAll() on a definition's lists and .toJSON()
-// on four of them, so `definition()` builds a duck-typed ModelDefinition (the
-// extension's own projection tests do the same) and the real mapping runs.
+// Test seam for the Model editor (spec 2026-09-12; shared editor 2026-09-13):
+// the REAL production chain -- the extension's own projectModelRoot ->
+// createModelRootSource -> createLucidModelStateAccessor -- with only the
+// postMessage transport faked, rendered through LucidModelEditor exactly as
+// ModelEditorForPage renders it. projectModelRoot only calls .getAll() on a
+// definition's lists and .toJSON() on four of them, so `definition()` builds a
+// duck-typed ModelDefinition and the real mapping runs.
 //
 // Not a test file (no ".test." in the name), so Vitest does not collect it.
-// Test files that render tab wrappers must mock MessageProvider themselves.
+// Test files that mount the editor must mock MessageProvider themselves.
 
-import React, { useSyncExternalStore } from 'react'
+import React from 'react'
 import { render } from '@testing-library/react'
 import { PeriodUnit, SimulationTimeType } from '@quodsi/lucid-shared'
 import type { ModelDefinition, ModelRootProjection } from '@quodsi/lucid-shared'
 import { projectModelRoot } from '../../../../../src/core/modelRootProjection'
 import { createModelRootSource, type ModelRootTransport } from '../../../adapters/useModelRootSource'
 import { createLucidModelStateAccessor } from '../../../adapters/LucidModelStateAccessor'
-import ModelEditor from '../ModelEditor'
+import { LucidModelEditor, type LucidModelEditorProps } from '../LucidModelEditor'
 
 type ListKey =
   | 'generators' | 'arrivalPatterns' | 'arrivalSchedules' | 'workSchedules' | 'activities'
@@ -110,18 +111,11 @@ export function modelRootSeam(def: ModelDefinition, transportOverrides: Partial<
 
 type EditorOptions = {
   transport?: Partial<ModelRootTransport>
-  props?: Partial<Omit<React.ComponentProps<typeof ModelEditor>, 'accessor' | 'projection'>>
+  props?: Partial<Omit<LucidModelEditorProps, 'accessor'>>
 }
 
-/** Render ModelEditor over the seam, re-rendering on every echo and snapshot like ModelEditorForPage does. */
+/** Render the Lucid host of the shared ModelEditor over the seam, as ModelEditorForPage does. */
 export function mountModelEditor(def: ModelDefinition = definition(), options: EditorOptions = {}) {
   const seam = modelRootSeam(def, options.transport)
-  function Harness() {
-    const projection = useSyncExternalStore(
-      seam.source.deps.onModelChanged,
-      seam.source.deps.getModelDefinition,
-    ) as unknown as ModelRootProjection
-    return <ModelEditor accessor={seam.accessor} projection={projection} {...options.props} />
-  }
-  return { ...seam, ...render(<Harness />) }
+  return { ...seam, ...render(<LucidModelEditor accessor={seam.accessor} {...options.props} />) }
 }

@@ -13,9 +13,10 @@
 // from the Resources tab, from a Resource block, and from a swimlane lane,
 // and missing one leaves a trapped modal on that route only.
 //
-// The seam contract is verbatim SchedulesTab's (see its header): supplying a
-// handler means "I will present the editor", and the shared control then
-// presents nothing -- otherwise one click opens two modals.
+// The seam contract is verbatim LucidModelEditor's own onEditWorkSchedule
+// (see ResourceBlockEditor's header): supplying a handler means "I will
+// present the editor", and the shared control then presents nothing --
+// otherwise one click opens two modals.
 //
 // Host is faked at postMessage exactly as ResourceBlockEditor.test.tsx /
 // SwimLaneEditor.test.tsx do, so the real useModelRootSource /
@@ -28,30 +29,34 @@ import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 
 const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }))
 
-// Both module paths are mocked: ResourcesTab / ResourceBlockEditor take
-// useMessaging from MessageProvider (as ActivityEditor and SchedulesTab do),
-// SwimLaneEditor from MessageContext.
+// Both module paths are mocked: LucidModelEditor / ResourceBlockEditor take
+// useMessaging from MessageProvider (as ActivityEditor does), SwimLaneEditor
+// from MessageContext. The Model editor's mount also reaches
+// useModelOpsSender -> useMessagingDispatch (MessageContext) via
+// useLucidSourceResolver, so that export has to be present too.
 vi.mock('../../../messaging/MessageProvider', () => ({
   useMessaging: () => ({ app: { panelType: 'model' }, sendMessage: mockSendMessage }),
 }))
 vi.mock('../../../messaging/MessageContext', () => ({
   useMessaging: () => ({ app: { panelType: 'model' }, sendMessage: mockSendMessage }),
+  useMessagingDispatch: () => vi.fn(),
 }))
 
-import ResourcesTab from '../ResourcesTab'
+import { setView } from 'quodsi_studio/platforms/shared'
+import { LucidModelEditor } from '../LucidModelEditor'
 import { ResourceBlockEditor } from '../ResourceBlockEditor'
 import SwimLaneEditor from '../SwimLaneEditor'
 import { useModelRootSource } from '../../../adapters/useModelRootSource'
 
 /**
- * ResourcesTab takes the Model editor's model-root accessor since spec
- * 2026-09-12. This is ModelEditorForPage's role in miniature: the REAL
- * useModelRootSource against the fake host below, rendering the tab once the
+ * The Model editor's Resources tab: ModelEditorForPage's role in miniature --
+ * the REAL useModelRootSource against the fake host below, rendering the
+ * shared Model editor (through LucidModelEditor) on its Resources tab once the
  * first snapshot has landed.
  */
-function ResourcesTabOnModelRoot() {
+function ModelEditorResourcesTab() {
   const { accessor, projection } = useModelRootSource()
-  return projection ? <ResourcesTab accessor={accessor} /> : null
+  return projection ? <LucidModelEditor accessor={accessor} activeTab="Resources" /> : null
 }
 
 /** Staffs 3, so the picker's nominal-seeding branch is live rather than inert. */
@@ -133,12 +138,14 @@ describe('Lucid resource mounts route "Edit schedule" to the Lucid modal', () =>
   afterEach(() => {
     cleanup()
     vi.restoreAllMocks()
+    setView('basic')
   })
 
-  it('the Resources tab (ResourcesEditor -> ResourceEditor)', async () => {
+  it('the Model editor Resources tab (ResourcesEditor -> ResourceEditor)', async () => {
+    setView('advanced')
     installHost([SCHEDULED_NURSE])
 
-    render(<ResourcesTabOnModelRoot />)
+    render(<ModelEditorResourcesTab />)
 
     fireEvent.click(await screen.findByRole('button', { name: /^edit$/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Edit schedule' }))

@@ -1,5 +1,5 @@
-// ModelEditor's States tab mounts Studio's shared StatesEditor (via StatesTab)
-// over the editor's ONE model-root accessor (spec 2026-09-12).
+// The shared Model editor's States tab in Lucid's host: Studio's shared
+// StatesEditor over the ONE model-root accessor (spec 2026-09-12, 2026-09-13).
 //
 // NOT stubbed: projectModelRoot, the source, the accessor, the Studio
 // StatesEditor. Only the transport is faked (see modelEditorSeam).
@@ -34,13 +34,13 @@ function statesDefinition() {
   });
 }
 
-describe("ModelEditor — States tab uses the shared editor", () => {
+describe("Model editor — States tab uses the shared editor", () => {
   // model.tab.states is 'intermediate' in quodsi_shared/src/views/catalog.ts.
   beforeEach(() => setView("intermediate"));
   afterEach(() => { cleanup(); setView("basic"); });
 
   it("renders the shared editor with Lucid's host wording and the formula warning", () => {
-    mountModelEditor(statesDefinition(), { props: { activeTab: "states" } });
+    mountModelEditor(statesDefinition(), { props: { activeTab: "States" } });
 
     expect(screen.getByRole("button", { name: "Add State" })).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Delete unit_price"));
@@ -55,7 +55,7 @@ describe("ModelEditor — States tab uses the shared editor", () => {
   });
 
   it("deletes through the model root only -- the host owns the reference cascade", async () => {
-    const { transport } = mountModelEditor(statesDefinition(), { props: { activeTab: "states" } });
+    const { transport } = mountModelEditor(statesDefinition(), { props: { activeTab: "States" } });
 
     fireEvent.click(screen.getByLabelText("Delete unit_price"));
     fireEvent.click(screen.getByRole("button", { name: "Delete State" }));
@@ -73,7 +73,7 @@ describe("ModelEditor — States tab uses the shared editor", () => {
 
   it("a rejected states write keeps the dialog open with the error, before and after the host's corrective snapshot", async () => {
     const seam = mountModelEditor(statesDefinition(), {
-      props: { activeTab: "states" },
+      props: { activeTab: "States" },
       transport: { send: vi.fn().mockRejectedValue(new Error("Current page not available")) },
     });
     const original = seam.source.deps.getModelDefinition();

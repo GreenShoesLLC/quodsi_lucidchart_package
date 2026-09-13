@@ -24,15 +24,17 @@ import {
   ViewTell,
   SettingsPanel,
   applyViewUrlOverride,
+  ModelEditor, MODEL_EDITOR_TABS, EntitlementsSourceProvider,
 } from 'quodsi_studio/platforms/shared'
+import { isModelLevelIssue, isEntityIssue } from '@quodsi/shared'
 
 describe('shared panel import', () => {
   it('resolves the Studio panel barrel from quodsim-react', () => {
     expect(typeof GeneratorPatternTab).toBe('function')
     expect(typeof summarizeArrivalPattern).toBe('function')
     // The Arrivals tab body is shared, not reimplemented per host -- only tab
-    // registration differs. This guards the import path Lucid's ArrivalsTab
-    // wrapper depends on.
+    // registration differs. This guards the import path Studio's shared
+    // ModelEditor (mounted in Lucid too, spec 2026-09-13) depends on.
     expect(typeof ArrivalsEditor).toBe('function')
     expect(typeof findArrivalUsage).toBe('function')
     expect(typeof RequirementField).toBe('function')
@@ -57,8 +59,9 @@ describe('shared panel import', () => {
     expect(typeof WorkScheduleModal).toBe('function')
     expect(typeof CapacitySourcePicker).toBe('function')
     expect(typeof workScheduleUsage).toBe('function')
-    // spec 2026-09-11: Lucid's Entities tab (EntitiesTab) mounts the shared
-    // EntitiesEditor; Lucid deleted its own features/editors/EntitiesEditor.tsx.
+    // spec 2026-09-11: the Entities tab mounts the shared EntitiesEditor;
+    // Lucid deleted its own features/editors/EntitiesEditor.tsx (and its own
+    // per-tab wrapper for it, spec 2026-09-13).
     expect(typeof EntitiesEditor).toBe('function')
     // spec 2026-09-11 States: Lucid's Model editor States tab mounts the shared
     // StatesEditor; Lucid deleted its own StatesEditor/StateFormDialog/StateListItem.
@@ -74,6 +77,14 @@ describe('shared panel import', () => {
     expect(typeof ViewTell).toBe('function')
     expect(typeof SettingsPanel).toBe('function')
     expect(typeof applyViewUrlOverride).toBe('function')
+    // spec 2026-09-13: Lucid's Model view mounts the shared ModelEditor with a
+    // messaging-backed entitlements source and a LOCATE_ELEMENT resolver built
+    // on the shared issue predicates.
+    expect(typeof ModelEditor).toBe('function')
+    expect(MODEL_EDITOR_TABS).toContain('Validation')
+    expect(typeof EntitlementsSourceProvider).toBe('function')
+    expect(typeof isModelLevelIssue).toBe('function')
+    expect(typeof isEntityIssue).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {

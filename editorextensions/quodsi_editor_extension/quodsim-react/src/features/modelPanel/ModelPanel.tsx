@@ -8,10 +8,9 @@ import { ElementEditor } from './ElementEditor';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
-import { EditorTab } from '../editors/ModelEditor';
 import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
-import { consumePendingModelEditorTab } from '../../utils/pendingNavigation';
+import { useModelEditorTab } from './useModelEditorTab';
 
 const log = getLogger('ModelPanel');
 
@@ -51,10 +50,11 @@ export const ModelPanel: React.FC = () => {
   // Get simulation run senders (for diagram mapping modal and auto-convert)
   const { openDiagramMappingModal, openStatusModal, openSettingsModal, autoConvertPage } = useSimulationRunSender();
 
-  // Tab state management for ModelEditor
-  const [activeTab, setActiveTab] = useState<EditorTab>("basic");
+  // The Model editor's tab, held here so it survives ElementEditor's
+  // page-keyed remount (spec 2026-09-13).
+  const { activeTab, onTabChange, applyPendingTab } = useModelEditorTab(onValidate);
 
-  // Check for pending navigation tab when showing a Model element
+  // A "Go to Model Editor" link stores its tab before selecting the model.
   useEffect(() => {
     if (currentElement) {
       const elementType = getSimulationObjectType(
@@ -63,15 +63,12 @@ export const ModelPanel: React.FC = () => {
         currentElement.data
       );
 
-      // Only consume pending tab when showing Model editor
+      // Only consume the pending tab when showing the Model editor
       if (elementType === SimulationObjectType.Model) {
-        const pendingTab = consumePendingModelEditorTab();
-        if (pendingTab) {
-          setActiveTab(pendingTab);
-        }
+        applyPendingTab();
       }
     }
-  }, [currentElement]);
+  }, [currentElement, applyPendingTab]);
 
   // State for Model JSON viewer modal
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
@@ -297,14 +294,13 @@ export const ModelPanel: React.FC = () => {
               currentElement.data
             )}
             onSave={handleElementSave}
-            onValidate={onValidate}
             referenceData={referenceData}
             currentElement={currentElement}
             states={states}
             outgoingConnectors={outgoingConnectors}
             validationState={validationState}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={onTabChange}
           />
         )}
       </div>

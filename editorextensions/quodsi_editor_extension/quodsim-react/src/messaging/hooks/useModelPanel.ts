@@ -4,7 +4,6 @@ import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
 import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData, getLogger } from '@quodsi/lucid-shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
-import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationPollState } from '../../types/SimulationStatus';
 
 import { ExtendedModelItemData } from '../../types/ModelItemData';
@@ -59,7 +58,6 @@ export function useModelPanel() {
   
   // Get sender hooks
   const modelOpsSender = useModelOpsSender();
-  const simulationSender = useSimulationSender();
 
   // Extract document context safely with detailed logging
   const documentContext = selection.documentContext || {
@@ -166,8 +164,12 @@ export function useModelPanel() {
     logger.debug('No modelItemData created or found');
   }
   
-  // Transform validation data (use the validation state directly, it's already in the correct format)
-  const validationState = transformToValidationState(validation.issues.length > 0 ? {
+  // Transform validation data. `lastUpdated !== undefined` is "a result has
+  // arrived" (set by VALIDATION_RESULT, cleared by VALIDATION_RESET) --
+  // NOT `issues.length > 0`, which made every zero-issue (clean model)
+  // result indistinguishable from "no result yet" (final-fix brief
+  // 2026-09-13, Fix 1).
+  const validationState = transformToValidationState(validation.lastUpdated !== undefined ? {
     isValid: validation.isValid,
     issues: validation.issues,
     summary: validation.summary
@@ -209,19 +211,6 @@ export function useModelPanel() {
     logger.debug('Validating model');
     modelOpsSender.validateModel(documentContext.documentId);
   }, [documentContext.documentId, modelOpsSender]);
-  
-  const onSimulate = (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => {
-    logger.debug(`Simulating model with scenario name: ${scenarioName}, scenarioDefinitionId: ${scenarioDefinitionId}, enableAnimation: ${enableAnimation}`);
-    simulationSender.requestSimulation(
-      documentContext.documentId,
-      scenarioName,
-      undefined,  // durationDays
-      undefined,  // repetitions
-      undefined,  // parameters
-      scenarioDefinitionId,
-      enableAnimation
-    );
-  };
   
   const onRemoveModel = () => {
     logger.debug('Removing model');
@@ -339,8 +328,6 @@ export function useModelPanel() {
     simulationStatus: simulationStatusProxy,
     referenceData,
     states: referenceData?.states || [],
-    entities: referenceData?.entities || [],
-    resourceRequirements: referenceData?.resourceRequirements || [],
     outgoingConnectors,
 
     // UI state
@@ -351,7 +338,6 @@ export function useModelPanel() {
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onSimulate,
     onRemoveModel,
     onConvertPage
   };

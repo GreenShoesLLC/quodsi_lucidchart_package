@@ -4,11 +4,8 @@
 //   1. Lucid's tab-id -> surface-id maps point at the SAME @quodsi/shared
 //      catalog Studio uses, including the ids that genuinely differ from
 //      Studio's naming (ActivityEditor's "connectors" tab, GeneratorEditor's
-//      "settings"/"events" tabs). ModelEditor's first tab is "basic" in BOTH
-//      shells -- the task brief's claim that it is "settings" here does not
-//      match this editor's real TAB_CONFIG (that id belongs to
-//      GeneratorEditor); this test pins the actual id instead of the brief's
-//      guess.
+//      "settings"/"events" tabs). The Model editor is Studio's shared one
+//      (spec 2026-09-13) and has no Lucid map.
 //   2. The gating actually bites in a rendered editor: a tab whose surface is
 //      above the current view is absent from the tab strip, and reappears
 //      once the view is raised.
@@ -30,7 +27,6 @@ import { definition, mountModelEditor } from "./modelEditorSeam";
 import {
   LUCID_ACTIVITY_TAB_SURFACE,
   LUCID_GENERATOR_TAB_SURFACE,
-  LUCID_MODEL_TAB_SURFACE,
 } from "../viewSurfaceMaps";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -95,9 +91,6 @@ describe("Lucid tab surface maps", () => {
     expect(LUCID_GENERATOR_TAB_SURFACE.settings).toBe("generator.tab.basic");
     // GeneratorEditor's "events" tab (initial-state modifications) is Studio's "States".
     expect(LUCID_GENERATOR_TAB_SURFACE.events).toBe("generator.tab.states");
-    // ModelEditor's first tab id is "basic" in BOTH shells -- no divergence here,
-    // despite the task brief's claim.
-    expect(LUCID_MODEL_TAB_SURFACE.basic).toBe("model.tab.basic");
   });
 
   it("hides the Failure tab in Basic and shows it in Advanced", () => {
@@ -238,10 +231,10 @@ describe("The tell: never silently hide live behaviour", () => {
 });
 
 describe("ModelEditor — view gates the model-level FIELDS", () => {
-  // Lucid renders its own copies of these controls, so the shared package's
-  // gating does not reach them -- Lucid-local proof. Hiding a field writes
-  // nothing; the model.field.* surfaces are in LUCID_MODEL_EXTRA_SURFACES so
-  // the tell can explain a non-default one.
+  // The shared BasicSettingsTab gates these; this pins it in Lucid's host
+  // (spec 2026-09-13). Hiding a field writes nothing; the model.field.*
+  // surfaces are in the shared MODEL_EXTRA_SURFACES so the tell can explain a
+  // non-default one.
   beforeEach(() => localStorage.clear());
 
   it("hides Replications, Time Mode, Clock Unit and Warmup in Basic", () => {
@@ -278,19 +271,19 @@ describe("ModelEditor — view gates the Schedules tab", () => {
   it("hides Schedules in Basic", () => {
     setView("basic");
     mountModelEditor();
-    expect(screen.queryByRole("button", { name: /Define work schedules/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Schedules" })).not.toBeInTheDocument();
   });
 
   it("shows Schedules in Advanced", () => {
     setView("advanced");
     mountModelEditor();
-    expect(screen.getByRole("button", { name: /Define work schedules/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Schedules" })).toBeInTheDocument();
   });
 
   it("never gates the diagnostics-only Validation tab", () => {
     setView("basic");
     mountModelEditor();
-    expect(screen.getByRole("button", { name: /View comprehensive model validation/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Validation" })).toBeInTheDocument();
   });
 
   // Daniel's Lucid smoke, 2026-09-04: Basic showed an "Advanced Settings"
