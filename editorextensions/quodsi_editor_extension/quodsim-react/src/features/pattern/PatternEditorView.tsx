@@ -118,8 +118,10 @@ export function PatternEditorView() {
   useEffect(() => {
     const flushNow = () => {
       void accessor.flush().catch(() => {
-        // Nobody left to report to: the document is going away. rollback()
-        // has already returned the edit to the overlay, which dies with it.
+        // Nobody left to report to: the document is going away. A refusal's
+        // corrective snapshot would already have restored the stored value,
+        // the same as a model edit -- there is nothing to retry, only the
+        // overlay to let go of along with this accessor.
       })
     }
     window.addEventListener('pagehide', flushNow)

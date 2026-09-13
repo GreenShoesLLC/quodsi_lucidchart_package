@@ -577,8 +577,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // activity selection.
   const { accessor: modelRootAccessor, projection: modelRootProjection } = useModelRootSource();
   // Save status of the batched source this editor now saves through (spec
-  // 2026-09-13 lucid-shape-writes §3): `saving` while its shape edit is
-  // pending or in flight, then `saved` or `failed` with the host's reason.
+  // 2026-09-13 lucid-shape-writes §3): `saving` while the SOURCE has anything
+  // pending or in flight -- not just this editor's own edit -- including its
+  // own 0.4 s pause after every autosave; the blur, unmount and pre-send
+  // saves still push the newest draft into it during that window (final
+  // review I2, queuesWhileSaving). Then `saved` or `failed` with the host's
+  // reason.
   const modelRootState = useSyncExternalStore(modelRootAccessor.subscribe, modelRootAccessor.getSnapshot);
   const { sendMessage } = useMessaging();
   // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.

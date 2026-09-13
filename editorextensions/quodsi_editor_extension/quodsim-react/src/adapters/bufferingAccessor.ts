@@ -530,10 +530,12 @@ export function createBufferingAccessor(
       void flush().catch(() => {
         // Swallowed deliberately: nobody awaits the timer-driven flush, and an
         // unhandled rejection here would be noise. The failure is already
-        // visible -- the base accessor sets saveStatus 'failed' / saveError and
-        // notifies, rollback() keeps the edit in the overlay so it is retried
-        // on the next flush rather than lost, and flush() itself reports it to
-        // the next caller (see `lastFlushError`).
+        // visible -- the base accessor's corrective snapshot has already
+        // restored the stored value and set saveStatus 'failed' / saveError,
+        // the same as a refused model edit. rollback() keeps the edit in the
+        // overlay so it is not silently dropped, but nothing here re-sends it;
+        // flush() itself still reports the failure to the next caller (see
+        // `lastFlushError`).
       })
     }, opts.debounceMs)
   }
@@ -679,9 +681,11 @@ export function createBufferingAccessor(
     // reasoning about maps that no longer exist. It costs at most one
     // content-identical rebuild, on a path that already failed.
     overlayVersion++
-    // No automatic retry is scheduled here: against a host that keeps
-    // rejecting, that would be an unbounded retry loop. The next keystroke, or
-    // the flush on close, retries it.
+    // No automatic retry is scheduled here, and none follows: the base's
+    // corrective snapshot already restored the stored value and reported the
+    // failure, the same as a refused model edit -- the edit is not re-sent.
+    // It only survives here so it is not silently dropped from what the user
+    // sees.
   }
 
   async function sendBatch(batch: Batch): Promise<void> {
