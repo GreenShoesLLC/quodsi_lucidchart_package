@@ -92,16 +92,30 @@ describe('ModelEditor — Basic draft on the model-root accessor', () => {
     expect(send).toHaveBeenCalledTimes(2)
   })
 
-  it('a rejected save keeps the typed value, even under the corrective snapshot, and says so', async () => {
+  it('a refused save says why, and the corrective snapshot restores the stored values', async () => {
     const { pushSnapshot } = mountModelEditor(definition(), {
       transport: { send: vi.fn().mockRejectedValue(new Error('Model changed on another page')) },
     })
 
     typeName('Mine')
 
-    expect(await screen.findByText('Save failed — keep typing to retry')).toBeInTheDocument()
+    expect(await screen.findByText('Save failed: Model changed on another page')).toBeInTheDocument()
     act(() => pushSnapshot({ name: 'My Model' }))
-    expect(nameInput().value).toBe('Mine')
+    await waitFor(() => expect(nameInput().value).toBe('My Model'))
+  })
+
+  it('clears the failure once a later save lands', async () => {
+    const send = vi.fn()
+      .mockRejectedValueOnce(new Error('Model changed on another page'))
+      .mockResolvedValue(undefined)
+    mountModelEditor(definition(), { transport: { send } })
+
+    typeName('Mine')
+    expect(await screen.findByText('Save failed: Model changed on another page')).toBeInTheDocument()
+
+    typeName('Mine again')
+    await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
+    expect(screen.queryByText(/Save failed/)).toBeNull()
   })
 
   it("catches the unmount flush's rejection", async () => {
