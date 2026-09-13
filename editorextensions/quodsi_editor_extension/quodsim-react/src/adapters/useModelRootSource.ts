@@ -128,11 +128,13 @@ export type ModelRootTransport = {
    */
   request?(): string | void
   /**
-   * Persist a shape-scoped patch (e.g. the arrival-pattern editor modal's
-   * GeneratorPatternTab volume slider, or its fork-on-edit linking, both via
-   * accessor.updateShape). Optional -- absent in unit tests that only
-   * exercise the model-root half; when absent, deps.save throws rather than
-   * silently no-opping (see createModelRootSource's own comment).
+   * Persist a shape-scoped patch on a confirmed ELEMENT_UPDATE round trip.
+   * Only shape types that do NOT batch come here: Activity and Generator
+   * edits (including the arrival-pattern modal's volume and fork-on-edit
+   * link) queue into the batch via deps.queueShape since spec 2026-09-13
+   * lucid-shape-writes. Optional -- absent in unit tests that only exercise
+   * the model-root half; when absent, deps.save throws rather than silently
+   * no-opping (see createModelRootSource's own comment).
    */
   saveShape?(shapeId: string, type: string, patch: Record<string, unknown>): Promise<void>
 }
@@ -520,23 +522,19 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
       return () => { listeners.delete(listener) }
     },
 
-    // Forwards to transport.saveShape, which the React hook below wires to
-    // the SAME ELEMENT_UPDATE route (same envelope type, same host handler
-    // ElementOpsHandler.handleElementUpdate, same StorageAdapter merge)
-    // GeneratorEditor's own field edits already use -- see that hook's own
-    // comment. Until Task 10 review round 2 this threw unconditionally
-    // ("wire deps.save to the existing element-update route instead");
-    // GeneratorPatternTab's volume input and fork-linking both call
-    // accessor.updateShape, and both were silently rejecting. Round 3
-    // upgraded the wiring again: saveShape now AWAITS the real
-    // ELEMENT_UPDATE_RESULT confirmation (round 2's version resolved the
-    // instant the message was sent), because a caller that needs to
-    // sequence a shape write before a model-root write -- GeneratorEditor's
-    // PATTERN mode-switch does, see its own comment -- needs deps.save to
-    // mean "durably persisted", not "message dispatched". A transport with
-    // no saveShape wired (e.g. a bare unit test) still fails loudly,
-    // matching updateModel's own "no saveModel dependency configured"
-    // posture -- never a silent no-op.
+    // The confirmed, UN-batched shape write. Since spec 2026-09-13
+    // lucid-shape-writes, LucidModelStateAccessor.updateShape sends Activity
+    // and Generator edits through queueShape below -- GeneratorEditor's
+    // fields and its PATTERN mode switch, and the pattern modal's volume and
+    // fork-linking -- so this path now serves only the shape types that do
+    // not batch. It forwards to transport.saveShape, which the React hook
+    // below wires to the ELEMENT_UPDATE route (ElementOpsHandler.
+    // handleElementUpdate, the StorageAdapter merge) and which AWAITS the
+    // real ELEMENT_UPDATE_RESULT, so a resolved deps.save means "durably
+    // persisted", not "message dispatched". A transport with no saveShape
+    // wired (e.g. a bare unit test) still fails loudly, matching updateModel's
+    // own "no saveModel dependency configured" posture -- never a silent
+    // no-op.
     save: async (shapeId, type, patch) => {
       if (!transport.saveShape) {
         throw new Error(
@@ -783,20 +781,17 @@ export function useModelRootSource(): {
       // -> StorageAdapter.updateElementData, which merges rather than
       // clobbers -- verified in Task 10 review round 2).
       //
-      // On confirmed success, request() a fresh snapshot. This is the fix
-      // for the "split-brain projection" finding (Task 10 review round 3):
-      // ELEMENT_UPDATE never triggers a MODEL_ROOT_SNAPSHOT push on its own
-      // (only MODEL_ROOT_REQUEST and the post-write push after
-      // MODEL_ROOT_UPDATE do), and that post-write push is built by
-      // buildModelRootProjection CONCURRENTLY with an in-flight shape write
-      // -- so a caller that fires both writes in parallel can have the
-      // model-root snapshot land BEFORE the shape write's arrivalPatternId
-      // reaches storage, permanently missing the link. Re-requesting here
-      // only fires once THIS shape write is confirmed durable, so a caller
-      // that awaits saveShape before issuing its own model-root write (see
-      // GeneratorEditor's PATTERN mode-switch handler) is guaranteed a
-      // projection that reflects both halves before making its next
-      // lifecycle decision.
+      // On confirmed success, request() a fresh snapshot: ELEMENT_UPDATE
+      // never triggers a MODEL_ROOT_SNAPSHOT push on its own (only
+      // MODEL_ROOT_REQUEST and the post-write push after MODEL_ROOT_UPDATE
+      // do), so without it the projection would not show a confirmed shape
+      // write until some later model-root write happened to refresh it.
+      // Re-requesting only once THIS write is confirmed durable means the
+      // reply reflects it. (This once guarded GeneratorEditor's PATTERN mode
+      // switch, which awaited saveShape before its model-root write; since
+      // spec 2026-09-13 lucid-shape-writes that switch sends its shape write
+      // and the pattern list through the one batched queue, in order, and no
+      // longer comes here.)
       saveShape(shapeId, type, patch) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {

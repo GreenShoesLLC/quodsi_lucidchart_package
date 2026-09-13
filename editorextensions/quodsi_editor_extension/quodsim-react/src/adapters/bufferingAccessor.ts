@@ -696,12 +696,19 @@ export function createBufferingAccessor(
       }
       if (Object.keys(batch.model).length > 0) {
         await base.updateModel(batch.model)
-        // A batching base (Lucid's model-root source, spec 2026-09-12
-        // lucid-model-root-batching) resolves updateModel once the edit is
-        // accepted. Flushing keeps this batch's success meaning "the host
-        // stored it", which flush() and the close path promise.
-        await base.flushModelImmediate?.()
       }
+      // EVERY batch flushes the base, shape-only batches included. A batching
+      // base (Lucid's model-root source: model edits since spec 2026-09-12
+      // lucid-model-root-batching, Activity/Generator shape edits since spec
+      // 2026-09-13 lucid-shape-writes) resolves updateModel AND updateShape
+      // once the edit is accepted, not stored. Without this flush a shape-only
+      // batch -- the pattern modal's volume -- would "succeed" while still
+      // sitting behind the source's own pause: lost if the modal's realm dies
+      // on close, flush() claiming it written, and a host refusal never
+      // reaching rollback(). Flushing makes success mean "the host stored it"
+      // and sends the edit inside this task. A non-batching base has no
+      // flushModelImmediate; its writes were already confirmed.
+      await base.flushModelImmediate?.()
     } catch (err) {
       rollback()
       throw err
