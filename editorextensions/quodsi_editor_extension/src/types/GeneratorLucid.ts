@@ -87,7 +87,10 @@ interface StoredGeneratorData {
  * too broad (86e2qwvf2, final-review finding 1) in favor of an explicit,
  * opt-in, per-type declaration.
  */
-const GENERATOR_CLEARABLE_KEYS: readonly string[] = ['arrivalPatternId'];
+// arrivalScheduleId and volume (spec 2026-09-13 lucid-shape-writes §1): the
+// shared GeneratorBasicTab clears both on a mode switch, alongside
+// arrivalPatternId, and absence is their value too.
+export const GENERATOR_CLEARABLE_KEYS: readonly string[] = ['arrivalPatternId', 'arrivalScheduleId', 'volume'];
 
 /**
  * Storage keys to delete, given what the writer EXPLICITLY declared cleared.

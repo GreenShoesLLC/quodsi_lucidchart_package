@@ -49,14 +49,15 @@ function newManager(storage: StorageAdapter): ModelManager {
 }
 
 describe('generatorStorageRemoveKeys', () => {
-    it('deletes only what was explicitly declared, and only arrivalPatternId', () => {
+    it('deletes only what was explicitly declared, and only clearable keys', () => {
         // Silence is not a clear -- this is the whole fix.
         expect(generatorStorageRemoveKeys(undefined)).toEqual([]);
         expect(generatorStorageRemoveKeys([])).toEqual([]);
         // A declaration is honoured, but only for keys a Generator may clear.
         expect(generatorStorageRemoveKeys(['arrivalPatternId'])).toEqual(['arrivalPatternId']);
-        expect(generatorStorageRemoveKeys(['volume', 'name'])).toEqual([]);
-        expect(generatorStorageRemoveKeys(['volume', 'arrivalPatternId'])).toEqual(['arrivalPatternId']);
+        expect(generatorStorageRemoveKeys(['volume', 'name'])).toEqual(['volume']);
+        expect(generatorStorageRemoveKeys(['volume', 'arrivalPatternId'])).toEqual(['arrivalPatternId', 'volume']);
+        expect(generatorStorageRemoveKeys(['arrivalScheduleId'])).toEqual(['arrivalScheduleId']);
     });
 });
 
@@ -124,7 +125,7 @@ describe('clearing a generator arrivalPatternId link persists (Task 10 review ro
         expect(after.name).toBe('Renamed');
     });
 
-    it('honours a declaration only for arrivalPatternId, not arbitrary keys', async () => {
+    it('honours a declaration only for clearable keys, not arbitrary ones', async () => {
         const storage = new StorageAdapter();
         const page = makeFakePage('page-1');
         const block = makeFakeBlock('gen-1');
@@ -141,9 +142,8 @@ describe('clearing a generator arrivalPatternId link persists (Task 10 review ro
         );
 
         const after = storedData(storage, block);
-        // volume/name are not in GENERATOR_CLEARABLE_KEYS -- the declaration
-        // names them, but only arrivalPatternId is honoured.
-        expect(after.volume).toBe(1000);
+        // volume is clearable (spec 2026-09-13 lucid-shape-writes §1); name is not.
+        expect('volume' in after).toBe(false);
         expect(after.name).toBe('Arrivals');
         expect(CLEARED_FIELDS_KEY in after).toBe(false);
     });
