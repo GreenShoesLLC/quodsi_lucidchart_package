@@ -25,6 +25,7 @@ import SaveStatusLine from "./SaveStatusLine";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
+import { registerModelRootSource } from "../../adapters/modelRootWrites";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import {
   summarizeArrivalPattern,
@@ -513,9 +514,13 @@ const GeneratorEditor: React.FC<Props> = ({
   );
 
   /**
-   * True while this editor's batched shape edit is pending or in flight.
-   * useAutoSave needs it to flip true -> false after each save (see its
-   * contract); saves no longer pass through Redux elementOpsState.
+   * True while ANYTHING is pending or unconfirmed in the model-root source --
+   * this editor's shape edits, the pattern lifecycle's writes, the source's
+   * own 0.4 s pause. useAutoSave needs it to flip true -> false after each
+   * save (see its contract), and useSaveCompletionDetector clears
+   * hasPendingChanges on that flip. Because it is source-wide, useAutoSave is
+   * told the source queues (queuesWhileSaving) so blur/unmount/pre-send saves
+   * do not wait on it.
    */
   const isSaving = modelRootState.saveStatus === "saving";
 
@@ -645,6 +650,9 @@ const GeneratorEditor: React.FC<Props> = ({
     onSave: handleAutoSave,
     isSaving,
     elementId: localGeneratorDraft.id,
+    // The source merges per key, so the blur, unmount and pre-send saves may
+    // hand it a newer draft while it is `saving` (final review I2).
+    queuesWhileSaving: true,
   });
 
   // Decisive controls: save now AND send the source's pending batch now.
@@ -652,6 +660,27 @@ const GeneratorEditor: React.FC<Props> = ({
     saveNow();
     void accessor.flushModelImmediate?.().catch(() => {});
   }, [saveNow, accessor]);
+
+  // The panel-wide flushes (Run/Validate/JSON/modal opens via
+  // FLUSH_BEFORE_SEND, window blur, pagehide) flush every registered source,
+  // but a draft reaches this editor's source only when the 0.5 s autosave
+  // sends it. Register the draft too: push it (saveNow), then flush the
+  // source and wait for the host (final review I2). After a refused batch
+  // the corrective snapshot refills a clean draft, so this has nothing to
+  // send and cannot loop.
+  const hasPendingChangesRef = useRef(hasPendingChanges);
+  hasPendingChangesRef.current = hasPendingChanges;
+  useEffect(
+    () =>
+      registerModelRootSource({
+        hasPendingWrites: () => hasPendingChangesRef.current,
+        flush: () => {
+          saveNow();
+          return accessor.flushModelImmediate?.() ?? Promise.resolve();
+        },
+      }),
+    [saveNow, accessor]
+  );
 
   // Reset nameError and any stale pattern-lifecycle error when generator
   // changes, and keep currentGeneratorIdRef in sync so the lifecycle

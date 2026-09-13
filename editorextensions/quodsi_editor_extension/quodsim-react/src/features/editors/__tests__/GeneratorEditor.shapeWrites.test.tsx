@@ -252,4 +252,36 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
     expect(updates(posted).some((e) => "arrivalPatterns" in e.data.patch)).toBe(false);
     expect(screen.getByText("Could not save the pattern switch. Try again.")).toBeInTheDocument();
   });
+
+  // Final review I2: the editor's `isSaving` is the source's combined status,
+  // true through the source's own 0.4 s pause after every autosave, and a
+  // blur must still push the newest draft into the source then.
+  it("a blur while the source holds the previous autosave sends the last typed value", async () => {
+    vi.useFakeTimers();
+    const posted = installHost();
+    const generator = makeFrequencyGenerator();
+    renderEditor(generator);
+    pushSnapshot([generator]);
+
+    const name = screen.getByDisplayValue("Arrivals");
+    fireEvent.change(name, { target: { value: "Walk-ins A" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTOSAVE_MS);
+    });
+    fireEvent.change(name, { target: { value: "Walk-ins AB" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+    expect(updates(posted)).toHaveLength(0);
+
+    fireEvent.blur(name);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS);
+    });
+
+    const names = updates(posted).flatMap((e) =>
+      (e.data.shapes ?? []).filter((s: any) => s.shapeId === "g1").map((s: any) => s.patch.name)
+    );
+    expect(names).toEqual(["Walk-ins AB"]);
+  });
 });

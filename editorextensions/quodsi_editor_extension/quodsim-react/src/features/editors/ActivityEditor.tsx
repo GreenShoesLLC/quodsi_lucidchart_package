@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import {
   Settings,
   Plus,
@@ -70,6 +70,7 @@ import {
 import { LUCID_ACTIVITY_TAB_SURFACE, LUCID_ACTIVITY_EXTRA_SURFACES } from "./viewSurfaceMaps";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
+import { registerModelRootSource } from "../../adapters/modelRootWrites";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
@@ -599,9 +600,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   );
 
   /**
-   * True while this editor's batched shape edit is pending or in flight.
-   * useAutoSave needs it to flip true -> false after each save (see its
-   * contract); saves no longer pass through Redux elementOpsState.
+   * True while ANYTHING is pending or unconfirmed in the model-root source --
+   * this editor's shape edits, a capacity picker's schedule write, the
+   * source's own 0.4 s pause. useAutoSave needs it to flip true -> false after
+   * each save (see its contract), and useSaveCompletionDetector clears
+   * hasPendingChanges on that flip. Because it is source-wide, useAutoSave is
+   * told the source queues (queuesWhileSaving) so blur/unmount/pre-send saves
+   * do not wait on it.
    */
   const isSaving = modelRootState.saveStatus === "saving";
 
@@ -703,6 +708,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     onSave: handleAutoSave,
     isSaving,
     elementId: localActivityDraft.id,
+    // The source merges per key, so the blur, unmount and pre-send saves may
+    // hand it a newer draft while it is `saving` (final review I2).
+    queuesWhileSaving: true,
   });
 
   // Decisive controls (no onBlur): save now AND send the source's pending
@@ -711,6 +719,27 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     saveNow();
     void modelRootAccessor.flushModelImmediate?.().catch(() => {});
   }, [saveNow, modelRootAccessor]);
+
+  // The panel-wide flushes (Run/Validate/JSON/modal opens via
+  // FLUSH_BEFORE_SEND, window blur, pagehide) flush every registered source,
+  // but a draft reaches this editor's source only when the 0.5 s autosave
+  // sends it. Register the draft too: push it (saveNow), then flush the
+  // source and wait for the host (final review I2). After a refused batch
+  // the corrective snapshot refills a clean draft, so this has nothing to
+  // send and cannot loop.
+  const hasPendingChangesRef = useRef(hasPendingChanges);
+  hasPendingChangesRef.current = hasPendingChanges;
+  useEffect(
+    () =>
+      registerModelRootSource({
+        hasPendingWrites: () => hasPendingChangesRef.current,
+        flush: () => {
+          saveNow();
+          return modelRootAccessor.flushModelImmediate?.() ?? Promise.resolve();
+        },
+      }),
+    [saveNow, modelRootAccessor]
+  );
   useFlushOnChange(localActivityDraft.financialProperties?.enabled, saveAndFlush);
   useFlushOnChange(localActivityDraft.failureProperties?.enabled, saveAndFlush);
   useFlushOnChange(localActivityDraft.failureProperties?.failureClockMode, saveAndFlush);
