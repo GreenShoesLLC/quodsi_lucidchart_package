@@ -24,6 +24,38 @@ vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
+// The editor now saves through the model-root source's batched shape queue
+// (spec 2026-09-13 lucid-shape-writes §3), not a plain onSave prop. This fake
+// source stands in for useModelRootSource so the two writing tests below can
+// assert on the patch handed to accessor.updateShape. `projection: null`
+// keeps the editor drafting from the test's own selection fixture.
+const { modelRoot } = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const snapshot = { modelDefinition: { activities: [], generators: [], workSchedules: [] }, saveStatus: "idle", saveError: null };
+  return {
+    modelRoot: {
+      accessor: {
+        subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+        getSnapshot: () => snapshot,
+        updateShape: vi.fn(async (_id: string, _type: string, _patch: Record<string, unknown>) => {}),
+        updateModel: vi.fn(async () => {}),
+        flushModelImmediate: vi.fn(async () => {}),
+      },
+      projection: null,
+      request: () => {},
+    },
+  };
+});
+
+vi.mock("../../../adapters/useModelRootSource", () => ({
+  useModelRootSource: () => modelRoot,
+  MODEL_ROOT_DEBOUNCE_MS: 400,
+}));
+
+beforeEach(() => {
+  modelRoot.accessor.updateShape.mockClear();
+});
+
 vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
@@ -62,7 +94,7 @@ describe('ActivityEditor — shared RequirementField', () => {
   // concurrently), unrelated to the assertions themselves.
   it('renders a picker (not a <select>) for Delay, Seize and Release, with the Studio labels', async () => {
     const user = userEvent.setup()
-    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} states={new StateListManager()} referenceData={referenceData} />)
     // Tabs are plain buttons (title-derived accessible name), not role="tab".
     await user.click(screen.getByRole('button', { name: /actions/i }))
     // Each SortableActionItem expand toggle is a button titled "Expand"/"Collapse".
@@ -102,38 +134,36 @@ describe('ActivityEditor — shared RequirementField', () => {
 
   it('picking a requirement writes it into the saved action', async () => {
     const user = userEvent.setup()
-    const onSave = vi.fn()
-    render(<ActivityEditor activity={activity} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /actions/i }))
     await expandAllActions(user)
     // navigate to the first action's picker as above
     await user.click(screen.getAllByRole('button', { name: /^resource requirement$/i })[0])
     await user.click(screen.getByRole('option', { name: /Triage team/ }))
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    const saved = onSave.mock.calls.at(-1)![0]
-    expect(saved.actions[0].resourceRequirementId).toBe('req-1')
+    await waitFor(() => expect(modelRoot.accessor.updateShape).toHaveBeenCalled())
+    const patch = modelRoot.accessor.updateShape.mock.calls.at(-1)![2] as any
+    expect(patch.actions[0].resourceRequirementId).toBe('req-1')
   })
 
   it('choosing the empty row on Release saves resourceRequirementId: undefined', async () => {
     const user = userEvent.setup()
-    const onSave = vi.fn()
     const activityWithReleaseRequirement = {
       ...activity,
       actions: [{ id: 'a3', type: 'release', resourceRequirementId: 'req-1' }],
     } as any
-    render(<ActivityEditor activity={activityWithReleaseRequirement} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activityWithReleaseRequirement} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /actions/i }))
     await expandAllActions(user)
     await user.click(screen.getByRole('button', { name: /^resource requirement$/i }))
     await user.click(screen.getByRole('option', { name: /\(release all\)/ }))
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    const saved = onSave.mock.calls.at(-1)![0]
-    expect(saved.actions[0].resourceRequirementId).toBeUndefined()
+    await waitFor(() => expect(modelRoot.accessor.updateShape).toHaveBeenCalled())
+    const patch = modelRoot.accessor.updateShape.mock.calls.at(-1)![2] as any
+    expect(patch.actions[0].resourceRequirementId).toBeUndefined()
   })
 
   it('Failure tab renders the repair picker with "(none — no resource needed)"', async () => {
     const user = userEvent.setup()
-    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /failure/i }))
     // Repair field is gated behind the "Enable Failure Simulation" checkbox.
     await user.click(screen.getByRole('checkbox', { name: /enable failure simulation/i }))
@@ -143,18 +173,17 @@ describe('ActivityEditor — shared RequirementField', () => {
 
   it('choosing the empty row on the Failure tab saves repairResourceRequirementId: ""', async () => {
     const user = userEvent.setup()
-    const onSave = vi.fn()
     const activityWithRepair = {
       ...activity,
       failureProperties: { enabled: true, repairResourceRequirementId: 'req-1' },
     } as any
-    render(<ActivityEditor activity={activityWithRepair} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activityWithRepair} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /failure/i }))
     await user.click(screen.getByRole('button', { name: /repair resource requirement/i }))
     await user.click(screen.getByRole('option', { name: /\(none — no resource needed\)/ }))
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    const saved = onSave.mock.calls.at(-1)![0]
-    expect(saved.failureProperties.repairResourceRequirementId).toBe("")
+    await waitFor(() => expect(modelRoot.accessor.updateShape).toHaveBeenCalled())
+    const patch = modelRoot.accessor.updateShape.mock.calls.at(-1)![2] as any
+    expect(patch.failureProperties.repairResourceRequirementId).toBe("")
   })
 
   it('shows the resolved requirement name in the collapsed summary row (not "Unknown")', async () => {
@@ -165,7 +194,7 @@ describe('ActivityEditor — shared RequirementField', () => {
         { id: 'a2', type: 'seize', resourceRequirementId: 'req-1' },
       ],
     } as any
-    render(<ActivityEditor activity={activityWithRequirement} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activityWithRequirement} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: /actions/i }))
     // Collapsed (never expanded) — the summary row still resolves the name.
     expect(screen.getByText('Triage team')).toBeInTheDocument()

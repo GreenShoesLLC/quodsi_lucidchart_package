@@ -26,6 +26,38 @@ vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
+// The editor now saves through the model-root source's batched shape queue
+// (spec 2026-09-13 lucid-shape-writes §3), not a plain onSave prop. This fake
+// source stands in for useModelRootSource so the second test below can
+// assert on the patch handed to accessor.updateShape. `projection: null`
+// keeps the editor drafting from the test's own selection fixture.
+const { modelRoot } = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const snapshot = { modelDefinition: { activities: [], generators: [], workSchedules: [] }, saveStatus: "idle", saveError: null };
+  return {
+    modelRoot: {
+      accessor: {
+        subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+        getSnapshot: () => snapshot,
+        updateShape: vi.fn(async (_id: string, _type: string, _patch: Record<string, unknown>) => {}),
+        updateModel: vi.fn(async () => {}),
+        flushModelImmediate: vi.fn(async () => {}),
+      },
+      projection: null,
+      request: () => {},
+    },
+  };
+});
+
+vi.mock("../../../adapters/useModelRootSource", () => ({
+  useModelRootSource: () => modelRoot,
+  MODEL_ROOT_DEBOUNCE_MS: 400,
+}));
+
+beforeEach(() => {
+  modelRoot.accessor.updateShape.mockClear();
+});
+
 vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
@@ -63,20 +95,20 @@ const ROUTING_TAB_NAME = /configure how entities are routed/i
 describe('ActivityEditor — Routing Configuration tab renders the shared ConnectorRoutingView', () => {
   it('Routing Configuration tab renders the shared view with four modes', async () => {
     const user = userEvent.setup()
-    render(<ActivityEditor activity={activity} onSave={vi.fn()} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: ROUTING_TAB_NAME }))
     const select = screen.getByRole('combobox') // the view's mode select -- only one <select> renders in Probability mode
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['Probability', 'State Condition', 'Entity Template', 'First Available'])
     expect(screen.getByTestId('connector-routing-card-c1')).toBeInTheDocument()
   })
 
-  it('choosing First Available flows through the editor draft to onSave', async () => {
+  it('choosing First Available flows through the editor draft to the model-root shape write', async () => {
     const user = userEvent.setup()
-    const onSave = vi.fn()
-    render(<ActivityEditor activity={activity} onSave={onSave} states={new StateListManager()} referenceData={referenceData} />)
+    render(<ActivityEditor activity={activity} states={new StateListManager()} referenceData={referenceData} />)
     await user.click(screen.getByRole('button', { name: ROUTING_TAB_NAME }))
     await user.selectOptions(screen.getByRole('combobox'), 'first_available')
-    await waitFor(() => expect(onSave).toHaveBeenCalled())
-    expect(onSave.mock.calls.at(-1)![0].routing).toBe('first_available')
+    await waitFor(() => expect(modelRoot.accessor.updateShape).toHaveBeenCalled())
+    const patch = modelRoot.accessor.updateShape.mock.calls.at(-1)![2] as any
+    expect(patch.routing).toBe('first_available')
   })
 })

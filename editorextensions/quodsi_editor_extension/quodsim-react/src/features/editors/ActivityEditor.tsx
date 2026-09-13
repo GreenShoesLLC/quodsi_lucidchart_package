@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import {
   Settings,
   Plus,
@@ -50,7 +50,6 @@ import {
   ResourceRequirement,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
-  declareClearedFields,
   EnvelopeMessageType,
   type ScenarioLever,
   type QueueRanking,
@@ -74,7 +73,6 @@ import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
-import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
 
@@ -379,6 +377,27 @@ export const updateActivityImmutably = (
   return updated;
 };
 
+/**
+ * The fields this editor owns, as one shape patch for the model-root source
+ * (spec 2026-09-13 lucid-shape-writes §3). `queueRanking` and `workScheduleId`
+ * are ALWAYS present: `undefined` means the modeller cleared them, and the
+ * source sends that as a cleared field. This editor is the only surface that
+ * renders those two controls, so it is the only one entitled to clear them.
+ */
+export const activityShapePatch = (draft: Activity): Record<string, unknown> => ({
+  name: draft.name,
+  capacity: draft.capacity,
+  inboundCapacity: draft.inboundCapacity,
+  outboundCapacity: draft.outboundCapacity,
+  actions: draft.actions,
+  routing: draft.routing,
+  financialProperties: draft.financialProperties,
+  failureProperties: draft.failureProperties,
+  levers: draft.levers,
+  queueRanking: draft.queueRanking,
+  workScheduleId: draft.workScheduleId,
+});
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -394,8 +413,6 @@ type ActivityInput = Activity | { data: Partial<Activity> } | Partial<Activity>;
 interface ActivityEditorProps {
   /** The activity to edit (can be Activity instance or raw data object) */
   activity: ActivityInput;
-  /** Callback when user clicks Save - receives the updated Activity */
-  onSave: (activity: Activity) => void;
   /** Reference data for dropdowns (resources, requirements, etc.) */
   referenceData?: EditorReferenceData;
   /** State manager for model-level states */
@@ -458,7 +475,6 @@ type ActivityTab =
  */
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
-  onSave,
   referenceData,
   states,
   outgoingConnectors = [],
@@ -486,9 +502,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  // Get element operations state from Redux
-  const elementOpsState = useElementOpsState();
 
   // ============================================================================
   // HELPER FUNCTIONS
@@ -561,7 +574,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // and creates through it. GeneratorEditor calls this same hook from a shape
   // editor for the same reason; the cost is one MODEL_ROOT_REQUEST per
   // activity selection.
-  const { accessor: modelRootAccessor } = useModelRootSource();
+  const { accessor: modelRootAccessor, projection: modelRootProjection } = useModelRootSource();
+  // Save status of the batched source this editor now saves through (spec
+  // 2026-09-13 lucid-shape-writes §3): `saving` while its shape edit is
+  // pending or in flight, then `saved` or `failed` with the host's reason.
+  const modelRootState = useSyncExternalStore(modelRootAccessor.subscribe, modelRootAccessor.getSnapshot);
   const { sendMessage } = useMessaging();
   // OPEN_SETTINGS_MODAL sender for ViewTell's switch affordance below.
   const { openSettingsModal } = useSimulationRunSender();
@@ -582,24 +599,26 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   );
 
   /**
-   * Redux-managed state for save operation tracking.
-   *
-   * isSaving: true when save is in progress (shows loading state)
-   *
-   * Managed by Redux elementOpsState to coordinate saves across
-   * multiple editor instances.
+   * True while this editor's batched shape edit is pending or in flight.
+   * useAutoSave needs it to flip true -> false after each save (see its
+   * contract); saves no longer pass through Redux elementOpsState.
    */
-  const isSaving = localActivityDraft.id
-    ? elementOpsState.isSaving(localActivityDraft.id)
-    : false;
+  const isSaving = modelRootState.saveStatus === "saving";
 
-  // Custom hooks for state synchronization
+  const activityId = (activity as any).id || (activity as any).data?.id || "";
+  // Refill from the snapshot's full record once one has arrived (spec
+  // 2026-09-13 lucid-shape-writes §3), falling back to the selection's copy
+  // until then. Keyed on snapshotSeq so only a real snapshot refills (an
+  // optimistic echo keeps the same seq); useFormSync never refills a draft
+  // with unsaved changes.
+  const snapshotRecord = modelRootProjection?.activities?.find((a) => a.id === activityId);
   useFormSync(
-    (activity as any).id || (activity as any).data?.id || "",
+    activityId,
     hasPendingChanges,
-    () => extractActivityData(activity),
+    () => extractActivityData(snapshotRecord ?? activity),
     setLocalActivityDraft,
-    setHasPendingChanges
+    setHasPendingChanges,
+    modelRootProjection?.snapshotSeq
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
@@ -663,34 +682,18 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // ============================================================================
 
   /**
-   * This editor is the only surface that renders the Queue Ranking control, so
-   * it is the only one entitled to say "the modeller cleared the ranking".
-   *
-   * It has to SAY it. A cleared ranking is `queueRanking: undefined`, and JSON
-   * transport drops undefined-valued keys, so the extension receives a payload
-   * with no queueRanking key — identical to what ConnectorsEditor sends, which
-   * never mentions the field at all. The extension therefore deletes a stored
-   * ranking only on an explicit declaration; without this, clearing to FIFO
-   * would silently fail to persist.
+   * Autosave through the model-root source as one batched shape edit (spec
+   * 2026-09-13 lucid-shape-writes §3). The source shows the change at once
+   * and reports progress through modelRootState; a refusal before any
+   * snapshot has arrived is recorded there too, so nothing to handle here.
    */
   const handleAutoSave = useCallback(
-    (draft: Activity) =>
-      onSave(
-        declareClearedFields(draft, [
-          ...(draft.queueRanking ? [] : ["queueRanking"]),
-          // Same argument, second field (Task D3). The capacity picker below
-          // is the only surface that links or unlinks an activity's work
-          // schedule, so it is the only one entitled to say the link was
-          // removed -- and it has to SAY it: JSON transport drops the
-          // undefined-valued key and StorageAdapter strips it again before
-          // merging, so silence is indistinguishable from a partial payload
-          // that never mentioned the field. `workScheduleId` is in
-          // ACTIVITY_CLEARABLE_KEYS (src/types/ActivityLucid.ts), which is
-          // what makes the declaration actionable on the host side.
-          ...(draft.workScheduleId ? [] : ["workScheduleId"]),
-        ])
-      ),
-    [onSave]
+    (draft: Activity) => {
+      void modelRootAccessor
+        .updateShape(draft.id, "Activity", activityShapePatch(draft))
+        .catch(() => {});
+    },
+    [modelRootAccessor]
   );
 
   const { status, lastSavedAt, saveNow } = useAutoSave<Activity>({
@@ -702,16 +705,19 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     elementId: localActivityDraft.id,
   });
 
-  // Decisive controls (no onBlur): flush save on change.
-  useFlushOnChange(localActivityDraft.financialProperties?.enabled, saveNow);
-  useFlushOnChange(localActivityDraft.failureProperties?.enabled, saveNow);
-  useFlushOnChange(localActivityDraft.failureProperties?.failureClockMode, saveNow);
-  useFlushOnChange(localActivityDraft.failureProperties?.repairResourceRequirementId, saveNow);
-  useFlushOnChange(localActivityDraft.routing, saveNow);
-  // Decisive control: the capacity source is a radio, not a typed field, so
-  // there is no blur to flush on and a 500ms debounce would let a link (or a
-  // clear) sit unsaved while the author moves on.
-  useFlushOnChange(localActivityDraft.workScheduleId, saveNow);
+  // Decisive controls (no onBlur): save now AND send the source's pending
+  // batch now, so the change does not wait for the source's own pause.
+  const saveAndFlush = useCallback(() => {
+    saveNow();
+    void modelRootAccessor.flushModelImmediate?.().catch(() => {});
+  }, [saveNow, modelRootAccessor]);
+  useFlushOnChange(localActivityDraft.financialProperties?.enabled, saveAndFlush);
+  useFlushOnChange(localActivityDraft.failureProperties?.enabled, saveAndFlush);
+  useFlushOnChange(localActivityDraft.failureProperties?.failureClockMode, saveAndFlush);
+  useFlushOnChange(localActivityDraft.failureProperties?.repairResourceRequirementId, saveAndFlush);
+  useFlushOnChange(localActivityDraft.routing, saveAndFlush);
+  // The capacity source is a radio, not a typed field: no blur to flush on.
+  useFlushOnChange(localActivityDraft.workScheduleId, saveAndFlush);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -1186,9 +1192,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           prev,
                           // The key is ALWAYS present, `undefined` when
                           // cleared -- updateActivityImmutably reads it by
-                          // key presence, and handleAutoSave turns a missing
-                          // link into the CLEARED_FIELDS_KEY declaration the
-                          // extension needs.
+                          // key presence, and activityShapePatch always
+                          // carries the key, so an `undefined` link goes out
+                          // as a cleared field.
                           nominal === undefined
                             ? { workScheduleId: id }
                             : { workScheduleId: id, capacity: nominal }
@@ -1717,7 +1723,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               </div>
             )}
             {/* Auto-save status (validation banners above provide details on what to fix) */}
-            <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
+            <SaveStatusLine
+              status={modelRootState.saveStatus === "failed" ? "error" : status}
+              lastSavedAt={lastSavedAt}
+              message={modelRootState.saveError}
+            />
           </div>
       </div>
     </RequirementFieldContext.Provider>

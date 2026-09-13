@@ -56,7 +56,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 const LEVERS_TAB_NAME = /mark .* as a scenario lever/i;
 
 const activityProps = {
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
 };

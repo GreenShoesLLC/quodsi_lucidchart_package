@@ -64,7 +64,6 @@ function setView(view: "basic" | "intermediate" | "advanced") {
 }
 
 const activityProps = {
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
   activity: { id: "a1", name: "Triage", capacity: 1, actions: [], levers: [] } as any,

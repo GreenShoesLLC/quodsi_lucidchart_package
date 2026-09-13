@@ -10,10 +10,6 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   }),
 }));
 
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
-}));
-
 vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
@@ -28,7 +24,6 @@ vi.mock("../SaveStatusLine", () => ({
 
 const baseProps = {
   activity: { id: "a1", name: "Triage", capacity: 1, actions: [], levers: [] } as any,
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
 };

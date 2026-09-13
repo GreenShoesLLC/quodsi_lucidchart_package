@@ -11,22 +11,19 @@
 //
 // FOUR THINGS ARE LOAD-BEARING HERE, and each has a test below:
 //
-//  1. LINK writes into the DRAFT, not through accessor.updateShape. This
-//     editor is draft + autosave; a shape write behind its back would be
+//  1. LINK writes into the DRAFT, not directly through accessor.updateShape.
+//     This editor is draft + autosave; a shape write behind its back would be
 //     clobbered by the next autosave of a draft that never learned about it.
 //     The seeded nominal capacity (CapacitySourcePicker's own header: a
 //     nominal of 1 against a schedule staffing 3 reports 300% utilization)
 //     rides on the SAME draft update.
 //
-//  2. CLEAR must SAY it was cleared. `workScheduleId: undefined` reaches the
-//     extension as a key with no value, and StorageAdapter.updateElementData
-//     strips undefined-valued keys before merging (so a partial update cannot
-//     clobber stored width/height) -- so a clear that only nulls the field is
-//     indistinguishable from a payload that never mentioned it, and the stored
-//     link survives. The payload therefore names the field in
-//     CLEARED_FIELDS_KEY, exactly as queueRanking already does
-//     (ActivityEditor.queueRanking.test.tsx). See overTheWire() below for what
-//     the transport really does to this payload, and what would break it.
+//  2. CLEAR must SAY it was cleared. Since Task 4 (spec 2026-09-13
+//     lucid-shape-writes §3) the editor saves through the model-root
+//     source's batched shape queue: a `workScheduleId: undefined` key in the
+//     patch handed to accessor.updateShape travels on MODEL_ROOT_UPDATE as
+//     `data.shapes[n].clearedFields`, not a value the extension would have
+//     to distinguish from "never mentioned".
 //
 //  3. NEW SCHEDULE is a MODEL-ROOT write (`updateModel({ workSchedules })`
 //     -> MODEL_ROOT_UPDATE), never a shape write: a work schedule is a
@@ -37,13 +34,14 @@
 //     inside the 300px right-dock panel. That is the `onEdit` seam added to
 //     CapacitySourcePicker in the monorepo half of this task.
 //
-// Harness: mirrors GeneratorEditor.pattern/schedule.test.tsx -- the model-root
-// projection arrives by dispatching a real MODEL_ROOT_SNAPSHOT message, and
-// outgoing envelopes are observed by spying on window.parent.postMessage
-// rather than by module-mocking useModelRootSource, so the hook's own
-// plumbing runs for real. Like ActivityEditor.queueRanking.test.tsx this file
-// does NOT stub "../hooks/useEditorState": the real useAutoSave is what
-// invokes the onSave prop these assertions read.
+// Harness: the model-root projection arrives by dispatching a real
+// MODEL_ROOT_SNAPSHOT message, and outgoing envelopes are observed through a
+// fake host installed over window.parent.postMessage, so the real
+// useModelRootSource plumbing runs (mirrors GeneratorEditor.pattern.test.tsx's
+// fake host, migrated for the same spec). Like
+// ActivityEditor.queueRanking.test.tsx this file does NOT stub
+// "../hooks/useEditorState": the real useAutoSave is what drives the writes
+// these assertions read off the wire.
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -52,7 +50,7 @@ import ActivityEditor, {
   extractActivityData,
   updateActivityImmutably,
 } from "../ActivityEditor";
-import { CLEARED_FIELDS_KEY, EnvelopeMessageType } from "@quodsi/lucid-shared";
+import { EnvelopeMessageType } from "@quodsi/lucid-shared";
 import { setView } from "quodsi_studio/platforms/shared";
 
 const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }));
@@ -106,7 +104,17 @@ const unlinked = {
 
 const linked = { ...unlinked, capacity: 3, workScheduleId: "ws-nt" } as any;
 
-function projectionWith(workSchedules: any[]) {
+// The stored record for whichever activity is under test -- Task 4 refills
+// the draft from this row on every accepted snapshot (spec 2026-09-13
+// lucid-shape-writes §3), so it must reflect the SAME fields the rendered
+// `activity` prop carries. A sparse row that omits a field the real activity
+// actually has (e.g. a "linked" fixture whose snapshot row forgets
+// workScheduleId) would clobber the draft the instant the snapshot lands --
+// exactly what a real host's full-record snapshot (Task 1) never does.
+const UNLINKED_ROW = { id: "act-1", name: "Triage", capacity: 1, actions: [] };
+const LINKED_ROW = { id: "act-1", name: "Triage", capacity: 3, workScheduleId: "ws-nt", actions: [] };
+
+function projectionWith(workSchedules: any[], activities: any[] = [UNLINKED_ROW]) {
   return {
     generators: [],
     arrivalPatterns: [],
@@ -115,7 +123,7 @@ function projectionWith(workSchedules: any[]) {
     states: [],
     resources: [],
     resourceRequirements: [],
-    activities: [{ id: "act-1", name: "Triage" }],
+    activities,
     workSchedules,
     model: {},
   };
@@ -123,12 +131,12 @@ function projectionWith(workSchedules: any[]) {
 
 /** The host pushing MODEL_ROOT_SNAPSHOT, in reply to the request
  *  useModelRootSource fires on mount. */
-function dispatchSnapshot(projection: Record<string, unknown>) {
+function dispatchSnapshot(projection: Record<string, unknown>, id = "snapshot-push") {
   act(() => {
     window.dispatchEvent(
       new MessageEvent("message", {
         data: {
-          id: "snapshot-push",
+          id,
           type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
           source: "host",
           target: "model-iframe",
@@ -141,33 +149,58 @@ function dispatchSnapshot(projection: Record<string, unknown>) {
 }
 
 /**
- * What this panel actually puts on the wire, modelled faithfully: the
- * ELEMENT_UPDATE sender spreads the draft into a plain object
- * (`{ ...data, id: elementId }` -- modelOpsSender.ts) and postMessage
- * structured-clones it. The spread is what carries the declaration across; the
- * class prototype does NOT survive it.
- *
- * Deliberately NOT JSON.stringify: `Activity.toJSON()` is a sparse whitelist
- * with no slot for CLEARED_FIELDS_KEY, so a JSON-serializing transport would
- * silently strip the declaration and every clear in this editor -- queueRanking
- * included -- would stop persisting. If the sender is ever changed to
- * JSON-encode its payload, this helper is where that regression should be
- * caught.
- *
- * `workScheduleId: undefined` DOES survive a structured clone as a key with an
- * undefined value -- which is exactly why the declaration is still required:
- * StorageAdapter.updateElementData strips undefined-valued keys before merging
- * (so a partial update cannot clobber stored width/height), leaving the stored
- * link untouched. The storage end of that is pinned by
- * tests/model/activityLucid.workScheduleIdClear.test.ts.
+ * A minimal fake host: tracks workSchedules + the Activity's own record and
+ * answers MODEL_ROOT_UPDATE the way the real extension does
+ * (modelRootHandler.ts) -- applying the model patch and any Activity shape
+ * edits (spec 2026-09-13 lucid-shape-writes §2) before replying with success
+ * and pushing a snapshot tagged with the write's own envelope id. Register
+ * before render() so the initial MODEL_ROOT_REQUEST on mount is captured too
+ * (harmless: this fake only reacts to MODEL_ROOT_UPDATE).
  */
-function overTheWire(draft: any): any {
-  return structuredClone({ ...draft, id: draft.id });
+function installHost(initialActivity: Record<string, unknown> = UNLINKED_ROW) {
+  const posted: any[] = [];
+  let workSchedules: any[] = [];
+  let activityRow: Record<string, unknown> = { ...initialActivity };
+
+  vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
+    posted.push(envelope);
+    if (envelope?.type !== EnvelopeMessageType.MODEL_ROOT_UPDATE) return;
+
+    const patch = envelope.data?.patch ?? {};
+    if (patch.workSchedules) workSchedules = patch.workSchedules;
+    for (const shape of envelope.data?.shapes ?? []) {
+      if (shape.type !== "Activity" || shape.shapeId !== activityRow.id) continue;
+      const merged: Record<string, unknown> = { ...activityRow, ...shape.patch };
+      for (const key of shape.clearedFields ?? []) delete merged[key];
+      activityRow = merged;
+    }
+
+    window.dispatchEvent(new MessageEvent("message", {
+      data: {
+        id: envelope.id,
+        type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
+        data: { success: true },
+      },
+    }));
+    dispatchSnapshot(projectionWith(workSchedules, [activityRow]), envelope.id);
+  });
+
+  return posted;
 }
 
-async function lastSave(onSave: ReturnType<typeof vi.fn>) {
-  await waitFor(() => expect(onSave).toHaveBeenCalled());
-  return onSave.mock.calls.at(-1)![0];
+function modelRootUpdates(posted: any[]) {
+  return posted.filter((e) => e?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE);
+}
+
+function activityShapeWrites(posted: any[]) {
+  return modelRootUpdates(posted).flatMap((e) => e.data?.shapes ?? []).filter((s: any) => s.shapeId === "act-1");
+}
+
+/** The last shape write this Activity sent, waiting for one to appear. */
+async function lastActivityShapeWrite(posted: any[]) {
+  await waitFor(() => expect(activityShapeWrites(posted).length).toBeGreaterThan(0));
+  const writes = activityShapeWrites(posted);
+  return writes[writes.length - 1];
 }
 
 // This file predates Complexity Views and exercises CapacitySourcePicker's
@@ -187,7 +220,8 @@ afterEach(() => {
 
 describe("ActivityEditor — capacity source picker", () => {
   it("renders the two capacity sources in place of the bare capacity input", () => {
-    render(<ActivityEditor activity={unlinked} onSave={vi.fn()} {...baseProps} />);
+    installHost();
+    render(<ActivityEditor activity={unlinked} {...baseProps} />);
     dispatchSnapshot(projectionWith([NT]));
 
     expect(screen.getByLabelText("Fixed capacity")).toBeChecked();
@@ -196,87 +230,79 @@ describe("ActivityEditor — capacity source picker", () => {
   });
 
   it("links the schedule into the DRAFT and seeds the nominal capacity", async () => {
-    const onSave = vi.fn();
-    render(<ActivityEditor activity={unlinked} onSave={onSave} {...baseProps} />);
+    const posted = installHost();
+    render(<ActivityEditor activity={unlinked} {...baseProps} />);
     dispatchSnapshot(projectionWith([NT]));
 
     fireEvent.click(screen.getByLabelText("Follow a schedule"));
 
-    const saved = await lastSave(onSave);
-    expect(saved.workScheduleId).toBe("ws-nt");
+    const shapeWrite = await lastActivityShapeWrite(posted);
+    expect(shapeWrite.patch.workScheduleId).toBe("ws-nt");
     // NT staffs 3, the activity stored 1 -- the raise rides on the same patch.
-    expect(saved.capacity).toBe(3);
+    expect(shapeWrite.patch.capacity).toBe(3);
     expect(screen.getByTestId("work-schedule-select")).toHaveValue("ws-nt");
   });
 
   it("declares workScheduleId cleared when the author switches back to Fixed", async () => {
-    const onSave = vi.fn();
-    render(<ActivityEditor activity={linked} onSave={onSave} {...baseProps} />);
-    dispatchSnapshot(projectionWith([NT]));
+    const posted = installHost(LINKED_ROW);
+    render(<ActivityEditor activity={linked} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT], [LINKED_ROW]));
 
     fireEvent.click(screen.getByLabelText("Fixed capacity"));
 
-    const saved = await lastSave(onSave);
-    expect(saved[CLEARED_FIELDS_KEY]).toContain("workScheduleId");
+    const shapeWrite = await lastActivityShapeWrite(posted);
+    expect(shapeWrite.clearedFields).toContain("workScheduleId");
     // The declaration is the only thing that survives as EVIDENCE: the link
-    // itself reaches the extension as an undefined-valued key, which
-    // StorageAdapter strips before merging, so without the declaration the
-    // stored link would simply stay put.
-    const wire = overTheWire(saved);
-    expect(wire.workScheduleId).toBeUndefined();
-    expect(wire[CLEARED_FIELDS_KEY]).toContain("workScheduleId");
+    // itself reaches the wire as an undefined-valued key, folded into
+    // clearedFields rather than `patch` -- see toWireShapes in
+    // useModelRootSource.ts.
+    expect(shapeWrite.patch.workScheduleId).toBeUndefined();
   });
 
   it("declares nothing about workScheduleId while a schedule is linked", async () => {
-    const onSave = vi.fn();
-    render(<ActivityEditor activity={linked} onSave={onSave} {...baseProps} />);
-    dispatchSnapshot(projectionWith([NT]));
+    const posted = installHost(LINKED_ROW);
+    render(<ActivityEditor activity={linked} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT], [LINKED_ROW]));
 
     // An unrelated edit, flushed the way the queueRanking test flushes one.
     const nameInput = screen.getByDisplayValue("Triage");
     fireEvent.change(nameInput, { target: { value: "Triage 2" } });
     fireEvent.blur(nameInput);
 
-    const saved = await lastSave(onSave);
-    expect(saved.workScheduleId).toBe("ws-nt");
-    expect(saved[CLEARED_FIELDS_KEY] ?? []).not.toContain("workScheduleId");
+    const shapeWrite = await lastActivityShapeWrite(posted);
+    expect(shapeWrite.patch.workScheduleId).toBe("ws-nt");
+    expect(shapeWrite.clearedFields).not.toContain("workScheduleId");
   });
 
   it("'New schedule' creates through the MODEL-ROOT route and links the new id", async () => {
-    const onSave = vi.fn();
-    const postMessageSpy = vi
-      .spyOn(window.parent, "postMessage")
-      .mockImplementation(() => {});
-    render(<ActivityEditor activity={linked} onSave={onSave} {...baseProps} />);
-    dispatchSnapshot(projectionWith([NT]));
+    const posted = installHost(LINKED_ROW);
+    render(<ActivityEditor activity={linked} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT], [LINKED_ROW]));
 
     fireEvent.click(screen.getByRole("button", { name: "New schedule" }));
 
-    const sent = () => postMessageSpy.mock.calls.map(([envelope]: any[]) => envelope);
-    const modelRootUpdates = () =>
-      sent().filter((e: any) => e?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE);
-    // Batched (spec 2026-09-12 lucid-model-root-batching): the create goes out after the debounce.
-    await waitFor(() => expect(modelRootUpdates()).toHaveLength(1));
-    const patch = modelRootUpdates()[0].data.patch;
+    await waitFor(() => {
+      expect(modelRootUpdates(posted).some((e) => e.data?.patch?.workSchedules)).toBe(true);
+    });
+    const withModelPatch = modelRootUpdates(posted).find((e) => e.data?.patch?.workSchedules);
+    const patch = withModelPatch.data.patch;
     // Appended to the model-level list, never replacing it, and never nested
     // under a `model` key.
     expect(Object.keys(patch)).toEqual(["workSchedules"]);
     expect(patch.workSchedules).toHaveLength(2);
     const newId = patch.workSchedules[1].id;
     expect(newId).not.toBe("ws-nt");
-    // No ELEMENT_UPDATE: the link lives in the draft until autosave.
-    expect(
-      sent().filter((e: any) => e?.type === EnvelopeMessageType.ELEMENT_UPDATE)
-    ).toHaveLength(0);
+    // No ELEMENT_UPDATE: the shape link travels as `shapes` on the batched write.
+    expect(posted.filter((e) => e?.type === EnvelopeMessageType.ELEMENT_UPDATE)).toHaveLength(0);
 
-    const saved = await lastSave(onSave);
-    expect(saved.workScheduleId).toBe(newId);
+    const shapeWrite = await lastActivityShapeWrite(posted);
+    expect(shapeWrite.patch.workScheduleId).toBe(newId);
   });
 
   it("'New schedule' opens the new schedule in the host modal, not an in-panel one", () => {
-    vi.spyOn(window.parent, "postMessage").mockImplementation(() => {});
-    render(<ActivityEditor activity={linked} onSave={vi.fn()} {...baseProps} />);
-    dispatchSnapshot(projectionWith([NT]));
+    installHost(LINKED_ROW);
+    render(<ActivityEditor activity={linked} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT], [LINKED_ROW]));
 
     fireEvent.click(screen.getByRole("button", { name: "New schedule" }));
 
@@ -288,8 +314,9 @@ describe("ActivityEditor — capacity source picker", () => {
   });
 
   it("'Edit schedule' opens the linked schedule over OPEN_WORK_SCHEDULE_MODAL", () => {
-    render(<ActivityEditor activity={linked} onSave={vi.fn()} {...baseProps} />);
-    dispatchSnapshot(projectionWith([NT]));
+    installHost(LINKED_ROW);
+    render(<ActivityEditor activity={linked} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT], [LINKED_ROW]));
 
     fireEvent.click(screen.getByRole("button", { name: "Edit schedule" }));
 
@@ -338,8 +365,9 @@ describe("ActivityEditor draft helpers — workScheduleId", () => {
 describe("ActivityEditor Basic — capacity-schedule tell", () => {
   it("names the capacity-schedule concept when a Basic activity follows a work schedule", () => {
     setView("basic");
-    render(<ActivityEditor activity={linked} onSave={vi.fn()} {...baseProps} />);
-    dispatchSnapshot(projectionWith([NT]));
+    installHost(LINKED_ROW);
+    render(<ActivityEditor activity={linked} {...baseProps} />);
+    dispatchSnapshot(projectionWith([NT], [LINKED_ROW]));
 
     const tell = screen.getByRole("note");
     expect(tell).toHaveTextContent(/capacity schedule/i);
