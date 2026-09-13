@@ -42,15 +42,29 @@
 // ActivityEditor.queueRanking.test.tsx this file does NOT stub
 // "../hooks/useEditorState": the real useAutoSave is what drives the writes
 // these assertions read off the wire.
+//
+// FAKE TIMERS, for the same reason as ActivityEditor.shapeWrites.test.tsx: a
+// draft that ends a test unsaved (e.g. the sync "New schedule" test below)
+// still queues its unmount save into the model-root source's 0.4 s pause.
+// On REAL timers that timer fires ~400ms later, on the NEXT test, and posts
+// through THAT test's own postMessage spy -- an order-dependent flake this
+// file hit under `--sequence.shuffle` (seed 1789341715203 reproduces it: the
+// "declares nothing about workScheduleId" test received the previous test's
+// leaked new-schedule UUID). `afterEach` unmounts every rendered tree
+// (dropping each source's window listener and flush-registry entry), resets
+// the registry, and drops every timer still scheduled before switching back
+// to real timers -- mirrored from shapeWrites.test.tsx.
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
 import ActivityEditor, {
   extractActivityData,
   updateActivityImmutably,
 } from "../ActivityEditor";
 import { EnvelopeMessageType } from "@quodsi/lucid-shared";
+import { MODEL_ROOT_DEBOUNCE_MS } from "../../../adapters/useModelRootSource";
+import { resetModelRootWritesForTests } from "../../../adapters/modelRootWrites";
 import { setView } from "quodsi_studio/platforms/shared";
 
 const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }));
@@ -192,9 +206,18 @@ function activityShapeWrites(posted: any[]) {
   return modelRootUpdates(posted).flatMap((e) => e.data?.shapes ?? []).filter((s: any) => s.shapeId === "act-1");
 }
 
-/** The last shape write this Activity sent, waiting for one to appear. */
+/**
+ * The last shape write this Activity sent. On fake timers a write's own
+ * round trip settles on microtasks alone (the host's mock replies inline),
+ * but a write reached only through the 0.5 s autosave / 0.4 s model-root
+ * pause (e.g. a plain blur, not a decisive-control saveAndFlush) needs that
+ * time advanced before it lands -- advancing past both covers either path.
+ */
 async function lastActivityShapeWrite(posted: any[]) {
-  await waitFor(() => expect(activityShapeWrites(posted).length).toBeGreaterThan(0));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS);
+  });
+  expect(activityShapeWrites(posted).length).toBeGreaterThan(0);
   const writes = activityShapeWrites(posted);
   return writes[writes.length - 1];
 }
@@ -205,11 +228,16 @@ async function lastActivityShapeWrite(posted: any[]) {
 // weaken any assertion -- view-gating itself is covered by viewGating.test.tsx
 // / Studio's own viewFieldGating.test.tsx.
 beforeEach(() => {
+  vi.useFakeTimers();
   mockSendMessage.mockClear();
   setView("advanced");
 });
 
 afterEach(() => {
+  cleanup();
+  resetModelRootWritesForTests();
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   setView("basic");
 });
@@ -277,9 +305,10 @@ describe("ActivityEditor — capacity source picker", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "New schedule" }));
 
-    await waitFor(() => {
-      expect(modelRootUpdates(posted).some((e) => e.data?.patch?.workSchedules)).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS);
     });
+    expect(modelRootUpdates(posted).some((e) => e.data?.patch?.workSchedules)).toBe(true);
     const withModelPatch = modelRootUpdates(posted).find((e) => e.data?.patch?.workSchedules);
     const patch = withModelPatch.data.patch;
     // Appended to the model-level list, never replacing it, and never nested
