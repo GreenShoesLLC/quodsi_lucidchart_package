@@ -11,9 +11,13 @@
 // bufferingAccessor.test.ts drives a mocked base whose writes complete when
 // they resolve, which is exactly why it cannot see this.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { Mock } from 'vitest'
 import { createBufferingAccessor } from '../bufferingAccessor'
 import { createModelRootSource } from '../useModelRootSource'
+import type { ModelRootTransport } from '../useModelRootSource'
 import { createLucidModelStateAccessor } from '../LucidModelStateAccessor'
+
+type Send = ModelRootTransport['send']
 
 const SNAPSHOT = {
   pageId: 'page-1',
@@ -35,7 +39,7 @@ async function flushMicrotasks() {
   for (let i = 0; i < 50; i++) await Promise.resolve()
 }
 
-function realChain(send: ReturnType<typeof vi.fn>) {
+function realChain(send: Mock<Send>) {
   const source = createModelRootSource({ send })
   source.acceptSnapshot(SNAPSHOT)
   const base = createLucidModelStateAccessor(source.deps)
@@ -56,7 +60,7 @@ describe('createBufferingAccessor over the real model-root source', () => {
 
   it('flush() posts a shape-only buffered edit at once and resolves only when the host confirms it', async () => {
     const write = deferred()
-    const send = vi.fn().mockReturnValueOnce(write.promise)
+    const send = vi.fn<Send>().mockReturnValueOnce(write.promise)
     const { buffered } = realChain(send)
 
     void buffered.updateShape('g1', 'Generator', { volume: 42 })
@@ -81,7 +85,7 @@ describe('createBufferingAccessor over the real model-root source', () => {
   // the 2026-09-12 batching too). The host's corrective snapshot then shows
   // the stored value -- the same outcome as a refused edit in the panel.
   it('a refused shape-only batch rejects flush(), keeps reporting it, and leaves the stored value to show', async () => {
-    const send = vi.fn().mockRejectedValue(new Error('storage write failed'))
+    const send = vi.fn<Send>().mockRejectedValue(new Error('storage write failed'))
     const { source, buffered } = realChain(send)
 
     void buffered.updateShape('g1', 'Generator', { volume: 42 })
