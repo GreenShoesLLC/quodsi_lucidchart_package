@@ -196,22 +196,27 @@ const START_DATE_HINT = "Set the start date first";
  * - Validation: read-only, from validationState.
  *
  * Draft resync: the draft re-extracts from a snapshot only while nothing is
- * pending, no save is in flight (useSaveInFlight) and the last save did not
- * fail, and only from a snapshot the source ACCEPTED after the last save
- * settled (snapshotSeq) whose model-field VALUES (modelSettingsSyncKey) differ
- * from the ones last applied. So an Advisor Apply shows up while idle, and so
- * does the host's post-save snapshot (a cleared name stored as the page title)
- * even though it lands before React commits saving=false; our own echo, a
- * snapshot that was in flight during a save, or the corrective snapshot after
- * a refused save never erases what the user typed. Merely re-checking a
- * skipped snapshot when the guard drops would: see the resync effect.
+ * pending and no save is in flight (useSaveInFlight), and only from a
+ * snapshot the source ACCEPTED after the last save settled (snapshotSeq)
+ * whose model-field VALUES (modelSettingsSyncKey) differ from the ones last
+ * applied. So an Advisor Apply shows up while idle, and so does the host's
+ * post-save snapshot (a cleared name stored as the page title) even though it
+ * lands before React commits saving=false; our own echo, or a snapshot that
+ * was in flight during a save, never erases what the user typed. Merely
+ * re-checking a skipped snapshot when the guard drops would: see the resync
+ * effect. A REFUSED save is different: it shows through the accessor's save
+ * status ("Save failed: <reason>", read via useSyncExternalStore below), and
+ * the guard drops immediately -- the host's corrective snapshot that follows
+ * is then just another snapshot, and it resyncs the draft to the stored
+ * values like any other.
  *
  * Calendar dates: only the Start Date is stored; Warmup and Finish write
  * `warmupTime`/`runTime`, which is what the clean wire and the engine carry.
  * Switching back to Clock clears all three dates in the same draft update.
  *
  * Status: SaveStatusLine ("Saved" / "Saving…" / "Save failed — keep typing to
- * retry"). Native LucidChart Ctrl+Z reverses saved changes.
+ * retry", or "Save failed: <reason>" once the host names why it refused).
+ * Native LucidChart Ctrl+Z reverses saved changes.
  */
 const ModelEditor: React.FC<Props> = ({ accessor, projection, onValidate, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
   // ============================================================================
