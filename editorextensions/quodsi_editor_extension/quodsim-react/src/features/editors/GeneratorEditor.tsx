@@ -20,7 +20,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { Settings, Zap, Info, ChevronDown, ChevronRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
-import StateModificationsEditor from "./StateModificationsEditor";
+import { LucidStateModificationsEditor } from "./LucidStateModificationsEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
@@ -1397,7 +1397,7 @@ const GeneratorEditor: React.FC<Props> = ({
         )}
 
         {activeOrFallback === "events" && (
-          <StateModificationsEditor
+          <LucidStateModificationsEditor
             modifications={localGeneratorDraft.initialStates || []}
             onModificationsChange={handleStateModificationsChange}
             states={states}

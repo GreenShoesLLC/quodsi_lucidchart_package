@@ -38,7 +38,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { X, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
-import StateModificationsEditor from "./StateModificationsEditor";
+import { LucidStateModificationsEditor } from "./LucidStateModificationsEditor";
 import { StateConditionEditor } from "./StateConditionEditor";
 import { RequirementField, ViewGated, useView, ACTION_TYPE_SURFACE } from "quodsi_studio/platforms/shared";
 
@@ -452,7 +452,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
           );
         }
         return (
-          <StateModificationsEditor
+          <LucidStateModificationsEditor
             modifications={assignAction.modifications || []}
             onModificationsChange={(mods) =>
               onChange({
@@ -732,7 +732,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
             {/* State Modifications */}
             {states && (
-              <StateModificationsEditor
+              <LucidStateModificationsEditor
                 modifications={splitAction.modifications || []}
                 onModificationsChange={(mods) =>
                   onChange({
@@ -834,7 +834,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
             {/* State Modifications */}
             {states && (
-              <StateModificationsEditor
+              <LucidStateModificationsEditor
                 modifications={createAction.modifications || []}
                 onModificationsChange={(mods) =>
                   onChange({
@@ -1037,7 +1037,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
             {/* State Modifications */}
             {states && (
-              <StateModificationsEditor
+              <LucidStateModificationsEditor
                 modifications={joinAction.modifications || []}
                 onModificationsChange={(mods) =>
                   onChange({
