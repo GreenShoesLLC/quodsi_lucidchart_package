@@ -24,7 +24,9 @@ import {
   ViewTell,
   SettingsPanel,
   applyViewUrlOverride,
+  ModelEditor, MODEL_EDITOR_TABS, EntitlementsSourceProvider,
 } from 'quodsi_studio/platforms/shared'
+import { isModelLevelIssue, isEntityIssue } from '@quodsi/shared'
 
 describe('shared panel import', () => {
   it('resolves the Studio panel barrel from quodsim-react', () => {
@@ -74,6 +76,14 @@ describe('shared panel import', () => {
     expect(typeof ViewTell).toBe('function')
     expect(typeof SettingsPanel).toBe('function')
     expect(typeof applyViewUrlOverride).toBe('function')
+    // spec 2026-09-13: Lucid's Model view mounts the shared ModelEditor with a
+    // messaging-backed entitlements source and a LOCATE_ELEMENT resolver built
+    // on the shared issue predicates.
+    expect(typeof ModelEditor).toBe('function')
+    expect(MODEL_EDITOR_TABS).toContain('Validation')
+    expect(typeof EntitlementsSourceProvider).toBe('function')
+    expect(typeof isModelLevelIssue).toBe('function')
+    expect(typeof isEntityIssue).toBe('function')
   })
 
   it('summarizes a pattern without a host', () => {
