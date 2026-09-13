@@ -5,6 +5,7 @@ import type { SeizeReleaseDisposition } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 import type { ModelEditorTab } from 'quodsi_studio/platforms/shared';
+import { setPendingModelEditorTab } from '../../utils/pendingNavigation';
 
 // Generous but bounded — a local ModelManager mutation + re-validate, not a
 // network call (same reasoning as useModelRootSource's MODEL_ROOT_UPDATE).
@@ -241,7 +242,6 @@ export function useModelOpsSender() {
   const selectElement = useCallback((elementId?: string, options?: { targetTab?: ModelEditorTab }) => {
     // If a target tab is specified, store it for the Model Editor to consume
     if (options?.targetTab) {
-      const { setPendingModelEditorTab } = require('../../utils/pendingNavigation');
       setPendingModelEditorTab(options.targetTab);
     }
 
