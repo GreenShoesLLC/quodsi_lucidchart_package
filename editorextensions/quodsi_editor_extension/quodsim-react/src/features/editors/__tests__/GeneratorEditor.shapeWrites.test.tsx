@@ -5,12 +5,25 @@
 // its mode-switch lifecycle sends the link and the pattern list through the
 // same queue, refills its draft from the snapshot's full record, and shows a
 // refused lifecycle write. The real hook runs; only the host is faked.
+//
+// ISOLATION (Task 5 review fix round 1). Every fixture is a fresh object
+// built by a factory called inside each test -- a module-level mutable
+// fixture, shared and sometimes mutated-by-reference across tests, is what
+// let one test's write bleed into another's assertions. `afterEach` unmounts
+// every rendered tree (dropping each model-root source's window listener and
+// unregistering it from the cross-panel flush registry), resets that
+// registry, and drops any timer still scheduled (a settled-but-unreleased
+// batch arms a real TAGGED_SNAPSHOT_GRACE_MS timer via `setTimeout` -- a
+// leftover one, uncleared, can fire during a LATER test and land in that
+// test's own host spy) before switching back to real timers.
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor, cleanup } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
 import { EnvelopeMessageType, GeneratorType } from "@quodsi/lucid-shared";
 import { MODEL_ROOT_DEBOUNCE_MS } from "../../../adapters/useModelRootSource";
+import { resetModelRootWritesForTests } from "../../../adapters/modelRootWrites";
+import { setView } from "quodsi_studio/platforms/shared";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -26,14 +39,38 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 }));
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  // Unmount FIRST: runs each rendered tree's own effect cleanup (the
+  // model-root source's message listener removed, and its flush registry
+  // entry unregistered) before anything else touches timers or mocks.
+  cleanup();
+  resetModelRootWritesForTests();
+  // Clear before switching back: drops any timer still scheduled (a settled
+  // batch's grace timer, or a debounce timer a test didn't advance) so it
+  // cannot fire during a LATER test against whatever host spy that test
+  // installs.
+  vi.clearAllTimers();
   vi.useRealTimers();
+  vi.restoreAllMocks();
+  setView("basic");
 });
 
 const AUTOSAVE_MS = 500;
 
-const frequencyGenerator = { id: "g1", name: "Arrivals", entityId: "e1", mode: GeneratorType.FREQUENCY, levers: [] } as any;
-const patternGenerator = { id: "g1", name: "Arrivals", entityId: "e1", mode: GeneratorType.PATTERN, arrivalPatternId: "ap-1", volume: 800, levers: [] } as any;
+function makeFrequencyGenerator(overrides: Record<string, unknown> = {}) {
+  return { id: "g1", name: "Arrivals", entityId: "e1", mode: GeneratorType.FREQUENCY, levers: [], ...overrides } as any;
+}
+function makePatternGenerator(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "g1",
+    name: "Arrivals",
+    entityId: "e1",
+    mode: GeneratorType.PATTERN,
+    arrivalPatternId: "ap-1",
+    volume: 800,
+    levers: [],
+    ...overrides,
+  } as any;
+}
 
 function installHost(options: { refuse?: boolean } = {}) {
   const posted: any[] = [];
@@ -75,8 +112,9 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
   it("autosaves the generator's own fields as a shape edit, never its link fields", async () => {
     vi.useFakeTimers();
     const posted = installHost();
-    renderEditor(frequencyGenerator);
-    pushSnapshot([frequencyGenerator]);
+    const generator = makeFrequencyGenerator();
+    renderEditor(generator);
+    pushSnapshot([generator]);
 
     fireEvent.change(screen.getByDisplayValue("Arrivals"), { target: { value: "Walk-ins" } });
     await act(async () => {
@@ -94,8 +132,9 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
 
   it("switching away from PATTERN sends the cleared link no later than the pattern list", async () => {
     const posted = installHost();
-    renderEditor(patternGenerator);
-    pushSnapshot([patternGenerator], [{ id: "ap-1", name: "Arrivals pattern" }]);
+    const generator = makePatternGenerator();
+    renderEditor(generator);
+    pushSnapshot([generator], [{ id: "ap-1", name: "Arrivals pattern" }]);
 
     fireEvent.change(screen.getByRole("combobox", { name: /generator type/i }), {
       target: { value: GeneratorType.FREQUENCY },
@@ -116,8 +155,9 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
 
   it("shows a refused mode-switch write in the lifecycle error line", async () => {
     installHost({ refuse: true });
-    renderEditor(frequencyGenerator);
-    pushSnapshot([frequencyGenerator], []);
+    const generator = makeFrequencyGenerator();
+    renderEditor(generator);
+    pushSnapshot([generator], []);
 
     fireEvent.change(screen.getByRole("combobox", { name: /generator type/i }), {
       target: { value: GeneratorType.PATTERN },
@@ -128,9 +168,10 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
 
   it("refills the draft from the snapshot's full record", () => {
     installHost();
-    renderEditor(frequencyGenerator);
+    const generator = makeFrequencyGenerator();
+    renderEditor(generator);
 
-    pushSnapshot([{ ...frequencyGenerator, name: "Stored name" }]);
+    pushSnapshot([{ ...generator, name: "Stored name" }]);
 
     expect(screen.getByDisplayValue("Stored name")).toBeInTheDocument();
   });
@@ -140,26 +181,39 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
   // similar) are ABSENT at their defaults, not present-with-default-value.
   // extractGeneratorData must default a missing field exactly like it does
   // for the pre-snapshot selection copy, so refilling from this sparse row
-  // (frequencyGenerator above carries none of those keys, matching a real
-  // toJSON() row) must not read as an edit. Pinned in isolation (its own
-  // describe block, own fixture) rather than alongside this file's other
-  // fake-timer tests: sharing frequencyGenerator and vi.useFakeTimers()
-  // across every test in one block proved flaky here -- a write from an
-  // earlier test's own fake-timer-scheduled batch was still in flight when
-  // this one advanced the (same, vitest-global) fake clock further, and
-  // landed in THIS test's host spy instead. Isolating it removed the
-  // interference without touching the other tests' own timer usage.
-  it("an unedited generator's sparse snapshot record refills without marking the draft dirty", () => {
-    installHost();
-    renderEditor(frequencyGenerator);
+  // must not read as an edit and fire a spurious autosave.
+  it("an unedited generator's sparse snapshot record produces the same defaults with no spurious autosave", async () => {
+    // generator.field.advanced (the Advanced Settings section, where
+    // Entities Per / Periodic Occurrences / Max Entities live) is
+    // intermediate+ -- see GeneratorEditor.tsx's own ViewGated comment.
+    setView("intermediate");
+    vi.useFakeTimers();
+    const posted = installHost();
+    // No batchSize/startDelay/maxCycles/initialStates/routing keys at all --
+    // exactly the sparse shape a real toJSON() row has at defaults.
+    const sparseGenerator = makeFrequencyGenerator();
+    const { container } = renderEditor(sparseGenerator);
+    pushSnapshot([sparseGenerator]);
 
-    pushSnapshot([frequencyGenerator]);
+    fireEvent.click(screen.getByRole("button", { name: /advanced settings/i }));
 
-    // No crash defaulting the sparse record, and the displayed name is
-    // exactly what the selection copy already showed -- a real edit (see
-    // "refills the draft from the snapshot's full record" above) does
-    // change what's displayed; an unedited resync must not.
-    expect(screen.getByDisplayValue("Arrivals")).toBeInTheDocument();
+    // Step 2: the drawn values are exactly extractGeneratorData's defaults --
+    // proof the sparse row was defaulted the same way the pre-snapshot
+    // selection copy already was, not read as a live edit.
+    expect((container.querySelector('input[name="entitiesPerCreation"]') as HTMLInputElement).value).toBe("1");
+    expect((container.querySelector('input[name="periodicOccurrences"]') as HTMLInputElement).value).toBe("999999");
+    expect((container.querySelector('input[name="maxEntities"]') as HTMLInputElement).value).toBe("999999");
+
+    // Step 3: well past both the 500ms autosave debounce and the 400ms
+    // model-root source pause.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTOSAVE_MS + MODEL_ROOT_DEBOUNCE_MS + 100);
+    });
+
+    // Step 4: no shape write for this generator went out at all.
+    expect(
+      updates(posted).some((e) => (e.data.shapes ?? []).some((s: any) => s.shapeId === sparseGenerator.id))
+    ).toBe(false);
   });
 
   // Controller ruling (Task 3 review): a SHAPE-ONLY lifecycle write -- the
@@ -180,14 +234,7 @@ describe("GeneratorEditor — shape writes through the model-root source", () =>
     // the snapshot -- ensurePatternForGenerator finds it and returns the
     // SAME model reference, so the `if (ensured.model !== model)` branch
     // (and, pre-fix, its flush) never runs.
-    const reusesExistingPattern = {
-      id: "g1",
-      name: "Arrivals",
-      entityId: "e1",
-      mode: GeneratorType.FREQUENCY,
-      arrivalPatternId: "ap-1",
-      levers: [],
-    } as any;
+    const reusesExistingPattern = makeFrequencyGenerator({ arrivalPatternId: "ap-1" });
     renderEditor(reusesExistingPattern);
     pushSnapshot([reusesExistingPattern], [{ id: "ap-1", name: "Arrivals pattern" }]);
 
