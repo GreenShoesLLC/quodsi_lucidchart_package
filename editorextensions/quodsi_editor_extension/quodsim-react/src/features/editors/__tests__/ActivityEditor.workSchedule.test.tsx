@@ -63,10 +63,6 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   }),
 }));
 
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
-}));
-
 vi.mock("../../../messaging/MessageProvider", () => ({
   useMessaging: () => ({ app: { panelType: "model" }, sendMessage: mockSendMessage }),
 }));
