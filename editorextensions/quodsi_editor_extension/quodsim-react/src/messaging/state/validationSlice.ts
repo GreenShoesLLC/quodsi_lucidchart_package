@@ -46,10 +46,10 @@ export function validationReducer(state: ValidationState = initialValidationStat
         lastUpdated: Date.now(),
       };
     case 'VALIDATION_RESET':
-      return {
-        ...initialValidationState,
-        lastUpdated: Date.now(),
-      };
+      // Returned as-is (lastUpdated undefined): a reset means "no result yet",
+      // the same as before the first VALIDATION_RESULT ever arrived (final-fix
+      // brief 2026-09-13, Fix 1).
+      return initialValidationState;
     default:
       return state;
   }

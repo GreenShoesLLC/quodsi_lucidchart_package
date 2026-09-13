@@ -164,8 +164,12 @@ export function useModelPanel() {
     logger.debug('No modelItemData created or found');
   }
   
-  // Transform validation data (use the validation state directly, it's already in the correct format)
-  const validationState = transformToValidationState(validation.issues.length > 0 ? {
+  // Transform validation data. `lastUpdated !== undefined` is "a result has
+  // arrived" (set by VALIDATION_RESULT, cleared by VALIDATION_RESET) --
+  // NOT `issues.length > 0`, which made every zero-issue (clean model)
+  // result indistinguishable from "no result yet" (final-fix brief
+  // 2026-09-13, Fix 1).
+  const validationState = transformToValidationState(validation.lastUpdated !== undefined ? {
     isValid: validation.isValid,
     issues: validation.issues,
     summary: validation.summary

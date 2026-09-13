@@ -73,6 +73,13 @@ describe('LucidModelEditor', () => {
     expect(screen.getByRole('button', { name: 'Validation: 1 blocker' })).toBeInTheDocument()
   })
 
+  it('shows the shared valid summary for a clean (zero-issue) result, not "No validation results yet." (final-fix brief 2026-09-13, Fix 1)', () => {
+    mount({ activeTab: 'Validation', validationState: result([]) })
+
+    expect(screen.getByText('✓ Valid')).toBeInTheDocument()
+    expect(screen.queryByText('No validation results yet.')).toBeNull()
+  })
+
   it('Go to source on a shape issue sends LOCATE_ELEMENT for that element', () => {
     mount({ activeTab: 'Validation', validationState: result([{ code: 'no_outgoing_connectors', elementId: 'act-1' }]) })
 
