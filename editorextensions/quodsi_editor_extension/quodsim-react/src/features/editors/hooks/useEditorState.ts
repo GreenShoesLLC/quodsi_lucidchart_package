@@ -113,7 +113,7 @@ export interface UseAutoSaveArgs<T> {
   onSave: (draft: T) => void;
   /**
    * True while a save is in flight: Redux elementOpsState for the element
-   * editors, useSaveInFlight for Lucid's Model editor.
+   * editors (ActivityEditor, GeneratorEditor).
    */
   isSaving: boolean;
   /** ID of the currently selected element. Switching this flushes pending edits. */
@@ -140,16 +140,15 @@ export interface UseAutoSaveResult {
  *
  * Contract — REQUIRED of consumers:
  *   onSave must cause the `isSaving` passed in to render true then false
- *   (Redux elementOpsState for the element editors; useSaveInFlight for the
- *   Model editor). The hook uses the saving→not-saving transition to clear the
- *   "saving" status, fire trailing saves, and drain captured pending flushes.
- *   If onSave is synchronous and never causes isSaving to flip, status will
- *   stay at "saving" forever and trailing/captured saves will never fire.
+ *   (Redux elementOpsState for the element editors). The hook uses the
+ *   saving→not-saving transition to clear the "saving" status, fire trailing
+ *   saves, and drain captured pending flushes. If onSave is synchronous and
+ *   never causes isSaving to flip, status will stay at "saving" forever and
+ *   trailing/captured saves will never fire.
  *
  *   The element editors get that transition from Redux's elementOpsState
  *   (ELEMENT_SAVE_START sets isSaving=true, ELEMENT_SAVE_SUCCESS/ERROR set it
- *   false); Lucid's Model editor gets it from useSaveInFlight around its
- *   accessor.updateModel promise.
+ *   false).
  *
  * Trailing saves: one is scheduled only for a draft that changed after the
  * in-flight save was dispatched -- compared by identity against the last

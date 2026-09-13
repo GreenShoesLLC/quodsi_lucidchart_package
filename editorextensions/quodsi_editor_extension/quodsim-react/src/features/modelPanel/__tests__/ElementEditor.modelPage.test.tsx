@@ -2,7 +2,8 @@
 // (spec 2026-09-12 §4): a page switch unmounts the whole Model editor -- its
 // source, draft and any open dialog -- and requests the new page's snapshot,
 // so nothing can act on the previous page's data. Replaces the per-tab
-// page-switch tests (StatesTab / EntitiesTab), whose keys moved here.
+// page-switch tests on Lucid's own (now-deleted) States and Entities tab
+// wrappers, whose keys moved here.
 import React from 'react'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { EnvelopeMessageType, SimulationObjectType, StateListManager } from '@quodsi/lucid-shared'

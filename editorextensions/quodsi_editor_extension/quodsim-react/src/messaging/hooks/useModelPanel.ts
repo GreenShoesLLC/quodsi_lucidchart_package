@@ -4,7 +4,6 @@ import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
 import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData, getLogger } from '@quodsi/lucid-shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
-import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationPollState } from '../../types/SimulationStatus';
 
 import { ExtendedModelItemData } from '../../types/ModelItemData';
@@ -59,7 +58,6 @@ export function useModelPanel() {
   
   // Get sender hooks
   const modelOpsSender = useModelOpsSender();
-  const simulationSender = useSimulationSender();
 
   // Extract document context safely with detailed logging
   const documentContext = selection.documentContext || {
@@ -210,19 +208,6 @@ export function useModelPanel() {
     modelOpsSender.validateModel(documentContext.documentId);
   }, [documentContext.documentId, modelOpsSender]);
   
-  const onSimulate = (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => {
-    logger.debug(`Simulating model with scenario name: ${scenarioName}, scenarioDefinitionId: ${scenarioDefinitionId}, enableAnimation: ${enableAnimation}`);
-    simulationSender.requestSimulation(
-      documentContext.documentId,
-      scenarioName,
-      undefined,  // durationDays
-      undefined,  // repetitions
-      undefined,  // parameters
-      scenarioDefinitionId,
-      enableAnimation
-    );
-  };
-  
   const onRemoveModel = () => {
     logger.debug('Removing model');
     modelOpsSender.removeModel(documentContext.documentId);
@@ -339,8 +324,6 @@ export function useModelPanel() {
     simulationStatus: simulationStatusProxy,
     referenceData,
     states: referenceData?.states || [],
-    entities: referenceData?.entities || [],
-    resourceRequirements: referenceData?.resourceRequirements || [],
     outgoingConnectors,
 
     // UI state
@@ -351,7 +334,6 @@ export function useModelPanel() {
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onSimulate,
     onRemoveModel,
     onConvertPage
   };

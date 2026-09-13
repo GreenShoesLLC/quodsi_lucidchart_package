@@ -39,9 +39,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
   }),
 }));
 
-// EditorTab is a type-only import at runtime — stub the heavy ModelEditor tree.
-vi.mock("../../editors/ModelEditor", () => ({}));
-
 // Shallow-stub heavy children so the test isolates ModelPanel's hook order.
 vi.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
 vi.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));

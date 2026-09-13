@@ -4,11 +4,8 @@
 //   1. Lucid's tab-id -> surface-id maps point at the SAME @quodsi/shared
 //      catalog Studio uses, including the ids that genuinely differ from
 //      Studio's naming (ActivityEditor's "connectors" tab, GeneratorEditor's
-//      "settings"/"events" tabs). ModelEditor's first tab is "basic" in BOTH
-//      shells -- the task brief's claim that it is "settings" here does not
-//      match this editor's real TAB_CONFIG (that id belongs to
-//      GeneratorEditor); this test pins the actual id instead of the brief's
-//      guess.
+//      "settings"/"events" tabs). The Model editor is Studio's shared one
+//      (spec 2026-09-13) and has no Lucid map.
 //   2. The gating actually bites in a rendered editor: a tab whose surface is
 //      above the current view is absent from the tab strip, and reappears
 //      once the view is raised.
@@ -30,7 +27,6 @@ import { definition, mountModelEditor } from "./modelEditorSeam";
 import {
   LUCID_ACTIVITY_TAB_SURFACE,
   LUCID_GENERATOR_TAB_SURFACE,
-  LUCID_MODEL_TAB_SURFACE,
 } from "../viewSurfaceMaps";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -95,9 +91,6 @@ describe("Lucid tab surface maps", () => {
     expect(LUCID_GENERATOR_TAB_SURFACE.settings).toBe("generator.tab.basic");
     // GeneratorEditor's "events" tab (initial-state modifications) is Studio's "States".
     expect(LUCID_GENERATOR_TAB_SURFACE.events).toBe("generator.tab.states");
-    // ModelEditor's first tab id is "basic" in BOTH shells -- no divergence here,
-    // despite the task brief's claim.
-    expect(LUCID_MODEL_TAB_SURFACE.basic).toBe("model.tab.basic");
   });
 
   it("hides the Failure tab in Basic and shows it in Advanced", () => {

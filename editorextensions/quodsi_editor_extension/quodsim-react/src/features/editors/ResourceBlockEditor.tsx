@@ -18,9 +18,10 @@
 // an "Edit schedule" button from the shared CapacitySourcePicker, and without
 // a handler the shared control opens its OWN WorkScheduleModal -- correct for
 // Studio and drawio, trapped inside the 300px right dock here. Supplying the
-// handler means "I will present the editor", exactly as SchedulesTab does for
-// WorkSchedulesEditor (see its header) and ActivityEditor does for the
-// activity-side picker. The id is a SCHEDULE id, not a shape id.
+// handler means "I will present the editor", exactly as LucidModelEditor does
+// for WorkSchedulesEditor (see its onEditWorkSchedule callback) and
+// ActivityEditor does for the activity-side picker. The id is a SCHEDULE id,
+// not a shape id.
 //
 // A dangling pointer is deliberately NOT auto-cleared: resolveResourceLinks
 // already reports it, ValidationPanel surfaces the warning, and the picker

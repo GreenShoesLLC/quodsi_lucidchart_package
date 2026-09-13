@@ -13,9 +13,10 @@
 // from the Resources tab, from a Resource block, and from a swimlane lane,
 // and missing one leaves a trapped modal on that route only.
 //
-// The seam contract is verbatim SchedulesTab's (see its header): supplying a
-// handler means "I will present the editor", and the shared control then
-// presents nothing -- otherwise one click opens two modals.
+// The seam contract is verbatim LucidModelEditor's own onEditWorkSchedule
+// (see ResourceBlockEditor's header): supplying a handler means "I will
+// present the editor", and the shared control then presents nothing --
+// otherwise one click opens two modals.
 //
 // Host is faked at postMessage exactly as ResourceBlockEditor.test.tsx /
 // SwimLaneEditor.test.tsx do, so the real useModelRootSource /
@@ -28,9 +29,9 @@ import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 
 const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }))
 
-// Both module paths are mocked: ResourcesTab / ResourceBlockEditor take
-// useMessaging from MessageProvider (as ActivityEditor and SchedulesTab do),
-// SwimLaneEditor from MessageContext. The Model editor's mount also reaches
+// Both module paths are mocked: LucidModelEditor / ResourceBlockEditor take
+// useMessaging from MessageProvider (as ActivityEditor does), SwimLaneEditor
+// from MessageContext. The Model editor's mount also reaches
 // useModelOpsSender -> useMessagingDispatch (MessageContext) via
 // useLucidSourceResolver, so that export has to be present too.
 vi.mock('../../../messaging/MessageProvider', () => ({
