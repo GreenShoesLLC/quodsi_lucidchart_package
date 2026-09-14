@@ -17,7 +17,7 @@ import { ConnectorEditor, type ModelEditorTab } from "quodsi_studio/platforms/sh
 import { ModelEditorForPage } from "../editors/ModelEditorForPage";
 import { useMessaging } from "../../messaging/MessageProvider";
 import ActivityEditor from "../editors/ActivityEditor";
-import GeneratorEditor from "../editors/GeneratorEditor";
+import { LucidGeneratorEditor } from "../editors/LucidGeneratorEditor";
 import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
@@ -62,8 +62,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   // below. This screen holds no draft of its own -- every routing edit made
   // here (weight/priority/condition/entity template/connect type) writes
   // straight through to storage via Task 2's ELEMENT_UPDATE sender, so no
-  // shapeWriters are registered (compare ActivityEditor/GeneratorEditor,
-  // which register one for the shape they already own a draft of).
+  // shapeWriters are registered (compare ActivityEditor, which registers one
+  // for the shape it already owns a draft of).
   const { updateResourceRequirements, updateElement } = useModelOpsSender();
   // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorEditor (its
   // routing cards' ViewTell mounts) below.
@@ -156,13 +156,16 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           />
         );
 
+      // Studio's shared GeneratorEditor through Lucid's wrapper (spec
+      // 2026-09-14 lucid-shared-generator-editor), keyed on the Lucid page
+      // like the Model case: a page switch starts a fresh model-root source.
       case SimulationObjectType.Generator:
       case "Generator":
         return (
-          <GeneratorEditor
-            generator={safeElementData}
+          <LucidGeneratorEditor
+            key={pageId}
+            shapeId={safeElementData.id}
             referenceData={referenceData}
-            states={states}
           />
         );
 
