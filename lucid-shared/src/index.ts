@@ -469,7 +469,6 @@ export type {
   SimulationTypeName,
 } from '@quodsi/shared';
 export * from './utils/nameUtils';
-export * from './utils/nameValidation';
 export * from './utils/resolveModelName';
 export * from './utils/scenarioUtils';
 

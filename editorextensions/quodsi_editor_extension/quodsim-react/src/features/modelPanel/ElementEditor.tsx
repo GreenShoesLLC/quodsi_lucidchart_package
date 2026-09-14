@@ -3,7 +3,6 @@ import {
   SimulationObjectType,
   EditorReferenceData,
   DiagramElementType,
-  StateListManager,
   ValidationResult,
   getLogger,
 } from "@quodsi/lucid-shared";
@@ -32,8 +31,6 @@ interface ElementEditorProps {
   onSave: (data: any) => void;
   referenceData: EditorReferenceData;
   currentElement?: ExtendedModelItemData;
-  states: StateListManager;
-  outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
   activeTab?: ModelEditorTab;
   onTabChange?: (tab: ModelEditorTab) => void;
@@ -48,8 +45,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   onSave,
   referenceData,
   currentElement,
-  states,
-  outgoingConnectors,
   validationState,
   activeTab,
   onTabChange,
@@ -59,11 +54,9 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   const previousEditorTypeRef = useRef<string | null>(null);
 
   // Unconditional (hook order): backs the Connector case's ConnectorEditor
-  // below. This screen holds no draft of its own -- every routing edit made
-  // here (weight/priority/condition/entity template/connect type) writes
-  // straight through to storage via Task 2's ELEMENT_UPDATE sender, so no
-  // shapeWriters are registered (compare ActivityEditor, which registers one
-  // for the shape it already owns a draft of).
+  // below. Every routing edit made here (weight/priority/condition/entity
+  // template/connect type) writes straight through to storage via the
+  // ELEMENT_UPDATE sender.
   const { updateResourceRequirements, updateElement } = useModelOpsSender();
   // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorEditor (its
   // routing cards' ViewTell mounts) below.

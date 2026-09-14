@@ -43,9 +43,6 @@ describe('ConnectorMoveTimeSection over useReferenceDataAccessor (seam)', () => 
     const source = createReferenceDataAccessor(
       referenceData,
       () => ({ updateResourceRequirements: vi.fn(), updateElement }),
-      // No shapeWriters registered for 'c1' -- a Connector edit has no
-      // writer of its own (only the routing SOURCE can get one), so this
-      // must go through ELEMENT_UPDATE, same as the priority field.
     )
 
     render(

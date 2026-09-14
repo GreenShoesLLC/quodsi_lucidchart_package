@@ -1,13 +1,8 @@
 // Real ConnectorRoutingView + real createReferenceDataAccessor, fake senders.
-// Pins the two write paths a routing edit can take:
-//   - a mode change on the source (Generator/Activity) goes through a
-//     registered shape writer when the caller registered one for that shape
-//     id (the host editor's own autosave), and the adapter overlays the
-//     patch so the select reflects it immediately;
-//   - a connector-level edit (priority) has no writer of its own, so it
-//     always goes through the ELEMENT_UPDATE sender, and the overlay is what
-//     re-ranks the FirstAvailable order badges before any referenceData
-//     refresh.
+// Pins the write path a routing edit takes: a mode change on the source
+// (Generator/Activity) and a connector-level edit (priority) both go through
+// the ELEMENT_UPDATE sender, and the overlay is what re-ranks the
+// FirstAvailable order badges before any referenceData refresh.
 // Also pins the optimistic-overlay fix for the priority input specifically:
 // it is fully controlled off the snapshot with no local buffer, so the
 // overlay must land BEFORE the ELEMENT_UPDATE send resolves (not after) or
@@ -52,23 +47,20 @@ describe('ConnectorRoutingView over useReferenceDataAccessor (seam)', () => {
   beforeEach(() => setView('intermediate'))
   afterEach(() => setView('basic'))
 
-  it('First Available: mode goes to the source writer, priority goes to ELEMENT_UPDATE and re-ranks from the overlay', async () => {
+  it('First Available: mode and priority go to ELEMENT_UPDATE, and priority re-ranks from the overlay', async () => {
     const user = userEvent.setup()
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
-    const writer = vi.fn()
     const source = createReferenceDataAccessor(
       referenceData,
       () => ({ updateResourceRequirements: vi.fn(), updateElement }),
-      () => ({ shapeWriters: { 'gen-1': writer } }),
     )
 
     render(<ConnectorRoutingView sourceId="gen-1" sourceType="Generator" accessor={source.accessor} />)
 
     await user.selectOptions(screen.getByRole('combobox'), 'first_available')
 
-    expect(writer).toHaveBeenCalledWith({ routing: 'first_available' })
-    expect(updateElement).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('first_available')) // writer-path overlay
+    await waitFor(() => expect(updateElement).toHaveBeenCalledWith('gen-1', 'Generator', { routing: 'first_available' }))
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('first_available'))
 
     // Pre-edit order: c1 (priority 3) ranks ahead of c2 (priority 5).
     expect(screen.getByTestId('connector-order-c1').textContent).toMatch(/1/)

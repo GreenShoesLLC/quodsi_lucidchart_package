@@ -4,7 +4,7 @@
 // source, a same-page rerender keeps it.
 import React from 'react'
 import { render, screen, cleanup } from '@testing-library/react'
-import { EnvelopeMessageType, SimulationObjectType, StateListManager } from '@quodsi/lucid-shared'
+import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared'
 import { setView } from 'quodsi_studio/platforms/shared'
 import { resetModelRootWritesForTests } from '../../../adapters/modelRootWrites'
 
@@ -65,7 +65,6 @@ const props = () => ({
   elementData: { id: 'a1' },
   onSave: vi.fn(),
   referenceData: { pageId: 'page-a', connectors: [] } as any,
-  states: new StateListManager(),
 })
 
 describe('ElementEditor — the Activity case is the shared editor, one source per Lucid page', () => {

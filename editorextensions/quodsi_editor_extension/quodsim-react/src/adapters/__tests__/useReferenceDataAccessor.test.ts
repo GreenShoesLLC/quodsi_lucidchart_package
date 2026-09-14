@@ -173,17 +173,6 @@ describe('updateShape', () => {
     expect(snap(s).states).toEqual([])
   })
 
-  it('a registered shape writer receives the patch, no envelope is sent, and the snapshot overlays it', async () => {
-    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
-    const writer = vi.fn()
-    const s = createReferenceDataAccessor(base(), () => ({ updateResourceRequirements: vi.fn(), updateElement }), () => ({ shapeWriters: { 'gen-1': writer } }))
-    await s.accessor.updateShape('gen-1', 'Generator', { routing: 'first_available' })
-    expect(writer).toHaveBeenCalledWith({ routing: 'first_available' })
-    expect(updateElement).not.toHaveBeenCalled()
-    expect(snap(s).generators[0].routing).toBe('first_available')   // overlay so the view reflects the draft immediately
-    expect(s.accessor.getSnapshot().saveStatus).toBe('idle')         // the host editor owns save status on this path
-  })
-
   it('a connector patch overlays optimistically before the round trip, then resolves on the result', async () => {
     let resolveHost!: () => void
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(() => new Promise((r) => { resolveHost = r }))
@@ -249,23 +238,6 @@ describe('useReferenceDataAccessor', () => {
     act(() => { rerender({ rd: second }) })
     expect(result.current).toBe(accessor)
     expect(def(accessor.getSnapshot()).resources).toHaveLength(1)
-  })
-
-  it('reads options through a ref: a rerender with a new writer object calls the NEW writer', async () => {
-    const rd = refData({ generators: [{ id: 'gen-1', name: 'Door', routing: 'probability' }] as never })
-    const senders = { updateResourceRequirements: vi.fn() }
-    const writer1 = vi.fn()
-    const { result, rerender } = renderHook(
-      ({ w }) => useReferenceDataAccessor(rd, senders, { shapeWriters: w }),
-      { initialProps: { w: { 'gen-1': writer1 } } },
-    )
-    const writer2 = vi.fn()
-    act(() => { rerender({ w: { 'gen-1': writer2 } }) })
-    await act(async () => {
-      await result.current.updateShape('gen-1', 'Generator', { routing: 'first_available' })
-    })
-    expect(writer1).not.toHaveBeenCalled()
-    expect(writer2).toHaveBeenCalledWith({ routing: 'first_available' })
   })
 })
 
