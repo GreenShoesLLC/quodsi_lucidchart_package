@@ -2,10 +2,10 @@
 //
 // Proves three things:
 //   1. Lucid's tab-id -> surface-id maps point at the SAME @quodsi/shared
-//      catalog Studio uses, including the ids that genuinely differ from
-//      Studio's naming (ActivityEditor's "connectors" tab, GeneratorEditor's
-//      "settings"/"events" tabs). The Model editor is Studio's shared one
-//      (spec 2026-09-13) and has no Lucid map.
+//      catalog Studio uses, including the id that genuinely differs from
+//      Studio's naming (ActivityEditor's "connectors" tab). The Model and
+//      Generator editors are Studio's shared ones (specs 2026-09-13,
+//      2026-09-14) and have no Lucid map.
 //   2. The gating actually bites in a rendered editor: a tab whose surface is
 //      above the current view is absent from the tab strip, and reappears
 //      once the view is raised.
@@ -22,12 +22,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { resolveVisibleSurfaces } from "@quodsi/shared";
 import ActivityEditor from "../ActivityEditor";
-import GeneratorEditor from "../GeneratorEditor";
 import { definition, mountModelEditor } from "./modelEditorSeam";
-import {
-  LUCID_ACTIVITY_TAB_SURFACE,
-  LUCID_GENERATOR_TAB_SURFACE,
-} from "../viewSurfaceMaps";
+import { LUCID_ACTIVITY_TAB_SURFACE } from "../viewSurfaceMaps";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -50,7 +46,7 @@ vi.mock("../SaveStatusLine", () => ({
   default: () => <div />,
 }));
 
-// GeneratorEditor calls useModelRootSource(), which needs useMessaging() for its
+// ActivityEditor calls useModelRootSource(), which needs useMessaging() for its
 // panelType; without this, render() throws (no MessageProvider ancestor here).
 vi.mock("../../../messaging/MessageProvider", () => ({
   useMessaging: () => ({ app: { panelType: "model" } }),
@@ -66,12 +62,6 @@ const activityProps = {
   activity: { id: "a1", name: "Triage", capacity: 1, actions: [], levers: [] } as any,
 };
 
-const generatorProps = {
-  states: {} as any,
-  referenceData: {} as any,
-  generator: { id: "g1", name: "Arrivals", mode: "frequency", levers: [] } as any,
-};
-
 describe("Lucid tab surface maps", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -82,10 +72,6 @@ describe("Lucid tab surface maps", () => {
     expect(LUCID_ACTIVITY_TAB_SURFACE.basic).toBe("activity.tab.basic");
     // ActivityEditor's routing tab id is "connectors" here, "Routing" in Studio.
     expect(LUCID_ACTIVITY_TAB_SURFACE.connectors).toBe("activity.tab.routing");
-    // GeneratorEditor's first tab id is "settings" here, "Basic" in Studio.
-    expect(LUCID_GENERATOR_TAB_SURFACE.settings).toBe("generator.tab.basic");
-    // GeneratorEditor's "events" tab (initial-state modifications) is Studio's "States".
-    expect(LUCID_GENERATOR_TAB_SURFACE.events).toBe("generator.tab.states");
   });
 
   it("hides the Failure tab in Basic and shows it in Advanced", () => {
@@ -94,7 +80,7 @@ describe("Lucid tab surface maps", () => {
   });
 
   it("keeps Levers visible in Basic", () => {
-    expect(resolveVisibleSurfaces("basic").has(LUCID_GENERATOR_TAB_SURFACE.levers)).toBe(true);
+    expect(resolveVisibleSurfaces("basic").has(LUCID_ACTIVITY_TAB_SURFACE.levers)).toBe(true);
   });
 });
 
@@ -114,26 +100,6 @@ describe("ActivityEditor — view gates the Failure tab", () => {
     render(<ActivityEditor {...activityProps} />);
     expect(
       screen.getByRole("button", { name: /Configure activity failure/i })
-    ).toBeInTheDocument();
-  });
-});
-
-describe("GeneratorEditor — view gates the Event Modifications tab", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("hides Event Modifications in Basic", () => {
-    setView("basic");
-    render(<GeneratorEditor {...generatorProps} />);
-    expect(
-      screen.queryByRole("button", { name: /Set initial state values/i })
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows Event Modifications in Intermediate", () => {
-    setView("intermediate");
-    render(<GeneratorEditor {...generatorProps} />);
-    expect(
-      screen.getByRole("button", { name: /Set initial state values/i })
     ).toBeInTheDocument();
   });
 });
@@ -167,26 +133,6 @@ describe("The tell: never silently hide live behaviour", () => {
     setView("basic");
     render(<ActivityEditor {...activityProps} />);
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
-  });
-
-  it("GeneratorEditor: shows the tell when initial states are configured but hidden in Basic", () => {
-    setView("basic");
-    render(
-      <GeneratorEditor
-        {...generatorProps}
-        generator={
-          {
-            id: "g1",
-            name: "Arrivals",
-            mode: "frequency",
-            levers: [],
-            initialStates: [{ stateId: "s1", value: 1 }],
-          } as any
-        }
-      />
-    );
-    const note = screen.getByRole("note");
-    expect(note).toHaveTextContent(/initial states/i);
   });
 
   it("ModelEditor: shows the tell when the model has states but States is hidden in Basic", () => {
