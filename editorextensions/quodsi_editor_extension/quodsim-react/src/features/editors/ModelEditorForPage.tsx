@@ -12,19 +12,14 @@
 // lists; an "Add" on an empty, not-yet-loaded list would send a one-row list
 // the host reads as deleting everything else.
 //
-// REFRESH. The host pushes a snapshot only after a MODEL_ROOT_UPDATE. Canvas
-// edits, the Advisor's Apply and embedded Studio's writes (ELEMENT_UPDATE
-// Model, STATES_UPDATE, ENTITIES_UPDATE) push none -- but each ends in a
-// selection re-process, which changes selection.lastUpdated. So a changed
-// lastUpdated re-requests a snapshot. Previous-value compare, not a skip-once
-// ref: React StrictMode re-runs effects, and a skip-once ref fires on the
-// re-run.
+// REFRESH. useModelRootRefreshOnSelection re-requests a snapshot whenever a
+// selection message lands (see that hook for why).
 
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import type { ValidationResult } from '@quodsi/lucid-shared'
 import type { ModelEditorTab } from 'quodsi_studio/platforms/shared'
 import { useModelRootSource } from '../../adapters/useModelRootSource'
-import { useMessaging } from '../../messaging/MessageProvider'
+import { useModelRootRefreshOnSelection } from '../../adapters/useModelRootRefreshOnSelection'
 import { LucidModelEditor } from './LucidModelEditor'
 
 export interface ModelEditorForPageProps {
@@ -35,15 +30,7 @@ export interface ModelEditorForPageProps {
 
 export const ModelEditorForPage: React.FC<ModelEditorForPageProps> = (props) => {
   const { accessor, projection, request } = useModelRootSource()
-  const { selection } = useMessaging()
-  const lastUpdated = selection?.lastUpdated
-  const previousLastUpdated = useRef(lastUpdated)
-
-  useEffect(() => {
-    if (previousLastUpdated.current === lastUpdated) return
-    previousLastUpdated.current = lastUpdated
-    request()
-  }, [lastUpdated, request])
+  useModelRootRefreshOnSelection(request)
 
   if (!projection) {
     return <div className="p-3 text-xs text-muted">Loading model…</div>
