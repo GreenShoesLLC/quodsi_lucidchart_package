@@ -47,7 +47,18 @@ export default defineConfig({
     // export-existence check), not a build error. If that happens: bump
     // this package's own lucide-react dependency to cover the icon, or
     // avoid the offending icon in the Studio panel being adopted.
-    dedupe: ['react', 'react-dom', 'lucide-react'],
+    //
+    // @dnd-kit/* added (Task 3, lucid-shared-activity-editor): quodsi_studio's
+    // ActivityActionsTab is the first shared panel mounted here that uses
+    // @dnd-kit itself (LucidActivityEditor's Actions tab, Classic view's
+    // sortable action cards). Same duplicate-module class as react/react-dom
+    // above, not a version skew -- both copies are 6.3.1/10.0.0/3.2.2 here --
+    // but @dnd-kit/core's DndContext calls React hooks against whichever
+    // physical "react" IT resolves, and without dedupe here too that produced
+    // a null dispatcher ("Cannot read properties of null (reading 'useMemo')")
+    // under Vitest's SSR-style resolution the moment ActivityActionsTab
+    // actually rendered (clicking into the Actions tab).
+    dedupe: ['react', 'react-dom', 'lucide-react', '@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
   },
   build: {
     // The extension's webpack hook and both deploy scripts copy from `build/`,

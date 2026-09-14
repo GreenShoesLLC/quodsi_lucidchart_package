@@ -16,7 +16,7 @@ import { getSimulationObjectType } from "../../utils/typeDetection";
 import { ConnectorEditor, type ModelEditorTab } from "quodsi_studio/platforms/shared";
 import { ModelEditorForPage } from "../editors/ModelEditorForPage";
 import { useMessaging } from "../../messaging/MessageProvider";
-import ActivityEditor from "../editors/ActivityEditor";
+import { LucidActivityEditor } from "../editors/LucidActivityEditor";
 import { LucidGeneratorEditor } from "../editors/LucidGeneratorEditor";
 import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
@@ -145,14 +145,16 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           />
         );
 
+      // Studio's shared ActivityEditor through Lucid's wrapper (spec
+      // 2026-09-14 lucid-shared-activity-editor), keyed on the Lucid page
+      // like the Model and Generator cases.
       case SimulationObjectType.Activity:
       case "Activity":
         return (
-          <ActivityEditor
-            activity={safeElementData}
+          <LucidActivityEditor
+            key={pageId}
+            shapeId={safeElementData.id}
             referenceData={referenceData}
-            states={states}
-            outgoingConnectors={outgoingConnectors}
           />
         );
 
