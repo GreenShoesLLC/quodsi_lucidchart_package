@@ -10,22 +10,37 @@
 // with its immediate overlay -- the path the shared ConnectorEditor already
 // uses in Lucid. Everything else (Activity/Generator shape edits, model-level
 // lists, flushModelImmediate) stays on the model-root queue.
+//
+// SAVE STATUS. `saving` while either source is saving; otherwise the outcome
+// of whichever source settled MOST RECENTLY; `idle` until one has. Neither
+// source ever resets its own status (the reference accessor keeps a refused
+// connector write's `failed` through every later setReferenceData, and this
+// composite outlives generator re-selection), so "failed if either failed"
+// would pin one refusal to the header through every later successful save.
+// Settles are ordered with ticks, as LucidModelStateAccessor orders its own
+// writes against its batching source's.
 
 import type { ModelStateAccessor, ModelStateSnapshot } from 'quodsi_studio/platforms/shared'
 
 export type SaveState = Pick<ModelStateSnapshot, 'saveStatus' | 'saveError'>
+export type SaveSource = 'modelRoot' | 'reference'
 
-export function combineSaveState(modelRoot: SaveState, reference: SaveState): SaveState {
+/**
+ * `latest` names the source that settled most recently, or null if neither
+ * has. The composite only ever names a source whose status is an outcome:
+ * neither source goes back to `idle` once it has settled.
+ */
+export function combineSaveState(modelRoot: SaveState, reference: SaveState, latest: SaveSource | null): SaveState {
   if (modelRoot.saveStatus === 'saving' || reference.saveStatus === 'saving') {
     return { saveStatus: 'saving', saveError: null }
   }
-  if (modelRoot.saveStatus === 'failed') return { saveStatus: 'failed', saveError: modelRoot.saveError }
-  if (reference.saveStatus === 'failed') return { saveStatus: 'failed', saveError: reference.saveError }
-  if (modelRoot.saveStatus === 'saved' || reference.saveStatus === 'saved') {
-    return { saveStatus: 'saved', saveError: null }
-  }
+  const settled = latest === 'modelRoot' ? modelRoot : latest === 'reference' ? reference : null
+  if (settled?.saveStatus === 'failed') return { saveStatus: 'failed', saveError: settled.saveError }
+  if (settled?.saveStatus === 'saved') return { saveStatus: 'saved', saveError: null }
   return { saveStatus: 'idle', saveError: null }
 }
+
+type SettleTracker = { seen: SaveState | undefined; settledTick: number }
 
 export function createElementEditorAccessor(
   modelRoot: ModelStateAccessor,
@@ -35,6 +50,29 @@ export function createElementEditorAccessor(
   let lastReference: ModelStateSnapshot | undefined
   let cached: ModelStateSnapshot | undefined
 
+  let tick = 0
+  const modelRootSettles: SettleTracker = { seen: undefined, settledTick: 0 }
+  const referenceSettles: SettleTracker = { seen: undefined, settledTick: 0 }
+
+  // A settle is an outcome (`saved`/`failed`) that differs from the status last
+  // seen -- which covers passing through `saving`, since `saving` is recorded
+  // when seen. Compared by CONTENT: a source snapshot rebuilt for a data
+  // change (a connector list refresh) with the same status is not a new
+  // settle. A source first seen already settled is stamped then; model-root
+  // is observed first, so a reference outcome first seen at the same moment
+  // counts as the later one.
+  function observe(tracker: SettleTracker, state: SaveState): void {
+    const seen = tracker.seen
+    if (seen && seen.saveStatus === state.saveStatus && seen.saveError === state.saveError) return
+    tracker.seen = { saveStatus: state.saveStatus, saveError: state.saveError }
+    if (state.saveStatus === 'saved' || state.saveStatus === 'failed') tracker.settledTick = ++tick
+  }
+
+  function latestSettled(): SaveSource | null {
+    if (modelRootSettles.settledTick === 0 && referenceSettles.settledTick === 0) return null
+    return referenceSettles.settledTick > modelRootSettles.settledTick ? 'reference' : 'modelRoot'
+  }
+
   // A new object only when either source's snapshot object changed:
   // useSyncExternalStore re-renders forever on a fresh object per call.
   const getSnapshot = (): ModelStateSnapshot => {
@@ -43,11 +81,13 @@ export function createElementEditorAccessor(
     if (cached && fromModelRoot === lastModelRoot && fromReference === lastReference) return cached
     lastModelRoot = fromModelRoot
     lastReference = fromReference
+    observe(modelRootSettles, fromModelRoot)
+    observe(referenceSettles, fromReference)
     const definition = fromModelRoot.modelDefinition as unknown as Record<string, unknown> | null
     const connectors =
       (fromReference.modelDefinition as unknown as { connectors?: unknown[] } | null)?.connectors ?? []
     cached = {
-      ...combineSaveState(fromModelRoot, fromReference),
+      ...combineSaveState(fromModelRoot, fromReference, latestSettled()),
       modelDefinition: (definition === null
         ? null
         : { ...definition, connectors }) as unknown as ModelStateSnapshot['modelDefinition'],

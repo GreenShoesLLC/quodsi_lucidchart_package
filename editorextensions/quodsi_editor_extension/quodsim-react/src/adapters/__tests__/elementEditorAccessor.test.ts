@@ -86,6 +86,117 @@ describe('createElementEditorAccessor — snapshot', () => {
   })
 })
 
+describe('createElementEditorAccessor — the save status follows the most recent save', () => {
+  // useSyncExternalStore calls getSnapshot after every notify; `step` does the
+  // same so the composite observes each source transition as React would.
+  function step(composite: ModelStateAccessor, source: Fake, next: ModelStateSnapshot) {
+    source.set(next)
+    return composite.getSnapshot()
+  }
+
+  it('shows saved when a model-root save settles after a refused connector write', () => {
+    const modelRoot = fakeAccessor(snap({}, 'saved'))
+    const reference = fakeAccessor(snap({}))
+    const composite = createElementEditorAccessor(modelRoot, reference)
+    composite.getSnapshot()
+
+    step(composite, reference, snap({}, 'saving'))
+    expect(step(composite, reference, snap({}, 'failed', 'Element update failed'))).toMatchObject({
+      saveStatus: 'failed',
+      saveError: 'Element update failed',
+    })
+    step(composite, modelRoot, snap({ generators: [] }, 'saving'))
+
+    expect(step(composite, modelRoot, snap({ generators: [] }, 'saved'))).toMatchObject({
+      saveStatus: 'saved',
+      saveError: null,
+    })
+  })
+
+  it('shows saved when a connector save settles after a refused model-root write', () => {
+    const modelRoot = fakeAccessor(snap({}))
+    const reference = fakeAccessor(snap({}))
+    const composite = createElementEditorAccessor(modelRoot, reference)
+    composite.getSnapshot()
+
+    step(composite, modelRoot, snap({}, 'saving'))
+    step(composite, modelRoot, snap({}, 'failed', 'storage write failed'))
+    step(composite, reference, snap({}, 'saving'))
+
+    expect(step(composite, reference, snap({}, 'saved'))).toMatchObject({ saveStatus: 'saved', saveError: null })
+  })
+
+  it("shows a connector write's failure when it settles after a model-root save", () => {
+    const modelRoot = fakeAccessor(snap({}))
+    const reference = fakeAccessor(snap({}))
+    const composite = createElementEditorAccessor(modelRoot, reference)
+    composite.getSnapshot()
+
+    step(composite, modelRoot, snap({}, 'saving'))
+    step(composite, modelRoot, snap({}, 'saved'))
+    step(composite, reference, snap({}, 'saving'))
+
+    expect(step(composite, reference, snap({}, 'failed', 'Element update failed'))).toMatchObject({
+      saveStatus: 'failed',
+      saveError: 'Element update failed',
+    })
+  })
+
+  it("shows saving while either source is saving, whatever the other's failure", () => {
+    const modelRoot = fakeAccessor(snap({}, 'failed', 'storage write failed'))
+    const reference = fakeAccessor(snap({}, 'failed', 'Element update failed'))
+    const composite = createElementEditorAccessor(modelRoot, reference)
+    composite.getSnapshot()
+
+    expect(step(composite, reference, snap({}, 'saving'))).toMatchObject({ saveStatus: 'saving', saveError: null })
+    step(composite, reference, snap({}, 'failed', 'Element update failed'))
+    expect(step(composite, modelRoot, snap({}, 'saving'))).toMatchObject({ saveStatus: 'saving', saveError: null })
+  })
+
+  it('lets a reference outcome win over a model-root outcome first seen at the same moment', () => {
+    const referenceWins = createElementEditorAccessor(
+      fakeAccessor(snap({}, 'failed', 'storage write failed')),
+      fakeAccessor(snap({}, 'saved')),
+    )
+    expect(referenceWins.getSnapshot()).toMatchObject({ saveStatus: 'saved', saveError: null })
+  })
+
+  it('is idle until either source has settled', () => {
+    const modelRoot = fakeAccessor(snap({}))
+    const composite = createElementEditorAccessor(modelRoot, fakeAccessor(snap({})))
+    expect(composite.getSnapshot()).toMatchObject({ saveStatus: 'idle', saveError: null })
+    expect(step(composite, modelRoot, snap({}, 'saving'))).toMatchObject({ saveStatus: 'saving' })
+  })
+
+  it('returns the same object from repeated calls with no source change', () => {
+    const modelRoot = fakeAccessor(snap({}, 'failed', 'storage write failed'))
+    const reference = fakeAccessor(snap({}))
+    const composite = createElementEditorAccessor(modelRoot, reference)
+    composite.getSnapshot()
+    step(composite, reference, snap({}, 'saving'))
+    const settled = step(composite, reference, snap({}, 'saved'))
+
+    expect(composite.getSnapshot()).toBe(settled)
+    expect(composite.getSnapshot()).toBe(settled)
+    expect(settled).toMatchObject({ saveStatus: 'saved', saveError: null })
+  })
+
+  it('does not read an equal status in a fresh source snapshot as a new settle', () => {
+    const modelRoot = fakeAccessor(snap({}))
+    const reference = fakeAccessor(snap({}, 'saved'))
+    const composite = createElementEditorAccessor(modelRoot, reference)
+    composite.getSnapshot()
+    step(composite, modelRoot, snap({}, 'saving'))
+    step(composite, modelRoot, snap({}, 'failed', 'storage write failed'))
+
+    // A connector list refresh: a new reference snapshot, the same 'saved'.
+    expect(step(composite, reference, snap({ connectors: [FULL] }, 'saved'))).toMatchObject({
+      saveStatus: 'failed',
+      saveError: 'storage write failed',
+    })
+  })
+})
+
 describe('createElementEditorAccessor — writes and subscriptions', () => {
   it('routes Connector shape edits to reference data and everything else to model-root', async () => {
     const flushModelImmediate = vi.fn(async () => {})
@@ -136,17 +247,21 @@ describe('combineSaveState', () => {
   })
 
   it.each([
-    ['idle', 'idle', { saveStatus: 'idle', saveError: null }],
-    ['saving', 'failed', { saveStatus: 'saving', saveError: null }],
-    ['saved', 'saving', { saveStatus: 'saving', saveError: null }],
-    ['failed', 'saved', { saveStatus: 'failed', saveError: 'model-root error' }],
-    ['saved', 'failed', { saveStatus: 'failed', saveError: 'reference error' }],
-    ['failed', 'failed', { saveStatus: 'failed', saveError: 'model-root error' }],
-    ['saved', 'idle', { saveStatus: 'saved', saveError: null }],
-    ['idle', 'saved', { saveStatus: 'saved', saveError: null }],
-  ] as const)('model-root %s + reference %s', (modelRoot, reference, expected) => {
+    ['idle', 'idle', null, { saveStatus: 'idle', saveError: null }],
+    ['saving', 'failed', 'reference', { saveStatus: 'saving', saveError: null }],
+    ['saved', 'saving', 'modelRoot', { saveStatus: 'saving', saveError: null }],
+    ['failed', 'saving', 'modelRoot', { saveStatus: 'saving', saveError: null }],
+    ['failed', 'saved', 'reference', { saveStatus: 'saved', saveError: null }],
+    ['failed', 'saved', 'modelRoot', { saveStatus: 'failed', saveError: 'model-root error' }],
+    ['saved', 'failed', 'reference', { saveStatus: 'failed', saveError: 'reference error' }],
+    ['saved', 'failed', 'modelRoot', { saveStatus: 'saved', saveError: null }],
+    ['failed', 'failed', 'modelRoot', { saveStatus: 'failed', saveError: 'model-root error' }],
+    ['failed', 'failed', 'reference', { saveStatus: 'failed', saveError: 'reference error' }],
+    ['saved', 'idle', 'modelRoot', { saveStatus: 'saved', saveError: null }],
+    ['idle', 'saved', 'reference', { saveStatus: 'saved', saveError: null }],
+  ] as const)('model-root %s + reference %s, %s settled last', (modelRoot, reference, latest, expected) => {
     expect(
-      combineSaveState(state(modelRoot, 'model-root error'), state(reference, 'reference error')),
+      combineSaveState(state(modelRoot, 'model-root error'), state(reference, 'reference error'), latest),
     ).toEqual(expected)
   })
 })
