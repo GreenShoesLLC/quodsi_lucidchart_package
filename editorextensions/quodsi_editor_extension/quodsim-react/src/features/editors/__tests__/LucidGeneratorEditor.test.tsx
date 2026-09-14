@@ -113,12 +113,25 @@ function installHost(options: { refuse?: boolean } = {}) {
   return posted
 }
 
+/** A snapshot after another window (e.g. the pattern modal) renamed the generator and changed its entity. */
+function otherWindowProjection(generatorOverrides: Record<string, unknown>) {
+  return {
+    ...projection(),
+    generators: [generator(generatorOverrides)],
+    entities: [
+      { id: 'e1', name: 'Patient' },
+      { id: 'e2', name: 'Visitor' },
+    ],
+  }
+}
+
 let snapshotCount = 0
-function pushSnapshot() {
+/** An unsolicited snapshot: its envelope id matches no batch this panel sent. */
+function pushSnapshot(next: unknown = projection()) {
   act(() => {
     window.dispatchEvent(
       new MessageEvent('message', {
-        data: { id: `snap-${++snapshotCount}`, type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT, data: { projection: projection() } },
+        data: { id: `snap-${++snapshotCount}`, type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT, data: { projection: next } },
       }),
     )
   })
@@ -174,6 +187,44 @@ describe('LucidGeneratorEditor — the shared editor over Lucid data', () => {
     expect(sent[0].data.shapes).toEqual([
       expect.objectContaining({ shapeId: 'g1', type: 'Generator', patch: expect.objectContaining({ name: 'Walk-ins' }) }),
     ])
+  })
+
+  it('shows a generator change pushed from another window', () => {
+    installHost()
+    render(<LucidGeneratorEditor shapeId="g1" referenceData={referenceData()} />)
+    pushSnapshot()
+    expect(screen.getByDisplayValue('Arrivals')).toBeInTheDocument()
+
+    pushSnapshot(otherWindowProjection({ name: 'Night arrivals', entityId: 'e2' }))
+
+    expect(screen.getByDisplayValue('Night arrivals')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Visitor')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Arrivals')).toBeNull()
+  })
+
+  it("keeps a typed name that has not been sent when another window's snapshot arrives", async () => {
+    vi.useFakeTimers()
+    const posted = installHost()
+    render(<LucidGeneratorEditor shapeId="g1" referenceData={referenceData()} />)
+    pushSnapshot()
+
+    fireEvent.change(screen.getByDisplayValue('Arrivals'), { target: { value: 'Walk-ins' } })
+    pushSnapshot(otherWindowProjection({ entityId: 'e2' }))
+
+    expect(updates(posted)).toHaveLength(0)
+    expect(screen.getByDisplayValue('Walk-ins')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Visitor')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    })
+
+    const sent = updates(posted)
+    expect(sent).toHaveLength(1)
+    expect(sent[0].data.shapes).toEqual([
+      expect.objectContaining({ shapeId: 'g1', type: 'Generator', patch: expect.objectContaining({ name: 'Walk-ins' }) }),
+    ])
+    expect(sent[0].data.shapes[0].patch).not.toHaveProperty('entityId')
   })
 
   it("saves a Routing move-time edit through ELEMENT_UPDATE with the departure's condition and name intact", async () => {
