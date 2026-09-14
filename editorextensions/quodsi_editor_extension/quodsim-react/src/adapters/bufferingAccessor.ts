@@ -530,12 +530,10 @@ export function createBufferingAccessor(
       void flush().catch(() => {
         // Swallowed deliberately: nobody awaits the timer-driven flush, and an
         // unhandled rejection here would be noise. The failure is already
-        // visible -- the base accessor's corrective snapshot has already
-        // restored the stored value and set saveStatus 'failed' / saveError,
-        // the same as a refused model edit. rollback() keeps the edit in the
-        // overlay so it is not silently dropped, but nothing here re-sends it;
-        // flush() itself still reports the failure to the next caller (see
-        // `lastFlushError`).
+        // visible -- the base accessor sets saveStatus 'failed' / saveError and
+        // notifies, and flush() itself reports it to the next caller (see
+        // `lastFlushError`). Nothing is re-sent from here; see rollback() for
+        // what, if anything, survives to go out with the next flush.
       })
     }, opts.debounceMs)
   }
@@ -657,8 +655,13 @@ export function createBufferingAccessor(
   }
 
   /**
-   * A write failed. Put the whole overlay back in `pending` so the edit stays
-   * visible and gets another chance, with any newer pending edit still winning.
+   * A write failed. Put whatever is still in flight back in `pending`, with any
+   * newer pending edit still winning. Over a base that stores before it shows,
+   * that keeps the edit visible for the next flush to re-send. Over Lucid's
+   * batching model-root source it is usually nothing: the source shows a
+   * queued edit at once, so reconcile has already retired the in-flight entry,
+   * and the host's corrective snapshot then shows the stored value -- the same
+   * outcome as a refused edit in the panel.
    * Retiring inFlight wholesale (rather than just the failed entry) is
    * deliberate: a re-send of an already-accepted patch is idempotent, whereas
    * leaving a never-echoed entry in inFlight risks it being retired by an
@@ -681,11 +684,10 @@ export function createBufferingAccessor(
     // reasoning about maps that no longer exist. It costs at most one
     // content-identical rebuild, on a path that already failed.
     overlayVersion++
-    // No automatic retry is scheduled here, and none follows: the base's
-    // corrective snapshot already restored the stored value and reported the
-    // failure, the same as a refused model edit -- the edit is not re-sent.
-    // It only survives here so it is not silently dropped from what the user
-    // sees.
+    // No automatic retry is scheduled here: against a host that keeps
+    // rejecting, that would be an unbounded retry loop. Whatever was put back
+    // in `pending` goes out with the next keystroke or flush -- over the
+    // batching source that is usually nothing (see the doc comment above).
   }
 
   async function sendBatch(batch: Batch): Promise<void> {
@@ -793,8 +795,8 @@ export function createBufferingAccessor(
     if (disposed) return
     cancelTimer()
     void flush().catch(() => {
-      // Nobody left to tell; rollback has already kept the edit in the overlay,
-      // which is itself about to be discarded along with this accessor.
+      // Nobody left to tell; whatever rollback() put back in `pending` is
+      // discarded along with this accessor.
     })
     disposed = true
     unsubscribeBase()
