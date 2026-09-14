@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import {
   Duration,
   Generator,
@@ -11,7 +11,6 @@ import {
   SimulationObjectType,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
-  declareClearedFields,
   getLogger,
   type ScenarioLever,
   type ConnectType,
@@ -21,12 +20,12 @@ import {
 import { Settings, Zap, Info, ChevronDown, ChevronRight, GitBranch, SlidersHorizontal } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import { LucidStateModificationsEditor } from "./LucidStateModificationsEditor";
-import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
+import { registerModelRootSource } from "../../adapters/modelRootWrites";
 import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
 import {
   summarizeArrivalPattern,
@@ -68,6 +67,27 @@ const INFINITY_DISPLAY_VALUE = 999999;
 // quodsi_studio's GeneratorBasicTab.tsx DEFAULT_PATTERN_VOLUME (not
 // exported from the shared barrel, so duplicated here rather than imported).
 const DEFAULT_PATTERN_VOLUME = 1000;
+
+/**
+ * The fields this editor's autosave owns, as one shape patch for the
+ * model-root source (spec 2026-09-13 lucid-shape-writes §3). The link fields
+ * -- arrivalPatternId, volume, arrivalScheduleId -- are deliberately absent:
+ * the mode-switch lifecycle below and the pattern/schedule modals write them,
+ * and an autosave carrying a stale copy would overwrite a modal's edit.
+ */
+export const generatorShapePatch = (draft: Generator): Record<string, unknown> => ({
+  name: draft.name,
+  entityId: draft.entityId,
+  mode: draft.mode,
+  interarrivalTime: draft.interarrivalTime,
+  batchSize: draft.batchSize,
+  startDelay: draft.startDelay,
+  maxCycles: draft.maxCycles,
+  maxEntities: draft.maxEntities,
+  initialStates: draft.initialStates,
+  levers: draft.levers,
+  routing: draft.routing,
+});
 
 /**
  * Plain-language summary for the SCHEDULED branch: arrival count and time
@@ -157,8 +177,6 @@ void _tabsAreMapped;
 interface Props {
   /** The generator to edit (can be Generator instance or raw data object) */
   generator: Generator;
-  /** Callback when user clicks Save or when auto-save triggers - receives the updated Generator */
-  onSave: (generator: Generator) => void;
   /** Reference data for dropdowns (entities, etc.) */
   referenceData: EditorReferenceData;
   /** State manager for model-level states */
@@ -190,7 +208,7 @@ type GeneratorTab = "settings" | "events" | "routing" | "levers";
  *
  * State Management:
  * - Maintains local draft state (localGeneratorDraft) for immediate UI updates
- * - Syncs with Redux for save state tracking (isSaving)
+ * - Syncs with the model-root source for save state tracking (isSaving)
  * - Uses custom hooks for generator switching and save completion detection
  * - Single save path: all field changes route through useAutoSave (debounced)
  *
@@ -224,7 +242,6 @@ type GeneratorTab = "settings" | "events" | "routing" | "levers";
  */
 const GeneratorEditor: React.FC<Props> = ({
   generator,
-  onSave,
   referenceData,
   states,
 }) => {
@@ -450,9 +467,6 @@ const GeneratorEditor: React.FC<Props> = ({
    */
   const currentGeneratorIdRef = useRef<string>(localGeneratorDraft.id);
 
-  // Get element operations state from Redux
-  const elementOpsState = useElementOpsState();
-
   // Model-root projection (generators + arrivalPatterns + model settings) and
   // the accessor shared cross-platform panels (the arrival-pattern editor
   // modal/GeneratorPatternTab) read/write through. `modelRootProjection` is
@@ -460,6 +474,10 @@ const GeneratorEditor: React.FC<Props> = ({
   // below tolerates that via `?? []` fallbacks or a `modelRootProjection &&`
   // guard, never assumes it is populated.
   const { accessor, projection: modelRootProjection } = useModelRootSource();
+
+  // Save status of the batched source this editor now saves through (spec
+  // 2026-09-13 lucid-shape-writes §3).
+  const modelRootState = useSyncExternalStore(accessor.subscribe, accessor.getSnapshot);
 
   // Get the selectElement function for navigating to Model Editor, plus the
   // senders the Routing tab's accessor persists through.
@@ -496,22 +514,28 @@ const GeneratorEditor: React.FC<Props> = ({
   );
 
   /**
-   * Redux-managed state for save operation tracking.
-   *
-   * isSaving: true when save is in progress (shows loading state)
-   *
-   * This is managed by Redux elementOpsState to coordinate saves across
-   * multiple editor instances.
+   * True while ANYTHING is pending or unconfirmed in the model-root source --
+   * this editor's shape edits, the pattern lifecycle's writes, the source's
+   * own 0.4 s pause. useAutoSave needs it to flip true -> false after each
+   * save (see its contract), and useSaveCompletionDetector clears
+   * hasPendingChanges on that flip. Because it is source-wide, useAutoSave is
+   * told the source queues (queuesWhileSaving) so blur/unmount/pre-send saves
+   * do not wait on it.
    */
-  const isSaving = localGeneratorDraft.id ? elementOpsState.isSaving(localGeneratorDraft.id) : false;
+  const isSaving = modelRootState.saveStatus === "saving";
 
-  // Custom hooks for state synchronization
+  // Refill from the snapshot's full record once one has arrived (spec
+  // 2026-09-13 lucid-shape-writes §3), falling back to the selection's copy
+  // until then. Keyed on snapshotSeq so only a real snapshot refills;
+  // useFormSync never refills a draft with unsaved changes.
+  const snapshotRecord = modelRootProjection?.generators?.find((g) => g.id === generator.id);
   useFormSync(
     generator.id,
     hasPendingChanges,
-    () => extractGeneratorData(generator),
+    () => extractGeneratorData(snapshotRecord ?? generator),
     setLocalGeneratorDraft,
-    setHasPendingChanges
+    setHasPendingChanges,
+    modelRootProjection?.snapshotSeq
   );
 
   // ==========================================================================
@@ -528,15 +552,11 @@ const GeneratorEditor: React.FC<Props> = ({
   // reverting the modal's edit. The panel summary showed the stale volume too,
   // until the generator was deselected and reselected.
   //
-  // WHY PROPS AND NOT modelRootProjection. The modal's volume write is a
-  // SHAPE write (accessor.updateShape -> ELEMENT_UPDATE), and
-  // ElementOpsHandler deliberately does NOT push a MODEL_ROOT_SNAPSHOT after
-  // one (that split-brain race is documented in
-  // GeneratorEditor.pattern.test.tsx's fake host). What it DOES do, every
-  // time, is re-run SelectionHandler, which sends a fresh SELECTION_CHANGED to
-  // the 'model' panel -- i.e. new props for this component. So the projection
-  // can still be carrying the pre-edit volume when the props already carry the
-  // new one; props are the reliable source here and the projection is not.
+  // WHY THE SNAPSHOT RECORD. Since 2026-09-13 (spec lucid-shape-writes) a
+  // modal's volume write is a shape edit on MODEL_ROOT_UPDATE, and the tagged
+  // snapshot it produces reaches this panel too, so the snapshot's record
+  // carries the modal's value. The selection's copy is only the fallback
+  // before the first snapshot arrives.
   //
   // WHY NOT WIDEN useFormSync. It is shared by every editor (Activity,
   // Resource, Entity, Connector, Model, ...). Widening it turns its currently
@@ -559,7 +579,7 @@ const GeneratorEditor: React.FC<Props> = ({
   //      because that prop did not change. (Prev-value-compare, not
   //      skip-once: the latter is the pattern StrictMode's double-invoke
   //      breaks.)
-  const incomingGeneratorData: any = (generator as any)?.data ?? generator;
+  const incomingGeneratorData: any = snapshotRecord ?? (generator as any)?.data ?? generator;
   const incomingVolume: number | undefined = incomingGeneratorData?.volume;
   const incomingArrivalPatternId: string | undefined = incomingGeneratorData?.arrivalPatternId;
   const lastSeenModalFieldsRef = useRef<{
@@ -611,14 +631,56 @@ const GeneratorEditor: React.FC<Props> = ({
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
+  /**
+   * Autosave through the model-root source as one batched shape edit (spec
+   * 2026-09-13 lucid-shape-writes §3); progress and refusals show through
+   * modelRootState.
+   */
+  const handleAutoSave = useCallback(
+    (draft: Generator) => {
+      void accessor.updateShape(draft.id, "Generator", generatorShapePatch(draft)).catch(() => {});
+    },
+    [accessor]
+  );
+
   const { status, lastSavedAt, saveNow } = useAutoSave<Generator>({
     draft: localGeneratorDraft,
     hasPendingChanges,
     isValid: nameError === null,
-    onSave,
+    onSave: handleAutoSave,
     isSaving,
     elementId: localGeneratorDraft.id,
+    // The source merges per key, so the blur, unmount and pre-send saves may
+    // hand it a newer draft while it is `saving` (final review I2).
+    queuesWhileSaving: true,
   });
+
+  // Decisive controls: save now AND send the source's pending batch now.
+  const saveAndFlush = useCallback(() => {
+    saveNow();
+    void accessor.flushModelImmediate?.().catch(() => {});
+  }, [saveNow, accessor]);
+
+  // The panel-wide flushes (Run/Validate/JSON/modal opens via
+  // FLUSH_BEFORE_SEND, window blur, pagehide) flush every registered source,
+  // but a draft reaches this editor's source only when the 0.5 s autosave
+  // sends it. Register the draft too: push it (saveNow), then flush the
+  // source and wait for the host (final review I2). After a refused batch
+  // the corrective snapshot refills a clean draft, so this has nothing to
+  // send and cannot loop.
+  const hasPendingChangesRef = useRef(hasPendingChanges);
+  hasPendingChangesRef.current = hasPendingChanges;
+  useEffect(
+    () =>
+      registerModelRootSource({
+        hasPendingWrites: () => hasPendingChangesRef.current,
+        flush: () => {
+          saveNow();
+          return accessor.flushModelImmediate?.() ?? Promise.resolve();
+        },
+      }),
+    [saveNow, accessor]
+  );
 
   // Reset nameError and any stale pattern-lifecycle error when generator
   // changes, and keep currentGeneratorIdRef in sync so the lifecycle
@@ -632,16 +694,16 @@ const GeneratorEditor: React.FC<Props> = ({
   }, [localGeneratorDraft.id]);
 
   // Fire saveNow when entity selection changes (no onBlur on selects).
-  useFlushOnChange(localGeneratorDraft.entityId, saveNow);
+  useFlushOnChange(localGeneratorDraft.entityId, saveAndFlush);
 
   // Fire saveNow when generator type changes. The "Generator Type" select
   // always renders now (offering FREQUENCY, PATTERN, and SCHEDULED) -- no
   // generator type is externally-authored-only any more.
-  useFlushOnChange(localGeneratorDraft.mode, saveNow);
+  useFlushOnChange(localGeneratorDraft.mode, saveAndFlush);
 
   // Fire saveNow when the Routing tab's mode select changes (no onBlur on
   // selects) -- mirrors ActivityEditor's own useFlushOnChange(...routing...).
-  useFlushOnChange(localGeneratorDraft.routing, saveNow);
+  useFlushOnChange(localGeneratorDraft.routing, saveAndFlush);
 
   const entities = referenceData.entities || [];
 
@@ -738,40 +800,18 @@ const GeneratorEditor: React.FC<Props> = ({
         const seededVolume = localGeneratorDraft.volume ?? DEFAULT_PATTERN_VOLUME;
         patternFieldUpdates = { arrivalPatternId: ensured.patternId, volume: seededVolume };
 
-        // SEQUENCED, not parallel -- Task 10 review round 3, "split-brain
-        // projection". The generator's own flat fields (mode, arrivalPatternId,
-        // volume) persist through the shape-scoped route (accessor.updateShape)
-        // -- updateGeneratorImmutably deliberately refuses these from a plain
-        // `updates` object for every OTHER caller, and a model-root patch is
-        // restricted to arrivalPatterns (the host's update-model-root route
-        // throws on any other key), so updateModel({ generators }) is not an
-        // option. Mirrors quodsi_studio's GeneratorBasicTab.tsx
-        // handleTypeChange, including seeding a default volume (Critical 1) --
-        // but Studio issues both halves through ONE accessor over ONE model,
-        // so ordering between them is moot there. Lucid has two independent
-        // write routes (ELEMENT_UPDATE for the shape half, MODEL_ROOT_UPDATE
-        // for arrivalPatterns), and MODEL_ROOT_UPDATE's own post-write
-        // snapshot push (buildModelRootProjection, on the host) runs
-        // CONCURRENTLY with whatever ELEMENT_UPDATE is still in flight for
-        // the same generator -- so firing both together let the snapshot
-        // land showing the new pattern in arrivalPatterns but NOT linked
-        // from the generator. A later removePatternForGenerator call, given
-        // that stale projection, found no link, silently no-op'd instead of
-        // deleting the pattern, and the NEXT switch to PATTERN minted a
-        // second one. accessor.updateShape's returned promise now resolves
-        // only once the host CONFIRMS the shape write (ELEMENT_UPDATE_RESULT)
-        // -- see useModelRootSource's saveShape -- so awaiting it here before
-        // the model-root write closes that window: by the time
-        // buildModelRootProjection runs (for either write's own snapshot
-        // push), the link has already landed.
+        // ONE QUEUE (spec 2026-09-13 lucid-shape-writes §3). The generator's
+        // link fields and the pattern list both go through the model-root
+        // source, which sends them in queue order -- in one MODEL_ROOT_UPDATE
+        // when they land in the same pause -- so a snapshot can never show the
+        // new pattern without the generator's link (the "split-brain
+        // projection" this handler once avoided by awaiting a confirmed
+        // ELEMENT_UPDATE). The flush sends them now and rejects if the host
+        // refused either.
         setPatternLifecycleError(null);
         void (async () => {
-          // `name` included even though this handler never changes it:
-          // ModelManager.handleDataUpdate falls back to a shape-derived
-          // default name whenever an update payload omits the `name` key
-          // at all (not just when it's undefined) -- harmless for a
-          // real Lucid BlockProxy whose on-canvas text label usually
-          // matches, but not a dependency this write should take on.
+          // `name` included: ModelManager.handleDataUpdate falls back to a
+          // shape-derived default name when an update omits the key.
           await accessor.updateShape(generatorId, 'Generator', {
             name: localGeneratorDraft.name,
             mode: nextMode,
@@ -780,10 +820,8 @@ const GeneratorEditor: React.FC<Props> = ({
           });
           if (ensured.model !== model) {
             await accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
-            // The pattern list lands right behind the generator's link, as
-            // before batching (spec 2026-09-12 lucid-model-root-batching §3).
-            await accessor.flushModelImmediate?.();
           }
+          await accessor.flushModelImmediate?.();
         })().catch(err => {
           // accessor.updateShape/updateModel can reject (host error, or the
           // 30s accessor timeout). Unhandled, that was an invisible unhandled
@@ -812,31 +850,18 @@ const GeneratorEditor: React.FC<Props> = ({
 
         setPatternLifecycleError(null);
         void (async () => {
-          // arrivalPatternId: undefined never reaches storage on its own --
-          // a documented Lucid platform constraint (Task 10 review round 3,
-          // Minor): the panel->extension JSON transport drops undefined-
-          // valued keys, and StorageAdapter.updateElementData's merge
-          // additionally strips them from the incoming patch (a partial
-          // update must not clobber stored fields it didn't mention) -- so
-          // "the user cleared this" and "this payload never mentions it"
-          // arrive identical, and the stale link would silently survive.
-          // Generator now follows the SAME explicit cleared-field
-          // declaration Activity's queueRanking already established
-          // (declareClearedFields here; the extension-side removeKeys half
-          // is generatorStorageRemoveKeys in GeneratorLucid.ts, wired into
-          // ModelManager.ts's handleDataUpdate the same way
-          // activityStorageRemoveKeys already is).
-          // `name` included for the same reason as the switch-to-PATTERN
-          // write above -- see its comment.
-          await accessor.updateShape(
-            generatorId,
-            'Generator',
-            declareClearedFields({ name: localGeneratorDraft.name, mode: nextMode }, ['arrivalPatternId'])
-          );
+          // `arrivalPatternId: undefined` goes out as a cleared field (the
+          // model-root source turns undefined into clearedFields; the host
+          // allows it on a Generator). Same queue as the pattern list below.
+          await accessor.updateShape(generatorId, 'Generator', {
+            name: localGeneratorDraft.name,
+            mode: nextMode,
+            arrivalPatternId: undefined,
+          });
           if (removed !== model) {
             await accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
-            await accessor.flushModelImmediate?.();
           }
+          await accessor.flushModelImmediate?.();
         })().catch(err => {
           // See the switch-to-PATTERN branch's identical .catch above for
           // the full rationale, including the currentGeneratorIdRef guard.
@@ -1418,7 +1443,11 @@ const GeneratorEditor: React.FC<Props> = ({
       </div>
 
       {/* Auto-save status */}
-      <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
+      <SaveStatusLine
+        status={modelRootState.saveStatus === "failed" ? "error" : status}
+        lastSavedAt={lastSavedAt}
+        message={modelRootState.saveError}
+      />
     </div>
   );
 };

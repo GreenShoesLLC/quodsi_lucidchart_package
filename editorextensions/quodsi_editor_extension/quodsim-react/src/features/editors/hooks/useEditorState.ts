@@ -112,14 +112,29 @@ export interface UseAutoSaveArgs<T> {
   /** Existing save callback — receives the draft when auto-save fires. */
   onSave: (draft: T) => void;
   /**
-   * True while a save is in flight: Redux elementOpsState for the element
-   * editors (ActivityEditor, GeneratorEditor).
+   * True while a save is in flight. For Lucid's ActivityEditor and
+   * GeneratorEditor this is the model-root source's COMBINED save status
+   * (spec 2026-09-13 lucid-shape-writes): `saving` while anything is pending
+   * or unconfirmed there, including the source's own 0.4 s pause after every
+   * autosave -- not a per-save flag.
    */
   isSaving: boolean;
   /** ID of the currently selected element. Switching this flushes pending edits. */
   elementId: string;
   /** Debounce delay in ms. Defaults to 500. */
   debounceMs?: number;
+  /**
+   * The save target queues and merges edits per key (Lucid's model-root
+   * source), so handing it a newer draft while `isSaving` is harmless. When
+   * true, saveNow() and the unmount save send a draft edited since the last
+   * dispatch even while isSaving, instead of waiting for the saving -> not
+   * saving transition -- which, with a source-wide isSaving, left a blur, a
+   * decisive control, a pre-send flush and switching away all unable to send
+   * the last edit (final review I2). A draft already dispatched is not sent
+   * again. Default false: the wait stays for a target whose concurrent saves
+   * are unverified.
+   */
+  queuesWhileSaving?: boolean;
 }
 
 export interface UseAutoSaveResult {
@@ -139,16 +154,19 @@ export interface UseAutoSaveResult {
  * unmount, and reports status="error" when onSave throws.
  *
  * Contract — REQUIRED of consumers:
- *   onSave must cause the `isSaving` passed in to render true then false
- *   (Redux elementOpsState for the element editors). The hook uses the
- *   saving→not-saving transition to clear the "saving" status, fire trailing
- *   saves, and drain captured pending flushes. If onSave is synchronous and
- *   never causes isSaving to flip, status will stay at "saving" forever and
- *   trailing/captured saves will never fire.
+ *   onSave must cause the `isSaving` passed in to render true then false.
+ *   The hook uses the saving→not-saving transition to clear the "saving"
+ *   status, fire trailing saves, and drain captured pending flushes. If
+ *   onSave is synchronous and never causes isSaving to flip, status will stay
+ *   at "saving" forever and trailing/captured saves will never fire.
  *
- *   The element editors get that transition from Redux's elementOpsState
- *   (ELEMENT_SAVE_START sets isSaving=true, ELEMENT_SAVE_SUCCESS/ERROR set it
- *   false).
+ *   Lucid's ActivityEditor and GeneratorEditor (the only consumers) get that
+ *   transition from the model-root source's save status (spec 2026-09-13
+ *   lucid-shape-writes): onSave queues a shape edit, which sets it `saving`,
+ *   and it falls to `saved`/`failed` once nothing is pending or unconfirmed
+ *   there. Being source-wide it stays true through the source's own 0.4 s
+ *   pause and across overlapping saves, which is why both pass
+ *   queuesWhileSaving (see UseAutoSaveArgs).
  *
  * Trailing saves: one is scheduled only for a draft that changed after the
  * in-flight save was dispatched -- compared by identity against the last
@@ -158,7 +176,16 @@ export interface UseAutoSaveResult {
  * re-sent the in-flight draft, a duplicate save in every Lucid editor.
  */
 export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
-  const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
+  const {
+    draft,
+    hasPendingChanges,
+    isValid,
+    onSave,
+    isSaving,
+    elementId,
+    debounceMs = 500,
+    queuesWhileSaving = false,
+  } = args;
 
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -169,11 +196,13 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const hasPendingRef = useRef(hasPendingChanges);
   const isValidRef = useRef(isValid);
   const isSavingRef = useRef(isSaving);
+  const queuesWhileSavingRef = useRef(queuesWhileSaving);
   draftRef.current = draft;
   onSaveRef.current = onSave;
   hasPendingRef.current = hasPendingChanges;
   isValidRef.current = isValid;
   isSavingRef.current = isSaving;
+  queuesWhileSavingRef.current = queuesWhileSaving;
 
   const timerRef = useRef<number | null>(null);
   const wasSavingRef = useRef(isSaving);
@@ -212,9 +241,18 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
       return;
     }
     if (isSavingRef.current) {
-      // No-op while a save is in flight. Task 5 adds trailingSaveNeededRef
-      // so the edit is retried after the current save completes.
-      return;
+      // Without a queueing target: no-op while a save is in flight; the
+      // trailing save sends the edit once the current save completes.
+      // With one (queuesWhileSaving): send a draft the target does not
+      // already have, NOW -- a blur, a decisive control or a pre-send flush
+      // must not wait out the target's own pause. A draft already dispatched
+      // is already there, so there is nothing to send.
+      if (!queuesWhileSavingRef.current || draftRef.current === dispatchedDraftRef.current) {
+        return;
+      }
+      // This dispatch carries the newest draft: the trailing save it
+      // replaces must not send the same draft again when isSaving falls.
+      trailingSaveNeededRef.current = false;
     }
     dispatchSave();
   }, [clearTimer, dispatchSave]);
@@ -342,7 +380,14 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
+      // While a save is in flight, only a queueing target may take a draft it
+      // does not already have (see queuesWhileSaving); otherwise the edit is
+      // lost with this editor -- switching to another element type within the
+      // source's pause dropped the last edit (final review I2).
+      const canSendNow =
+        !isSavingRef.current ||
+        (queuesWhileSavingRef.current && draftRef.current !== dispatchedDraftRef.current);
+      if (hasPendingRef.current && isValidRef.current && canSendNow) {
         try {
           dispatchedDraftRef.current = draftRef.current;
           onSaveRef.current(draftRef.current);

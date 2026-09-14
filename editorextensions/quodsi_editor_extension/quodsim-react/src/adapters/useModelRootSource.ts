@@ -86,21 +86,41 @@ function isNoReplyError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { noReply?: unknown }).noReply === true
 }
 
+/** A shape edit as it travels on MODEL_ROOT_UPDATE (spec 2026-09-13 lucid-shape-writes §1). */
+export type ShapeWriteEntry = {
+  shapeId: string
+  type: 'Activity' | 'Generator'
+  /** Defined values only. */
+  patch: Record<string, unknown>
+  /** Fields the panel cleared (`undefined` in the queued patch). */
+  clearedFields: string[]
+}
+
+/** A shape's queued edits: `undefined` values mark clears until sent. */
+type PendingShape = { type: 'Activity' | 'Generator'; patch: Record<string, unknown> }
+
+const SHAPE_LIST_KEY: Record<PendingShape['type'], 'activities' | 'generators'> = {
+  Activity: 'activities',
+  Generator: 'generators',
+}
+
 export type ModelRootTransport = {
   /**
    * Send one model-root batch. `basedOnPageId` is the page id of the snapshot
    * the batch's first edit was based on (page guard, spec 2026-09-11);
    * `options` is a delete dialog's Seize/Release choice, present only on a
    * write that carries one; `id` is the envelope id -- the host tags its
-   * post-write AND corrective snapshots with it. Resolves when the host
-   * confirms; rejects with the host's message, or with ModelRootNoReplyError
-   * when no reply can come.
+   * post-write AND corrective snapshots with it; `shapes` is present only
+   * when the batch carries Activity/Generator edits (spec 2026-09-13
+   * lucid-shape-writes). Resolves when the host confirms; rejects with the
+   * host's message, or with ModelRootNoReplyError when no reply can come.
    */
   send(
     patch: Record<string, unknown>,
     basedOnPageId: string | undefined,
     options: ReferenceCleanupOptions | undefined,
     id: string,
+    shapes?: ShapeWriteEntry[],
   ): Promise<void>
   /**
    * Ask the host for a fresh snapshot; returns the request's envelope id,
@@ -108,11 +128,13 @@ export type ModelRootTransport = {
    */
   request?(): string | void
   /**
-   * Persist a shape-scoped patch (e.g. the arrival-pattern editor modal's
-   * GeneratorPatternTab volume slider, or its fork-on-edit linking, both via
-   * accessor.updateShape). Optional -- absent in unit tests that only
-   * exercise the model-root half; when absent, deps.save throws rather than
-   * silently no-opping (see createModelRootSource's own comment).
+   * Persist a shape-scoped patch on a confirmed ELEMENT_UPDATE round trip.
+   * Only shape types that do NOT batch come here: Activity and Generator
+   * edits (including the arrival-pattern modal's volume and fork-on-edit
+   * link) queue into the batch via deps.queueShape since spec 2026-09-13
+   * lucid-shape-writes. Optional -- absent in unit tests that only exercise
+   * the model-root half; when absent, deps.save throws rather than silently
+   * no-opping (see createModelRootSource's own comment).
    */
   saveShape?(shapeId: string, type: string, patch: Record<string, unknown>): Promise<void>
 }
@@ -177,11 +199,51 @@ function applyPatch(current: Record<string, unknown>, patch: Record<string, unkn
   return next
 }
 
+/**
+ * Lay queued shape edits over a projection's `activities` / `generators`
+ * rows by id, returning a NEW object. An `undefined` value removes the key
+ * (a clear). A shape the projection does not list is left alone; its edit is
+ * still sent.
+ */
+function applyShapes(current: Record<string, unknown>, shapes: Map<string, PendingShape>): Record<string, unknown> {
+  if (shapes.size === 0) return current
+  const next: Record<string, unknown> = { ...current }
+  for (const [shapeId, { type, patch }] of shapes) {
+    const key = SHAPE_LIST_KEY[type]
+    const rows = (next[key] as Array<Record<string, unknown>> | undefined) ?? []
+    next[key] = rows.map((row) => {
+      if (!row || row.id !== shapeId) return row
+      const merged: Record<string, unknown> = { ...row }
+      for (const [field, value] of Object.entries(patch)) {
+        if (value === undefined) delete merged[field]
+        else merged[field] = value
+      }
+      return merged
+    })
+  }
+  return next
+}
+
+/** Queued shape edits as the wire carries them: defined values, plus cleared field names. */
+function toWireShapes(shapes: Map<string, PendingShape>): ShapeWriteEntry[] {
+  return Array.from(shapes, ([shapeId, { type, patch }]) => {
+    const defined: Record<string, unknown> = {}
+    const clearedFields: string[] = []
+    for (const [field, value] of Object.entries(patch)) {
+      if (value === undefined) clearedFields.push(field)
+      else defined[field] = value
+    }
+    return { shapeId, type, patch: defined, clearedFields }
+  })
+}
+
 /** A group of model-root edits sent as one MODEL_ROOT_UPDATE. */
 type Batch = {
   id: string
   order: number
   patch: Record<string, unknown>
+  /** Activity/Generator edits sent with this batch. */
+  shapes: Map<string, PendingShape>
   basedOnPageId: string | undefined
   options: ReferenceCleanupOptions | undefined
   /** Envelope ids whose snapshot releases this batch: its own, plus a safety-net request's. */
@@ -219,6 +281,7 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
   let seq = 0
 
   let pending: Record<string, unknown> = {}
+  let pendingShapes = new Map<string, PendingShape>()
   let pendingPageId: string | undefined
   let hasPending = false
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -250,8 +313,8 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
       return
     }
     let next = base as unknown as Record<string, unknown>
-    for (const batch of unreleased) next = applyPatch(next, batch.patch)
-    if (hasPending) next = applyPatch(next, pending)
+    for (const batch of unreleased) next = applyShapes(applyPatch(next, batch.patch), batch.shapes)
+    if (hasPending) next = applyShapes(applyPatch(next, pending), pendingShapes)
     projection = next as unknown as ModelRootProjection
   }
 
@@ -271,12 +334,14 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     patch: Record<string, unknown>,
     basedOnPageId: string | undefined,
     options: ReferenceCleanupOptions | undefined,
+    shapes: Map<string, PendingShape> = new Map(),
   ): Batch {
     const id = uuid()
     return {
       id,
       order: ++batchOrder,
       patch,
+      shapes,
       basedOnPageId,
       options,
       releaseIds: new Set([id]),
@@ -293,8 +358,9 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
   function promotePending(): Batch | null {
     clearTimer()
     if (!hasPending) return null
-    const batch = makeBatch(pending, pendingPageId, undefined)
+    const batch = makeBatch(pending, pendingPageId, undefined, pendingShapes)
     pending = {}
+    pendingShapes = new Map()
     pendingPageId = undefined
     hasPending = false
     unreleased.push(batch)
@@ -312,7 +378,13 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
 
   function send(batch: Batch): Promise<void> {
     return new Promise<void>((resolve) => {
-      resolve(transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id))
+      const shapes = toWireShapes(batch.shapes)
+      // Model-only batches keep the four-argument call (and envelope) exactly.
+      resolve(
+        shapes.length > 0
+          ? transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id, shapes)
+          : transport.send(batch.patch, batch.basedOnPageId, batch.options, batch.id),
+      )
     }).then(
       () => {
         settle(batch, SAVED)
@@ -427,6 +499,21 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     return hasPending || outstanding.size > 0
   }
 
+  // One pending batch for model and shape edits: (re)arm the quiet-period
+  // timer and show the edit at once.
+  function schedulePending(): void {
+    hasPending = true
+    clearTimer()
+    timer = setTimeout(() => {
+      timer = null
+      const batch = promotePending()
+      if (batch) void enqueue(batch).catch(() => {})
+    }, debounceMs)
+    syncStatus()
+    recompute()
+    notify()
+  }
+
   const deps: LucidModelStateAccessorDeps = {
     getModelDefinition: () => projection as unknown as Record<string, unknown> | null,
 
@@ -435,23 +522,19 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
       return () => { listeners.delete(listener) }
     },
 
-    // Forwards to transport.saveShape, which the React hook below wires to
-    // the SAME ELEMENT_UPDATE route (same envelope type, same host handler
-    // ElementOpsHandler.handleElementUpdate, same StorageAdapter merge)
-    // GeneratorEditor's own field edits already use -- see that hook's own
-    // comment. Until Task 10 review round 2 this threw unconditionally
-    // ("wire deps.save to the existing element-update route instead");
-    // GeneratorPatternTab's volume input and fork-linking both call
-    // accessor.updateShape, and both were silently rejecting. Round 3
-    // upgraded the wiring again: saveShape now AWAITS the real
-    // ELEMENT_UPDATE_RESULT confirmation (round 2's version resolved the
-    // instant the message was sent), because a caller that needs to
-    // sequence a shape write before a model-root write -- GeneratorEditor's
-    // PATTERN mode-switch does, see its own comment -- needs deps.save to
-    // mean "durably persisted", not "message dispatched". A transport with
-    // no saveShape wired (e.g. a bare unit test) still fails loudly,
-    // matching updateModel's own "no saveModel dependency configured"
-    // posture -- never a silent no-op.
+    // The confirmed, UN-batched shape write. Since spec 2026-09-13
+    // lucid-shape-writes, LucidModelStateAccessor.updateShape sends Activity
+    // and Generator edits through queueShape below -- GeneratorEditor's
+    // fields and its PATTERN mode switch, and the pattern modal's volume and
+    // fork-linking -- so this path now serves only the shape types that do
+    // not batch. It forwards to transport.saveShape, which the React hook
+    // below wires to the ELEMENT_UPDATE route (ElementOpsHandler.
+    // handleElementUpdate, the StorageAdapter merge) and which AWAITS the
+    // real ELEMENT_UPDATE_RESULT, so a resolved deps.save means "durably
+    // persisted", not "message dispatched". A transport with no saveShape
+    // wired (e.g. a bare unit test) still fails loudly, matching updateModel's
+    // own "no saveModel dependency configured" posture -- never a silent
+    // no-op.
     save: async (shapeId, type, patch) => {
       if (!transport.saveShape) {
         throw new Error(
@@ -525,16 +608,22 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
       }
       if (!hasPending) pendingPageId = base.pageId
       pending = { ...pending, ...patch }
-      hasPending = true
-      clearTimer()
-      timer = setTimeout(() => {
-        timer = null
-        const batch = promotePending()
-        if (batch) void enqueue(batch).catch(() => {})
-      }, debounceMs)
-      syncStatus()
-      recompute()
-      notify()
+      schedulePending()
+      return Promise.resolve()
+    },
+
+    // Activity/Generator shape edits (spec 2026-09-13 lucid-shape-writes §2):
+    // merged per shape and key into the SAME pending batch as model edits, so
+    // a shape write and the model write it goes with always land in order.
+    // Refused before any echo when no snapshot has arrived, like saveModel.
+    queueShape: (shapeId: string, type: 'Activity' | 'Generator', patch: Record<string, unknown>) => {
+      if (!base) {
+        return Promise.reject(new Error(MODEL_NOT_LOADED_MESSAGE))
+      }
+      if (!hasPending) pendingPageId = base.pageId
+      const prev = pendingShapes.get(shapeId)
+      pendingShapes.set(shapeId, { type, patch: { ...(prev?.patch ?? {}), ...patch } })
+      schedulePending()
       return Promise.resolve()
     },
 
@@ -613,7 +702,7 @@ export function useModelRootSource(): {
   const sourceRef = useRef<ReturnType<typeof createModelRootSource> | null>(null)
   if (!sourceRef.current) {
     const transport: ModelRootTransport = {
-      send(patch, basedOnPageId, options, id) {
+      send(patch, basedOnPageId, options, id, shapes) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {
             reject(new ModelRootNoReplyError('No parent window to send model-root update to'))
@@ -654,7 +743,12 @@ export function useModelRootSource(): {
             source,
             target: 'host',
             version: '1.0',
-            data: { patch, basedOnPageId, ...(options?.seizeRelease ? { seizeRelease: options.seizeRelease } : {}) },
+            data: {
+              patch,
+              basedOnPageId,
+              ...(options?.seizeRelease ? { seizeRelease: options.seizeRelease } : {}),
+              ...(shapes && shapes.length > 0 ? { shapes } : {}),
+            },
           }
           window.parent.postMessage(envelope, '*')
         })
@@ -687,20 +781,17 @@ export function useModelRootSource(): {
       // -> StorageAdapter.updateElementData, which merges rather than
       // clobbers -- verified in Task 10 review round 2).
       //
-      // On confirmed success, request() a fresh snapshot. This is the fix
-      // for the "split-brain projection" finding (Task 10 review round 3):
-      // ELEMENT_UPDATE never triggers a MODEL_ROOT_SNAPSHOT push on its own
-      // (only MODEL_ROOT_REQUEST and the post-write push after
-      // MODEL_ROOT_UPDATE do), and that post-write push is built by
-      // buildModelRootProjection CONCURRENTLY with an in-flight shape write
-      // -- so a caller that fires both writes in parallel can have the
-      // model-root snapshot land BEFORE the shape write's arrivalPatternId
-      // reaches storage, permanently missing the link. Re-requesting here
-      // only fires once THIS shape write is confirmed durable, so a caller
-      // that awaits saveShape before issuing its own model-root write (see
-      // GeneratorEditor's PATTERN mode-switch handler) is guaranteed a
-      // projection that reflects both halves before making its next
-      // lifecycle decision.
+      // On confirmed success, request() a fresh snapshot: ELEMENT_UPDATE
+      // never triggers a MODEL_ROOT_SNAPSHOT push on its own (only
+      // MODEL_ROOT_REQUEST and the post-write push after MODEL_ROOT_UPDATE
+      // do), so without it the projection would not show a confirmed shape
+      // write until some later model-root write happened to refresh it.
+      // Re-requesting only once THIS write is confirmed durable means the
+      // reply reflects it. (This once guarded GeneratorEditor's PATTERN mode
+      // switch, which awaited saveShape before its model-root write; since
+      // spec 2026-09-13 lucid-shape-writes that switch sends its shape write
+      // and the pattern list through the one batched queue, in order, and no
+      // longer comes here.)
       saveShape(shapeId, type, patch) {
         return new Promise<void>((resolve, reject) => {
           if (!window.parent) {

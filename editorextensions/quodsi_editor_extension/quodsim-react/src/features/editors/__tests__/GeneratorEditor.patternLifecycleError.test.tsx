@@ -13,6 +13,12 @@
 // error must appear. A control case proves the assertion isn't vacuous: the
 // identical rejection DOES surface when the user is still on the generator
 // the write was for.
+//
+// Migrated for spec 2026-09-13 lucid-shape-writes §2 (Task 3): the generator
+// shape write no longer travels as its own ELEMENT_UPDATE envelope --
+// accessor.updateShape now queues it into the SAME batched MODEL_ROOT_UPDATE
+// as any model-root edit (arrivalPatterns here), and it is THAT envelope's
+// delayed failure the fake host below simulates.
 
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -29,11 +35,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: mockSelectElement,
     updateElementData: mockUpdateElementData,
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 // Real useFormSync (NOT mocked) -- this suite is specifically about
@@ -65,7 +69,6 @@ afterEach(() => {
 });
 
 const baseProps = {
-  onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
 };
@@ -75,13 +78,18 @@ function frequencyGenerator(id: string) {
 }
 
 /**
- * Minimal fake host: answers MODEL_ROOT_REQUEST with an (empty) snapshot so
- * modelRootProjection becomes non-null (required for the mode-switch
- * lifecycle branch to run at all), and answers every ELEMENT_UPDATE with a
- * FAILURE after `delayMs` -- reproducing "accessor.updateShape rejects some
- * time after it was issued" without an actual 30s wait.
+ * Minimal fake host: answers MODEL_ROOT_REQUEST with a snapshot that already
+ * lists `initialGenerators` (required so ensurePatternForGenerator finds the
+ * generator and actually creates+links a pattern -- an empty list makes it a
+ * same-model no-op, and Task 3's queueShape resolves the SHAPE half the
+ * instant it is locally accepted, so only a write that also changes
+ * arrivalPatterns triggers GeneratorEditor's `await
+ * accessor.flushModelImmediate?.()`, the one call whose rejection this test
+ * needs to observe), then answers every MODEL_ROOT_UPDATE with a FAILURE
+ * after `delayMs` -- reproducing "the flushed write rejects some time after
+ * it was issued" without an actual 30s wait.
  */
-function createFailingFakeHost(delayMs: number) {
+function createFailingFakeHost(delayMs: number, initialGenerators: any[] = []) {
   function dispatch(data: any) {
     window.dispatchEvent(new MessageEvent("message", { data }));
   }
@@ -94,15 +102,15 @@ function createFailingFakeHost(delayMs: number) {
         source: "host",
         target: "model-iframe",
         version: "1.0",
-        data: { projection: { generators: [], arrivalPatterns: [], model: {} } },
+        data: { projection: { generators: initialGenerators, arrivalPatterns: [], model: {} } },
       });
       return;
     }
-    if (envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE) {
+    if (envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
       setTimeout(() => {
         dispatch({
           id: envelope.id,
-          type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT,
+          type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
           source: "host",
           target: "model-iframe",
           version: "1.0",
@@ -123,7 +131,13 @@ describe("GeneratorEditor PATTERN mode — lifecycle error misattribution (Task 
   });
 
   it("does not show the lifecycle error on generator B when the late rejection was for generator A", async () => {
-    const fakeHost = createFailingFakeHost(50);
+    // The initial snapshot must already list generator A (spec 2026-09-13
+    // lucid-shape-writes §2 -- see createFailingFakeHost's own comment): only
+    // that makes ensurePatternForGenerator actually link a NEW pattern, which
+    // is what makes GeneratorEditor await accessor.flushModelImmediate?.()
+    // (and so observe this fake host's delayed rejection) rather than just
+    // locally queuing the shape edit and returning.
+    const fakeHost = createFailingFakeHost(50, [{ id: "g-a", name: "Gen g-a", mode: "frequency" }]);
     vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
       fakeHost.handlePostMessage(envelope);
     });
@@ -150,7 +164,7 @@ describe("GeneratorEditor PATTERN mode — lifecycle error misattribution (Task 
   });
 
   it("control case: DOES show the lifecycle error when the user is still on the generator the write was for", async () => {
-    const fakeHost = createFailingFakeHost(50);
+    const fakeHost = createFailingFakeHost(50, [{ id: "g-a", name: "Gen g-a", mode: "frequency" }]);
     vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
       fakeHost.handlePostMessage(envelope);
     });

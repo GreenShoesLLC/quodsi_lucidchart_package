@@ -531,9 +531,9 @@ export function createBufferingAccessor(
         // Swallowed deliberately: nobody awaits the timer-driven flush, and an
         // unhandled rejection here would be noise. The failure is already
         // visible -- the base accessor sets saveStatus 'failed' / saveError and
-        // notifies, rollback() keeps the edit in the overlay so it is retried
-        // on the next flush rather than lost, and flush() itself reports it to
-        // the next caller (see `lastFlushError`).
+        // notifies, and flush() itself reports it to the next caller (see
+        // `lastFlushError`). Nothing is re-sent from here; see rollback() for
+        // what, if anything, survives to go out with the next flush.
       })
     }, opts.debounceMs)
   }
@@ -655,8 +655,13 @@ export function createBufferingAccessor(
   }
 
   /**
-   * A write failed. Put the whole overlay back in `pending` so the edit stays
-   * visible and gets another chance, with any newer pending edit still winning.
+   * A write failed. Put whatever is still in flight back in `pending`, with any
+   * newer pending edit still winning. Over a base that stores before it shows,
+   * that keeps the edit visible for the next flush to re-send. Over Lucid's
+   * batching model-root source it is usually nothing: the source shows a
+   * queued edit at once, so reconcile has already retired the in-flight entry,
+   * and the host's corrective snapshot then shows the stored value -- the same
+   * outcome as a refused edit in the panel.
    * Retiring inFlight wholesale (rather than just the failed entry) is
    * deliberate: a re-send of an already-accepted patch is idempotent, whereas
    * leaving a never-echoed entry in inFlight risks it being retired by an
@@ -680,8 +685,9 @@ export function createBufferingAccessor(
     // content-identical rebuild, on a path that already failed.
     overlayVersion++
     // No automatic retry is scheduled here: against a host that keeps
-    // rejecting, that would be an unbounded retry loop. The next keystroke, or
-    // the flush on close, retries it.
+    // rejecting, that would be an unbounded retry loop. Whatever was put back
+    // in `pending` goes out with the next keystroke or flush -- over the
+    // batching source that is usually nothing (see the doc comment above).
   }
 
   async function sendBatch(batch: Batch): Promise<void> {
@@ -696,12 +702,19 @@ export function createBufferingAccessor(
       }
       if (Object.keys(batch.model).length > 0) {
         await base.updateModel(batch.model)
-        // A batching base (Lucid's model-root source, spec 2026-09-12
-        // lucid-model-root-batching) resolves updateModel once the edit is
-        // accepted. Flushing keeps this batch's success meaning "the host
-        // stored it", which flush() and the close path promise.
-        await base.flushModelImmediate?.()
       }
+      // EVERY batch flushes the base, shape-only batches included. A batching
+      // base (Lucid's model-root source: model edits since spec 2026-09-12
+      // lucid-model-root-batching, Activity/Generator shape edits since spec
+      // 2026-09-13 lucid-shape-writes) resolves updateModel AND updateShape
+      // once the edit is accepted, not stored. Without this flush a shape-only
+      // batch -- the pattern modal's volume -- would "succeed" while still
+      // sitting behind the source's own pause: lost if the modal's realm dies
+      // on close, flush() claiming it written, and a host refusal never
+      // reaching rollback(). Flushing makes success mean "the host stored it"
+      // and sends the edit inside this task. A non-batching base has no
+      // flushModelImmediate; its writes were already confirmed.
+      await base.flushModelImmediate?.()
     } catch (err) {
       rollback()
       throw err
@@ -782,8 +795,8 @@ export function createBufferingAccessor(
     if (disposed) return
     cancelTimer()
     void flush().catch(() => {
-      // Nobody left to tell; rollback has already kept the edit in the overlay,
-      // which is itself about to be discarded along with this accessor.
+      // Nobody left to tell; whatever rollback() put back in `pending` is
+      // discarded along with this accessor.
     })
     disposed = true
     unsubscribeBase()

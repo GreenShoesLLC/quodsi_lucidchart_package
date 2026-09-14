@@ -42,10 +42,12 @@ export type ModelRootModelFields = {
  * silently: the React panel would read the wrong key and render blank rather
  * than error.
  *
- * Activity, generator and connector rows are SUMMARIES (the shapes
- * referenceDataBuilder sends, built by the extension's referenceSummaries.ts),
- * never whole domain records: the snapshot is posted after every model-root
- * write, so every field added here rides the wire each time.
+ * Connector rows are SUMMARIES (the shapes referenceDataBuilder sends, built
+ * by the extension's referenceSummaries.ts). Activity and generator rows are
+ * FULL records since 2026-09-13 (spec lucid-shape-writes): the summary keys
+ * plus every stored field, because Studio's shared Activity and Generator
+ * editors read them. The snapshot is posted after every model-root write, so
+ * every field added here rides the wire each time.
  */
 export type ModelRootProjection = ModelRootModelFields & {
     // The Lucid page this snapshot was built for (spec 2026-09-11 page guard).
@@ -71,8 +73,14 @@ export type ModelRootProjection = ModelRootModelFields & {
         arrivalScheduleId?: string;
         volume?: number;
         interarrivalTime?: ISerializedDuration;
-        initialStates?: EditorReferenceStateModification[];
+        initialStates?: Array<EditorReferenceStateModification & Record<string, unknown>>;
         routing?: string;
+        // Full record (spec 2026-09-13 lucid-shape-writes §1).
+        batchSize?: number;
+        startDelay?: ISerializedDuration;
+        maxCycles?: number;
+        maxEntities?: number;
+        description?: string;
     }>;
     arrivalPatterns: ISerializedArrivalPattern[];
     // Optional only to avoid churning ~65 fixture literals; projectModelRoot
@@ -118,23 +126,29 @@ export type ModelRootProjection = ModelRootModelFields & {
     resourceRequirements?: ISerializedResourceRequirement[];
     // Model-level work schedules (spec 2026-08-27 §3.1).
     workSchedules?: ISerializedWorkSchedule[];
-    // Activity summaries plus what the Model editor's tabs count off them:
-    // the work-schedule link (Schedules usage and delete guard), the arrival
-    // links of a self-generating activity (Arrivals usage), and levers (the
-    // delete dialogs' lever count).
+    // Full activity records (spec 2026-09-13 lucid-shape-writes §1): the
+    // summary keys the Model editor's tabs count off (work-schedule link,
+    // arrival links, levers, action summaries) plus every stored field the
+    // shared ActivityEditor reads.
     activities?: Array<{
         id: string;
         name: string;
         workScheduleId?: string;
         routing?: string;
-        actions?: EditorReferenceActionSummary[];
+        actions?: Array<EditorReferenceActionSummary & Record<string, unknown>>;
         sourceConfig?: {
-            initialStates?: EditorReferenceStateModification[];
+            initialStates?: Array<EditorReferenceStateModification & Record<string, unknown>>;
             arrivalPatternId?: string;
             arrivalScheduleId?: string;
-        };
-        failureProperties?: { repairResourceRequirementId?: string };
+        } & Record<string, unknown>;
+        failureProperties?: { repairResourceRequirementId?: string } & Record<string, unknown>;
         levers?: unknown[];
+        capacity?: number;
+        inboundCapacity?: number;
+        outboundCapacity?: number;
+        queueRanking?: Record<string, unknown>;
+        financialProperties?: Record<string, unknown>;
+        description?: string;
     }>;
     // Geometry-free connector summaries: routing fields, action summaries and
     // levers, for the delete dialogs and the state-delete preview.

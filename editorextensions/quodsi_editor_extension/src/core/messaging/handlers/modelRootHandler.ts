@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi/lucid-shared';
+import { CLEARED_FIELDS_KEY, EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -10,6 +10,7 @@ import { SettingsModal } from '../../../panels/SettingsModal';
 import { SelectionHandler } from './selection/SelectionHandler';
 import { assertWritePage } from '../pageGuard';
 import { readReferenceCleanupOptions } from '../referenceCleanupOptions';
+import { readShapeWrites, resolveShapeWrites } from '../shapeWrites';
 
 const log = getLogger('ModelRootHandler');
 
@@ -339,10 +340,12 @@ export class ModelRootHandler {
     // Guarded the same way the log line below already was: an unwrapped or
     // missing payload must not throw a confusing `Object.keys(undefined)`
     // TypeError out of this handler.
-    const data = msg.data as { patch?: Record<string, unknown>; basedOnPageId?: string; seizeRelease?: string };
+    const data = msg.data as { patch?: Record<string, unknown>; basedOnPageId?: string; seizeRelease?: string; shapes?: unknown };
     const patch = data.patch ?? {};
+    // Shape edits batched with model edits (spec 2026-09-13 lucid-shape-writes §1).
+    const shapes = readShapeWrites(data);
 
-    log.debug('Model-root update requested', { keys: Object.keys(patch) });
+    log.debug('Model-root update requested', { keys: Object.keys(patch), shapes: shapes.length });
 
     const channel = ModelRootHandler.getResponseChannel(msg);
 
@@ -359,7 +362,34 @@ export class ModelRootHandler {
       // replies with the failure and pushes a corrective snapshot.
       assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
 
-      await modelManager.updateModelRoot(patch, currentPage, readReferenceCleanupOptions(data));
+      // Every shape entry is checked before anything is written; the model
+      // patch's own unknown-key check also runs before it writes. So each
+      // refusal leaves storage untouched.
+      const resolvedShapes = resolveShapeWrites(
+        shapes,
+        currentPage as unknown as { allBlocks?: { get(id: string): unknown } },
+        (element) => modelManager.getElementType(element as never)?.type,
+      );
+
+      // A shapes-only batch carries an empty model patch: skip the call.
+      // Model-only batches behave exactly as before.
+      if (Object.keys(patch).length > 0 || resolvedShapes.length === 0) {
+        await modelManager.updateModelRoot(patch, currentPage, readReferenceCleanupOptions(data));
+      }
+
+      for (const shape of resolvedShapes) {
+        await modelManager.saveElementData(
+          shape.element as never,
+          {
+            ...shape.patch,
+            id: shape.shapeId,
+            ...(shape.clearedFields.length > 0 ? { [CLEARED_FIELDS_KEY]: shape.clearedFields } : {}),
+          },
+          shape.simulationType,
+          currentPage,
+        );
+      }
+
       await modelManager.validateModel();
 
       router.send(channel, {

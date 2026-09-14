@@ -147,8 +147,11 @@ describe('work-schedule panels against a real model-root projection', () => {
     )
     // The enriched activity SUMMARY projectModelRoot emits since spec
     // 2026-09-12 (Task 3): id, name and the schedule link, plus routing,
-    // levers and action summaries for the Model editor's delete dialogs --
-    // still a summary, not the whole Activity object.
+    // levers and action summaries for the Model editor's delete dialogs.
+    // Since 2026-09-13 (lucid-shape-writes §1) it is a full record: the
+    // domain object's own toJSON() lands on top of the summary, and
+    // Activity.toJSON()'s action serialization omits `resourceRequirementId`
+    // when unset rather than carrying it as `null` the way the summary does.
     expect(projection.activities).toEqual([
       {
         id: ACTIVITY_ID,
@@ -163,7 +166,6 @@ describe('work-schedule panels against a real model-root projection', () => {
             id: triageActionId,
             type: 'delay_with_resource',
             duration: { value: 1, unit: 'minutes' },
-            resourceRequirementId: null,
           },
         ],
       },

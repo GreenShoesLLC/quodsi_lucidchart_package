@@ -18,8 +18,10 @@
 //
 // Since 2026-09-12 (spec lucid-model-accessor §1) this snapshot is the ONLY
 // data source of Lucid's Model editor, so it also carries the model's own
-// fields (flat AND under `model`), full state rows, and the activity,
-// generator and connector summaries referenceDataBuilder sends.
+// fields (flat AND under `model`), full state rows, the connector summaries
+// referenceDataBuilder sends, and full activity and generator records
+// (summaries with the domain object's own fields over them, spec 2026-09-13
+// lucid-shape-writes).
 //
 // WHEN YOU ADD A FIELD HERE, add it to ModelRootProjection in lucid-shared
 // too: the type is shared by both ends of the seam precisely so a
@@ -78,6 +80,20 @@ export function snapshotModelFields(model: unknown): ModelRootModelFields {
     return out as ModelRootModelFields;
 }
 
+/**
+ * A domain object's stored fields as plain data (spec 2026-09-13
+ * lucid-shape-writes §1): its toJSON() when it has one -- every real
+ * ModelDefinition instance does -- otherwise a shallow copy (duck-typed rows
+ * in tests and seams).
+ */
+function recordFields(obj: unknown): Record<string, unknown> {
+    const source = obj as { toJSON?: () => unknown } | null | undefined;
+    if (source && typeof source.toJSON === 'function') {
+        return { ...(source.toJSON() as Record<string, unknown>) };
+    }
+    return { ...((obj ?? {}) as Record<string, unknown>) };
+}
+
 /** The empty projection, used when the page has no ModelDefinition at all. */
 export function emptyModelRootProjection(): ModelRootProjection {
     const fields = snapshotModelFields(null);
@@ -109,6 +125,9 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
         ...fields,
         generators: def.generators.getAll().map(g => ({
             ...summarizeGenerator(g),
+            // Full record for the shared GeneratorEditor (spec 2026-09-13
+            // lucid-shape-writes §1), over the summary so its keys stay.
+            ...recordFields(g),
             levers: g.levers,
             arrivalPatternId: g.arrivalPatternId,
             // SCHEDULED's counterpart to arrivalPatternId. Omitting it made
@@ -117,7 +136,11 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
             // DUPLICATE schedule, orphaning the original.
             arrivalScheduleId: g.arrivalScheduleId,
             volume: g.volume,
-        })),
+            // The named summary/record types above have no index signature,
+            // so TS won't structurally match the `& Record<string, unknown>`
+            // widening in ModelRootProjection without this assertion; the
+            // runtime shape is exactly what's built above.
+        } as ModelRootProjection['generators'][number])),
         arrivalPatterns: def.arrivalPatterns.getAll()
             .map(p => p.toJSON()) as ISerializedArrivalPattern[],
         arrivalSchedules: def.arrivalSchedules.getAll()
@@ -129,6 +152,9 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
             .map(w => w.toJSON()) as ISerializedWorkSchedule[],
         activities: def.activities.getAll().map(a => {
             const summary = summarizeActivity(a);
+            // Full record for the shared ActivityEditor (spec 2026-09-13
+            // lucid-shape-writes §1), over the summary so its keys stay.
+            const full = recordFields(a);
             // A self-generating activity's arrival links: without them an
             // arrival pattern or schedule used only by such an activity looks
             // unused on the Arrivals tab and can be deleted.
@@ -137,17 +163,20 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
                 ...(source?.arrivalPatternId ? { arrivalPatternId: source.arrivalPatternId } : {}),
                 ...(source?.arrivalScheduleId ? { arrivalScheduleId: source.arrivalScheduleId } : {}),
             };
-            const sourceConfig = summary.sourceConfig || Object.keys(arrivalLinks).length > 0
-                ? { ...summary.sourceConfig, ...arrivalLinks }
+            const fullSource = full.sourceConfig as Record<string, unknown> | undefined;
+            const sourceConfig = fullSource || summary.sourceConfig || Object.keys(arrivalLinks).length > 0
+                ? { ...summary.sourceConfig, ...fullSource, ...arrivalLinks }
                 : undefined;
             return {
                 ...summary,
+                ...full,
                 sourceConfig,
                 // Delete dialogs count the levers on the steps they remove.
                 levers: (a.levers ?? []) as unknown[],
                 // workScheduleUsage counts activities as well as resources.
                 workScheduleId: a.workScheduleId,
-            };
+                // See the matching comment on the generators map above.
+            } as NonNullable<ModelRootProjection['activities']>[number];
         }),
         connectors: def.connectors.getAll().map(c => summarizeConnector(c)),
         // Entities carry `description` for the shared EntitiesEditor. Omitted

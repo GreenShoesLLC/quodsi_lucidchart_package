@@ -80,7 +80,7 @@ interface StoredActivityData {
  * and a global null-means-delete sentinel was rejected as too broad.
  * (86e2qwvf2, final-review finding 1.)
  */
-const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking', 'workScheduleId'];
+export const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking', 'workScheduleId'];
 
 /**
  * Storage keys to delete, given what the writer EXPLICITLY declared cleared.

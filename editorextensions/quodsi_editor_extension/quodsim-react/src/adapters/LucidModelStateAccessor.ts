@@ -102,6 +102,15 @@ export interface LucidModelStateAccessorDeps {
   saveModel?(patch: Record<string, unknown>, options?: ReferenceCleanupOptions): Promise<void>
 
   /**
+   * Queue an Activity or Generator shape edit into the batching model-root
+   * source (spec 2026-09-13 lucid-shape-writes §2). Resolves once the edit is
+   * accepted; progress is reported through getModelWriteStatus, like
+   * saveModel. `undefined` values mean "clear this field". Absent: every
+   * shape write goes through save.
+   */
+  queueShape?(shapeId: string, type: 'Activity' | 'Generator', patch: Record<string, unknown>): Promise<void>
+
+  /**
    * Send every pending or in-flight model-root batch now and wait for the
    * host. Present when saveModel batches (it then resolves once the edit is
    * accepted). Exposed on the accessor as flushModelImmediate.
@@ -170,7 +179,16 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
   function currentSaveState(): { saveStatus: ModelStateSnapshot['saveStatus']; saveError: string | null } {
     const model = deps.getModelWriteStatus?.()
     if (!model) return { saveStatus: ownStatus, saveError: ownError }
-    if (model !== lastModelWrite) {
+    // Compare by CONTENT, not reference: a deps.getModelWriteStatus that
+    // returns a fresh-but-equal object every call (a plain closure, rather
+    // than the batching source's own stable `writeStatus` variable) must not
+    // be read as a new settle each time getSnapshot() happens to be called
+    // twice in a row -- that spuriously bumped modelSettledTick past a just-
+    // recorded own outcome's tick (spec 2026-09-13 lucid-shape-writes §2,
+    // queueShape's own-refusal test).
+    const changed =
+      lastModelWrite === undefined || model.status !== lastModelWrite.status || model.error !== lastModelWrite.error
+    if (changed) {
       const firstLook = lastModelWrite === undefined
       lastModelWrite = model
       if (!firstLook && model.status !== 'saving') modelSettledTick = ++tick
@@ -244,6 +262,20 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     type: DomainType,
     patch: Record<string, unknown>,
   ): Promise<void> {
+    // Activity and Generator edits batch with model-root edits (spec
+    // 2026-09-13 lucid-shape-writes §2): the source reports their progress,
+    // so only a refusal it throws straight back is recorded here. Every
+    // other type keeps the confirmed round trip below.
+    if (deps.queueShape && (type === 'Activity' || type === 'Generator')) {
+      try {
+        await deps.queueShape(shapeId, type, patch)
+      } catch (err) {
+        recordOwnOutcome(err)
+        throw err
+      }
+      return
+    }
+
     startOwnWrite()
     try {
       await deps.save(shapeId, type, patch)

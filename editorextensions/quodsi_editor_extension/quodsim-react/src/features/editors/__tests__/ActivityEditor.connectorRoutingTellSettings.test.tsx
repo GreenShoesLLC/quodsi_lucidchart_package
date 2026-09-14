@@ -29,10 +29,6 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   }),
 }));
 
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
-}));
-
 vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
@@ -89,7 +85,6 @@ describe("ActivityEditor's Routing tab — the shared ConnectorRoutingView's per
     render(
       <ActivityEditor
         activity={activity}
-        onSave={vi.fn()}
         states={new StateListManager()}
         referenceData={referenceData}
       />

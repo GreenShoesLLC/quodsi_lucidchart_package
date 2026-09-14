@@ -325,6 +325,102 @@ describe("useAutoSave", () => {
     });
   });
 
+  // Final review I2 (spec 2026-09-13 lucid-shape-writes). Lucid's Activity and
+  // Generator editors save into the model-root source, which queues and merges
+  // per key, and their `isSaving` is that source's combined status -- true
+  // through its own 0.4 s pause. With queuesWhileSaving, saveNow and the
+  // unmount save send a draft edited since the last dispatch without waiting
+  // for isSaving to fall; a draft already dispatched is not sent again.
+  describe("queuesWhileSaving", () => {
+    const v1 = { id: "e1", name: "v1" };
+    const v2 = { id: "e1", name: "v2" };
+
+    it("without it, saveNow still waits while a save is in flight", () => {
+      const onSave = vi.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, draft: v1, hasPendingChanges: true, isSaving: true }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: v2, hasPendingChanges: true, isSaving: true }));
+      act(() => {
+        result.current.saveNow();
+      });
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("saveNow sends a draft edited after the in-flight dispatch, once", () => {
+      const onSave = vi.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, queuesWhileSaving: true }) }
+      );
+      rerender(baseArgs({ onSave, draft: v1, hasPendingChanges: true, queuesWhileSaving: true }));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // The dispatched draft is already in the queue: nothing new to send.
+      rerender(baseArgs({ onSave, draft: v1, hasPendingChanges: true, isSaving: true, queuesWhileSaving: true }));
+      act(() => {
+        result.current.saveNow();
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      rerender(baseArgs({ onSave, draft: v2, hasPendingChanges: true, isSaving: true, queuesWhileSaving: true }));
+      act(() => {
+        result.current.saveNow();
+      });
+      expect(onSave).toHaveBeenCalledTimes(2);
+      expect(onSave).toHaveBeenLastCalledWith(v2);
+
+      // The save completes, then pending clears: no trailing re-send of v2.
+      rerender(baseArgs({ onSave, draft: v2, hasPendingChanges: true, isSaving: false, queuesWhileSaving: true }));
+      rerender(baseArgs({ onSave, draft: v2, hasPendingChanges: false, isSaving: false, queuesWhileSaving: true }));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(2);
+    });
+
+    it("the unmount save sends a draft edited after the in-flight dispatch", () => {
+      const onSave = vi.fn();
+      const { rerender, unmount } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, queuesWhileSaving: true }) }
+      );
+      rerender(baseArgs({ onSave, draft: v1, hasPendingChanges: true, queuesWhileSaving: true }));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      rerender(baseArgs({ onSave, draft: v2, hasPendingChanges: true, isSaving: true, queuesWhileSaving: true }));
+
+      unmount();
+
+      expect(onSave).toHaveBeenCalledTimes(2);
+      expect(onSave).toHaveBeenLastCalledWith(v2);
+    });
+
+    it("the unmount save does not re-send the draft already dispatched", () => {
+      const onSave = vi.fn();
+      const { rerender, unmount } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, queuesWhileSaving: true }) }
+      );
+      rerender(baseArgs({ onSave, draft: v1, hasPendingChanges: true, queuesWhileSaving: true }));
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      rerender(baseArgs({ onSave, draft: v1, hasPendingChanges: true, isSaving: true, queuesWhileSaving: true }));
+
+      unmount();
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("element-switch flush", () => {
     it("flushes pending edit when elementId changes", () => {
       const onSave = vi.fn();

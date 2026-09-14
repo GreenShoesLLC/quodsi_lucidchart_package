@@ -150,7 +150,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         return (
           <ActivityEditor
             activity={safeElementData}
-            onSave={onSave}
             referenceData={referenceData}
             states={states}
             outgoingConnectors={outgoingConnectors}
@@ -162,7 +161,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         return (
           <GeneratorEditor
             generator={safeElementData}
-            onSave={onSave}
             referenceData={referenceData}
             states={states}
           />

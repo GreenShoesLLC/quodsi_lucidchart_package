@@ -11,7 +11,6 @@ import {
   ComponentType,
   StateType,
   QUEUE_RANKING_COPY,
-  CLEARED_FIELDS_KEY,
 } from "@quodsi/lucid-shared";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -20,10 +19,6 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
     selectElement: vi.fn(),
     updateElementData: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 // NOTE: unlike ActivityEditor.levers.test.tsx, this file does NOT stub
@@ -37,6 +32,39 @@ vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));
+
+// The editor now saves through the model-root source's batched shape queue
+// (spec 2026-09-13 lucid-shape-writes §3), not a plain onSave prop. This fake
+// source stands in for useModelRootSource so each test can assert on the
+// patch handed to accessor.updateShape instead. `projection: null` keeps the
+// editor drafting from the test's own selection fixture (extractActivityData
+// falls back to `activity` when no snapshot record exists).
+const { modelRoot } = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const snapshot = { modelDefinition: { activities: [], generators: [], workSchedules: [] }, saveStatus: "idle", saveError: null };
+  return {
+    modelRoot: {
+      accessor: {
+        subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+        getSnapshot: () => snapshot,
+        updateShape: vi.fn(async (_id: string, _type: string, _patch: Record<string, unknown>) => {}),
+        updateModel: vi.fn(async () => {}),
+        flushModelImmediate: vi.fn(async () => {}),
+      },
+      projection: null,
+      request: () => {},
+    },
+  };
+});
+
+vi.mock("../../../adapters/useModelRootSource", () => ({
+  useModelRootSource: () => modelRoot,
+  MODEL_ROOT_DEBOUNCE_MS: 400,
+}));
+
+beforeEach(() => {
+  modelRoot.accessor.updateShape.mockClear();
+});
 
 const baseProps = {
   states: {} as any,
@@ -58,6 +86,14 @@ function makeStateListManager(states: State[]): StateListManager {
   return manager;
 }
 
+/** The patch handed to the model-root source's last accessor.updateShape call. */
+async function lastPatch() {
+  await waitFor(() => expect(modelRoot.accessor.updateShape).toHaveBeenCalled());
+  const call = modelRoot.accessor.updateShape.mock.calls.at(-1);
+  expect(call).toBeDefined();
+  return call![2] as Record<string, unknown>;
+}
+
 describe("ActivityEditor — queueRanking preservation", () => {
   const ranked = {
     id: "act-1",
@@ -70,8 +106,7 @@ describe("ActivityEditor — queueRanking preservation", () => {
   } as any;
 
   it("keeps the ranking when an unrelated field is edited", async () => {
-    const onSave = vi.fn();
-    render(<ActivityEditor activity={ranked} onSave={onSave} {...baseProps} />);
+    render(<ActivityEditor activity={ranked} {...baseProps} />);
     // The name input has no accessible-name association in this component
     // (label is a plain sibling, not `htmlFor`-linked), so re-query by role
     // doesn't resolve it — reuse the element handle found via display value.
@@ -79,18 +114,14 @@ describe("ActivityEditor — queueRanking preservation", () => {
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Nurse");
     fireEvent.blur(nameInput);
-    await waitFor(() => expect(onSave).toHaveBeenCalled());
-    const lastCall = onSave.mock.calls.at(-1);
-    expect(lastCall).toBeDefined();
-    const saved = lastCall![0];
-    expect(saved.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
+    const patch = await lastPatch();
+    expect(patch.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
   });
 
   // The case that fails under `updates.queueRanking ?? base.queueRanking`:
   // a cleared ranking must STAY cleared through the next unrelated edit.
   it("keeps the ranking cleared once cleared", async () => {
-    const onSave = vi.fn();
-    render(<ActivityEditor activity={ranked} onSave={onSave} {...baseProps} />);
+    render(<ActivityEditor activity={ranked} {...baseProps} />);
     const draft = updateActivityImmutably(extractActivityData(ranked), {
       queueRanking: undefined,
     } as any);
@@ -103,7 +134,10 @@ describe("ActivityEditor — queueRanking preservation", () => {
 // The extension deletes a stored queueRanking only when the payload SAYS it was
 // cleared — absence alone means "this panel never mentioned the field", which is
 // exactly what ConnectorsEditor's partial Activity payload looks like. So the
-// one panel that owns the control has to speak up.
+// one panel that owns the control has to speak up. Since Task 4, that
+// declaration is the model-root source's own `clearedFields` list (built from
+// an `undefined`-valued key in the patch handed to accessor.updateShape) —
+// not a CLEARED_FIELDS_KEY on a saved object.
 describe("ActivityEditor — explicit cleared-field declaration", () => {
   const ranked = {
     id: "act-1",
@@ -115,41 +149,35 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
     queueRanking: { stateId: "s1", order: "ascending" },
   } as any;
 
-  async function saveAfterRename(activity: any) {
-    const onSave = vi.fn();
-    render(<ActivityEditor activity={activity} onSave={onSave} {...baseProps} />);
+  async function patchAfterRename(activity: any) {
+    render(<ActivityEditor activity={activity} {...baseProps} />);
     const nameInput = screen.getByDisplayValue("Doctor");
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, "Nurse");
     fireEvent.blur(nameInput);
-    await waitFor(() => expect(onSave).toHaveBeenCalled());
-    const lastCall = onSave.mock.calls.at(-1);
-    expect(lastCall).toBeDefined();
-    return lastCall![0];
+    return lastPatch();
   }
 
   // MEMBERSHIP, not equality: Task D3 gave this editor a second clearable
-  // field (workScheduleId, declared by the same handleAutoSave whenever the
+  // field (workScheduleId, declared by the same activityShapePatch whenever the
   // draft carries no work-schedule link -- see
   // ActivityEditor.workSchedule.test.tsx). These two tests are about
   // queueRanking, so they assert only about queueRanking; an exact-array
   // assertion here would fail every time a THIRD clearable field is added,
   // without saying anything about the one under test.
   it("declares queueRanking cleared when it saves an activity with no ranking", async () => {
-    const saved = await saveAfterRename(unranked);
-    expect(saved[CLEARED_FIELDS_KEY]).toContain("queueRanking");
+    const patch = await patchAfterRename(unranked);
+    expect("queueRanking" in patch && patch.queueRanking === undefined).toBe(true);
   });
 
   it("declares nothing about queueRanking while a ranking is set", async () => {
-    const saved = await saveAfterRename(ranked);
-    expect(saved.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
-    expect(saved[CLEARED_FIELDS_KEY] ?? []).not.toContain("queueRanking");
+    const patch = await patchAfterRename(ranked);
+    expect(patch.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
   });
 });
 
 describe("ActivityEditor — queue ranking control", () => {
   it("offers only ENTITY NUMBER states and writes the ranking on pick", async () => {
-    const onSave = vi.fn();
     const states = makeStateListManager([
       new State("s1", "severity", ComponentType.ENTITY, StateType.NUMBER, 0),
       new State("s2", "globalCount", ComponentType.MODEL, StateType.NUMBER, 0),
@@ -158,7 +186,6 @@ describe("ActivityEditor — queue ranking control", () => {
       <ActivityEditor
         {...baseProps}
         activity={unranked}
-        onSave={onSave}
         states={states}
       />
     );
@@ -166,10 +193,8 @@ describe("ActivityEditor — queue ranking control", () => {
     const picker = screen.getByLabelText(QUEUE_RANKING_COPY.stateLabel);
     expect(within(picker).queryByRole("option", { name: /globalCount/ })).not.toBeInTheDocument();
     await userEvent.selectOptions(picker, "severity");
-    await waitFor(() => expect(onSave).toHaveBeenCalled());
-    const lastCall = onSave.mock.calls.at(-1);
-    expect(lastCall).toBeDefined();
-    expect(lastCall![0].queueRanking).toEqual({
+    const patch = await lastPatch();
+    expect(patch.queueRanking).toEqual({
       stateId: "s1",
       order: "ascending",
     });
@@ -183,7 +208,6 @@ describe("ActivityEditor — queue ranking control", () => {
       <ActivityEditor
         {...baseProps}
         activity={unranked}
-        onSave={vi.fn()}
         states={states}
       />
     );

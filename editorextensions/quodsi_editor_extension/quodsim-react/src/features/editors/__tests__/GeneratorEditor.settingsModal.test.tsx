@@ -21,11 +21,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: vi.fn(),
     updateElementData: vi.fn(),
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -51,7 +49,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 }));
 
 const baseProps = {
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
 };

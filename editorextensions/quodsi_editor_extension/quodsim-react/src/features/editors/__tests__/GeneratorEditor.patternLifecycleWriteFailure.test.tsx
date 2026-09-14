@@ -9,9 +9,16 @@
 // unrelated write path).
 //
 // This test drives a real PATTERN-mode switch against a fake host that
-// answers ELEMENT_UPDATE with success:false, and asserts:
+// answers MODEL_ROOT_UPDATE with success:false, and asserts:
 //   1. the failure is logged through the shared logger (not console.*), and
 //   2. it is surfaced next to the Generator Type control (patternLifecycleError).
+//
+// Migrated for spec 2026-09-13 lucid-shape-writes §2 (Task 3): the generator
+// write (accessor.updateShape) and the model-root write for the new pattern
+// now go out together on ONE MODEL_ROOT_UPDATE envelope (carrying `shapes`)
+// rather than a separate ELEMENT_UPDATE -- failing that one envelope still
+// rejects the whole `await` chain the same way a failed ELEMENT_UPDATE used
+// to reject accessor.updateShape.
 
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
@@ -28,11 +35,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: mockSelectElement,
     updateElementData: mockUpdateElementData,
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -56,8 +61,9 @@ afterEach(() => {
 });
 
 /** A fake host that answers MODEL_ROOT_REQUEST normally, but fails every
- *  ELEMENT_UPDATE with success:false -- simulating a host-side rejection of
- *  accessor.updateShape (e.g. a storage error, or the 30s accessor timeout). */
+ *  MODEL_ROOT_UPDATE with success:false -- simulating a host-side rejection
+ *  of accessor.updateShape's queued write (e.g. a storage error, or the 30s
+ *  accessor timeout). */
 function installFailingHost(initialGenerators: any[]) {
   return vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
     if (envelope?.type === EnvelopeMessageType.MODEL_ROOT_REQUEST) {
@@ -75,12 +81,12 @@ function installFailingHost(initialGenerators: any[]) {
       );
       return;
     }
-    if (envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE) {
+    if (envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
       window.dispatchEvent(
         new MessageEvent("message", {
           data: {
             id: envelope.id,
-            type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT,
+            type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
             source: "host",
             target: "model-iframe",
             version: "1.0",
@@ -94,7 +100,6 @@ function installFailingHost(initialGenerators: any[]) {
 }
 
 const baseProps = {
-  onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
 };

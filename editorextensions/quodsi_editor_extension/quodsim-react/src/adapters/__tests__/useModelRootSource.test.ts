@@ -635,3 +635,283 @@ describe('createModelRootSource — batching (spec 2026-09-12 lucid-model-root-b
     expect(request).not.toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------
+// Shape edits (spec 2026-09-13 lucid-shape-writes §2): Activity and
+// Generator edits batch per shape in the same pending batch, timer, queue
+// and overlay as model-root edits.
+// ---------------------------------------------------------------------
+describe('createModelRootSource — shape edits', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function loaded(send = vi.fn().mockResolvedValue(undefined), request?: () => string | void) {
+    const source = createModelRootSource({ send, request })
+    source.acceptSnapshot({
+      pageId: 'page-1',
+      generators: [{ id: 'gen-1', name: 'Arrivals', arrivalPatternId: 'ap-1', volume: 900 }],
+      arrivalPatterns: [],
+      activities: [{ id: 'act-1', name: 'Triage', capacity: 1, queueRanking: { stateId: 's', order: 'ascending' } }],
+      model: {},
+    } as any)
+    return { source, send }
+  }
+
+  const activityRow = (source: ReturnType<typeof createModelRootSource>) =>
+    (source.deps.getModelDefinition() as any).activities[0]
+
+  it('shows a queued shape edit at once and sends nothing until the pause ends', async () => {
+    const { source, send } = loaded()
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    expect(activityRow(source)).toEqual(expect.objectContaining({ id: 'act-1', name: 'Triage', capacity: 3 }))
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('merges edits to one shape key by key and sends them with the page id and batch id', async () => {
+    const { source, send } = loaded()
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3, name: 'T' })
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 4 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+
+    expect(send).toHaveBeenCalledTimes(1)
+    const [patch, pageId, options, id, shapes] = send.mock.calls[0]
+    expect(patch).toEqual({})
+    expect(pageId).toBe('page-1')
+    expect(options).toBeUndefined()
+    expect(typeof id).toBe('string')
+    expect(shapes).toEqual([{ shapeId: 'act-1', type: 'Activity', patch: { capacity: 4, name: 'T' }, clearedFields: [] }])
+  })
+
+  it('turns undefined into a cleared field, and the overlay drops the key', async () => {
+    const { source, send } = loaded()
+    await source.deps.queueShape!('act-1', 'Activity', { queueRanking: undefined, name: 'Triage' })
+    expect('queueRanking' in activityRow(source)).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send.mock.calls[0][4]).toEqual([
+      { shapeId: 'act-1', type: 'Activity', patch: { name: 'Triage' }, clearedFields: ['queueRanking'] },
+    ])
+  })
+
+  it('sends model and shape edits made in one pause as one batch', async () => {
+    const { source, send } = loaded()
+    await source.deps.queueShape!('gen-1', 'Generator', { mode: 'pattern', arrivalPatternId: 'ap-2' })
+    await source.deps.saveModel!({ arrivalPatterns: [{ id: 'ap-2', name: 'P' }] })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(send.mock.calls[0][0]).toEqual({ arrivalPatterns: [{ id: 'ap-2', name: 'P' }] })
+    expect(send.mock.calls[0][4]).toEqual([
+      { shapeId: 'gen-1', type: 'Generator', patch: { mode: 'pattern', arrivalPatternId: 'ap-2' }, clearedFields: [] },
+    ])
+  })
+
+  it('keeps model-only batches on the four-argument send', async () => {
+    const { source, send } = loaded()
+    await source.deps.saveModel!({ entities: [] })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send.mock.calls[0]).toHaveLength(4)
+  })
+
+  it('keeps the shape overlay until the snapshot tagged with its batch arrives', async () => {
+    const { source, send } = loaded()
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    const id = send.mock.calls[0][3]
+    const snapshot = (capacity: number) =>
+      ({ pageId: 'page-1', generators: [], arrivalPatterns: [], activities: [{ id: 'act-1', name: 'Triage', capacity }], model: {} }) as any
+
+    // An untagged snapshot that predates the write does not overwrite it.
+    source.acceptSnapshot(snapshot(1))
+    expect(activityRow(source).capacity).toBe(3)
+
+    // The tagged snapshot is the stored result and releases the overlay.
+    source.acceptSnapshot(snapshot(2), id)
+    expect(activityRow(source).capacity).toBe(2)
+  })
+
+  it('counts queued shape edits as pending writes and sends them on flush', async () => {
+    const { source, send } = loaded()
+    await source.deps.queueShape!('gen-1', 'Generator', { name: 'G' })
+    expect(source.hasPendingWrites()).toBe(true)
+
+    await source.flush()
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(source.hasPendingWrites()).toBe(false)
+  })
+
+  it('refuses a shape edit before the first snapshot', async () => {
+    const source = createModelRootSource({ send: vi.fn() })
+    await expect(source.deps.queueShape!('act-1', 'Activity', { name: 'x' })).rejects.toThrow(MODEL_NOT_LOADED_MESSAGE)
+  })
+
+  it('reports saving while a shape edit is pending, then failed with the host message', async () => {
+    const send = vi.fn().mockRejectedValue(new Error('Cannot clear name on Activity'))
+    const { source } = loaded(send)
+    await source.deps.queueShape!('act-1', 'Activity', { name: undefined })
+    expect(source.deps.getModelWriteStatus!()).toEqual({ status: 'saving', error: null })
+
+    await source.flush().catch(() => {})
+    expect(source.deps.getModelWriteStatus!()).toEqual({ status: 'failed', error: 'Cannot clear name on Activity' })
+  })
+
+  // ------------------------------------------------------------------
+  // Queue safety nets for shape edits (Task 3 review M5, final review m3):
+  // the same guarantees the batching suite above pins for model edits.
+  // ------------------------------------------------------------------
+
+  function deferred() {
+    let resolve!: () => void
+    let reject!: (err: Error) => void
+    const promise = new Promise<void>((res, rej) => { resolve = res; reject = rej })
+    return { promise, resolve, reject }
+  }
+
+  const generatorRow = (source: ReturnType<typeof createModelRootSource>) =>
+    (source.deps.getModelDefinition() as any).generators[0]
+
+  // A stored snapshot, as the host sends it, for the one activity.
+  const storedActivity = (fields: Record<string, unknown>) =>
+    ({
+      pageId: 'page-1',
+      generators: [{ id: 'gen-1', name: 'Arrivals', arrivalPatternId: 'ap-1', volume: 900 }],
+      arrivalPatterns: [],
+      activities: [{ id: 'act-1', name: 'Triage', capacity: 1, ...fields }],
+      model: {},
+    }) as any
+
+  it("a shape edit made while a batch is in flight survives that batch's tagged snapshot and goes out next", async () => {
+    const write = deferred()
+    const send = vi.fn().mockReturnValueOnce(write.promise).mockResolvedValue(undefined)
+    const { source } = loaded(send)
+
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+
+    await source.deps.queueShape!('act-1', 'Activity', { name: 'Intake' })
+    write.resolve()
+    await vi.advanceTimersByTimeAsync(0)
+    source.acceptSnapshot(storedActivity({ capacity: 3 }), send.mock.calls[0][3])
+
+    // The stored capacity comes from the snapshot; the newer name still shows.
+    expect(activityRow(source)).toEqual(expect.objectContaining({ capacity: 3, name: 'Intake' }))
+
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(send.mock.calls[1][4]).toEqual([
+      { shapeId: 'act-1', type: 'Activity', patch: { name: 'Intake' }, clearedFields: [] },
+    ])
+  })
+
+  it('a refused batch with shapes drops its overlay on the corrective snapshot, while later pending shape edits stay', async () => {
+    const write = deferred()
+    const send = vi.fn().mockReturnValueOnce(write.promise).mockResolvedValue(undefined)
+    const { source } = loaded(send)
+
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    await source.deps.queueShape!('act-1', 'Activity', { name: 'Intake' })
+
+    write.reject(new Error('Cannot clear name on Activity'))
+    await vi.advanceTimersByTimeAsync(0)
+    source.acceptSnapshot(storedActivity({ capacity: 1 }), send.mock.calls[0][3])
+
+    expect(activityRow(source)).toEqual(expect.objectContaining({ capacity: 1, name: 'Intake' }))
+
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send.mock.calls[1][4]).toEqual([
+      { shapeId: 'act-1', type: 'Activity', patch: { name: 'Intake' }, clearedFields: [] },
+    ])
+  })
+
+  it('a set after a clear of the same key in one pause sends the value, not the clear', async () => {
+    const { source, send } = loaded()
+    const ranking = { stateId: 's2', order: 'descending' }
+
+    await source.deps.queueShape!('act-1', 'Activity', { queueRanking: undefined })
+    await source.deps.queueShape!('act-1', 'Activity', { queueRanking: ranking })
+    expect(activityRow(source).queueRanking).toEqual(ranking)
+
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send.mock.calls[0][4]).toEqual([
+      { shapeId: 'act-1', type: 'Activity', patch: { queueRanking: ranking }, clearedFields: [] },
+    ])
+  })
+
+  it('a clear after a set of the same key in one pause sends the clear, not the value', async () => {
+    const { source, send } = loaded()
+
+    await source.deps.queueShape!('gen-1', 'Generator', { arrivalPatternId: 'ap-9' })
+    await source.deps.queueShape!('gen-1', 'Generator', { arrivalPatternId: undefined })
+    expect('arrivalPatternId' in generatorRow(source)).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send.mock.calls[0][4]).toEqual([
+      { shapeId: 'gen-1', type: 'Generator', patch: {}, clearedFields: ['arrivalPatternId'] },
+    ])
+  })
+
+  it('a confirmed shape batch whose tagged snapshot never comes asks for one after the grace period, and that reply releases it', async () => {
+    const request = vi.fn(() => 'req-1')
+    const { source } = loaded(vi.fn().mockResolvedValue(undefined), request)
+
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    await source.flush()
+
+    await vi.advanceTimersByTimeAsync(TAGGED_SNAPSHOT_GRACE_MS - 1)
+    expect(request).not.toHaveBeenCalled()
+    source.acceptSnapshot(storedActivity({ capacity: 1 }))
+    expect(activityRow(source).capacity).toBe(3)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(request).toHaveBeenCalledTimes(1)
+    source.acceptSnapshot(storedActivity({ capacity: 2 }), 'req-1')
+    expect(activityRow(source).capacity).toBe(2)
+  })
+
+  it('a second grace period with no reply releases a shape overlay outright', async () => {
+    const request = vi.fn(() => 'req-1')
+    const { source } = loaded(vi.fn().mockResolvedValue(undefined), request)
+
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    await source.flush()
+    source.acceptSnapshot(storedActivity({ capacity: 2 }))
+    expect(activityRow(source).capacity).toBe(3)
+
+    await vi.advanceTimersByTimeAsync(TAGGED_SNAPSHOT_GRACE_MS * 2)
+
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(activityRow(source).capacity).toBe(2)
+  })
+
+  it('no reply within the transport timeout drops a shape overlay at once and asks for a fresh snapshot', async () => {
+    const NO_REPLY_TIMEOUT_MS = 30_000
+    const request = vi.fn(() => 'req-1')
+    // What the hook's transport does when MODEL_ROOT_UPDATE_RESULT never comes.
+    const send = vi.fn(
+      () =>
+        new Promise<void>((_, reject) => {
+          setTimeout(() => reject(new ModelRootNoReplyError('Model-root update timed out')), NO_REPLY_TIMEOUT_MS)
+        }),
+    )
+    const { source } = loaded(send as any, request)
+
+    await source.deps.queueShape!('act-1', 'Activity', { capacity: 3 })
+    await vi.advanceTimersByTimeAsync(MODEL_ROOT_DEBOUNCE_MS)
+    expect(send).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(NO_REPLY_TIMEOUT_MS - 1)
+    expect(activityRow(source).capacity).toBe(3)
+    expect(request).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(activityRow(source).capacity).toBe(1)
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(source.deps.getModelWriteStatus!()).toEqual({ status: 'failed', error: 'Model-root update timed out' })
+  })
+})

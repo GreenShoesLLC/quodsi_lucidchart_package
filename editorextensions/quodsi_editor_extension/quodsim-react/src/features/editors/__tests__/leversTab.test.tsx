@@ -26,11 +26,8 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
     updateResourceRequirements: vi.fn(),
     selectElement: vi.fn(),
     updateElementData: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -56,13 +53,11 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 const LEVERS_TAB_NAME = /mark .* as a scenario lever/i;
 
 const activityProps = {
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
 };
 
 const generatorProps = {
-  onSave: vi.fn(),
   states: {} as any,
   referenceData: {} as any,
 };

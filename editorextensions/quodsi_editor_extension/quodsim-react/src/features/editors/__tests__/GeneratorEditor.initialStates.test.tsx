@@ -17,11 +17,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: mockSelectElement,
     updateElementData: vi.fn(),
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -45,7 +43,6 @@ const qty = new State("s-qty", "Qty", ComponentType.ENTITY, StateType.NUMBER, 0)
 function renderInitialStates(states: StateListManager, initialStates: unknown[] = []) {
   render(
     <GeneratorEditor
-      onSave={vi.fn()}
       referenceData={{} as any}
       states={states}
       generator={{ id: "g1", name: "Arrivals", mode: "frequency", levers: [], initialStates } as any}

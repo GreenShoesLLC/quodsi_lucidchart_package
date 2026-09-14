@@ -28,11 +28,9 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     selectElement: mockSelectElement,
     updateElementData: mockUpdateElementData,
+    updateResourceRequirements: vi.fn(),
+    updateElement: vi.fn(),
   }),
-}));
-
-vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
-  useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 vi.mock("../hooks/useEditorState", () => ({
@@ -69,7 +67,6 @@ function patternGenerator() {
 }
 
 const baseProps = {
-  onSave: vi.fn(),
   referenceData: { entities: [] } as any,
   states: {} as any,
 };
@@ -108,20 +105,20 @@ function dispatchSnapshot(projection: Record<string, unknown>) {
 
 /**
  * A minimal in-memory "host": tracks generators + arrivalPatterns and
- * answers MODEL_ROOT_REQUEST / MODEL_ROOT_UPDATE / ELEMENT_UPDATE the same
- * way the real extension does (modelRootHandler.ts / elementOpsHandler.ts),
- * closely enough to exercise the split-brain race (Task 10 review round 3)
- * and its fix: an ELEMENT_UPDATE never pushes its own MODEL_ROOT_SNAPSHOT,
- * a MODEL_ROOT_UPDATE's post-write snapshot reflects whatever this fake
- * "shape storage" currently holds, and ELEMENT_UPDATE's own confirmation
- * (ELEMENT_UPDATE_RESULT) can be delayed to reproduce "the shape write
- * hadn't landed yet when the model-root snapshot was built."
+ * answers MODEL_ROOT_REQUEST / MODEL_ROOT_UPDATE the same way the real
+ * extension does (modelRootHandler.ts). Task 3 (spec 2026-09-13
+ * lucid-shape-writes §2) folded the generator-half shape write into the
+ * SAME MODEL_ROOT_UPDATE as the arrivalPatterns write -- both halves are
+ * applied here before the one post-write snapshot is pushed, which is what
+ * makes the split-brain race this file used to reproduce via a delayed
+ * ELEMENT_UPDATE (Task 10 review round 3) structurally impossible now: there
+ * is no second, separately-timed envelope for the shape half any more --
+ * there is no ELEMENT_UPDATE branch left to delay.
  *
  * Register with `vi.spyOn(window.parent, 'postMessage').mockImplementation
  * ((envelope) => fakeHost.handlePostMessage(envelope))`.
  */
-function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
-  const elementUpdateDelayMs = options.elementUpdateDelayMs ?? 0;
+function createFakeHost() {
   let generators: any[] = [];
   let arrivalPatterns: any[] = [];
 
@@ -153,29 +150,6 @@ function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
     });
   }
 
-  function applyElementUpdate(envelope: any) {
-    const idx = generators.findIndex((g) => g.id === envelope.data.elementId);
-    if (idx >= 0) {
-      const incoming = envelope.data.data ?? {};
-      const cleared: string[] = incoming.__clearedFields ?? [];
-      const merged: any = { ...generators[idx] };
-      for (const [k, v] of Object.entries(incoming)) {
-        if (k === "__clearedFields" || v === undefined) continue;
-        merged[k] = v;
-      }
-      for (const key of cleared) delete merged[key];
-      generators[idx] = merged;
-    }
-    dispatch({
-      id: envelope.id,
-      type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT,
-      source: "host",
-      target: "model-iframe",
-      version: "1.0",
-      data: { success: true, elementId: envelope.data.elementId },
-    });
-  }
-
   function handlePostMessage(envelope: any) {
     if (envelope?.type === EnvelopeMessageType.MODEL_ROOT_REQUEST) {
       pushSnapshot(envelope.id);
@@ -184,6 +158,26 @@ function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
     if (envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE) {
       const patch = envelope.data?.patch ?? {};
       if (patch.arrivalPatterns) arrivalPatterns = patch.arrivalPatterns;
+      // Spec 2026-09-13 lucid-shape-writes §2: Task 3 routes every
+      // Activity/Generator accessor.updateShape into the SAME batched
+      // MODEL_ROOT_UPDATE as model-root edits, carried as `data.shapes`
+      // (shapeId/type/patch/clearedFields) -- there is no separate
+      // ELEMENT_UPDATE for a generator write any more. Apply them to this
+      // fake "shape storage" the same way the real host's element-update
+      // merge does, then include them in the SAME post-write snapshot push
+      // as the arrivalPatterns half -- exactly what makes the split-brain
+      // race (below) impossible now: one envelope, one snapshot, both
+      // halves landed together.
+      const shapes = envelope.data?.shapes ?? [];
+      for (const shape of shapes) {
+        if (shape.type !== "Generator") continue;
+        const idx = generators.findIndex((g) => g.id === shape.shapeId);
+        if (idx >= 0) {
+          const merged: any = { ...generators[idx], ...shape.patch };
+          for (const key of shape.clearedFields ?? []) delete merged[key];
+          generators[idx] = merged;
+        }
+      }
       dispatch({
         id: envelope.id,
         type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
@@ -192,19 +186,7 @@ function createFakeHost(options: { elementUpdateDelayMs?: number } = {}) {
         version: "1.0",
         data: { success: true },
       });
-      // Mirrors modelRootHandler.ts's handleUpdate: pushes its own
-      // post-write snapshot, built from whatever this fake "shape storage"
-      // holds AT THIS MOMENT -- which is stale if a same-generator
-      // ELEMENT_UPDATE is still delayed/in flight.
       pushSnapshot(envelope.id);
-      return;
-    }
-    if (envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE) {
-      if (elementUpdateDelayMs > 0) {
-        setTimeout(() => applyElementUpdate(envelope), elementUpdateDelayMs);
-      } else {
-        applyElementUpdate(envelope);
-      }
       return;
     }
   }
@@ -380,36 +362,39 @@ describe("GeneratorEditor PATTERN mode — switch-to-PATTERN lifecycle round tri
     const select = screen.getByRole("combobox", { name: /generator type/i });
     fireEvent.change(select, { target: { value: GeneratorType.PATTERN } });
 
-    // The generator-half patch (mode + arrivalPatternId + volume) persists
-    // through the shape-scoped route (a real ELEMENT_UPDATE envelope, not
-    // silently dropped), and arrivalPatterns persists through exactly one
-    // MODEL_ROOT_UPDATE with exactly one new pattern.
+    // The generator-half patch (mode + arrivalPatternId + volume) and the
+    // new arrivalPatterns entry now travel on the SAME MODEL_ROOT_UPDATE
+    // (spec 2026-09-13 lucid-shape-writes §2) -- not a separate ELEMENT_UPDATE
+    // envelope, and not silently dropped.
     await waitFor(() => {
       expect(fakeHost.snapshot().arrivalPatterns).toHaveLength(1);
     });
 
-    const elementUpdateCalls = postMessageSpy.mock.calls.filter(
-      ([envelope]: any) => envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE
-    );
-    expect(elementUpdateCalls).toHaveLength(1);
-    const patch = (elementUpdateCalls[0][0] as any).data.data;
-    expect(patch.mode).toBe(GeneratorType.PATTERN);
-    expect(typeof patch.arrivalPatternId).toBe("string");
-    expect(patch.arrivalPatternId.length).toBeGreaterThan(0);
-    expect(patch.volume).toBeGreaterThan(0);
+    expect(
+      postMessageSpy.mock.calls.filter(
+        ([envelope]: any) => envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE
+      )
+    ).toHaveLength(0);
 
     const modelRootUpdateCalls = postMessageSpy.mock.calls.filter(
       ([envelope]: any) => envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE
     );
     expect(modelRootUpdateCalls).toHaveLength(1);
-    const rootPatch = (modelRootUpdateCalls[0][0] as any).data.patch;
-    expect(rootPatch.arrivalPatterns).toHaveLength(1);
-    expect(rootPatch.arrivalPatterns[0].id).toBe(patch.arrivalPatternId);
+    const envelopeData = (modelRootUpdateCalls[0][0] as any).data;
+    const shapeWrite = envelopeData.shapes.find((s: any) => s.shapeId === "g1");
+    expect(shapeWrite.type).toBe("Generator");
+    expect(shapeWrite.patch.mode).toBe(GeneratorType.PATTERN);
+    expect(typeof shapeWrite.patch.arrivalPatternId).toBe("string");
+    expect(shapeWrite.patch.arrivalPatternId.length).toBeGreaterThan(0);
+    expect(shapeWrite.patch.volume).toBeGreaterThan(0);
+
+    expect(envelopeData.patch.arrivalPatterns).toHaveLength(1);
+    expect(envelopeData.patch.arrivalPatterns[0].id).toBe(shapeWrite.patch.arrivalPatternId);
 
     // The fake host's own generator record ends up linked too -- the exact
     // invariant Critical 1 restores (previously only the model-root half
     // persisted).
-    expect(fakeHost.snapshot().generators[0].arrivalPatternId).toBe(patch.arrivalPatternId);
+    expect(fakeHost.snapshot().generators[0].arrivalPatternId).toBe(shapeWrite.patch.arrivalPatternId);
   });
 
   it("does not append a duplicate pattern when the model already links this generator to one (idempotency)", async () => {
@@ -444,30 +429,83 @@ describe("GeneratorEditor PATTERN mode — switch-to-PATTERN lifecycle round tri
     const select = screen.getByRole("combobox", { name: /generator type/i });
     fireEvent.change(select, { target: { value: GeneratorType.PATTERN } });
 
-    // The shape-half write still fires (mode really did change), reusing
-    // the EXISTING pattern id rather than minting a new one.
+    // The shape-half write still fires (mode really did change), reusing the
+    // EXISTING pattern id rather than minting a new one -- now on
+    // MODEL_ROOT_UPDATE's `shapes` (spec 2026-09-13 lucid-shape-writes §2),
+    // not a separate ELEMENT_UPDATE envelope.
     await waitFor(() => {
       const calls = postMessageSpy.mock.calls.filter(
-        ([envelope]: any) => envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE
+        ([envelope]: any) => envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE
       );
       expect(calls).toHaveLength(1);
     });
-    const elementUpdateCalls = postMessageSpy.mock.calls.filter(
-      ([envelope]: any) => envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE
-    );
-    const patch = (elementUpdateCalls[0][0] as any).data.data;
-    expect(patch.arrivalPatternId).toBe("ap-existing");
+    expect(
+      postMessageSpy.mock.calls.filter(
+        ([envelope]: any) => envelope?.type === EnvelopeMessageType.ELEMENT_UPDATE
+      )
+    ).toHaveLength(0);
 
-    // No model-root write at all -- ensured.model === model (unchanged), so
-    // the `ensured.model !== model` guard skips the write entirely. A
-    // duplicate pattern would show up here as a second MODEL_ROOT_UPDATE
-    // carrying two arrivalPatterns entries; there is none, and the fake
-    // host still holds exactly the one pattern it started with.
     const modelRootUpdateCalls = postMessageSpy.mock.calls.filter(
       ([envelope]: any) => envelope?.type === EnvelopeMessageType.MODEL_ROOT_UPDATE
     );
-    expect(modelRootUpdateCalls).toHaveLength(0);
+    const envelopeData = (modelRootUpdateCalls[0][0] as any).data;
+    const shapeWrite = envelopeData.shapes.find((s: any) => s.shapeId === "g1");
+    expect(shapeWrite.patch.arrivalPatternId).toBe("ap-existing");
+
+    // No arrivalPatterns change on this envelope -- ensured.model === model
+    // (unchanged), so the `ensured.model !== model` guard skips the
+    // model-root half of the write entirely; only the shape half queues and
+    // sends. A duplicate pattern would show up here as an arrivalPatterns
+    // entry carrying two entries; there is none, and the fake host still
+    // holds exactly the one pattern it started with.
+    expect(envelopeData.patch.arrivalPatterns).toBeUndefined();
     expect(fakeHost.snapshot().arrivalPatterns).toHaveLength(1);
+  });
+});
+
+// Controller ruling (Task 3 review, carried into Task 5): the switch-away
+// clear has to be verifiable against a host that actually removes the field
+// -- not just a wire assertion that clearedFields NAMED it -- otherwise the
+// "genuine" bar isn't met. createFakeHost's MODEL_ROOT_UPDATE branch already
+// applies `shape.clearedFields` by deleting those keys from its own
+// generator record (see its own comment above), which is what makes the
+// round-trip assertion below a real check rather than a restatement of the
+// envelope shape.
+describe("GeneratorEditor PATTERN mode — switch-away-from-PATTERN lifecycle round trip", () => {
+  beforeEach(() => {
+    mockUpdateElementData.mockClear();
+    mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
+  });
+
+  it("removes the generator's arrivalPatternId and drops the now-orphaned pattern", async () => {
+    const fakeHost = createFakeHost();
+    fakeHost.setInitial(
+      [{ id: "g1", name: "Arrivals", mode: "pattern", arrivalPatternId: "ap-1" }],
+      [{ id: "ap-1", name: "Arrivals pattern" }]
+    );
+    vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
+      fakeHost.handlePostMessage(envelope);
+    });
+
+    render(
+      <GeneratorEditor
+        {...baseProps}
+        generator={{ id: "g1", name: "Arrivals", mode: GeneratorType.PATTERN, arrivalPatternId: "ap-1", levers: [] } as any}
+      />
+    );
+
+    const select = screen.getByRole("combobox", { name: /generator type/i });
+    fireEvent.change(select, { target: { value: GeneratorType.FREQUENCY } });
+
+    await waitFor(() => {
+      expect(fakeHost.snapshot().arrivalPatterns).toHaveLength(0);
+    });
+
+    // The generator record itself no longer carries the key at all -- this
+    // is only true because the fake host actually deletes it on a cleared
+    // field, not merely because the wire declared it cleared.
+    expect("arrivalPatternId" in fakeHost.snapshot().generators[0]).toBe(false);
   });
 });
 
@@ -475,22 +513,20 @@ describe("GeneratorEditor PATTERN mode — switch-to-PATTERN lifecycle round tri
 // above either never dispatches a snapshot, or dispatches exactly one before
 // the ONE mode switch under test -- none of them exercise a SECOND lifecycle
 // decision reading the projection a first switch just wrote. This is the
-// required regression test: PATTERN -> FREQUENCY -> PATTERN in one mount,
-// with the fake host's ELEMENT_UPDATE confirmation deliberately DELAYED
-// (elementUpdateDelayMs) relative to MODEL_ROOT_UPDATE's own handling -- the
-// exact ordering the review described ("buildModelRootProjection reads
-// shape storage that may not have landed yet"). Against the PRE-FIX code
-// (parallel writes, saveShape resolving the instant the message was sent),
-// this reproduces the reported bug: switch 1's post-write snapshot shows
-// the new pattern in arrivalPatterns but NOT linked from the generator;
-// switch 2 (away from PATTERN) reads that stale projection, finds no link,
-// and silently no-ops instead of deleting the pattern (orphan); switch 3
-// (back to PATTERN) mints a SECOND pattern. Against the fix (saveShape
-// awaits the real ELEMENT_UPDATE_RESULT before the model-root write fires,
-// and re-requests a snapshot on confirmed success), each switch's decision
-// is made against a projection that already reflects the previous switch's
-// full effect, and the sequence ends with exactly one pattern, correctly
-// linked.
+// required regression test: PATTERN -> FREQUENCY -> PATTERN in one mount.
+//
+// Migrated for spec 2026-09-13 lucid-shape-writes §2 (Task 3): the original
+// version reproduced the race via a fake host that deliberately DELAYED its
+// ELEMENT_UPDATE confirmation relative to MODEL_ROOT_UPDATE's own handling,
+// simulating "buildModelRootProjection reads shape storage that may not have
+// landed yet" against the pre-batching code (parallel writes, saveShape
+// resolving the instant the message was sent). Task 3 removes that seam
+// altogether: the generator-half write and the arrivalPatterns write now
+// always travel on ONE MODEL_ROOT_UPDATE envelope (`shapes` alongside
+// `patch`), so there is no second, independently-timed write left to delay
+// -- the fake host here has no ELEMENT_UPDATE branch to delay any more. The
+// regression this test pins is unchanged: the sequence ends with exactly one
+// pattern, correctly linked, no orphan.
 describe("GeneratorEditor PATTERN mode — PATTERN -> FREQUENCY -> PATTERN in one mount (split-brain projection)", () => {
   beforeEach(() => {
     mockUpdateElementData.mockClear();
@@ -499,11 +535,7 @@ describe("GeneratorEditor PATTERN mode — PATTERN -> FREQUENCY -> PATTERN in on
   });
 
   it("ends with exactly one pattern and no orphan after PATTERN -> FREQUENCY -> PATTERN", async () => {
-    // Deliberately longer than a same-tick race would need, to reliably
-    // simulate "the model-root write's own snapshot push runs BEFORE the
-    // shape write has landed" against the pre-fix code, without relying on
-    // exact microtask ordering.
-    const fakeHost = createFakeHost({ elementUpdateDelayMs: 20 });
+    const fakeHost = createFakeHost();
     fakeHost.setInitial([{ id: "g1", name: "Arrivals", mode: "frequency" }], []);
     vi.spyOn(window.parent, "postMessage").mockImplementation((envelope: any) => {
       fakeHost.handlePostMessage(envelope);
