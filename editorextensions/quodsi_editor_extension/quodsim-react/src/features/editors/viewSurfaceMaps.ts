@@ -11,12 +11,12 @@
 //
 // Ids differ between shells where the copy differs -- map ids, never labels:
 //   - ActivityEditor's routing tab is id "connectors" here, "Routing" in Studio.
-//   - GeneratorEditor's first tab is "settings" here, "Basic" in Studio; its
-//     initial-state tab is "events" here, "States" in Studio.
 //
 // The Model editor has no map here: Lucid renders Studio's shared ModelEditor
 // (spec 2026-09-13), which gates its own tabs and fields with
-// MODEL_TAB_SURFACE / MODEL_EXTRA_SURFACES.
+// MODEL_TAB_SURFACE / MODEL_EXTRA_SURFACES. Nor does the Generator editor:
+// Lucid renders Studio's shared GeneratorEditor (spec 2026-09-14), gated by
+// GENERATOR_TAB_SURFACE / GENERATOR_EXTRA_SURFACES.
 //
 // ResourceBlockEditor has no map of its own: it renders the SHARED
 // ResourceEditor from quodsi_studio/platforms/shared directly, and that
@@ -38,15 +38,6 @@ export const LUCID_ACTIVITY_TAB_SURFACE: Record<ActivityTabId, SurfaceId> = {
   levers: 'activity.tab.levers',
 }
 
-type GeneratorTabId = 'settings' | 'events' | 'routing' | 'levers'
-
-export const LUCID_GENERATOR_TAB_SURFACE: Record<GeneratorTabId, SurfaceId> = {
-  settings: 'generator.tab.basic',
-  events: 'generator.tab.states',
-  routing: 'generator.tab.routing',
-  levers: 'generator.tab.levers',
-}
-
 // Task 13-equivalent, ported from quodsi_studio's ACTIVITY_EXTRA_SURFACES
 // (see that file's header): ActivityEditor mounts the same shared
 // CapacitySourcePicker Resource's own editor does, so it needs the same two
@@ -60,11 +51,4 @@ export const LUCID_ACTIVITY_EXTRA_SURFACES: SurfaceId[] = [
   'action.field.condition',
   'resource.capacity.fixed',
   'resource.capacity.schedule',
-]
-
-// GeneratorEditor renders its own "Advanced Settings" block (it does not mount
-// the shared GeneratorBasicTab), so like the model fields below it needs its
-// own ViewGated wrapper AND its own tell entry. Intermediate as of 2026-09-03.
-export const LUCID_GENERATOR_EXTRA_SURFACES: SurfaceId[] = [
-  'generator.field.advanced',
 ]

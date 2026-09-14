@@ -10,16 +10,12 @@
 // What this pins, beyond "the tab exists":
 //   - the badge counts, and is aria-hidden so it can't become the icon-only
 //     button's whole accessible name;
-//   - a SCHEDULED generator gets NO tab -- every property offered to a GENERATOR
-//     is FREQUENCY- or PATTERN-only, so its checkboxes would author levers the
-//     engine ignores. Lucid offered them before this change;
 //   - an activity following a work schedule loses its capacity lever but keeps
 //     the tab. Lucid offered that lever before this change too.
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ActivityEditor from "../ActivityEditor";
-import GeneratorEditor from "../GeneratorEditor";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -42,7 +38,7 @@ vi.mock("../SaveStatusLine", () => ({
   default: () => <div />,
 }));
 
-// GeneratorEditor calls useModelRootSource(), which needs useMessaging() for its
+// ActivityEditor calls useModelRootSource(), which needs useMessaging() for its
 // panelType; without this, render() throws (no MessageProvider ancestor here).
 vi.mock("../../../messaging/MessageProvider", () => ({
   useMessaging: () => ({ app: { panelType: "model" } }),
@@ -53,11 +49,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 const LEVERS_TAB_NAME = /mark .* as a scenario lever/i;
 
 const activityProps = {
-  states: {} as any,
-  referenceData: {} as any,
-};
-
-const generatorProps = {
   states: {} as any,
   referenceData: {} as any,
 };
@@ -155,38 +146,5 @@ describe("ActivityEditor — work-schedule capacity rule (new to Lucid)", () => 
       />
     );
     expect(screen.queryByTestId("tab-badge-levers")).not.toBeInTheDocument();
-  });
-});
-
-describe("GeneratorEditor — Levers tab is mode-dependent (new to Lucid)", () => {
-  it("offers the tab for a Rate generator", () => {
-    render(
-      <GeneratorEditor
-        {...generatorProps}
-        generator={{ id: "g1", name: "Arrivals", mode: "frequency", levers: [] } as any}
-      />
-    );
-    expect(screen.getByRole("button", { name: LEVERS_TAB_NAME })).toBeInTheDocument();
-  });
-
-  it("offers the tab for a Pattern generator", () => {
-    render(
-      <GeneratorEditor
-        {...generatorProps}
-        generator={{ id: "g1", name: "Arrivals", mode: "pattern", volume: 1000, levers: [] } as any}
-      />
-    );
-    expect(screen.getByRole("button", { name: LEVERS_TAB_NAME })).toBeInTheDocument();
-  });
-
-  it("withholds the tab from a Scheduled generator", () => {
-    render(
-      <GeneratorEditor
-        {...generatorProps}
-        generator={{ id: "g1", name: "Arrivals", mode: "scheduled", levers: [] } as any}
-      />
-    );
-    expect(screen.queryByRole("button", { name: LEVERS_TAB_NAME })).not.toBeInTheDocument();
-    expect(screen.queryByTestId("lever-authoring")).not.toBeInTheDocument();
   });
 });
