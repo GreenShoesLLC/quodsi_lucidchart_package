@@ -244,19 +244,22 @@ Schedules tab mounts Studio's `WorkSchedulesEditor`, which hands an id to
 channel, `?view=work-schedule&scheduleId=…`) rather than opening its own
 modal inside the 300px dock. The per-target "Fixed capacity | Follow a
 schedule" control is Studio's `CapacitySourcePicker`: `ResourceBasicTab`
-mounts it for a Resource, and `ActivityEditor`'s Basic tab mounts it directly
-for an Activity (it replaced the bare capacity input). Both read the schedule
+mounts it for a Resource, and the shared `ActivityBasicTab` mounts it for an
+Activity (Lucid renders the shared `ActivityEditor` through
+`LucidActivityEditor`, spec 2026-09-14). Both read the schedule
 list off the model-root projection -- NOT `referenceData`, which is rebuilt
 only when the host re-processes a SELECTION, so a just-created schedule would
-render as "Missing schedule". The Activity mount passes `onEdit`, the same
+render as "Missing schedule". The Activity mount passes `onEdit` (from
+`LucidActivityEditor`'s `onEditWorkSchedule`), the same
 host-presenter seam `WorkSchedulesEditor` uses, so its "Edit/New schedule"
 opens the Lucid modal; the Resource mount does NOT yet (ResourcesTab ->
 ResourcesEditor -> ResourceBasicTab never threads one through), so on that
 path the picker still opens its own dialog inside the 300px dock -- worth
-closing when the Resources tab is next touched. In `ActivityEditor` the link
-is written into that editor's own DRAFT (never `accessor.updateShape`, which
-the next autosave would clobber) and a clear rides out as
-`CLEARED_FIELDS_KEY: ['workScheduleId']`.
+closing when the Resources tab is next touched. An Activity's link is written
+with `updateShape(id, 'Activity', { workScheduleId })` into the model-root
+batch, and a clear (`workScheduleId: undefined`) rides out as that shape's
+`clearedFields: ['workScheduleId']`, which the host turns into
+`CLEARED_FIELDS_KEY`.
 
 ### Debugging Tips
 1. Enable console logging in browser developer tools

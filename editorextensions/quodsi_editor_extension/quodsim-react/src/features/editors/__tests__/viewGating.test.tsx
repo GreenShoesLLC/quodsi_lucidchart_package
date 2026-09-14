@@ -1,29 +1,22 @@
 // Complexity Views, Lucid half (Task 11a).
 //
-// Proves three things:
-//   1. Lucid's tab-id -> surface-id maps point at the SAME @quodsi/shared
-//      catalog Studio uses, including the id that genuinely differs from
-//      Studio's naming (ActivityEditor's "connectors" tab). The Model and
-//      Generator editors are Studio's shared ones (specs 2026-09-13,
-//      2026-09-14) and have no Lucid map.
-//   2. The gating actually bites in a rendered editor: a tab whose surface is
-//      above the current view is absent from the tab strip, and reappears
-//      once the view is raised.
-//   3. THE TELL actually renders when a view-hidden surface is genuinely in
+// Every Lucid editor is now Studio's shared one (Model: spec 2026-09-13;
+// Generator and Activity: specs 2026-09-14), so their tab gating is Studio's
+// and is tested there. What this file still proves, in Lucid's own host (the
+// shared ModelEditor over the real model-root source):
+//   1. The gating actually bites: a tab or field whose surface is above the
+//      current view is absent, and reappears once the view is raised.
+//   2. THE TELL actually renders when a view-hidden surface is genuinely in
 //      use -- review round 1 caught that ModelEditor's ViewTell mount passed
 //      ctx={{ element: localModelDraft }} while every model-level predicate
 //      in @quodsi/shared reads ctx.model, so surfacesInUse was always empty
 //      and the tell was structurally dead code no assertion here would have
-//      caught. These tests render an element/model that actually uses a
-//      hidden surface and assert role="note" appears.
+//      caught. These tests render a model that actually uses a hidden
+//      surface and assert role="note" appears.
 
-import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { resolveVisibleSurfaces } from "@quodsi/shared";
-import ActivityEditor from "../ActivityEditor";
+import { screen, fireEvent } from "@testing-library/react";
 import { definition, mountModelEditor } from "./modelEditorSeam";
-import { LUCID_ACTIVITY_TAB_SURFACE } from "../viewSurfaceMaps";
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -34,20 +27,8 @@ vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   }),
 }));
 
-vi.mock("../hooks/useEditorState", () => ({
-  useFormSync: () => {},
-  useSaveCompletionDetector: () => {},
-  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: vi.fn() }),
-  useFlushOnChange: () => {},
-}));
-
-vi.mock("../SaveStatusLine", () => ({
-  __esModule: true,
-  default: () => <div />,
-}));
-
-// ActivityEditor calls useModelRootSource(), which needs useMessaging() for its
-// panelType; without this, render() throws (no MessageProvider ancestor here).
+// The Model editor's model-root source reads useMessaging() for its panelType;
+// without this, mounting throws (no MessageProvider ancestor here).
 vi.mock("../../../messaging/MessageProvider", () => ({
   useMessaging: () => ({ app: { panelType: "model" } }),
 }));
@@ -56,84 +37,8 @@ function setView(view: "basic" | "intermediate" | "advanced") {
   localStorage.setItem("quodsi_view", view);
 }
 
-const activityProps = {
-  states: {} as any,
-  referenceData: {} as any,
-  activity: { id: "a1", name: "Triage", capacity: 1, actions: [], levers: [] } as any,
-};
-
-describe("Lucid tab surface maps", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  it("points at the same surface ids as the Studio shell", () => {
-    expect(LUCID_ACTIVITY_TAB_SURFACE.failure).toBe("activity.tab.failure");
-    expect(LUCID_ACTIVITY_TAB_SURFACE.basic).toBe("activity.tab.basic");
-    // ActivityEditor's routing tab id is "connectors" here, "Routing" in Studio.
-    expect(LUCID_ACTIVITY_TAB_SURFACE.connectors).toBe("activity.tab.routing");
-  });
-
-  it("hides the Failure tab in Basic and shows it in Advanced", () => {
-    expect(resolveVisibleSurfaces("basic").has(LUCID_ACTIVITY_TAB_SURFACE.failure)).toBe(false);
-    expect(resolveVisibleSurfaces("advanced").has(LUCID_ACTIVITY_TAB_SURFACE.failure)).toBe(true);
-  });
-
-  it("keeps Levers visible in Basic", () => {
-    expect(resolveVisibleSurfaces("basic").has(LUCID_ACTIVITY_TAB_SURFACE.levers)).toBe(true);
-  });
-});
-
-describe("ActivityEditor — view gates the Failure tab", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("hides Failure Settings in Basic", () => {
-    setView("basic");
-    render(<ActivityEditor {...activityProps} />);
-    expect(
-      screen.queryByRole("button", { name: /Configure activity failure/i })
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows Failure Settings in Advanced", () => {
-    setView("advanced");
-    render(<ActivityEditor {...activityProps} />);
-    expect(
-      screen.getByRole("button", { name: /Configure activity failure/i })
-    ).toBeInTheDocument();
-  });
-});
-
 describe("The tell: never silently hide live behaviour", () => {
   beforeEach(() => localStorage.clear());
-
-  it("ActivityEditor: shows the tell when Failure is configured but hidden in Basic", () => {
-    setView("basic");
-    render(
-      <ActivityEditor
-        {...activityProps}
-        activity={
-          {
-            id: "a1",
-            name: "Triage",
-            capacity: 1,
-            actions: [],
-            levers: [],
-            failureProperties: { enabled: true },
-          } as any
-        }
-      />
-    );
-    const note = screen.getByRole("note");
-    expect(note).toHaveTextContent(/failures/i);
-    expect(note).toHaveTextContent(/hidden in Basic/i);
-  });
-
-  it("ActivityEditor: shows no tell when Failure is not configured", () => {
-    setView("basic");
-    render(<ActivityEditor {...activityProps} />);
-    expect(screen.queryByRole("note")).not.toBeInTheDocument();
-  });
 
   it("ModelEditor: shows the tell when the model has states but States is hidden in Basic", () => {
     setView("basic");

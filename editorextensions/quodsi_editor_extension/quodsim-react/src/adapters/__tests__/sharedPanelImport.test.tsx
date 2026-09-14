@@ -16,10 +16,9 @@ import {
   workScheduleUsage,
   EntitiesEditor,
   StatesEditor,
-  // Complexity views (Task 11a). Lucid mounts these directly in its own
-  // editors (ActivityEditor, GeneratorEditor, ModelEditor) rather than
-  // reimplementing the hook or the tell -- guard the barrel export they
-  // travel on like every other shared panel.
+  // Complexity views (Task 11a). Lucid's editors are Studio's shared ones,
+  // which mount the hook and the tell themselves -- guard the barrel export
+  // they travel on like every other shared panel.
   useView,
   ViewTell,
   SettingsPanel,
@@ -86,10 +85,10 @@ describe('shared panel import', () => {
     expect(typeof EntitlementsSourceProvider).toBe('function')
     expect(typeof isModelLevelIssue).toBe('function')
     expect(typeof isEntityIssue).toBe('function')
-    // spec 2026-09-13 lucid-state-modifications-editor: Lucid's action and
-    // generator state-modification sections mount the shared editor through
-    // LucidStateModificationsEditor; Lucid deleted its own editor, dialog,
-    // list row and sample/ distribution editors.
+    // spec 2026-09-13 lucid-state-modifications-editor, then 2026-09-14:
+    // Lucid's editors are Studio's shared ones, which mount the shared
+    // StateModificationsEditor; Lucid deleted its own editor, dialog, list
+    // row, sample/ distribution editors and its LucidStateModificationsEditor.
     expect(typeof StateModificationsEditor).toBe('function')
   })
 
