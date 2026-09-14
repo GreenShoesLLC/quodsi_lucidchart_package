@@ -6,7 +6,7 @@
 // the selection's reference data), and the host hooks open Lucid's own modals
 // and navigation. Nothing is editable before the first model-root snapshot.
 
-import React from 'react'
+import React, { useCallback } from 'react'
 import type { EditorReferenceData } from '@quodsi/lucid-shared'
 import { GeneratorEditor } from 'quodsi_studio/platforms/shared'
 import { useElementEditorAccessor } from '../../adapters/useElementEditorAccessor'
@@ -22,6 +22,12 @@ export const LucidGeneratorEditor: React.FC<LucidGeneratorEditorProps> = ({ shap
   const { accessor, projection } = useElementEditorAccessor(referenceData)
   const { openPatternModal, openScheduleModal, openSettingsModal } = useSimulationRunSender()
   const { selectElement } = useModelOpsSender()
+  // Stable hooks: GeneratorEditor memoises its EditorHostContext on
+  // onGoToStates, so a fresh arrow per render would rebuild it every render.
+  // Above the early return (hook order).
+  const onOpenPatternModal = useCallback(() => openPatternModal(shapeId), [openPatternModal, shapeId])
+  const onOpenScheduleModal = useCallback(() => openScheduleModal(shapeId), [openScheduleModal, shapeId])
+  const onGoToStates = useCallback(() => selectElement('model', { targetTab: 'States' }), [selectElement])
 
   if (!projection) {
     return <div className="p-3 text-xs text-muted">Loading model…</div>
@@ -30,10 +36,10 @@ export const LucidGeneratorEditor: React.FC<LucidGeneratorEditorProps> = ({ shap
     <GeneratorEditor
       shapeId={shapeId}
       accessor={accessor}
-      onOpenPatternModal={() => openPatternModal(shapeId)}
-      onOpenScheduleModal={() => openScheduleModal(shapeId)}
+      onOpenPatternModal={onOpenPatternModal}
+      onOpenScheduleModal={onOpenScheduleModal}
       onOpenSettings={openSettingsModal}
-      onGoToStates={() => selectElement('model', { targetTab: 'States' })}
+      onGoToStates={onGoToStates}
     />
   )
 }

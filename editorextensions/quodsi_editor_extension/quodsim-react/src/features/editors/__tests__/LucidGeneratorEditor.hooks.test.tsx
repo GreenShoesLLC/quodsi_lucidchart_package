@@ -77,4 +77,19 @@ describe('LucidGeneratorEditor — host wiring', () => {
     expect(h.openSettingsModal).toHaveBeenCalledTimes(1)
     expect(h.selectElement).toHaveBeenCalledWith('model', { targetTab: 'States' })
   })
+
+  // GeneratorEditor memoises its EditorHostContext on onGoToStates: a fresh
+  // arrow per render would rebuild that context on every render.
+  it('keeps the host hooks stable across a rerender with the same shape', () => {
+    h.projection = { pageId: 'page-1' }
+    const { rerender } = render(<LucidGeneratorEditor shapeId="g1" referenceData={undefined} />)
+    const first = h.editorProps
+
+    rerender(<LucidGeneratorEditor shapeId="g1" referenceData={undefined} />)
+
+    expect(h.editorProps).not.toBe(first)
+    expect(h.editorProps.onGoToStates).toBe(first.onGoToStates)
+    expect(h.editorProps.onOpenPatternModal).toBe(first.onOpenPatternModal)
+    expect(h.editorProps.onOpenScheduleModal).toBe(first.onOpenScheduleModal)
+  })
 })
