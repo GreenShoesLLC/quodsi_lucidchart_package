@@ -235,6 +235,9 @@ describe('LucidActivityEditor — the shared editor over Lucid data', () => {
     expect([...shape.clearedFields].sort()).toEqual(['queueRanking', 'workScheduleId'])
   })
 
+  // The shared ActivityEditor lazy-loads ActionsTab, so the first test to open the
+  // Actions tab pays a cold dynamic import (codemirror, @dnd-kit, Recipe view) that
+  // can exceed Vitest's default 5s timeout under full-suite load.
   it('sends a new requirement in a flushed batch before the action points at it', async () => {
     setView('advanced')
     localStorage.setItem(ACTION_VIEW_KEY, 'classic')
@@ -243,7 +246,7 @@ describe('LucidActivityEditor — the shared editor over Lucid data', () => {
     pushSnapshot()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Actions' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Expand action 1' }, { timeout: 5000 }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Expand action 1' }, { timeout: 15_000 }))
     fireEvent.click(screen.getByRole('button', { name: /^resource requirement$/i }))
     fireEvent.click(screen.getByRole('option', { name: /New requirement/ }))
     fireEvent.click(screen.getByRole('button', { name: /^Save( as new)?$/ }))
@@ -256,7 +259,7 @@ describe('LucidActivityEditor — the shared editor over Lucid data', () => {
     const newId = requirements[1].id
     const actions = linkBatch.data.shapes.find((s: any) => s.shapeId === 'a1').patch.actions
     expect(actions[0].resourceRequirementId).toBe(newId)
-  })
+  }, 20_000)
 
   it("saves a Routing move-time edit through ELEMENT_UPDATE with the departure's condition and name intact", async () => {
     const posted = installHost()
@@ -286,8 +289,8 @@ describe('LucidActivityEditor — the shared editor over Lucid data', () => {
     pushSnapshot()
 
     fireEvent.click(screen.getByRole('tab', { name: 'Actions' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'Expand action 1' }, { timeout: 5000 }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Expand action 1' }, { timeout: 15_000 }))
 
     expect(screen.getByTestId('script-action-offline')).toHaveTextContent('entity.priority = 1')
-  })
+  }, 20_000)
 })

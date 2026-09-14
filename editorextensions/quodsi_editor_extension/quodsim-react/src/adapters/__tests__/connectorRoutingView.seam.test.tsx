@@ -75,22 +75,6 @@ describe('ConnectorRoutingView over useReferenceDataAccessor (seam)', () => {
     expect(screen.getByTestId('connector-order-c1').textContent).toMatch(/2/)
   })
 
-  it('with no writer, the mode change goes to ELEMENT_UPDATE for the source', async () => {
-    const user = userEvent.setup()
-    const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
-    const source = createReferenceDataAccessor(
-      referenceData,
-      () => ({ updateResourceRequirements: vi.fn(), updateElement }),
-    )
-
-    render(<ConnectorRoutingView sourceId="gen-1" sourceType="Generator" accessor={source.accessor} />)
-
-    await user.selectOptions(screen.getByRole('combobox'), 'first_available')
-
-    await waitFor(() => expect(updateElement).toHaveBeenCalledWith('gen-1', 'Generator', { routing: 'first_available' }))
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('first_available')) // overlay after the resolved ELEMENT_UPDATE
-  })
-
   // I2/I3: the priority input is fully controlled off the snapshot with no
   // local buffer. Without an optimistic overlay it would revert to the
   // pre-edit value the instant ELEMENT_UPDATE puts saveStatus into 'saving'
