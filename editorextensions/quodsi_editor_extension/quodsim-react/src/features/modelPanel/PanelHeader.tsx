@@ -8,11 +8,18 @@ import {
   getLogger,
 } from "@quodsi/lucid-shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
-import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
-import { TYPE_ACCENT_CLASS, TYPE_ICON, TYPE_ICON_CLASS, useDevMode, type HeaderType } from "quodsi_studio/platforms/shared";
+import {
+  ShapeTypeSelect,
+  TYPE_ACCENT_CLASS,
+  TYPE_ICON,
+  TYPE_ICON_CLASS,
+  useDevMode,
+  type HeaderType,
+  type ShapeTypeOption,
+} from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
 
 const log = getLogger("PanelHeader");
@@ -29,6 +36,18 @@ function getEditorAccentClass(editorType: string): string {
 function getEditorIconClass(editorType: string): string {
   return TYPE_ICON_CLASS[editorType as HeaderType] || "text-gray-500";
 }
+
+// The header's type dropdown is the SHARED ShapeTypeSelect, so its options,
+// view gating and grandfathering live once (drawio and Visio use it through
+// ShapeTypeSelector). A Lucid element type it has no option for shows None.
+const SHAPE_TYPE_VALUES: readonly string[] = ["Activity", "Generator", "Resource", "Connector"];
+
+function toShapeTypeOption(type: SimulationObjectType | string | undefined): ShapeTypeOption {
+  return SHAPE_TYPE_VALUES.includes(type as string) ? (type as ShapeTypeOption) : "None";
+}
+
+const TYPE_SELECT_CLASS =
+  "flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -314,11 +333,12 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* Row 3: Type Selector (to change or revert type) */}
         <div>
           {currentElement && (
-            <SimulationComponentSelector
-              elementId={currentElement.id}
-              selectedType={elementType}
-              diagramElementType={diagramElementType}
-              onTypeChange={handleTypeChange}
+            <ShapeTypeSelect
+              value={toShapeTypeOption(elementType)}
+              is1D={diagramElementType === DiagramElementType.LINE}
+              onChange={(next) => handleTypeChange(next as SimulationObjectType, currentElement.id)}
+              className={TYPE_SELECT_CLASS}
+              aria-label="Element type"
             />
           )}
         </div>
@@ -353,11 +373,12 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* Row 3: Component Selector */}
         <div>
           {currentElement && (
-            <SimulationComponentSelector
-              elementId={currentElement.id}
-              selectedType={(currentElement.metadata?.type || SimulationObjectType.None) as SimulationObjectType}
-              diagramElementType={diagramElementType}
-              onTypeChange={handleTypeChange}
+            <ShapeTypeSelect
+              value={toShapeTypeOption(currentElement.metadata?.type)}
+              is1D={diagramElementType === DiagramElementType.LINE}
+              onChange={(next) => handleTypeChange(next as SimulationObjectType, currentElement.id)}
+              className={TYPE_SELECT_CLASS}
+              aria-label="Element type"
             />
           )}
         </div>

@@ -6,30 +6,24 @@
 // itself lives in the page's q_resources and outlives every claimant.
 //
 // So this editor owns no resource state. It chooses between the two SHARED
-// Studio panels the Resource block also uses:
-//   - no resourceId, or a resourceId that resolves to NOTHING in the
-//     model-root snapshot -> <ResourceLinkPicker claimantNoun="lane">, whose
-//     onLink writes ONLY the pointer into the lane. The create -> confirmed
-//     model-root write -> link ordering lives inside the picker; do not
-//     reimplement it here.
-//   - a resourceId that resolves -> <ResourceEditor> on that resource.
+// Studio panels the Resource block also uses, <ResourceEditor> and
+// <ResourceLinkPicker claimantNoun="lane">; which one is resolveClaimantView's
+// decision (below). The picker's onLink writes ONLY the pointer into the lane;
+// the create -> confirmed model-root write -> link ordering lives inside the
+// picker, so do not reimplement it here.
 //
-// Resolving the pointer against the snapshot (rather than trusting its mere
-// presence) is what keeps a DANGLING lane -- and a LOSING one -- out of the
-// shared editor. Lucid copies shapeData wholesale on paste, so a copied
-// swimlane brings q_swimlane's resourceId with it; resolveResourceLinks is
-// first-wins, so the ORIGINAL lane keeps the record and its projection row
-// carries the winner's transient marker (`laneRef` for a lane, `shapeId` for
-// a block) while the copy's claim is rejected. The pointer must therefore
-// resolve AND the row must not already belong to someone else: claimed by
-// THIS lane -> editor; unclaimed -> editor (the window between writing a
-// fresh link and the next snapshot stamping the claim); claimed by anyone
-// else -> notice + the same picker, so this lane can take another resource. Deleting a
-// resource from the Resources tab does not rewrite q_swimlane -- the cascade
-// leaves the pointer behind and the builder reports it as
-// `resource_link_dangling` -- and ResourceEditor's answer to an unknown id is
-// a "Resource ... not found ... Re-bootstrap" dead end that no gesture in this
-// panel can clear. Same posture, same copy, as ResourceBlockEditor next door.
+// Which of the two a lane gets is the SHARED resolveClaimantView's decision,
+// the same rule the Resource block and drawio/Visio shapes use: the row this
+// lane owns (its `laneRef` stamped by resolveResourceLinks), or an unclaimed
+// row its pointer names (the window between writing a link and the next
+// snapshot stamping the claim), gets the editor. A DANGLING pointer (a
+// resource deleted from the Resources tab leaves q_swimlane's pointer behind,
+// reported as `resource_link_dangling`) and a LOSING one (Lucid copies
+// shapeData wholesale on paste, so a copied swimlane carries the original's
+// resourceId) get the shared ResourceClaimNotice and the same picker, so this
+// lane can take another resource -- never ResourceEditor's "not found ...
+// Re-bootstrap" dead end. Lanes don't use ResourceClaimPanel because a linked
+// lane wraps the editor with assignment-mode controls.
 //
 // Two consequences worth stating, because both were true the other way round
 // until this task:
@@ -54,22 +48,16 @@ import {
   EnvelopeMessageType,
   generateUUID,
 } from "@quodsi/lucid-shared";
-import { ResourceEditor, ResourceLinkPicker } from "quodsi_studio/platforms/shared";
+import {
+  ResourceClaimNotice,
+  ResourceEditor,
+  ResourceLinkPicker,
+  resolveClaimantView,
+  type ClaimResourceRow,
+} from "quodsi_studio/platforms/shared";
 import { useMessaging } from "../../messaging/MessageContext";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
-
-/**
- * The model-root projection's resource row. `shapeId` / `laneRef` are
- * TRANSIENT claim markers stamped at build time by resolveResourceLinks --
- * never persisted, and present only on the row the winning claimant owns.
- */
-type ResourceRow = {
-  id: string;
-  name: string;
-  shapeId?: string;
-  laneRef?: { blockId: string; laneId: string };
-};
 
 interface LaneInfo {
   index: number;
@@ -126,20 +114,17 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
   // moment a MODEL_ROOT_SNAPSHOT lands.
   const snap = useSyncExternalStore(accessor.subscribe, accessor.getSnapshot);
   const resources =
-    (snap.modelDefinition as unknown as { resources?: ResourceRow[] } | null)?.resources ?? [];
-  const linkedResource = activeMapping?.resourceId
-    ? resources.find((r) => r.id === activeMapping.resourceId)
-    : undefined;
-  // Does the resolved record actually belong to THIS lane? (See the header.)
-  const ownsClaim =
-    !!linkedResource?.laneRef &&
-    linkedResource.laneRef.blockId === elementData.blockId &&
-    linkedResource.laneRef.laneId === activeMapping?.laneId;
-  const unclaimed = !!linkedResource && !linkedResource.shapeId && !linkedResource.laneRef;
-  // The record this lane may edit in place -- undefined when the claim was
-  // lost to another claimant, which drops the lane into the picker branch.
-  const editableResource = ownsClaim || unclaimed ? linkedResource : undefined;
-  const losingClaim = !!linkedResource && !editableResource;
+    (snap.modelDefinition as unknown as { resources?: ClaimResourceRow[] } | null)?.resources ?? [];
+  // The shared claim rule (see the header). An unmapped lane has no laneId,
+  // and "" never matches a stamped laneRef.
+  const claimView = resolveClaimantView(
+    { kind: "lane", blockId: elementData.blockId, laneId: activeMapping?.laneId ?? "" },
+    activeMapping?.resourceId,
+    resources,
+  );
+  // The record this lane may edit in place -- undefined for an unlinked,
+  // dangling or losing lane, which drops it into the picker branch.
+  const editableResource = claimView.kind === "edit" ? claimView.resource : undefined;
 
   // Reset confirmation state when switching lanes
   useEffect(() => {
@@ -223,13 +208,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
              model-level resource it stands for. All three take the same
              picker; only the copy above them differs. */
           <div className="space-y-2">
-            <p className="text-xs text-gray-500">
-              {losingClaim
-                ? `Resource '${linkedResource?.name}' is already represented elsewhere. This lane is not linked.`
-                : activeMapping?.resourceId
-                  ? "This lane points at a Resource that no longer exists. Link it to an existing Resource or create a new one."
-                  : "This lane is not linked to a Resource."}
-            </p>
+            <ResourceClaimNotice view={claimView} claimantNoun="lane" />
             <ResourceLinkPicker
               accessor={accessor}
               claimantNoun="lane"
@@ -253,7 +232,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
           </div>
         )}
 
-        {activeLane && activeMapping?.resourceId && editableResource && (
+        {activeLane && activeMapping && editableResource && (
           /* Linked lane -- assignment mode + the SHARED editor on the resource */
           <div className="space-y-4">
             {/* Assignment Mode */}
@@ -301,7 +280,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
             {/* The model-level record this lane points at, edited in place. */}
             <div className="border-t border-gray-200 pt-3">
               <ResourceEditor
-                resourceId={activeMapping.resourceId}
+                resourceId={editableResource.id}
                 accessor={accessor}
                 // Same seam as the Resources tab and the Resource block:
                 // schedule editing is presented by a real Lucid modal, not by
@@ -318,7 +297,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
             <div className="text-xs text-gray-500 border-t border-gray-100 pt-3">
               <div>Lane index: {activeLane.index}</div>
               <div>Size: {activeLane.size}px</div>
-              <div>Resource ID: <code className="text-xs">{activeMapping.resourceId}</code></div>
+              <div>Resource ID: <code className="text-xs">{editableResource.id}</code></div>
             </div>
 
             {/* Unlink */}

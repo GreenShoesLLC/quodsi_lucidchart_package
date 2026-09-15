@@ -4,8 +4,8 @@
 // `safeElementData.resourceId` off it by name. Nothing type-checks that name
 // against what the extension actually sends -- so if the Resource selection
 // payload ever renamed the field, every Resource block would silently render
-// the ResourceLinkPicker forever ("this shape is not linked to a Resource
-// yet") instead of the editor, with no error anywhere.
+// the ResourceLinkPicker ("Link this shape to a Resource") forever instead of
+// the editor, with no error anywhere.
 //
 // This test pins the seam by rendering the REAL ElementEditor over the REAL
 // shared Studio panels, feeding it the payload the extension's
@@ -132,7 +132,7 @@ describe('ElementEditor — Resource block pointer passthrough', () => {
     // The shared ResourceEditor's Basic-tab name input -- proof the pointer
     // survived every hop by the name each hop reads it under.
     expect(await screen.findByDisplayValue('Nurse')).toBeInTheDocument()
-    // ...and NOT the ResourceLinkPicker's "not linked yet" prompt.
-    expect(screen.queryByText(/not linked to a Resource yet/i)).not.toBeInTheDocument()
+    // ...and NOT the ResourceLinkPicker (its heading).
+    expect(screen.queryByText('Link this shape to a Resource')).toBeNull()
   })
 })

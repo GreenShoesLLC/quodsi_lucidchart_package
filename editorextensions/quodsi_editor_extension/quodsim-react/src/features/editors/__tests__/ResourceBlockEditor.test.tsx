@@ -130,6 +130,15 @@ describe('ResourceBlockEditor', () => {
     expect(screen.getByText(/no longer exists/i)).toBeInTheDocument()
   })
 
+  it('an unlinked block gets the picker with no claim notice', async () => {
+    installHost([{ id: 'r9', name: 'Tech', capacity: 1 }])
+
+    render(<ResourceBlockEditor blockId="blk-1" resourceId={undefined} />)
+
+    expect(await screen.findByText('Link this shape to a Resource')).toBeInTheDocument()
+    expect(screen.queryByText(/already represented|no longer exists|not linked to a Resource yet/i)).toBeNull()
+  })
+
   // Lucid copies shapeData wholesale on paste, so a pasted Resource block
   // carries the ORIGINAL's resourceId. resolveResourceLinks is first-wins:
   // the original keeps the row and stamps its `shapeId` on the projection,
@@ -145,7 +154,7 @@ describe('ResourceBlockEditor', () => {
     render(<ResourceBlockEditor blockId="blk-1" resourceId="r1" />)
 
     expect(
-      await screen.findByText(/already represented by another shape/i),
+      await screen.findByText(/already represented elsewhere\. This shape is not linked\./i),
     ).toBeInTheDocument()
     // The shared editor's name input must NOT be what renders -- that is the
     // surface that would have written through to the original's record.
@@ -162,7 +171,7 @@ describe('ResourceBlockEditor', () => {
     render(<ResourceBlockEditor blockId="blk-1" resourceId="r1" />)
 
     expect(
-      await screen.findByText(/already represented by another shape/i),
+      await screen.findByText(/already represented elsewhere\. This shape is not linked\./i),
     ).toBeInTheDocument()
     expect(screen.queryByDisplayValue('Nurse')).not.toBeInTheDocument()
   })
