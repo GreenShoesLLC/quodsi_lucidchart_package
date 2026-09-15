@@ -16,63 +16,48 @@ vi.mock('../../../messaging/MessageContext', () => ({
   useAuth: () => mockAuthState,
 }));
 
-let mockValidationState: any = { hasErrors: false, errorCount: 0 };
+let mockValidationState: any = { errorCount: 0 };
 vi.mock('../../../messaging/hooks/useValidationState', () => ({
   useValidationState: () => mockValidationState,
 }));
 
 import { StudiesLaunchButton } from '../StudiesLaunchButton';
 
-describe('StudiesLaunchButton', () => {
+// The shared button's titles, disabled states and variants are pinned in
+// quodsi_studio (platforms/shared/__tests__/StudiesLaunchButton.test.tsx).
+// This file pins only what LucidChart feeds it.
+describe('StudiesLaunchButton (Lucid host)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState = { isAuthenticated: false };
-    mockValidationState = { hasErrors: false, errorCount: 0 };
+    mockValidationState = { errorCount: 0 };
   });
 
-  it('is disabled and does not launch the studies modal when signed out', () => {
-    mockAuthState = { isAuthenticated: false };
+  it('maps signed out to the shared signed-out state', () => {
     render(<StudiesLaunchButton />);
-    const btn = screen.getByTestId('open-studies-modal');
+    const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute('title', 'Sign in to use Studies');
     fireEvent.click(btn);
     expect(mockOpenStudiesModal).not.toHaveBeenCalled();
   });
 
-  it('renders an enabled Studies button and launches the studies modal when signed in', () => {
+  it("passes the extension's error count as the blocker count", () => {
+    mockAuthState = { isAuthenticated: true };
+    mockValidationState = { errorCount: 2 };
+    render(<StudiesLaunchButton />);
+    const btn = screen.getByTestId('studies-launch-button');
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('title', "Fix 2 validation errors before opening Studies — see the Model's Validation tab");
+  });
+
+  it('renders the full-width variant and opens Studies for this document and page', () => {
     mockAuthState = { isAuthenticated: true };
     render(<StudiesLaunchButton />);
-    const btn = screen.getByTestId('open-studies-modal');
-    expect(btn).toHaveTextContent(/studies/i);
+    const btn = screen.getByTestId('studies-launch-button');
+    expect(btn).toHaveClass('w-full');
     expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
     expect(mockOpenStudiesModal).toHaveBeenCalledWith('doc1', 'pg1');
-  });
-
-  it('is disabled with the error count in its title while the model has validation errors', () => {
-    mockAuthState = { isAuthenticated: true };
-    mockValidationState = { hasErrors: true, errorCount: 2 };
-    render(<StudiesLaunchButton />);
-    const btn = screen.getByTestId('open-studies-modal');
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('title', 'Fix 2 validation errors before opening Studies — see the Validation tab');
-    fireEvent.click(btn);
-    expect(mockOpenStudiesModal).not.toHaveBeenCalled();
-  });
-
-  it('singularises the title for one error', () => {
-    mockAuthState = { isAuthenticated: true };
-    mockValidationState = { hasErrors: true, errorCount: 1 };
-    render(<StudiesLaunchButton />);
-    expect(screen.getByTestId('open-studies-modal'))
-      .toHaveAttribute('title', 'Fix 1 validation error before opening Studies — see the Validation tab');
-  });
-
-  it('lets the sign-in title win over validation errors when signed out', () => {
-    mockAuthState = { isAuthenticated: false };
-    mockValidationState = { hasErrors: true, errorCount: 3 };
-    render(<StudiesLaunchButton />);
-    expect(screen.getByTestId('open-studies-modal')).toHaveAttribute('title', 'Sign in to use Studies');
   });
 });

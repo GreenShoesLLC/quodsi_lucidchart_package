@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity, Trash2, Settings } from "lucide-react";
+import { Wrench, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity, Trash2, Settings } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -13,7 +13,7 @@ import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
-import { TYPE_ACCENT_CLASS, TYPE_ICON_CLASS, useDevMode, type HeaderType } from "quodsi_studio/platforms/shared";
+import { TYPE_ACCENT_CLASS, TYPE_ICON, TYPE_ICON_CLASS, useDevMode, type HeaderType } from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
 import { AdvisorLaunchButton, advisorFocusForElement, modelAdvisorFocus } from "./AdvisorLaunchButton";
 
@@ -131,25 +131,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     onElementTypeChange(elementId, newType);
   };
 
-  // Helper to get icon for element type
-  const getElementIcon = (type: SimulationObjectType) => {
-    switch (type) {
-      case SimulationObjectType.Model:
-        return Network;
-      case SimulationObjectType.Activity:
-        return Wrench;
-      case SimulationObjectType.Resource:
-        return Users;
-      case SimulationObjectType.Entity:
-        return Package;
-      case SimulationObjectType.Generator:
-        return Factory;
-      case SimulationObjectType.Connector:
-        return ArrowRight;
-      default:
-        return AlertTriangle;
-    }
-  };
+  // Icon per element type, from the shared Studio typeConfig; a type that is
+  // not a header type (e.g. None) gets the warning icon.
+  const getElementIcon = (type: SimulationObjectType) =>
+    TYPE_ICON[type as HeaderType] ?? AlertTriangle;
 
   // Helper to get model statistics
   const getModelStats = () => {
