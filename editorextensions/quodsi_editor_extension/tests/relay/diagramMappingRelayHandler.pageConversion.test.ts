@@ -158,6 +158,31 @@ describe('AUTO_CONVERT_PAGE result', () => {
   });
 });
 
+describe('ANALYZE_PAGE from the inline Diagram Mapping modal', () => {
+  it("replies on the 'diagram-mapping' channel, targeting 'diagram-mapping-iframe', for a diagram-mapping-iframe-sourced request", async () => {
+    analyzeMock.mockReturnValue({ pageId: 'page-1', mappings: [] });
+
+    await (DiagramMappingRelayHandler as any).handleAnalyze({
+      id: 'req-dm-1',
+      type: EnvelopeMessageType.ANALYZE_PAGE,
+      source: 'diagram-mapping-iframe',
+      target: 'host',
+      version: '1.0',
+      data: { requestId: 7 },
+    });
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const [channel, reply] = sendMock.mock.calls[0];
+    expect(channel).toBe('diagram-mapping');
+    expect(reply).toMatchObject({
+      id: 'req-dm-1',
+      type: EnvelopeMessageType.PAGE_ANALYSIS_RESULT,
+      target: 'diagram-mapping-iframe',
+      data: { requestId: 7, data: { pageId: 'page-1', mappings: [] } },
+    });
+  });
+});
+
 describe('toPageConversionCounts', () => {
   it('maps the element counts, sets entities to 0, and counts null and Entity proposals as skipped', () => {
     expect(

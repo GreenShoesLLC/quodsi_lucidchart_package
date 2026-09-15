@@ -123,11 +123,21 @@ export enum EnvelopeMessageType {
   // never the model.
   OPEN_SETTINGS_MODAL = "OPEN_SETTINGS_MODAL",
 
-  // Diagram Mapping (Phase 2B)
+  // Diagram Mapping (Phase 2B). ANALYZE_PAGE/APPLY_SHAPE_CHANGES originate in
+  // the inline Diagram Mapping modal (spec 2026-09-15, "opens inline") and
+  // are answered by DiagramMappingRelayHandler -- see DiagramMappingModal.ts
+  // for why this moved off the embedded-Studio path OPEN_DIAGRAM_MAPPING_MODAL
+  // used until then.
   ANALYZE_PAGE = "ANALYZE_PAGE",
   PAGE_ANALYSIS_RESULT = "PAGE_ANALYSIS_RESULT",
   APPLY_SHAPE_CHANGES = "APPLY_SHAPE_CHANGES",
   APPLY_SHAPE_CHANGES_RESULT = "APPLY_SHAPE_CHANGES_RESULT",
+  // Opens the Diagram Mapping screen INLINE, in the extension's own
+  // quodsim-react bundle (?view=diagram-mapping) -- a RoutingModal on the
+  // 'diagram-mapping' channel, same family as OPEN_SETTINGS_MODAL above.
+  // Formerly opened a hosted Studio embed via openEmbedSurfaceModal, like
+  // OPEN_STUDIES_MODAL still does; moved inline because the Studio page
+  // never used the server model id or quodsi_api that path resolved.
   OPEN_DIAGRAM_MAPPING_MODAL = "OPEN_DIAGRAM_MAPPING_MODAL",
   AUTO_CONVERT_PAGE = "AUTO_CONVERT_PAGE",
   // Reply to AUTO_CONVERT_PAGE, carrying the request's envelope id: success

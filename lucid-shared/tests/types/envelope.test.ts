@@ -69,4 +69,8 @@ describe('isEnvelope source/target validation', () => {
     // broadcast is a fan-out target only; a message can never originate from it.
     expect(isEnvelope(envelopeWith({ source: 'broadcast' }))).toBe(false);
   });
+
+  it('accepts the diagram-mapping-iframe source used by the inline Diagram Mapping modal (spec 2026-09-15)', () => {
+    expect(isEnvelope(envelopeWith({ source: 'diagram-mapping-iframe' }))).toBe(true);
+  });
 });

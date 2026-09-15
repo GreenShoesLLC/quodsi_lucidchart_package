@@ -66,6 +66,17 @@ describe('useSendMessage — flush before sends that read the stored model', () 
     expect(flush).not.toHaveBeenCalled()
   })
 
+  it('maps panelType diagram-mapping to source diagram-mapping-iframe', () => {
+    const posted: Array<{ source: string }> = []
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => { posted.push(envelope) })
+    const { result } = renderHook(() => useSendMessage({ app: { panelType: 'diagram-mapping' } }, vi.fn()))
+
+    result.current(EnvelopeMessageType.ANALYZE_PAGE, { requestId: 1 })
+
+    expect(posted).toHaveLength(1)
+    expect(posted[0].source).toBe('diagram-mapping-iframe')
+  })
+
   it('lists exactly the messages whose host handler reads the stored model', () => {
     expect([...FLUSH_BEFORE_SEND].sort()).toEqual(
       [

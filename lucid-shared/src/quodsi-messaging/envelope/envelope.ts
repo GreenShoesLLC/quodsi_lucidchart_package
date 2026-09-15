@@ -32,6 +32,11 @@ export const MESSAGE_SOURCES = [
   // Settings screen (Complexity Views, Task 11b). Same RUNTIME-list
   // requirement as work-schedule-iframe above.
   'settings-iframe',
+  // Diagram Mapping modal, opened inline in the extension's own bundle
+  // instead of through a hosted Studio embed (spec 2026-09-15, "opens
+  // inline"). Same RUNTIME-list requirement as every entry above -- see
+  // this constant's own header for the bug a missing entry here causes.
+  'diagram-mapping-iframe',
 ] as const;
 
 /**

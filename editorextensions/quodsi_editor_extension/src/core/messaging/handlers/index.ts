@@ -62,7 +62,8 @@ export class MessageHandlers {
       return true;
     }
 
-    // Diagram-mapping relay messages (embedded Studio 2B)
+    // Diagram-mapping relay messages (the inline Diagram Mapping modal,
+    // spec 2026-09-15 -- formerly the embedded Studio 2B screen)
     if (DiagramMappingRelayHandler.handleMessage(msg)) {
       return true;
     }

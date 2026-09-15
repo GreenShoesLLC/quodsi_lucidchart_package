@@ -88,12 +88,16 @@ export function toPageConversionCounts(
 }
 
 /**
- * Handler for the embedded Studio diagram-mapping relay messages:
- * ANALYZE_PAGE and APPLY_SHAPE_CHANGES.
+ * Handler for the Diagram Mapping relay messages: ANALYZE_PAGE and
+ * APPLY_SHAPE_CHANGES.
  *
- * These messages originate in the embedded Studio diagram-mapping screen
- * (2B) and are forwarded here by the extension message router. The handler
- * reuses the existing LucidPageAnalyzer.analyzePageForPreview() and
+ * These messages now originate in the INLINE Diagram Mapping modal (spec
+ * 2026-09-15, "opens inline") — not the embedded Studio diagram-mapping
+ * screen (2B) this class originally served, which this handler no longer
+ * relays for (see DiagramMappingModal.ts's header and EmbeddedStudioFrame.tsx
+ * for that history). They are forwarded here by the extension message
+ * router the same way regardless of source. The handler reuses the existing
+ * LucidPageAnalyzer.analyzePageForPreview() and
  * LucidPageConversionService.convertPageWithMappings() (the Phase-1
  * remove-then-add path). The inbound requestId is echoed in every result.
  */
@@ -136,13 +140,16 @@ export class DiagramMappingRelayHandler {
   }
 
   /**
-   * Determine which panel channel to send the response to.
-   * Mirrors SimulationRunHandler.getResponseChannel: embed-sourced messages
-   * go back to the 'studio-embed' channel, everything else to 'model'.
+   * Determine which panel channel to send the response to. The inline
+   * Diagram Mapping modal's own ANALYZE_PAGE/APPLY_SHAPE_CHANGES come back
+   * on the 'diagram-mapping' channel; PAGE_COUNTS_REQUEST/AUTO_CONVERT_PAGE
+   * from the model panel's blank-slate card come back on 'model'. Mirrors
+   * SimulationRunHandler.getResponseChannel.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
     if (msg.source === 'studio-embed-iframe') return 'studio-embed';
+    if (msg.source === 'diagram-mapping-iframe') return 'diagram-mapping';
     return 'model';
   }
 
