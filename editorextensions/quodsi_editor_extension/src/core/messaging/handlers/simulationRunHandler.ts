@@ -185,11 +185,8 @@ export class SimulationRunHandler {
     // Push the live model definition snapshot (envelope-level
     // modelDefinitionSnapshot → models.model_definition_snapshot)
     // fire-and-forget AFTER the modal opens — never block the Studies button on
-    // the serialize+sync. Named "IfStudies" from when Diagram Mapping shared
-    // this function with a `surface !== 'studies'` guard here; `surface` is
-    // always 'studies' now (see openEmbedSurfaceModal's own header), so the
-    // guard was dead and has been dropped.
-    const pushSnapshotIfStudies = (): void => {
+    // the serialize+sync.
+    const pushSnapshot = (): void => {
       void pushModelDefinitionSnapshot(client, { documentId: data.documentId!, pageId: data.pageId!, modelName })
         .catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: snapshot push failed', e));
     };
@@ -199,7 +196,7 @@ export class SimulationRunHandler {
       // Reopen: open immediately with the cached id; keep the row fresh in the
       // background. The editor reads scenarios from quodsi_api anyway.
       openModal(cached);
-      pushSnapshotIfStudies();
+      pushSnapshot();
       void refreshUpsert().catch((e) =>
         SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: background UpsertModel failed:`, e));
       return;
@@ -215,7 +212,7 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: UpsertModel failed:`, e));
     SimulationRunHandler.pendingEmbedResolve = { surface, idPromise };
     new StudioEmbedModal(client, { title, pending: true, modalSize: data.modalSize }).show();
-    pushSnapshotIfStudies();
+    pushSnapshot();
   }
 
   /**
@@ -295,8 +292,8 @@ export class SimulationRunHandler {
 
   /**
    * Handle OPEN_STATUS_MODAL: open the public Studio /status health page in the
-   * generic embed modal. Unlike Studies/Diagram Mapping, /status is model-agnostic
-   * and public (no UpsertModel, no server model id, no token relay needed).
+   * generic embed modal. Unlike Studies, /status is model-agnostic and public
+   * (no UpsertModel, no server model id, no token relay needed).
    */
   private static handleOpenStatusModal(msg: EnvelopeBase): void {
     const data = msg.data as { modalSize?: ModalSize };

@@ -148,7 +148,6 @@ export class DiagramMappingRelayHandler {
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
-    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     if (msg.source === 'diagram-mapping-iframe') return 'diagram-mapping';
     return 'model';
   }
@@ -351,8 +350,9 @@ export class DiagramMappingRelayHandler {
   }
 
   /**
-   * Post-convert UI + DB refresh, shared by the embed apply (handleApply) and the
-   * one-click auto-convert (handleAutoConvert). Recovered from the deleted
+   * Post-convert UI + DB refresh, shared by the inline Diagram Mapping
+   * modal's apply (handleApply) and the one-click auto-convert
+   * (handleAutoConvert). Recovered from the deleted
    * ConversionPreviewHandler.handleApplyConversion (git ce884d4): broadcasts
    * MODEL_CONTEXT and re-runs SelectionHandler context (sends a fresh
    * SELECTION_CHANGED so the editor panel — including a shape that's still
