@@ -19,8 +19,6 @@ Studio editors.
   `ConnectorRoutingView`).
 - **`ModelDefinitionViewer.tsx`** — modal that shows the host-built model
   JSON (requested via `MODEL_JSON_REQUEST`/`MODEL_JSON_RESPONSE`).
-- **`AdvisorLaunchButton.tsx`** — sparkle button that opens the embedded
-  Advisor consult (`OPEN_ADVISOR_MODAL`), gated on the dev-tools flag.
 - **`StudiesLaunchButton.tsx`** — opens the Studies modal; disabled when
   signed out or when validation has outstanding errors.
 - **`useModelEditorTab.ts`** — holds the Model editor's active tab across
