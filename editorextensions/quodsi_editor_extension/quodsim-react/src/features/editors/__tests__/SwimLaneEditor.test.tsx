@@ -136,6 +136,15 @@ describe('SwimLaneEditor', () => {
     expect(update.data.swimlaneData.lanes[1]).toBeNull()
   })
 
+  it('an unlinked lane gets the picker with no claim notice', async () => {
+    installHost([{ id: 'doctor-id', name: 'Doctor', capacity: 1 }])
+
+    render(<SwimLaneEditor elementData={elementData([null, null])} onSave={() => {}} />)
+
+    expect(await screen.findByText('Link this lane to a Resource')).toBeInTheDocument()
+    expect(screen.queryByText(/already represented|no longer exists|not linked to a Resource/i)).toBeNull()
+  })
+
   it('a linked lane renders the shared ResourceEditor for its resource', async () => {
     installHost([{ id: 'doctor-id', name: 'Doctor', capacity: 1 }])
 
