@@ -11,8 +11,7 @@ Studio editors.
   initialization/loading/unconverted-page states.
 - **`PanelHeader.tsx`** — model/element header: icon, name, accent stripe,
   type selector, and the "..." overflow menu (Diagram Mapping, View Model
-  JSON, Developer Tools, Preferences, Status, Settings, About, Remove
-  Quodsi Model).
+  JSON, Developer Tools, Status, Settings, About, Remove Quodsi Model).
 - **`ElementEditor.tsx`** — dispatches to the right editor for the selected
   element's type (the shared Studio Activity/Generator/Model editors via
   their `Lucid*Editor` wrappers, `ResourceBlockEditor`, `SwimLaneEditor`,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Wrench, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity, Trash2, Settings } from "lucide-react";
+import { Wrench, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Activity, Trash2, Settings } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -11,7 +11,6 @@ import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
-import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
 import { TYPE_ACCENT_CLASS, TYPE_ICON, TYPE_ICON_CLASS, useDevMode, type HeaderType } from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
@@ -78,7 +77,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
-  const [preferencesModalOpen, setPreferencesModalOpen] = useState(false);
   const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
   const [removeModelModalOpen, setRemoveModelModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -199,16 +197,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               Developer Tools
             </button>
           )}
-          <button
-            onClick={() => {
-              setMenuOpen(false);
-              setPreferencesModalOpen(true);
-            }}
-            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
-          >
-            <Sliders className="w-3 h-3 text-gray-500" />
-            Preferences
-          </button>
           <button
             onClick={() => {
               setMenuOpen(false);
@@ -405,10 +393,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <AboutModal
         isOpen={aboutModalOpen}
         onClose={() => setAboutModalOpen(false)}
-      />
-      <PreferencesModal
-        isOpen={preferencesModalOpen}
-        onClose={() => setPreferencesModalOpen(false)}
       />
       <DevToolsModal
         isOpen={devToolsModalOpen}

@@ -37,4 +37,10 @@ describe('SettingsEditorView', () => {
     render(<SettingsEditorView />)
     expect(screen.queryByRole('button', { name: /close settings/i })).not.toBeInTheDocument()
   })
+
+  it('includes the Window size section, showing the stored size', () => {
+    localStorage.setItem('quodsi_modal_size', 'large')
+    render(<SettingsEditorView />)
+    expect(screen.getByRole('combobox', { name: 'Window size' })).toHaveValue('large')
+  })
 })

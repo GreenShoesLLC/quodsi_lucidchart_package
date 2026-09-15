@@ -10,8 +10,7 @@ interface RemoveModelModalProps {
 /**
  * RemoveModelModal - confirmation for unconverting a page ("Remove Quodsi Model").
  *
- * Triggered from the 3-dots menu in PanelHeader, mirroring AboutModal /
- * PreferencesModal.
+ * Triggered from the 3-dots menu in PanelHeader, mirroring AboutModal.
  *
  * WHY THE WARNING IS SPECIFIC: removing does three things, not one.
  *   1. clears Quodsi data from the page and every shape (StorageAdapter.clearAllModelData)

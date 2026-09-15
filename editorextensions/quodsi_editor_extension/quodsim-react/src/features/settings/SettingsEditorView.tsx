@@ -27,12 +27,16 @@
 // `extraSections` is deliberately omitted -- that slot is Studio's theme
 // control, and Lucid has no theme-preference machinery to hand it (see
 // SettingsPanel's own header comment and this task's brief).
+//
+// `showWindowSize` is on: Lucid opens its Studio surfaces in sized host
+// modals, and the Window size section is where the user picks that size
+// (it replaced Lucid's Preferences dialog, spec 2026-09-15 section 3).
 import { SettingsPanel } from 'quodsi_studio/platforms/shared'
 
 export function SettingsEditorView() {
   return (
     <div className="h-full w-full bg-surface">
-      <SettingsPanel />
+      <SettingsPanel showWindowSize />
     </div>
   )
 }

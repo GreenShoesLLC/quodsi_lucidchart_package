@@ -53,4 +53,10 @@ describe("PanelHeader — Settings (the deliberate entry point)", () => {
     openMenu();
     expect(screen.getByRole("button", { name: /^Settings$/i })).toBeInTheDocument();
   });
+
+  it("no longer offers Preferences -- window size lives in Settings", () => {
+    render(<PanelHeader {...baseProps} onOpenSettings={vi.fn()} />);
+    openMenu();
+    expect(screen.queryByRole("button", { name: /^Preferences$/i })).toBeNull();
+  });
 });
