@@ -1,7 +1,7 @@
 // SwimLaneEditor: Advisor sparkle in the lane header.
 //
 // Lanes never render PanelHeader (SwimLaneEditor draws its own header), so
-// the sparkle's devtools gate has to be re-read here rather than inherited
+// the sparkle's developer-flag gate has to be re-read here rather than inherited
 // from a mounted PanelHeader. This file pins that gate plus the exact
 // Resource focus the sparkle is handed for the lane that OWNS its claim.
 //
@@ -126,7 +126,7 @@ describe('SwimLaneEditor — Advisor sparkle', () => {
   beforeEach(() => localStorage.clear())
   afterEach(() => cleanup())
 
-  it('shows no sparkle when the devtools flag is off, even for a linked lane', async () => {
+  it('shows no sparkle when the developer flag is off, even for a linked lane', async () => {
     installHost([{ id: 'r1', name: 'Nurse', laneRef: { blockId: 'sw-1', laneId: 'lane-0' } }])
     render(<SwimLaneEditor {...linkedLaneProps} />)
     await waitFor(() => expect(screen.getByText('Swimlane')).toBeInTheDocument())
@@ -134,7 +134,7 @@ describe('SwimLaneEditor — Advisor sparkle', () => {
   })
 
   it('shows the sparkle with a Resource focus for a linked lane when the flag is on', async () => {
-    localStorage.setItem('quodsi_devtools', 'true')
+    localStorage.setItem('quodsi_devmode', 'true')
     installHost([{ id: 'r1', name: 'Nurse', laneRef: { blockId: 'sw-1', laneId: 'lane-0' } }])
     render(<SwimLaneEditor {...linkedLaneProps} />)
     const sparkle = await screen.findByTestId('open-advisor-modal')
@@ -147,7 +147,7 @@ describe('SwimLaneEditor — Advisor sparkle', () => {
   })
 
   it('shows no sparkle for an unlinked lane', async () => {
-    localStorage.setItem('quodsi_devtools', 'true')
+    localStorage.setItem('quodsi_devmode', 'true')
     installHost([])
     render(<SwimLaneEditor {...unlinkedLaneProps} />)
     await waitFor(() => expect(screen.getByText('Swimlane')).toBeInTheDocument())

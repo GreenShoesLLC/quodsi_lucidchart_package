@@ -31,6 +31,7 @@ import { ModelManager } from '../../src/core/ModelManager';
 import { LucidVersionManager } from '../../src/versioning/LucidVersionManager';
 import { router } from '../../src/core/messaging';
 import { makeFakeBlock, makeFakePage, addBlock } from '../helpers/fakeProxies';
+import { BlockProxy } from 'lucid-extension-sdk';
 
 function wireModelDefinition(manager: ModelManager, page: any, modelDefinition: ModelDefinition): void {
     (manager as any).currentPage = page;
@@ -140,6 +141,70 @@ describe('ModelManager — a Resource block is a pointer (Plan 2b Task 5)', () =
         // Exactly the pointer: no name, no capacity, no geometry rebuilt from
         // a ResourceLucid sim object.
         expect(storage.getElementData(block)).toEqual({ id: 'blk-1', type: 'Resource', resourceId: 'r1' });
+        expect(page.shapeData.get('q_resources')).toBe(resourcesBefore);
+    });
+
+    // Converting ONE block to a Resource from the panel's type picker (an
+    // ELEMENT_CONVERT with no data) must not mint a record: the global-resources
+    // spec (2026-08-20, decision 2) has the user pick an unclaimed resource or
+    // create one, in ResourceBlockEditor's shared picker. The block is left as
+    // an unlinked Resource envelope `{ id }` -- the same shape the paste
+    // normalizer writes, which ResourceStorageMigration skips and the builder
+    // claims nothing for.
+    it('converting a block to Resource leaves it unlinked for the picker and mints no record', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const block = addBlock(page, makeFakeBlock('blk-1', { text: 'Nurse' }));
+        Object.setPrototypeOf(block, BlockProxy.prototype);
+        storage.setResources(page, [{ id: 'r1', name: 'Porter', capacity: 1 }]);
+        const resourcesBefore = page.shapeData.get('q_resources');
+
+        const manager = new ModelManager(storage);
+        wireModelDefinition(manager, page, new ModelDefinition(new Model('model-1', 'Test Model', 1)));
+
+        await manager.saveElementData(block, {}, SimulationObjectType.Resource, page);
+
+        expect(storage.getElementType(block)).toMatchObject({ type: SimulationObjectType.Resource, mappingSource: 'user' });
+        // No resourceId and no name/capacity: an unlinked envelope, nothing else.
+        expect(storage.getElementData(block)).toEqual({ id: 'blk-1', type: 'Resource', mappingSource: 'user' });
+        // The unclaimed 'r1' is untouched, so the picker can offer it.
+        expect(page.shapeData.get('q_resources')).toBe(resourcesBefore);
+    });
+
+    it('converting an Activity block to Resource drops the activity payload (no legacy record for the migration to lift)', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const block = addBlock(page, makeFakeBlock('blk-1', { text: 'Cut' }));
+        Object.setPrototypeOf(block, BlockProxy.prototype);
+        storage.setElementData(block, { id: 'blk-1', name: 'Cut', capacity: 2 } as any, SimulationObjectType.Activity);
+
+        const manager = new ModelManager(storage);
+        wireModelDefinition(manager, page, new ModelDefinition(new Model('model-1', 'Test Model', 1)));
+
+        await manager.saveElementData(block, {}, SimulationObjectType.Resource, page);
+
+        expect(storage.getElementType(block)?.type).toBe(SimulationObjectType.Resource);
+        // No resourceId and no name/capacity: an unlinked envelope, nothing else.
+        expect(storage.getElementData(block)).toEqual({ id: 'blk-1', type: 'Resource', mappingSource: 'user' });
+        expect(storage.getResources(page)).toEqual([]);
+    });
+
+    it('converting a block that is already a linked Resource keeps its pointer', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const block = addBlock(page, makeFakeBlock('blk-1', { text: 'Nurse' }));
+        Object.setPrototypeOf(block, BlockProxy.prototype);
+        storage.setElementData(block, { id: 'blk-1', resourceId: 'r1' }, SimulationObjectType.Resource);
+        storage.setResources(page, [{ id: 'r1', name: 'Nurse', capacity: 2 }]);
+        const pointerBefore = block.shapeData.get('q_data');
+        const resourcesBefore = page.shapeData.get('q_resources');
+
+        const manager = new ModelManager(storage);
+        wireModelDefinition(manager, page, new ModelDefinition(new Model('model-1', 'Test Model', 1)));
+
+        await manager.saveElementData(block, {}, SimulationObjectType.Resource, page);
+
+        expect(block.shapeData.get('q_data')).toBe(pointerBefore);
         expect(page.shapeData.get('q_resources')).toBe(resourcesBefore);
     });
 

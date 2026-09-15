@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType, getLogger } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType, getLogger, parseSimulationObjectType } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -549,37 +549,16 @@ export class ElementOpsHandler {
   
   /**
    * Helper method to convert string type to SimulationObjectType enum
-   * 
-   * @param typeString Type as string
-   * @returns SimulationObjectType enum value
+   *
+   * @param typeString Type name, matched case-insensitively
+   * @returns SimulationObjectType enum value; None for an unknown type
    */
   private static getElementType(typeString: string): SimulationObjectType {
-    // Handle both string literals and enum value numbers
-    if (!isNaN(Number(typeString))) {
-      const numericType = Number(typeString);
-      
-      // Check if the numeric value has a corresponding enum key
-      // We need to compare with the numeric representation of the enum
-      // Since TypeScript enums get compiled to bidirectional mappings
-      const enumValues = Object.values(SimulationObjectType)
-        .filter(v => typeof v === 'number') as number[];
-      
-      if (enumValues.includes(numericType)) {
-        // This is safe because we verified the number is a valid enum value
-        return numericType as unknown as SimulationObjectType;
-      }
+    const type = parseSimulationObjectType(typeString);
+    // An explicit "None" is a known type; only an unrecognised name warns (as before).
+    if (type === SimulationObjectType.None && typeString.toLowerCase() !== 'none') {
+      log.warn(`Unknown element type: ${typeString}, defaulting to None`);
     }
-    
-    // Check if string is a property name of SimulationObjectType
-    const enumKeys = Object.keys(SimulationObjectType).filter(k => isNaN(Number(k)));
-    for (const key of enumKeys) {
-      if (key.toLowerCase() === typeString.toLowerCase()) {
-        return SimulationObjectType[key as keyof typeof SimulationObjectType];
-      }
-    }
-    
-    // Default to None if not found
-    log.warn(`Unknown element type: ${typeString}, defaulting to None`);
-    return SimulationObjectType.None;
+    return type;
   }
 }

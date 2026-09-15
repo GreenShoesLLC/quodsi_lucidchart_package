@@ -47,7 +47,7 @@
 
 import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { Layers, Unlink } from "lucide-react";
-import { AccordionSection } from "quodsi_studio/platforms/shared";
+import { AccordionSection, useDevMode } from "quodsi_studio/platforms/shared";
 import {
   SwimLaneQuodsiData,
   SwimLaneLaneMapping,
@@ -101,13 +101,10 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
   const [activeLaneIndex, setActiveLaneIndex] = useState(0);
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(true);
-  // Advisor sparkle ships DARK behind the same devtools flag PanelHeader
+  // Advisor sparkle ships DARK behind the shared developer flag PanelHeader
   // reads (the button itself does not check it). Lanes never render
   // PanelHeader, so the gate lives here too.
-  const [devToolsEnabled, setDevToolsEnabled] = useState(false);
-  useEffect(() => {
-    setDevToolsEnabled(localStorage.getItem("quodsi_devtools") === "true");
-  }, []);
+  const devToolsEnabled = useDevMode();
   const [swimlaneData, setSwimlaneData] = useState<SwimLaneQuodsiData>(
     elementData.swimlaneData || {
       lanes: elementData.lanes.map(() => null),

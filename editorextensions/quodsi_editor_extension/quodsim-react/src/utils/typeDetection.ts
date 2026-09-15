@@ -1,4 +1,4 @@
-import { SimulationObjectType, DiagramElementType } from '@quodsi/lucid-shared';
+import { SimulationObjectType, DiagramElementType, parseSimulationObjectType } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../types/ModelItemData';
 
 /**
@@ -36,21 +36,9 @@ export function getSimulationObjectType(
   }
 
   // Use metadata type if available (most authoritative)
-  const metadataType = currentElement?.metadata?.type;
-  if (metadataType && metadataType !== SimulationObjectType.None) {
-    // Ensure it's a valid SimulationObjectType
-    if (typeof metadataType === 'number') {
-      return metadataType as SimulationObjectType;
-    }
-    // If it's a string, try to convert it
-    if (typeof metadataType === 'string') {
-      const enumKeys = Object.keys(SimulationObjectType).filter(k => isNaN(Number(k)));
-      for (const key of enumKeys) {
-        if (key === metadataType || key.toLowerCase() === metadataType.toLowerCase()) {
-          return SimulationObjectType[key as keyof typeof SimulationObjectType];
-        }
-      }
-    }
+  const metadataType = parseSimulationObjectType(currentElement?.metadata?.type);
+  if (metadataType !== SimulationObjectType.None) {
+    return metadataType;
   }
 
   // Handle diagram element types (visual representation)
@@ -58,22 +46,6 @@ export function getSimulationObjectType(
     return SimulationObjectType.Connector;
   }
 
-  // Return the provided element type if it's a valid SimulationObjectType
-  if (typeof elementType === 'number') {
-    return elementType as SimulationObjectType;
-  }
-
-  // Try to parse string element types
-  if (typeof elementType === 'string') {
-    // Check if it matches a SimulationObjectType key
-    const enumKeys = Object.keys(SimulationObjectType).filter(k => isNaN(Number(k)));
-    for (const key of enumKeys) {
-      if (key.toLowerCase() === elementType.toLowerCase()) {
-        return SimulationObjectType[key as keyof typeof SimulationObjectType];
-      }
-    }
-  }
-
-  // Default to None if no type could be determined
-  return SimulationObjectType.None;
+  // Match the provided element type by name; None if nothing matches
+  return parseSimulationObjectType(elementType);
 }

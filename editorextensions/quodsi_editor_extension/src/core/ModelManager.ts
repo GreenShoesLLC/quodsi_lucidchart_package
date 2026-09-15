@@ -1900,6 +1900,26 @@ export class ModelManager {
                 throw new Error(`Cannot convert element ${element.id} to ${newType}: element is not a BlockProxy (found ${element.constructor.name})`);
             }
 
+            // Resource: converting ONE block from the panel's type picker does
+            // not mint a record (global-resources spec 2026-08-20, decision 2).
+            // The block becomes an unlinked Resource envelope -- `{ id }`, no
+            // resourceId -- so ResourceBlockEditor shows the shared
+            // link-or-create picker (unclaimed resources + "Create new
+            // Resource…"). Whole-page conversion still mints through
+            // ResourceLucid.createFromConversion: it has no per-shape picking
+            // step. The envelope is already a supported state: PasteNormalizer
+            // writes it for a pasted pointer that resolves nowhere,
+            // ResourceStorageMigration skips it (no legacy payload), and the
+            // builder claims nothing for it (no resourceId). A block that is
+            // already a Resource keeps whatever it points at.
+            if (newType === SimulationObjectType.Resource) {
+                if (this.storageAdapter.getElementType(element)?.type !== SimulationObjectType.Resource) {
+                    this.setElementData(element, { id: element.id }, SimulationObjectType.Resource, { mappingSource: 'user' });
+                }
+                this.debug.debug('handleTypeConversion - Resource block left unlinked for the picker');
+                return;
+            }
+
             // Use LucidElementFactory to create proper platform object
             const factory = new LucidElementFactory(this.storageAdapter);
             factory.setLogging(false);

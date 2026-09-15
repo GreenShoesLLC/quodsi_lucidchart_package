@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { MODEL_SCHEMA_VERSION, ENGINE_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/lucid-shared";
 import { detectEnvironment } from "../../utils/environmentDetection";
+import { setDevMode } from "quodsi_studio/platforms/shared";
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     }
 
     if (newCount >= 5) {
-      localStorage.setItem('quodsi_devtools', 'true');
+      setDevMode(true);
       setDevModeMessage(true);
       setClickCount(0);
       setTimeout(() => setDevModeMessage(false), 2000);
