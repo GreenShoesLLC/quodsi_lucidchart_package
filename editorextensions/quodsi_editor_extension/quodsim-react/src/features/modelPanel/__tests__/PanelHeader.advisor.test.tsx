@@ -1,7 +1,8 @@
 // The Advisor sparkle ships DARK in Lucid: PanelHeader mounts AdvisorLaunchButton
-// only when the `quodsi_devtools` localStorage flag is on (the same flag its
-// DevTools menu item reads), in both the model header and the element header,
-// with the focus derived from the selection. Mirrors PanelHeader.settings.test.tsx.
+// only when the shared developer flag (`quodsi_devmode`, read through useDevMode)
+// is on -- the same flag its Developer Tools menu item reads -- in both the model
+// header and the element header, with the focus derived from the selection.
+// Mirrors PanelHeader.settings.test.tsx.
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
@@ -36,33 +37,33 @@ const activityElement: any = {
 
 const focusOf = () => JSON.parse(screen.getByTestId("open-advisor-modal").getAttribute("data-focus")!);
 
-describe("PanelHeader — Advisor sparkle (dark behind quodsi_devtools)", () => {
+describe("PanelHeader — Advisor sparkle (dark behind the developer flag)", () => {
   beforeEach(() => localStorage.clear());
 
-  it("renders no sparkle when the devtools flag is off (model header)", () => {
+  it("renders no sparkle when the developer flag is off (model header)", () => {
     render(<PanelHeader {...baseProps} currentElement={null} />);
     expect(screen.queryByTestId("open-advisor-modal")).toBeNull();
   });
 
-  it("renders no sparkle when the devtools flag is off (element header)", () => {
+  it("renders no sparkle when the developer flag is off (element header)", () => {
     render(<PanelHeader {...baseProps} editorType="activity" currentElement={activityElement} />);
     expect(screen.queryByTestId("open-advisor-modal")).toBeNull();
   });
 
   it("renders the sparkle with a Model focus when nothing is selected and the flag is on", () => {
-    localStorage.setItem("quodsi_devtools", "true");
+    localStorage.setItem("quodsi_devmode", "true");
     render(<PanelHeader {...baseProps} currentElement={null} />);
     expect(focusOf()).toEqual({ focusId: "", focusType: "Model", focusName: "Clinic", mode: "definition" });
   });
 
   it("renders the sparkle with the element focus for a selected activity when the flag is on", () => {
-    localStorage.setItem("quodsi_devtools", "true");
+    localStorage.setItem("quodsi_devmode", "true");
     render(<PanelHeader {...baseProps} editorType="activity" currentElement={activityElement} />);
     expect(focusOf()).toEqual({ focusId: "a1", focusType: "Activity", focusName: "Triage", mode: "definition" });
   });
 
   it("falls back to the Model focus, carrying the model name, for a non-consultable element type", () => {
-    localStorage.setItem("quodsi_devtools", "true");
+    localStorage.setItem("quodsi_devmode", "true");
     const noneElement: any = {
       id: "x1",
       name: "Thing",

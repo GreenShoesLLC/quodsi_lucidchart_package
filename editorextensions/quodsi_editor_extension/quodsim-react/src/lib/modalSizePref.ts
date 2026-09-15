@@ -3,7 +3,7 @@ import { ModalSize, DEFAULT_MODAL_SIZE } from '@quodsi/lucid-shared';
 /**
  * Per-user preference for the embedded Studio modal size (Scenarios / Animation
  * / Results). Stored in localStorage so it persists across documents in the same
- * browser — mirrors the embeddedResultsFlag / quodsi_devtools precedent. Read at
+ * browser — mirrors the embeddedResultsFlag / quodsi_devmode precedent. Read at
  * the moment a modal is opened and sent along with the OPEN_*_MODAL message.
  */
 const KEY = 'quodsi_modal_size';

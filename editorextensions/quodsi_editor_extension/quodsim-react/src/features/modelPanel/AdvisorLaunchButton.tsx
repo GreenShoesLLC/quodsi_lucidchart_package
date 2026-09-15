@@ -10,9 +10,9 @@ import { useAuth } from "../../messaging/MessageContext";
  * in a StudioEmbedModal with this focus on the query string. Read-only in
  * this piece: the embedded consult has no apply.
  *
- * Rendered by PanelHeader, which gates it behind the `quodsi_devtools`
- * localStorage flag (the Advisor ships dark, matching drawio's ?qdev=1) --
- * so this component itself does NOT check the flag.
+ * Rendered by PanelHeader, which gates it behind the shared developer flag
+ * (`quodsi_devmode`, read through useDevMode; the Advisor ships dark, matching
+ * drawio's ?qdev=1) -- so this component itself does NOT check the flag.
  *
  * Exported for unit testing.
  */

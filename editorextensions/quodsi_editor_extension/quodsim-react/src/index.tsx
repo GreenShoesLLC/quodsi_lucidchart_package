@@ -45,6 +45,7 @@ import "./index_new.css";
 // does not publish theme.css as a subpath.
 import '../../../../../quodsi_studio/src/platforms/shared/theme.css';
 import { applyViewUrlOverride } from 'quodsi_studio/platforms/shared';
+import { migrateLegacyDevFlag } from './utils/migrateLegacyDevFlag';
 
 const log = getLogger('index');
 
@@ -57,6 +58,10 @@ const log = getLogger('index');
 // ?view= route (model panel AND the pattern/schedule/work-schedule/settings
 // modals below), so calling it once here covers all of them.
 applyViewUrlOverride();
+
+// One developer flag (spec 2026-09-15 §3): carry a legacy quodsi_devtools=true
+// over to the shared quodsi_devmode before the first render reads it.
+migrateLegacyDevFlag();
 
 // Initialize the messaging system
 const cleanup = initializeMessaging({

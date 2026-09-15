@@ -13,7 +13,7 @@ import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
-import { TYPE_ACCENT_CLASS, TYPE_ICON_CLASS, type HeaderType } from "quodsi_studio/platforms/shared";
+import { TYPE_ACCENT_CLASS, TYPE_ICON_CLASS, useDevMode, type HeaderType } from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
 import { AdvisorLaunchButton, advisorFocusForElement, modelAdvisorFocus } from "./AdvisorLaunchButton";
 
@@ -82,13 +82,11 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const [preferencesModalOpen, setPreferencesModalOpen] = useState(false);
   const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
   const [removeModelModalOpen, setRemoveModelModalOpen] = useState(false);
-  const [devToolsEnabled, setDevToolsEnabled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Check for developer tools flag on mount and when about modal closes
-  useEffect(() => {
-    setDevToolsEnabled(localStorage.getItem('quodsi_devtools') === 'true');
-  }, [aboutModalOpen]);
+  // Developer Tools and the Advisor button: the shared developer flag
+  // (quodsi_devmode), which the About dialog's five-click turns on.
+  const devToolsEnabled = useDevMode();
 
   // Click-outside handler to close menu
   useEffect(() => {
