@@ -28,5 +28,7 @@ export type { ValidationGateResult, SourceResolver } from '@quodsi/shared';
 // Model-level issue classifier — re-exported so quodsim-react can import from @quodsi/lucid-shared
 export { isModelLevelIssue, MODEL_LEVEL_ISSUE_CODES, isEntityIssue, getIssueObjectType } from '@quodsi/shared';
 
-// NOTE: ValidationIssue, ValidationSeverity, and ValidationResult are exported from
-// '../quodsi-messaging' at the top level, not here, to avoid duplicate exports
+// NOTE: ValidationIssue, ValidationSeverity and ValidationResult are the
+// @quodsi/shared declarations, re-exported once at the top level through
+// '../quodsi-messaging' (its validation/types.ts); not here as well, to avoid
+// duplicate exports.

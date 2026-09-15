@@ -124,6 +124,10 @@ export {
 export { GeneratorType } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
+// Case-insensitive SimulationObjectType parse (spec 2026-09-15 §1), used by the
+// extension's element handlers and the panel's type detection.
+export { parseSimulationObjectType } from '@quodsi/shared';
+
 // Calendar-window derivation. The clean wire carries ONE calendar anchor
 // (`startDateTime`) plus two LENGTHS (`warmupTime`/`runTime`); the warmup and
 // finish instants are arithmetic the engine redoes itself in
