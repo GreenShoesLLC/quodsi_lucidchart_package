@@ -11,8 +11,8 @@ interface Props {
   studioOrigin: string;
   /**
    * Whether this embedded Studio page participates in the auth token relay.
-   * Authed surfaces (Studies, Diagram Mapping — under Studio's EmbeddedLayout)
-   * request a token via QUODSI_EMBED_TOKEN_REFRESH, and we cover the iframe with
+   * Authed surfaces (Studies — under Studio's EmbeddedLayout) request a
+   * token via QUODSI_EMBED_TOKEN_REFRESH, and we cover the iframe with
    * a "Loading…" overlay until STUDIO_TOKEN arrives. Public pages (e.g. /status
    * under PublicLayout) never do that handshake, so gating on it would spin
    * forever — pass `false` to show the iframe immediately. Defaults to `true`.
@@ -29,6 +29,12 @@ interface Props {
  * Advisor write half: iframe QUODSI_EMBED_WRITE requests become the
  * extension's own write envelopes, and the matching *_RESULT is echoed back
  * into the iframe as QUODSI_EMBED_WRITE_RESULT.
+ *
+ * Diagram Mapping's analyze/apply relay (QUODSI_ANALYZE_PAGE/QUODSI_APPLY_CHANGES
+ * and their *_RESULT replies) used to live here too; that screen now opens
+ * inline in its own Lucid modal (spec 2026-09-15, "opens inline") and talks
+ * straight to the extension, so this frame no longer forwards those messages
+ * -- see DiagramMappingModal.ts.
  */
 export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = true }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -136,22 +142,6 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
         );
         return;
       }
-      // Page analysis result (response): host sends PAGE_ANALYSIS_RESULT -> forward into the iframe.
-      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.PAGE_ANALYSIS_RESULT) {
-        if (e.source !== window.parent) return;
-        const d = e.data.data as { requestId?: number; data?: unknown; error?: string };
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'QUODSI_PAGE_ANALYSIS_RESULT', requestId: d?.requestId, data: d?.data, error: d?.error }, studioOrigin);
-        return;
-      }
-      // Apply shape changes result (response): host sends APPLY_SHAPE_CHANGES_RESULT -> forward into the iframe.
-      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.APPLY_SHAPE_CHANGES_RESULT) {
-        if (e.source !== window.parent) return;
-        const d = e.data.data as { requestId?: number; success?: boolean; error?: string };
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'QUODSI_APPLY_CHANGES_RESULT', requestId: d?.requestId, success: d?.success, error: d?.error }, studioOrigin);
-        return;
-      }
       // Catalog hop (request): iframe asks for the catalog -> ask the host.
       if (
         e.origin === studioOrigin &&
@@ -202,21 +192,6 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = 
       ) {
         sendMessage(EnvelopeMessageType.LOCATE_ELEMENT, {
           elementId: (e.data as { elementId?: string }).elementId,
-        });
-        return;
-      }
-      // Analyze page: iframe asks the host to analyze the diagram page for shape mapping.
-      if (e.origin === studioOrigin && e.source === iframeRef.current?.contentWindow
-          && e.data?.type === 'QUODSI_ANALYZE_PAGE') {
-        sendMessage(EnvelopeMessageType.ANALYZE_PAGE, { requestId: (e.data as { requestId?: number }).requestId });
-        return;
-      }
-      // Apply shape changes: iframe asks the host to apply shape changes to the diagram.
-      if (e.origin === studioOrigin && e.source === iframeRef.current?.contentWindow
-          && e.data?.type === 'QUODSI_APPLY_CHANGES') {
-        sendMessage(EnvelopeMessageType.APPLY_SHAPE_CHANGES, {
-          requestId: (e.data as { requestId?: number }).requestId,
-          changes: (e.data as { changes?: unknown }).changes,
         });
         return;
       }
