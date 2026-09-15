@@ -20,14 +20,3 @@ export function transformToValidationState(validationResult: any): ValidationRes
     }
   };
 }
-
-/**
- * Determines if the validation result is valid (no errors)
- *
- * @param validationResult The validation result
- * @returns true if validation is valid (no errors)
- */
-export function isValidationValid(validationResult: ValidationResult | null): boolean {
-  if (!validationResult) return true;
-  return validationResult.isValid;
-}

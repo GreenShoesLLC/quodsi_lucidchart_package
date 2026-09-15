@@ -71,14 +71,11 @@ const rootElement = document.getElementById("root");
 if (!rootElement) {
   log.error("Could not find root element to mount application");
 } else {
-  // Always use model panel (auth has been removed)
-  const panelType: "model" = "model";
-
   // Use the new createRoot API
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App panelType={panelType} />
+      <App />
     </React.StrictMode>
   );
 }

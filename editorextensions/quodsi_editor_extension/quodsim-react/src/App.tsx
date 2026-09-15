@@ -8,11 +8,7 @@ import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
 import { SettingsEditorView } from "./features/settings/SettingsEditorView";
 
-interface AppProps {
-  panelType?: "model";
-}
-
-export const App: React.FC<AppProps> = ({ panelType }) => {
+export const App: React.FC = () => {
   const urlParams = new URLSearchParams(window.location.search);
 
   if (urlParams.get("view") === "pattern") {
@@ -71,7 +67,7 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
   return (
     <MessageProvider initialPanelType={currentPanelType}>
       <div className="app-new-container">
-        <LucidApp panelType={currentPanelType} />
+        <LucidApp />
       </div>
     </MessageProvider>
   );

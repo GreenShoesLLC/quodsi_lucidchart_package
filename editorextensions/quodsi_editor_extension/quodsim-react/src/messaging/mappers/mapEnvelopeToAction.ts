@@ -4,7 +4,6 @@ import { mapAuth } from './auth.mapper';
 import { mapSelection } from './selection.mapper';
 import { mapSimulation } from './simulation.mapper';
 import { mapModelOps } from './modelOps.mapper';
-import { mapElementOps } from './elementOps.mapper';
 import { mapEntitlements } from './entitlements.mapper';
 import { getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
@@ -22,7 +21,6 @@ const mappers = [
   mapSelection,
   mapSimulation,
   mapModelOps,
-  mapElementOps,
   mapEntitlements,
 ];
 

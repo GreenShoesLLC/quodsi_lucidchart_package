@@ -9,7 +9,6 @@ import { AuthState, initialAuthState, authReducer, AuthAction } from './authSlic
 import { SelectionState, initialSelectionState, selectionReducer, SelectionAction } from './selectionSlice';
 import { SimulationState, initialSimulationState, simulationReducer, SimulationAction } from './simulationSlice';
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
-import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
 import { EntitlementsState, initialEntitlementsState, entitlementsReducer, EntitlementsAction } from './entitlementsSlice';
 
 // Combined state type
@@ -19,7 +18,6 @@ export interface MessagingState {
   selection: SelectionState;
   simulation: SimulationState;
   validation: ValidationState;
-  elementOps: ElementOpsState;
   entitlements: EntitlementsState;
 }
 
@@ -33,7 +31,6 @@ export const initialState: MessagingState = {
   selection: initialSelectionState,
   simulation: initialSimulationState,
   validation: initialValidationState,
-  elementOps: initialElementOpsState,
   entitlements: initialEntitlementsState,
 };
 
@@ -48,7 +45,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     selection: selectionReducer(state.selection, action as SelectionAction),
     simulation: simulationReducer(state.simulation, action as SimulationAction),
     validation: validationReducer(state.validation, action as ValidationAction),
-    elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
     entitlements: entitlementsReducer(state.entitlements, action as EntitlementsAction),
   };
 }

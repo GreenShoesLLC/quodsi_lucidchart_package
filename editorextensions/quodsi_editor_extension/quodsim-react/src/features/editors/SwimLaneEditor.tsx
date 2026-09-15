@@ -47,7 +47,7 @@
 
 import React, { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { Layers, Unlink } from "lucide-react";
-import { AccordionSection } from "../shared/AccordionSection";
+import { AccordionSection } from "quodsi_studio/platforms/shared";
 import {
   SwimLaneQuodsiData,
   SwimLaneLaneMapping,

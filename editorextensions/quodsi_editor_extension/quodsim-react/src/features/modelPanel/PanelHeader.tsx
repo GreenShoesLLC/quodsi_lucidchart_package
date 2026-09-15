@@ -13,11 +13,24 @@ import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
-import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
+import { TYPE_ACCENT_CLASS, TYPE_ICON_CLASS, type HeaderType } from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
 import { AdvisorLaunchButton, advisorFocusForElement, modelAdvisorFocus } from "./AdvisorLaunchButton";
 
 const log = getLogger("PanelHeader");
+
+// Accent/icon colors per editor type, sourced from the shared Studio
+// typeConfig (formerly a Lucid-local copy in constants/editorColors.ts,
+// deleted as a duplicate). Falls back the same way the old local helpers
+// did, since `editorType` here is a plain string and can carry a
+// SimulationObjectType value (e.g. "None") outside typeConfig's HeaderType.
+function getEditorAccentClass(editorType: string): string {
+  return TYPE_ACCENT_CLASS[editorType as HeaderType] || "border-transparent";
+}
+
+function getEditorIconClass(editorType: string): string {
+  return TYPE_ICON_CLASS[editorType as HeaderType] || "text-gray-500";
+}
 
 interface PanelHeaderProps {
   modelName: string;

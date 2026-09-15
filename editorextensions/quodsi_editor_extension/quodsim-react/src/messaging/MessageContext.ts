@@ -66,14 +66,6 @@ export function useValidation() {
 }
 
 /**
- * Hook to access element operations state
- */
-export function useElementOps() {
-  const { elementOps } = useMessaging();
-  return elementOps;
-}
-
-/**
  * Hook to access authentication state
  */
 export function useAuth() {
