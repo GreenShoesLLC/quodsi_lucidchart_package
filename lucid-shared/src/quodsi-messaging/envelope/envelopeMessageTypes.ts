@@ -130,6 +130,14 @@ export enum EnvelopeMessageType {
   APPLY_SHAPE_CHANGES_RESULT = "APPLY_SHAPE_CHANGES_RESULT",
   OPEN_DIAGRAM_MAPPING_MODAL = "OPEN_DIAGRAM_MAPPING_MODAL",
   AUTO_CONVERT_PAGE = "AUTO_CONVERT_PAGE",
+  // Reply to AUTO_CONVERT_PAGE, carrying the request's envelope id: success
+  // plus element counts, or failure plus the error. The model panel's shared
+  // blank-slate card waits on it (spec 2026-09-15 section 1).
+  AUTO_CONVERT_PAGE_RESULT = "AUTO_CONVERT_PAGE_RESULT",
+  // The current page's block and line counts, which the blank-slate card shows
+  // before conversion. PAGE_COUNTS answers PAGE_COUNTS_REQUEST.
+  PAGE_COUNTS_REQUEST = "PAGE_COUNTS_REQUEST",
+  PAGE_COUNTS = "PAGE_COUNTS",
 
   // Embedded scenarios editor — run delegation (Phase 3b)
   RUN_SCENARIO = "RUN_SCENARIO",
