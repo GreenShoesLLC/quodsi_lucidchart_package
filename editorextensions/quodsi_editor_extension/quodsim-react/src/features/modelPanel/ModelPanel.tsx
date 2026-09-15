@@ -121,10 +121,9 @@ export const ModelPanel: React.FC = () => {
   }, [modelName, currentElement, diagramElementType]);
   
   // Memoize onElementUpdate-bound callback so it has a stable identity as the
-  // onSave prop ElementEditor passes down to its child editors (e.g.
-  // SwimLaneEditor). Without this, the parent's inline arrow produces a new
-  // function each render, cascading to those editors and re-attaching their
-  // internal effects.
+  // onSave prop ElementEditor passes down to SwimLaneEditor, the only editor
+  // that still takes it. Without this, the parent's inline arrow produces a
+  // new function each render, re-attaching that editor's internal effects.
   // Must stay above the early returns below so hook order is unconditional
   // every render (Rules of Hooks) — opening Diagram Mapping flips
   // isPreviewVisible and would otherwise skip this hook.
