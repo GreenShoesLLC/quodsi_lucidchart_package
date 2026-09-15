@@ -8,11 +8,6 @@ vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> })
 vi.mock("../../SimulationComponentSelector", () => ({
   SimulationComponentSelector: () => <div />,
 }));
-vi.mock("../AdvisorLaunchButton", async () => {
-  const actual = await vi.importActual<typeof import("../AdvisorLaunchButton")>("../AdvisorLaunchButton");
-  return { ...actual, AdvisorLaunchButton: () => <div /> };
-});
-
 const baseProps = {
   modelName: "Clinic",
   validationState: null,

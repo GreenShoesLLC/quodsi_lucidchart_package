@@ -7,6 +7,7 @@ import { PatternEditorView } from "./features/pattern/PatternEditorView";
 import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
 import { SettingsEditorView } from "./features/settings/SettingsEditorView";
+import { DiagramMappingView } from "./features/diagramMapping/DiagramMappingView";
 
 export const App: React.FC = () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -46,6 +47,16 @@ export const App: React.FC = () => {
       <MessageProvider initialPanelType="settings">
         <div className="h-full w-full">
           <SettingsEditorView />
+        </div>
+      </MessageProvider>
+    );
+  }
+
+  if (urlParams.get("view") === "diagram-mapping") {
+    return (
+      <MessageProvider initialPanelType="diagram-mapping">
+        <div className="h-full w-full">
+          <DiagramMappingView />
         </div>
       </MessageProvider>
     );

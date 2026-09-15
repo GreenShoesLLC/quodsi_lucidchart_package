@@ -132,6 +132,13 @@ export {
   ClientAnalyticsEvent
 } from './analytics/messages';
 
+// Export page conversion message payloads (blank-slate card)
+export type {
+  PageCountsData,
+  PageConversionCounts,
+  AutoConvertPageResultData,
+} from './pageConversion/messages';
+
 // Define the union type of all possible messages
 export type QuodsiMessage =
   | FrameworkMessage

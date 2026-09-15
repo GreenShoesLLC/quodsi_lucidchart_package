@@ -90,9 +90,9 @@ export class ModelRootHandler {
    * Lucid modal over the whole application. Lives here (not
    * simulationRunHandler) because the pattern editor is a model-root-adjacent
    * editor with no server-side model to resolve -- unlike the embedded Studio
-   * surfaces (Studies, Diagram Mapping), it needs nothing but the shape id
-   * already on hand, and this file is where the model-root projection it
-   * edits (arrivalPatterns) is otherwise read/written.
+   * surface (Studies), it needs nothing but the shape id already on hand, and
+   * this file is where the model-root projection it edits (arrivalPatterns)
+   * is otherwise read/written.
    */
   private static handleOpenPatternModal(msg: EnvelopeBase): void {
     const data = msg.data as { shapeId?: string; modalSize?: ModalSize };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Wrench, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity, Trash2, Settings } from "lucide-react";
+import { Wrench, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Activity, Trash2, Settings } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -11,11 +11,9 @@ import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
-import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
 import { TYPE_ACCENT_CLASS, TYPE_ICON, TYPE_ICON_CLASS, useDevMode, type HeaderType } from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
-import { AdvisorLaunchButton, advisorFocusForElement, modelAdvisorFocus } from "./AdvisorLaunchButton";
 
 const log = getLogger("PanelHeader");
 
@@ -79,13 +77,13 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
-  const [preferencesModalOpen, setPreferencesModalOpen] = useState(false);
   const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
   const [removeModelModalOpen, setRemoveModelModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Developer Tools and the Advisor button: the shared developer flag
-  // (quodsi_devmode), which the About dialog's five-click turns on.
+  // The Developer Tools menu item: the shared developer flag (quodsi_devmode),
+  // which the About dialog's five-click turns on. The Advisor is not gated:
+  // each shared editor header shows its button (ModelPanel supplies the context).
   const devToolsEnabled = useDevMode();
 
   // Click-outside handler to close menu
@@ -202,16 +200,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           <button
             onClick={() => {
               setMenuOpen(false);
-              setPreferencesModalOpen(true);
-            }}
-            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
-          >
-            <Sliders className="w-3 h-3 text-gray-500" />
-            Preferences
-          </button>
-          <button
-            onClick={() => {
-              setMenuOpen(false);
               onOpenStatus?.();
             }}
             className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
@@ -277,10 +265,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             </span>
           </div>
           <div className="flex-shrink-0 flex items-center gap-1">
-            {/* AI Advisor entry point. Ships DARK behind the same devtools
-                flag as the DevTools menu item (drawio's counterpart is
-                ?qdev=1); both hosts ungate together (ClickUp 86e31e5rt). */}
-            {devToolsEnabled && <AdvisorLaunchButton focus={modelAdvisorFocus(modelName)} />}
             <MenuButton />
           </div>
         </div>
@@ -318,11 +302,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             </span>
           </div>
           <div className="flex-shrink-0 flex items-center gap-1">
-            {devToolsEnabled && currentElement && (
-              <AdvisorLaunchButton
-                focus={advisorFocusForElement(elementType, currentElement.id, elementName, modelName)}
-              />
-            )}
             <MenuButton />
           </div>
         </div>
@@ -414,10 +393,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <AboutModal
         isOpen={aboutModalOpen}
         onClose={() => setAboutModalOpen(false)}
-      />
-      <PreferencesModal
-        isOpen={preferencesModalOpen}
-        onClose={() => setPreferencesModalOpen(false)}
       />
       <DevToolsModal
         isOpen={devToolsModalOpen}

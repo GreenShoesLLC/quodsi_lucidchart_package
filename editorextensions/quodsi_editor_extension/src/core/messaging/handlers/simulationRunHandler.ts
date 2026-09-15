@@ -8,6 +8,7 @@ import { getLogger } from '@quodsi/lucid-shared';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
+import { DiagramMappingModal } from '../../../panels/DiagramMappingModal';
 import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
 /**
@@ -30,8 +31,21 @@ export class SimulationRunHandler {
    * modal is open at a time, so a single slot suffices.
    */
   private static pendingEmbedResolve:
-    | { surface: 'studies' | 'diagram-mapping'; idPromise: Promise<string | null | undefined> }
+    | { surface: 'studies'; idPromise: Promise<string | null | undefined> }
     | null = null;
+
+  /**
+   * The diagram-mapping modal currently open, if any. SINGLETON GUARD, same
+   * shape as ModelRootHandler.handleOpenPatternModal/handleOpenSettingsModal
+   * (see that file's own comment for the full rationale): hold the open
+   * modal, refuse a second open, release on frameClosed, identity-checked so
+   * a late frameClosed from an earlier modal cannot clear a newer one's
+   * claim. Unlike the Studies embed above, opening this modal has no
+   * server round trip in the way at all (no UpsertModel), so a double-click
+   * would otherwise open two modals just as readily as the pattern/schedule
+   * editors did before they got the same guard.
+   */
+  private static openDiagramMappingModal: DiagramMappingModal | null = null;
 
   /**
    * Handle messages related to simulation run operations
@@ -42,10 +56,15 @@ export class SimulationRunHandler {
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       // OPEN_PATTERN_MODAL is NOT handled here -- it lives in
-      // modelRootHandler.ts. Unlike the OPEN_*_MODAL cases below, it opens a
+      // modelRootHandler.ts. Unlike OPEN_STUDIES_MODAL below, it opens a
       // local quodsim-react view (no server-side model id to resolve via
       // UpsertModel), and modelRootHandler.ts is where the arrivalPatterns
       // model-root projection it edits is otherwise read/written.
+      // OPEN_DIAGRAM_MAPPING_MODAL below is ALSO local now (spec 2026-09-15,
+      // "opens inline") but stays in this file rather than moving to
+      // modelRootHandler.ts: it has no model-root projection of its own, and
+      // the relay handler it talks to (DiagramMappingRelayHandler) already
+      // lives alongside this class.
       case EnvelopeMessageType.OPEN_STUDIES_MODAL:
         SimulationRunHandler.handleOpenStudiesModal(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleOpenStudiesModal failed', e),
@@ -53,9 +72,7 @@ export class SimulationRunHandler {
         return true;
 
       case EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL:
-        SimulationRunHandler.handleOpenDiagramMappingModal(msg).catch((e) =>
-          SimulationRunHandler.logger.error('handleOpenDiagramMappingModal failed', e),
-        );
+        SimulationRunHandler.handleOpenDiagramMappingModal(msg);
         return true;
 
       case EnvelopeMessageType.OPEN_STATUS_MODAL:
@@ -115,9 +132,16 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Shared embed-modal opener for the Studies surfaces: ensure the
-   * model row exists in quodsi_api (UpsertModel) to resolve its server id, then
-   * open the embedded Studio at /embed/models/<serverModelId>/<surface>.
+   * Embed-modal opener for the Studies surface: ensure the model row exists
+   * in quodsi_api (UpsertModel) to resolve its server id, then open the
+   * embedded Studio at /embed/models/<serverModelId>/<surface>.
+   *
+   * Diagram Mapping used to share this path too (a second `surface` union
+   * member) until it moved inline (spec 2026-09-15, "opens inline") — see
+   * DiagramMappingModal.ts's header for why the Studio embed was pure
+   * overhead for that screen. `surface` is narrowed to the one remaining
+   * caller rather than dropped as a parameter, so this function's shape and
+   * behaviour for Studies stay byte-identical.
    *
    * IMPORTANT: do NOT push Lucid shapeData scenarios here. Scenarios are
    * DB-authoritative once the embed owns them — the editor reads/writes
@@ -126,7 +150,7 @@ export class SimulationRunHandler {
    * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
    */
   private static async openEmbedSurfaceModal(
-    msg: EnvelopeBase, surface: 'studies' | 'diagram-mapping', title: string,
+    msg: EnvelopeBase, surface: 'studies', title: string,
   ): Promise<void> {
     const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
     const client = ModelManager.getClient();
@@ -158,12 +182,11 @@ export class SimulationRunHandler {
         return serverModelId;
       });
 
-    // For the Studies surface only, push the live model definition snapshot
-    // (envelope-level modelDefinitionSnapshot → models.model_definition_snapshot)
+    // Push the live model definition snapshot (envelope-level
+    // modelDefinitionSnapshot → models.model_definition_snapshot)
     // fire-and-forget AFTER the modal opens — never block the Studies button on
     // the serialize+sync.
-    const pushSnapshotIfStudies = (): void => {
-      if (surface !== 'studies') return;
+    const pushSnapshot = (): void => {
       void pushModelDefinitionSnapshot(client, { documentId: data.documentId!, pageId: data.pageId!, modelName })
         .catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: snapshot push failed', e));
     };
@@ -173,7 +196,7 @@ export class SimulationRunHandler {
       // Reopen: open immediately with the cached id; keep the row fresh in the
       // background. The editor reads scenarios from quodsi_api anyway.
       openModal(cached);
-      pushSnapshotIfStudies();
+      pushSnapshot();
       void refreshUpsert().catch((e) =>
         SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: background UpsertModel failed:`, e));
       return;
@@ -189,7 +212,7 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: UpsertModel failed:`, e));
     SimulationRunHandler.pendingEmbedResolve = { surface, idPromise };
     new StudioEmbedModal(client, { title, pending: true, modalSize: data.modalSize }).show();
-    pushSnapshotIfStudies();
+    pushSnapshot();
   }
 
   /**
@@ -234,17 +257,43 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle OPEN_DIAGRAM_MAPPING_MODAL: open the embedded Studio Diagram Mapping
-   * surface at /embed/models/<id>/diagram-mapping.
+   * Handle OPEN_DIAGRAM_MAPPING_MODAL: open the Diagram Mapping screen
+   * inline, in the extension's own quodsim-react bundle (spec 2026-09-15,
+   * "opens inline") — see DiagramMappingModal.ts's header for why this no
+   * longer goes through openEmbedSurfaceModal. There is no server round trip
+   * in the way, so the modal opens synchronously and immediately, guarded
+   * against a double-open the same way ModelRootHandler's pattern/schedule/
+   * work-schedule/settings modals are (see openDiagramMappingModal's own
+   * comment). The payload's documentId/pageId (still sent by the React
+   * sender, unused here) are not required — an absent one is not a
+   * malformed message.
    */
-  private static async handleOpenDiagramMappingModal(msg: EnvelopeBase): Promise<void> {
-    return SimulationRunHandler.openEmbedSurfaceModal(msg, 'diagram-mapping', 'Diagram Mapping');
+  private static handleOpenDiagramMappingModal(msg: EnvelopeBase): void {
+    const data = (msg.data ?? {}) as { modalSize?: ModalSize };
+
+    if (SimulationRunHandler.openDiagramMappingModal) {
+      SimulationRunHandler.logger.debug(
+        'OPEN_DIAGRAM_MAPPING_MODAL: a diagram-mapping modal is already open; ignoring',
+      );
+      return;
+    }
+
+    const modal = new DiagramMappingModal(ModelManager.getClient(), {
+      modalSize: data.modalSize,
+      onClosed: () => {
+        if (SimulationRunHandler.openDiagramMappingModal === modal) {
+          SimulationRunHandler.openDiagramMappingModal = null;
+        }
+      },
+    });
+    SimulationRunHandler.openDiagramMappingModal = modal;
+    modal.show();
   }
 
   /**
    * Handle OPEN_STATUS_MODAL: open the public Studio /status health page in the
-   * generic embed modal. Unlike Studies/Diagram Mapping, /status is model-agnostic
-   * and public (no UpsertModel, no server model id, no token relay needed).
+   * generic embed modal. Unlike Studies, /status is model-agnostic and public
+   * (no UpsertModel, no server model id, no token relay needed).
    */
   private static handleOpenStatusModal(msg: EnvelopeBase): void {
     const data = msg.data as { modalSize?: ModalSize };

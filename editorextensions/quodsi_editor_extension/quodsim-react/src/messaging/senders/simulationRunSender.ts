@@ -29,7 +29,12 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_STUDIES_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
   }, [send]);
 
-  /** Send an OPEN_DIAGRAM_MAPPING_MODAL message to open the embedded Studio Diagram Mapping surface. */
+  /**
+   * Send an OPEN_DIAGRAM_MAPPING_MODAL message to open the Diagram Mapping
+   * screen (spec 2026-09-15: opens inline, in the extension's own bundle --
+   * no longer a hosted Studio embed). documentId/pageId are no longer read
+   * by the host handler, but are harmless to keep sending.
+   */
   const openDiagramMappingModal = useCallback((documentId: string, pageId: string) => {
     send(EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
   }, [send]);
@@ -40,15 +45,6 @@ export function useSimulationRunSender() {
    */
   const openStatusModal = useCallback(() => {
     send(EnvelopeMessageType.OPEN_STATUS_MODAL, { modalSize: getModalSizePref() });
-  }, [send]);
-
-  /**
-   * Send an AUTO_CONVERT_PAGE message to trigger a one-click auto-convert.
-   * The extension analyzes the page, applies proposed types (skipping null +
-   * Entity), converts, and refreshes the model panel — no modal opened.
-   */
-  const autoConvertPage = useCallback((documentId: string, pageId: string) => {
-    send(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId });
   }, [send]);
 
   /**
@@ -100,7 +96,6 @@ export function useSimulationRunSender() {
     openStudiesModal,
     openDiagramMappingModal,
     openStatusModal,
-    autoConvertPage,
     openPatternModal,
     openScheduleModal,
     openSettingsModal,

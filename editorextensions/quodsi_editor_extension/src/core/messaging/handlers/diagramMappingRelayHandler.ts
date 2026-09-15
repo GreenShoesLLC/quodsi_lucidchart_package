@@ -4,6 +4,11 @@ import {
   EnvelopeMessageType,
   SimulationObjectType,
 } from '@quodsi/lucid-shared';
+import type {
+  AutoConvertPageResultData,
+  PageConversionCounts,
+  PageCountsData,
+} from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
@@ -59,12 +64,40 @@ export function buildAutoMappings(
 }
 
 /**
- * Handler for the embedded Studio diagram-mapping relay messages:
- * ANALYZE_PAGE and APPLY_SHAPE_CHANGES.
+ * The blank-slate card's result counts for an automatic conversion (spec
+ * 2026-09-15 section 1): the conversion service's element counts,
+ * `entities: 0` (LucidChart never creates entities from shapes), and
+ * `skipped` = analyzed page items the automatic mapping left unclassified --
+ * no proposed type, or Entity, the two cases buildAutoMappings drops.
+ */
+export function toPageConversionCounts(
+  elementCount: { activities: number; generators: number; resources: number; connectors: number },
+  previewData: { mappings: { proposedType: SimulationObjectType | null }[] },
+): PageConversionCounts {
+  const skipped = previewData.mappings.filter(
+    (m) => m.proposedType == null || m.proposedType === SimulationObjectType.Entity,
+  ).length;
+  return {
+    activities: elementCount.activities,
+    generators: elementCount.generators,
+    resources: elementCount.resources,
+    entities: 0,
+    connectors: elementCount.connectors,
+    skipped,
+  };
+}
+
+/**
+ * Handler for the Diagram Mapping relay messages: ANALYZE_PAGE and
+ * APPLY_SHAPE_CHANGES.
  *
- * These messages originate in the embedded Studio diagram-mapping screen
- * (2B) and are forwarded here by the extension message router. The handler
- * reuses the existing LucidPageAnalyzer.analyzePageForPreview() and
+ * These messages now originate in the INLINE Diagram Mapping modal (spec
+ * 2026-09-15, "opens inline") — not the embedded Studio diagram-mapping
+ * screen (2B) this class originally served, which this handler no longer
+ * relays for (see DiagramMappingModal.ts's header and EmbeddedStudioFrame.tsx
+ * for that history). They are forwarded here by the extension message
+ * router the same way regardless of source. The handler reuses the existing
+ * LucidPageAnalyzer.analyzePageForPreview() and
  * LucidPageConversionService.convertPageWithMappings() (the Phase-1
  * remove-then-add path). The inbound requestId is echoed in every result.
  */
@@ -97,19 +130,25 @@ export class DiagramMappingRelayHandler {
         );
         return true;
 
+      case EnvelopeMessageType.PAGE_COUNTS_REQUEST:
+        DiagramMappingRelayHandler.handlePageCounts(msg);
+        return true;
+
       default:
         return false;
     }
   }
 
   /**
-   * Determine which panel channel to send the response to.
-   * Mirrors SimulationRunHandler.getResponseChannel: embed-sourced messages
-   * go back to the 'studio-embed' channel, everything else to 'model'.
+   * Determine which panel channel to send the response to. The inline
+   * Diagram Mapping modal's own ANALYZE_PAGE/APPLY_SHAPE_CHANGES come back
+   * on the 'diagram-mapping' channel; PAGE_COUNTS_REQUEST/AUTO_CONVERT_PAGE
+   * from the model panel's blank-slate card come back on 'model'. Mirrors
+   * SimulationRunHandler.getResponseChannel.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
-    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
+    if (msg.source === 'diagram-mapping-iframe') return 'diagram-mapping';
     return 'model';
   }
 
@@ -210,13 +249,42 @@ export class DiagramMappingRelayHandler {
   }
 
   /**
+   * Handle PAGE_COUNTS_REQUEST: reply with the current page's block and line
+   * counts, which the model panel's blank-slate card shows before conversion.
+   * With no page open it replies zeros, so the card never waits on a reply
+   * that never comes.
+   */
+  private static handlePageCounts(msg: EnvelopeBase): void {
+    const channel = DiagramMappingRelayHandler.getResponseChannel(msg);
+    let data: PageCountsData = { pageId: '', shapeCount: 0, lineCount: 0 };
+    try {
+      const page = new Viewport(ModelManager.getClient()).getCurrentPage();
+      if (page) {
+        data = { pageId: page.id, shapeCount: page.allBlocks.size, lineCount: page.allLines.size };
+      }
+    } catch (error) {
+      DiagramMappingRelayHandler.logger.error('PAGE_COUNTS_REQUEST error:', error);
+    }
+    router.send(channel, {
+      id: msg.id,
+      type: EnvelopeMessageType.PAGE_COUNTS,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data,
+    });
+  }
+
+  /**
    * Handle AUTO_CONVERT_PAGE: analyze the current page, apply proposed types
-   * (skipping null and Entity), convert, then run the post-convert refresh so
-   * the model panel transitions from "needs initialization" to the model editor
-   * and the model row is registered/snapshotted in quodsi_api.
+   * (skipping null and Entity), convert, reply AUTO_CONVERT_PAGE_RESULT with
+   * the counts, then run the post-convert refresh so the model panel moves
+   * from the blank-slate card to the model editor and the model row is
+   * registered/snapshotted in quodsi_api. A failure replies with the error
+   * instead, so the card can show it with Retry (spec 2026-09-15 section 1).
    *
    * Recovered from the deleted ConversionPreviewHandler.handleApplyConversion
-   * (git ce884d4). Fire-and-forget: no result message sent to the panel.
+   * (git ce884d4).
    */
   private static async handleAutoConvert(msg: EnvelopeBase): Promise<void> {
     try {
@@ -248,21 +316,43 @@ export class DiagramMappingRelayHandler {
         mappingCount: finalMappings.size,
       });
 
-      await service.convertPageWithMappings(page, finalMappings, userOverrideIds);
+      const result = await service.convertPageWithMappings(page, finalMappings, userOverrideIds);
 
       DiagramMappingRelayHandler.logger.debug('AUTO_CONVERT_PAGE: conversion complete, refreshing UI');
+
+      DiagramMappingRelayHandler.sendAutoConvertResult(msg, {
+        success: true,
+        result: toPageConversionCounts(result.elementCount, previewData),
+      });
 
       DiagramMappingRelayHandler.postConvertRefresh(client, page.id, modelManager);
 
     } catch (error) {
       DiagramMappingRelayHandler.logger.error('AUTO_CONVERT_PAGE error:', error);
-      // Fire-and-forget — no error message sent to the panel
+      DiagramMappingRelayHandler.sendAutoConvertResult(msg, {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
+  /** Reply to AUTO_CONVERT_PAGE on the requesting panel's channel, with its envelope id. */
+  private static sendAutoConvertResult(msg: EnvelopeBase, data: AutoConvertPageResultData): void {
+    const channel = DiagramMappingRelayHandler.getResponseChannel(msg);
+    router.send(channel, {
+      id: msg.id,
+      type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data,
+    });
+  }
+
   /**
-   * Post-convert UI + DB refresh, shared by the embed apply (handleApply) and the
-   * one-click auto-convert (handleAutoConvert). Recovered from the deleted
+   * Post-convert UI + DB refresh, shared by the inline Diagram Mapping
+   * modal's apply (handleApply) and the one-click auto-convert
+   * (handleAutoConvert). Recovered from the deleted
    * ConversionPreviewHandler.handleApplyConversion (git ce884d4): broadcasts
    * MODEL_CONTEXT and re-runs SelectionHandler context (sends a fresh
    * SELECTION_CHANGED so the editor panel — including a shape that's still

@@ -23,7 +23,7 @@ const logger = getLogger('InitializationEffects');
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
   dispatch: React.Dispatch<any>,
-  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings'
+  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings' | 'diagram-mapping'
 ) {
   useEffect(() => {
     if (!state.app.initialized) {
@@ -32,12 +32,16 @@ export function usePanelTypeDetectionEffect(
       const panelParam = urlParams.get("panel");
       const viewParam = urlParams.get("view");
 
-      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | "settings" | undefined = initialPanelType;
+      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | "settings" | "diagram-mapping" | undefined = initialPanelType;
 
       if (viewParam === "pattern") {
         detectedType = "pattern";
       } else if (viewParam === "schedule") {
         detectedType = "schedule";
+      } else if (viewParam === "diagram-mapping") {
+        // The inline Diagram Mapping modal (spec 2026-09-15, "opens
+        // inline") -- same reasoning as work-schedule/settings below.
+        detectedType = "diagram-mapping";
       } else if (viewParam === "work-schedule") {
         // The work-schedule editor modal. Listed explicitly rather than left
         // to the `initialPanelType` fallthrough: App already passes it, so
