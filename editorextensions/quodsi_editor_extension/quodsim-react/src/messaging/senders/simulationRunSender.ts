@@ -43,15 +43,6 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
-   * Send an AUTO_CONVERT_PAGE message to trigger a one-click auto-convert.
-   * The extension analyzes the page, applies proposed types (skipping null +
-   * Entity), converts, and refreshes the model panel — no modal opened.
-   */
-  const autoConvertPage = useCallback((documentId: string, pageId: string) => {
-    send(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId });
-  }, [send]);
-
-  /**
    * Send an OPEN_PATTERN_MODAL message to open the arrival-pattern editor as
    * a real Lucid modal over the whole application. Handled by
    * modelRootHandler.ts on the host side (not simulationRunHandler.ts --
@@ -100,7 +91,6 @@ export function useSimulationRunSender() {
     openStudiesModal,
     openDiagramMappingModal,
     openStatusModal,
-    autoConvertPage,
     openPatternModal,
     openScheduleModal,
     openSettingsModal,
