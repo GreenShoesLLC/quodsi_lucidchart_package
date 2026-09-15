@@ -19,7 +19,6 @@ import { useMessaging } from '../../messaging/MessageProvider'
 import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 import { useLucidEntitlementsSource } from '../../adapters/lucidEntitlementsSource'
 import { useLucidSourceResolver } from '../../adapters/lucidSourceResolver'
-import { toSharedValidationResult } from '../../adapters/toSharedValidationResult'
 
 export interface LucidModelEditorProps {
   accessor: ModelStateAccessor
@@ -45,7 +44,7 @@ export function LucidModelEditor({ accessor, activeTab, onTabChange, validationS
         accessor={accessor}
         activeTab={activeTab}
         onTabChange={onTabChange}
-        validationResult={toSharedValidationResult(validationState ?? null)}
+        validationResult={validationState ?? null}
         resolver={resolver}
         referenceCleanup="host"
         onEditWorkSchedule={onEditWorkSchedule}

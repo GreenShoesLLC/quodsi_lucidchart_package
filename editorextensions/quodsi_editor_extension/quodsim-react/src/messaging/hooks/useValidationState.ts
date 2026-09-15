@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
+import { partitionValidationIssues } from '@quodsi/shared';
 import { useValidation } from '../MessageProvider';
 import { useModelOpsSender } from '../senders/modelOpsSender';
-import { ValidationSeverity } from '@quodsi/lucid-shared';
 
 /**
  * Enhanced hook for validation state that combines state and actions
@@ -16,6 +16,10 @@ export function useValidationState() {
   const validationState = useMemo(() => {
     // Get counts from summary (already computed in validationSlice)
     const { errorCount, warningCount, infoCount } = validation.summary;
+
+    // The one severity split every host uses (@quodsi/shared); this hook keeps
+    // its errors/warnings/infos names.
+    const { blockers, advisories, infos } = partitionValidationIssues(validation.issues);
 
     return {
       // State
@@ -35,9 +39,9 @@ export function useValidationState() {
       hasWarnings: warningCount > 0,
 
       // Filtered issues by severity
-      errors: validation.issues.filter(issue => issue.severity === ValidationSeverity.ERROR),
-      warnings: validation.issues.filter(issue => issue.severity === ValidationSeverity.WARNING),
-      infos: validation.issues.filter(issue => issue.severity === ValidationSeverity.INFO),
+      errors: blockers,
+      warnings: advisories,
+      infos,
 
       // Issue utilities
       getIssuesForElement: (elementId: string) =>

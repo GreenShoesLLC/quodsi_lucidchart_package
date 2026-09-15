@@ -45,6 +45,7 @@ import {
   MODEL_FIELD_KEYS,
 } from '@quodsi/lucid-shared'
 import type { ReferenceCleanupOptions } from '@quodsi/lucid-shared'
+import { DOMAIN_LIST_KEY } from '@quodsi/shared'
 import { useMessaging } from '../messaging/MessageProvider'
 import {
   createLucidModelStateAccessor,
@@ -100,8 +101,8 @@ export type ShapeWriteEntry = {
 type PendingShape = { type: 'Activity' | 'Generator'; patch: Record<string, unknown> }
 
 const SHAPE_LIST_KEY: Record<PendingShape['type'], 'activities' | 'generators'> = {
-  Activity: 'activities',
-  Generator: 'generators',
+  Activity: DOMAIN_LIST_KEY.Activity,
+  Generator: DOMAIN_LIST_KEY.Generator,
 }
 
 export type ModelRootTransport = {
