@@ -25,23 +25,19 @@
 //  - After a successful write the snapshot OVERLAYS the sent list until the
 //    next referenceData prop lands, so the picker never flashes
 //    "(missing requirement: …)" between the RESULT and the selection refresh.
-//  - updateShape now also routes routing-tab edits: connectors / generators /
+//  - updateShape also routes routing-tab edits: connectors / generators /
 //    entities / states are projected onto the snapshot alongside the
 //    existing three collections, and updateShape(shapeId, type, patch)
-//    persists either through a host-registered shape writer (Lucid's own
-//    shape-data write, no envelope) or through Task 2's ELEMENT_UPDATE
-//    sender, overlaying the patch onto the matching element either way so
-//    the view reflects the change immediately. A successful ELEMENT_UPDATE
-//    DOES trigger a host-side refresh -- elementOpsHandler re-processes the
-//    current selection after a save, and the Activity/Generator/Connector
-//    processors each rebuild referenceData unconditionally -- but that round
-//    trip is not instant. On the ELEMENT_UPDATE sender path the overlay is
-//    therefore applied optimistically, before the send resolves, so a fully
-//    controlled input (e.g. the priority field) doesn't snap back to the
-//    pre-edit value while the write is pending; it rolls back on rejection.
-//    On the shape-writer path the host editor's own autosave is a separate,
-//    later ELEMENT_UPDATE, so the overlay also bridges that window. See
-//    spec docs/superpowers/specs/2026-08-22-lucid-routing-tab-design.md.
+//    persists through Task 2's ELEMENT_UPDATE sender, overlaying the patch
+//    onto the matching element so the view reflects the change immediately.
+//    A successful ELEMENT_UPDATE DOES trigger a host-side refresh --
+//    elementOpsHandler re-processes the current selection after a save, and
+//    the Activity/Generator/Connector processors each rebuild referenceData
+//    unconditionally -- but that round trip is not instant, so the overlay
+//    is applied optimistically, before the send resolves: a fully controlled
+//    input (e.g. the priority field) doesn't snap back to the pre-edit value
+//    while the write is pending, and the overlay rolls back on rejection.
+//    See spec docs/superpowers/specs/2026-08-22-lucid-routing-tab-design.md.
 //  - Page guard (spec 2026-09-11): requirements writes echo
 //    referenceData.pageId to their senders, and are refused before the
 //    optimistic overlay when referenceData carries no pageId (not loaded yet).
@@ -65,14 +61,6 @@ export type ReferenceDataSenders = {
   updateElement?: (elementId: string, type: string, data: Record<string, unknown>) => Promise<void>
 }
 
-/** A host-implemented writer for a specific shape's own shape-data (no envelope, no round trip). */
-export type ShapeWriter = (patch: Record<string, unknown>) => void | Promise<void>
-
-export type ReferenceDataAccessorOptions = {
-  /** shapeId -> writer, registered by the caller for shapes it owns directly (e.g. the selected source). */
-  shapeWriters?: Record<string, ShapeWriter>
-}
-
 type RequirementRecord = { id: string; name: string; rootClause?: unknown }
 
 export type ReferenceDataSource = {
@@ -85,7 +73,6 @@ type ElementRecord = { id: string } & Record<string, unknown>
 export function createReferenceDataAccessor(
   initial: EditorReferenceData | undefined,
   getSenders: () => ReferenceDataSenders,
-  getOptions?: () => ReferenceDataAccessorOptions,
 ): ReferenceDataSource {
   let referenceData = initial
   let overlay: RequirementRecord[] | null = null
@@ -170,17 +157,6 @@ export function createReferenceDataAccessor(
       }
     },
     async updateShape(shapeId, type, patch) {
-      const writer = getOptions?.().shapeWriters?.[shapeId]
-      if (writer) {
-        await writer(patch)
-        // The host editor persists via its own autosave -- a separate,
-        // later ELEMENT_UPDATE that will itself trigger a referenceData
-        // refresh once it round-trips -- so overlay now to bridge that
-        // window.
-        elementOverlays = { ...elementOverlays, [shapeId]: { ...(elementOverlays[shapeId] ?? {}), ...patch } }
-        notify()
-        return
-      }
       if (type !== 'Connector' && type !== 'Activity' && type !== 'Generator') {
         throw new Error(`useReferenceDataAccessor.updateShape: no persistence path for type ${type}`)
       }
@@ -231,15 +207,12 @@ export function createReferenceDataAccessor(
 export function useReferenceDataAccessor(
   referenceData: EditorReferenceData | undefined,
   senders: ReferenceDataSenders,
-  options?: ReferenceDataAccessorOptions,
 ): ModelStateAccessor {
   const sendersRef = useRef(senders)
   sendersRef.current = senders
-  const optionsRef = useRef(options)
-  optionsRef.current = options
   const sourceRef = useRef<ReferenceDataSource | null>(null)
   if (!sourceRef.current) {
-    sourceRef.current = createReferenceDataAccessor(referenceData, () => sendersRef.current, () => optionsRef.current ?? {})
+    sourceRef.current = createReferenceDataAccessor(referenceData, () => sendersRef.current)
   }
   // Prop → source in an effect, not during render: setReferenceData notifies
   // useSyncExternalStore subscribers, which must not happen mid-render.

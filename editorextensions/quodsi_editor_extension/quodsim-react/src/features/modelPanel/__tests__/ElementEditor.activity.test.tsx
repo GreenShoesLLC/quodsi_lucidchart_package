@@ -1,6 +1,6 @@
-// ElementEditor's Generator case renders Lucid's wrapper around Studio's shared
-// GeneratorEditor, keyed on the Lucid page (spec 2026-09-14
-// lucid-shared-generator-editor §3): a page switch starts a fresh model-root
+// ElementEditor's Activity case renders Lucid's wrapper around Studio's shared
+// ActivityEditor, keyed on the Lucid page (spec 2026-09-14
+// lucid-shared-activity-editor §3): a page switch starts a fresh model-root
 // source, a same-page rerender keeps it.
 import React from 'react'
 import { render, screen, cleanup } from '@testing-library/react'
@@ -49,9 +49,9 @@ function installHost() {
           data: {
             projection: {
               pageId,
-              generators: [{ id: 'g1', name: `Arrivals ${pageId}`, entityId: 'e1', mode: 'frequency', levers: [] }],
-              activities: [], connectors: [], entities: [{ id: 'e1', name: 'Patient' }], states: [],
-              arrivalPatterns: [], arrivalSchedules: [], model: {},
+              activities: [{ id: 'a1', name: `Triage ${pageId}`, capacity: 1, levers: [], actions: [] }],
+              generators: [], connectors: [], entities: [], states: [], resources: [], resourceRequirements: [],
+              workSchedules: [], arrivalPatterns: [], arrivalSchedules: [], model: {},
             },
           },
         },
@@ -61,13 +61,13 @@ function installHost() {
 }
 
 const props = () => ({
-  elementType: SimulationObjectType.Generator,
-  elementData: { id: 'g1' },
+  elementType: SimulationObjectType.Activity,
+  elementData: { id: 'a1' },
   onSave: vi.fn(),
   referenceData: { pageId: 'page-a', connectors: [] } as any,
 })
 
-describe('ElementEditor — the Generator case is the shared editor, one source per Lucid page', () => {
+describe('ElementEditor — the Activity case is the shared editor, one source per Lucid page', () => {
   beforeEach(() => {
     setView('basic')
     setPage('page-a')
@@ -80,10 +80,10 @@ describe('ElementEditor — the Generator case is the shared editor, one source 
     vi.restoreAllMocks()
   })
 
-  it('renders the shared Generator editor for a selected generator', async () => {
+  it('renders the shared Activity editor for a selected activity', async () => {
     render(<ElementEditor {...props()} />)
     expect(await screen.findByRole('tab', { name: 'Basic' })).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Arrivals page-a')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Triage page-a')).toBeInTheDocument()
   })
 
   it('starts a fresh model-root source on a page switch, and keeps it on a same-page rerender', async () => {
@@ -97,6 +97,6 @@ describe('ElementEditor — the Generator case is the shared editor, one source 
     setPage('page-b')
     rerender(<ElementEditor {...props()} />)
     expect(requests).toBe(2)
-    expect(await screen.findByDisplayValue('Arrivals page-b')).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('Triage page-b')).toBeInTheDocument()
   })
 })

@@ -34,7 +34,7 @@
 
 import React from 'react'
 import { render, screen, cleanup } from '@testing-library/react'
-import { EnvelopeMessageType, SimulationObjectType, StateListManager } from '@quodsi/lucid-shared'
+import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared'
 import { getSimulationObjectType } from '../../../utils/typeDetection'
 
 vi.mock('../../../messaging/MessageProvider', () => ({
@@ -101,7 +101,6 @@ const baseProps = {
     resources: [],
     resourceRequirements: [],
   } as any,
-  states: new StateListManager(),
   entities: [],
 }
 

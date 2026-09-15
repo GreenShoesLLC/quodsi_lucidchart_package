@@ -20,7 +20,7 @@
 // Studio and drawio, trapped inside the 300px right dock here. Supplying the
 // handler means "I will present the editor", exactly as LucidModelEditor does
 // for WorkSchedulesEditor (see its onEditWorkSchedule callback) and
-// ActivityEditor does for the activity-side picker. The id is a SCHEDULE id,
+// LucidActivityEditor does for the activity-side picker. The id is a SCHEDULE id,
 // not a shape id.
 //
 // A dangling pointer is deliberately NOT auto-cleared: resolveResourceLinks

@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { ElementEditor } from "../ElementEditor";
-import { SimulationObjectType, StateListManager, ScenarioPropertyName } from "@quodsi/lucid-shared";
+import { SimulationObjectType, ScenarioPropertyName } from "@quodsi/lucid-shared";
 import { setView } from "quodsi_studio/platforms/shared";
 
 // This file predates Complexity Views and exercises the shared
@@ -46,7 +46,6 @@ const referenceData = {
 const baseProps = {
   onSave: vi.fn(),
   referenceData,
-  states: new StateListManager(),
   entities: [],
 };
 

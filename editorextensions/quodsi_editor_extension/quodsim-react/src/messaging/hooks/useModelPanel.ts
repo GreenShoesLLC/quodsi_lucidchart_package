@@ -236,22 +236,6 @@ export function useModelPanel() {
     connectorsCount: referenceData.connectors?.length || 0
   });
 
-  // Filter outgoing connectors for the selected activity (React-side filtering)
-  const outgoingConnectors = useMemo(() => {
-    const activityId = modelItemData?.id;
-    if (!activityId || !referenceData.connectors) {
-      return [];
-    }
-    return referenceData.connectors.filter(conn => conn.sourceId === activityId);
-  }, [referenceData.connectors, modelItemData?.id]);
-
-  logger.debug('Filtered outgoing connectors:', {
-    activityId: modelItemData?.id,
-    totalConnectors: referenceData.connectors?.length || 0,
-    outgoingCount: outgoingConnectors.length,
-    connectors: outgoingConnectors
-  });
-  
   // Get diagram element type from selection state (set by extension)
   let typedDiagramElementType = DiagramElementType.BLOCK; // Default to BLOCK
   if (selection.diagramElementType) {
@@ -327,8 +311,6 @@ export function useModelPanel() {
     validationState,
     simulationStatus: simulationStatusProxy,
     referenceData,
-    states: referenceData?.states || [],
-    outgoingConnectors,
 
     // UI state
     isLoading,

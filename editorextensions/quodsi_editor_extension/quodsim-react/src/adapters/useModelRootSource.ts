@@ -882,12 +882,12 @@ export function useModelRootSource(): {
   //
   // ORDERING WITH A CHILD EDITOR'S OWN UNMOUNT SAVE. React runs the cleanup
   // effects of a deleted subtree PARENT-FIRST, so this flush can run BEFORE a
-  // child editor's own unmount-time save (e.g. ModelEditor's useAutoSave
-  // flush) has written anything into this source's pending overlay -- that
-  // edit simply isn't here yet when this flush fires. It is not lost: it
-  // still lands in the overlay a moment later and goes out on the source's
-  // own debounce timer instead (or, if a page switch is what's unmounting
-  // everything, is refused by the page guard like any other late write).
+  // child editor's own unmount-time save has written anything into this
+  // source's pending overlay -- that edit simply isn't here yet when this
+  // flush fires. It is not lost: it still lands in the overlay a moment
+  // later and goes out on the source's own debounce timer instead (or, if a
+  // page switch is what's unmounting everything, is refused by the page
+  // guard like any other late write).
   useEffect(() => {
     const unregister = registerModelRootSource(modelRootSource)
     return () => {

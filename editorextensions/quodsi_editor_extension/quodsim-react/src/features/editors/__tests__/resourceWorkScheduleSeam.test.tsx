@@ -1,8 +1,8 @@
 // Every Lucid mount of the SHARED ResourceEditor hands work-schedule editing
 // to the Lucid modal, not to the in-panel one (spec 2026-08-27 §6, case E6).
 //
-// WHY THIS FILE EXISTS. D3 gave CapacitySourcePicker an `onEdit` seam and
-// ActivityEditor used it (ActivityEditor.workSchedule.test.tsx, case 4), but
+// WHY THIS FILE EXISTS. D3 gave CapacitySourcePicker an `onEdit` seam and the
+// activity side used it (today LucidActivityEditor's onEditWorkSchedule), but
 // the RESOURCE path had no way to reach it: the picker is mounted three
 // levels down (ResourcesEditor -> ResourceEditor -> ResourceBasicTab) and
 // none of those forwarded anything, so "Edit schedule" on a resource opened
@@ -30,7 +30,7 @@ import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 const { mockSendMessage } = vi.hoisted(() => ({ mockSendMessage: vi.fn() }))
 
 // Both module paths are mocked: LucidModelEditor / ResourceBlockEditor take
-// useMessaging from MessageProvider (as ActivityEditor does), SwimLaneEditor
+// useMessaging from MessageProvider (as LucidActivityEditor does), SwimLaneEditor
 // from MessageContext. The Model editor's mount also reaches
 // useModelOpsSender -> useMessagingDispatch (MessageContext) via
 // useLucidSourceResolver, so that export has to be present too.

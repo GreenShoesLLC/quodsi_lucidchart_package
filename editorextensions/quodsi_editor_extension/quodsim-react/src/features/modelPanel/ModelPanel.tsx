@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender';
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
+import { SimulationObjectType, DiagramElementType, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
 import { ModelDefinitionViewer } from './ModelDefinitionViewer';
@@ -29,8 +29,6 @@ export const ModelPanel: React.FC = () => {
     diagramElementType,
     referenceData,
     simulationStatus,
-    states: serializedStates,
-    outgoingConnectors,
     // Actions
     onElementUpdate,
     onElementTypeChange,
@@ -104,32 +102,6 @@ export const ModelPanel: React.FC = () => {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
-  const states = useMemo(() => {
-    const stateListManager = new StateListManager();
-
-    // Deserialize and add each state
-    if (serializedStates && serializedStates.length > 0) {
-      serializedStates.forEach((serializedState: any) => {
-        const state = new State(
-          serializedState.id,
-          serializedState.name,
-          serializedState.componentType as ComponentType,
-          serializedState.dataType as StateType,
-          serializedState.initialValue,
-          {
-            categoryValues: serializedState.categoryValues,
-            description: serializedState.description,
-            collectStatistics: serializedState.collectStatistics
-          }
-        );
-        stateListManager.add(state);
-      });
-    }
-
-    return stateListManager;
-  }, [serializedStates]);
-
   useEffect(() => {
     // Handle element type issues
     if (currentElement && (!currentElement.metadata?.type || currentElement.metadata.type === SimulationObjectType.None)) {
@@ -148,11 +120,10 @@ export const ModelPanel: React.FC = () => {
     }
   }, [modelName, currentElement, diagramElementType]);
   
-  // Memoize onElementUpdate-bound callback so child editors' useAutoSave
-  // hooks see a stable reference. Without this, the parent's inline arrow
-  // produces a new function each render, cascading to all 6 editors and
-  // re-attaching their internal effects (the value-equality guards
-  // suppress spurious save fires, but the effects still re-run).
+  // Memoize onElementUpdate-bound callback so it has a stable identity as the
+  // onSave prop ElementEditor passes down to SwimLaneEditor, the only editor
+  // that still takes it. Without this, the parent's inline arrow produces a
+  // new function each render, re-attaching that editor's internal effects.
   // Must stay above the early returns below so hook order is unconditional
   // every render (Rules of Hooks) — opening Diagram Mapping flips
   // isPreviewVisible and would otherwise skip this hook.
@@ -296,8 +267,6 @@ export const ModelPanel: React.FC = () => {
             onSave={handleElementSave}
             referenceData={referenceData}
             currentElement={currentElement}
-            states={states}
-            outgoingConnectors={outgoingConnectors}
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={onTabChange}

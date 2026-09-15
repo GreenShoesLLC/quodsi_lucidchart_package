@@ -47,8 +47,5 @@ describe('useModelPanel EMPTY_REFERENCE_DATA fallback', () => {
   it('useModelPanel exposes that same fallback (no referenceData.states key) when selection carries no referenceData', () => {
     const { result } = renderHook(() => useModelPanel())
     expect('states' in result.current.referenceData).toBe(false)
-    // The OTHER reader (states: referenceData?.states || []) still degrades
-    // safely to an empty array -- this fix must not break it.
-    expect(result.current.states).toEqual([])
   })
 })

@@ -6,7 +6,7 @@
 // wrappers, whose keys moved here.
 import React from 'react'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { EnvelopeMessageType, SimulationObjectType, StateListManager } from '@quodsi/lucid-shared'
+import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared'
 import { setView } from 'quodsi_studio/platforms/shared'
 
 const messaging = vi.hoisted(() => ({ current: {} as any }))
@@ -68,7 +68,6 @@ const props = (pageId: string) => ({
   elementData: { id: pageId },
   onSave: vi.fn(),
   referenceData: {} as any,
-  states: new StateListManager(),
   activeTab: 'States' as const,
   onTabChange: vi.fn(),
 })
