@@ -11,6 +11,8 @@ import { getSimulationObjectType } from '../../utils/typeDetection';
 import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
 import { useModelEditorTab } from './useModelEditorTab';
+import { BlankSlateConverter, HostAdvisorProvider, type AdvisorFocus } from 'quodsi_studio/platforms/shared';
+import { useLucidBlankSlateAccessor } from '../../adapters/useLucidBlankSlateAccessor';
 
 const log = getLogger('ModelPanel');
 
@@ -40,15 +42,38 @@ export const ModelPanel: React.FC = () => {
     requestModelJson
   } = useModelOpsSender();
 
-  // Get selection context for documentId
-  const { selection } = useMessaging();
+  // Selection context (document/page ids, selection changes) and sign-in state
+  const { selection, auth } = useMessaging();
 
-  // Get simulation run senders (for diagram mapping modal and auto-convert)
-  const { openDiagramMappingModal, openStatusModal, openSettingsModal, autoConvertPage } = useSimulationRunSender();
+  // Simulation run senders (diagram mapping, status, settings and Advisor modals)
+  const { openDiagramMappingModal, openStatusModal, openSettingsModal, openAdvisorModal } = useSimulationRunSender();
 
   // The Model editor's tab, held here so it survives ElementEditor's
   // page-keyed remount (spec 2026-09-13).
   const { activeTab, onTabChange, applyPendingTab } = useModelEditorTab(onValidate);
+
+  // The shared blank-slate card's host adapter (spec 2026-09-15 §1). Called on
+  // every render (Rules of Hooks); it only talks to the host while the page is
+  // unconverted.
+  const blankSlateAccessor = useLucidBlankSlateAccessor({
+    enabled: needsInitialization,
+    documentId: selection.documentContext?.documentId ?? '',
+    pageId: selection.documentContext?.pageId ?? '',
+    selectionVersion: selection.lastUpdated,
+  });
+
+  // Every Advisor button in the panel -- the shared editor headers and the
+  // blank-slate card -- opens the embedded consult in a Lucid host modal (spec
+  // 2026-09-15 §2). Editors only open definition consults.
+  const onOpenAdvisor = useCallback(
+    (focus: AdvisorFocus) =>
+      openAdvisorModal({ focusId: focus.id, focusType: focus.type, focusName: focus.name, mode: 'definition' }),
+    [openAdvisorModal],
+  );
+  // Signed out, the provider supplies no context, so no Advisor button shows:
+  // the consult modal cannot sign the user in. The provider itself always
+  // renders, so signing in does not remount the editors below it.
+  const advisorEnabled = !!auth?.isAuthenticated;
 
   // A "Go to Model Editor" link stores its tab before selecting the model.
   useEffect(() => {
@@ -134,43 +159,17 @@ export const ModelPanel: React.FC = () => {
     [onElementUpdate, currentElement?.id]
   );
 
-  // Handle initialization state
+  // Unconverted page: the shared blank-slate card (spec 2026-09-15 §1)
   if (needsInitialization) {
     return (
-      <div className="flex flex-col h-full bg-gray-50">
-        <AccountStrip />
-        <div className="flex-1 min-h-0 flex items-center justify-center p-4 overflow-auto">
-          <div className="text-center p-5 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
-            <h3 className="text-xl font-semibold text-gray-800 mb-5">
-              Transform diagram into Simulation Model
-            </h3>
-            <button
-              className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium"
-              onClick={() => autoConvertPage(
-                selection.documentContext?.documentId ?? '',
-                selection.documentContext?.pageId ?? ''
-              )}
-            >
-              Convert Automatically
-            </button>
-            <p className="text-gray-500 text-sm mt-3">
-              Instantly applies Quodsi's best-practice mapping.<br />
-              No questions asked — you can edit everything later.
-            </p>
-            <div className="mt-5 pt-3 border-t border-gray-200">
-              <button
-                className="text-blue-600 hover:text-blue-800 text-sm hover:underline"
-                onClick={() => openDiagramMappingModal(
-                  selection.documentContext?.documentId ?? '',
-                  selection.documentContext?.pageId ?? ''
-                )}
-              >
-                Review & Convert: Preview, edit and convert
-              </button>
-            </div>
+      <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} enabled={advisorEnabled}>
+        <div className="flex flex-col h-full bg-gray-50">
+          <AccountStrip />
+          <div className="flex-1 min-h-0 overflow-auto p-4">
+            <BlankSlateConverter accessor={blankSlateAccessor} />
           </div>
         </div>
-      </div>
+      </HostAdvisorProvider>
     );
   }
 
@@ -229,56 +228,58 @@ export const ModelPanel: React.FC = () => {
 
   // Main content render
   return (
-    <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
-      <AccountStrip />
-      {!isSwimLane && <PanelHeader
-        modelName={modelName}
-        validationState={validationState}
-        currentElement={currentElement}
-        editorType={editorType}
-        onRemoveModel={onRemoveModel}
-        onOpenDiagramMapping={() => openDiagramMappingModal(
-          selection.documentContext?.documentId ?? '',
-          selection.documentContext?.pageId ?? '',
-        )}
-        onElementTypeChange={onElementTypeChange}
-        diagramElementType={diagramElementType}
-        referenceData={referenceData}
-        onViewModelJson={handleViewModelJson}
-        onOpenStatus={() => openStatusModal()}
-        onOpenSettings={() => openSettingsModal()}
-      />}
+    <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} enabled={advisorEnabled}>
+      <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
+        <AccountStrip />
+        {!isSwimLane && <PanelHeader
+          modelName={modelName}
+          validationState={validationState}
+          currentElement={currentElement}
+          editorType={editorType}
+          onRemoveModel={onRemoveModel}
+          onOpenDiagramMapping={() => openDiagramMappingModal(
+            selection.documentContext?.documentId ?? '',
+            selection.documentContext?.pageId ?? '',
+          )}
+          onElementTypeChange={onElementTypeChange}
+          diagramElementType={diagramElementType}
+          referenceData={referenceData}
+          onViewModelJson={handleViewModelJson}
+          onOpenStatus={() => openStatusModal()}
+          onOpenSettings={() => openSettingsModal()}
+        />}
 
-      <div className="flex-1 bg-gray-50 overflow-auto">
-        {/* If current element exists and is either not unconverted or is a Model type */}
-        {currentElement && ((!currentElement.isUnconverted) || isModelElement) && (
-          <ElementEditor
-            elementData={{
-              ...currentElement.data,
-              id: currentElement.id // Ensure ID is included in elementData
-            }}
-            elementType={getSimulationObjectType(
-              currentElement.metadata?.type || currentElement.type,
-              currentElement,
-              currentElement.data
-            )}
-            onSave={handleElementSave}
-            referenceData={referenceData}
-            currentElement={currentElement}
-            validationState={validationState}
-            activeTab={activeTab}
-            onTabChange={onTabChange}
+        <div className="flex-1 bg-gray-50 overflow-auto">
+          {/* If current element exists and is either not unconverted or is a Model type */}
+          {currentElement && ((!currentElement.isUnconverted) || isModelElement) && (
+            <ElementEditor
+              elementData={{
+                ...currentElement.data,
+                id: currentElement.id // Ensure ID is included in elementData
+              }}
+              elementType={getSimulationObjectType(
+                currentElement.metadata?.type || currentElement.type,
+                currentElement,
+                currentElement.data
+              )}
+              onSave={handleElementSave}
+              referenceData={referenceData}
+              currentElement={currentElement}
+              validationState={validationState}
+              activeTab={activeTab}
+              onTabChange={onTabChange}
+            />
+          )}
+        </div>
+
+        {/* Model Definition Viewer Modal */}
+        {isModelViewerOpen && modelJson && (
+          <ModelDefinitionViewer
+            modelJson={modelJson}
+            onClose={() => setIsModelViewerOpen(false)}
           />
         )}
       </div>
-
-      {/* Model Definition Viewer Modal */}
-      {isModelViewerOpen && modelJson && (
-        <ModelDefinitionViewer
-          modelJson={modelJson}
-          onClose={() => setIsModelViewerOpen(false)}
-        />
-      )}
-    </div>
+    </HostAdvisorProvider>
   );
 };
