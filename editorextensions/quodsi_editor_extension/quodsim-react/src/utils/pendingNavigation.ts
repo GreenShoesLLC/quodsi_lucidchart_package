@@ -24,10 +24,3 @@ export function consumePendingModelEditorTab(): ModelEditorTab | null {
   pendingModelEditorTab = null;
   return tab;
 }
-
-/**
- * Check if there's a pending Model editor tab without consuming it.
- */
-export function hasPendingModelEditorTab(): boolean {
-  return pendingModelEditorTab !== null;
-}

@@ -11,14 +11,12 @@ const mockUseModelPanel = {
   needsInitialization: false,
   diagramElementType: null,
   referenceData: {} as any,
-  simulationStatus: null,
   resourceRequirements: [],
   onElementUpdate: vi.fn(),
   onElementTypeChange: vi.fn(),
   onValidate: vi.fn(),
   onSimulate: vi.fn(),
   onRemoveModel: vi.fn(),
-  onConvertPage: vi.fn(),
 };
 
 vi.mock("../../../messaging/hooks/useModelPanel", () => ({
@@ -44,9 +42,6 @@ vi.mock("../ElementEditor", () => ({ ElementEditor: () => <div /> }));
 vi.mock("../ModelDefinitionViewer", () => ({ ModelDefinitionViewer: () => <div /> }));
 vi.mock("../../../utils/pendingNavigation", () => ({
   consumePendingModelEditorTab: () => null,
-}));
-vi.mock("../../../utils/pendingSubmission", () => ({
-  setPendingSubmission: () => {},
 }));
 
 // Mock simulationRunSender since ModelPanel now uses openDiagramMappingModal from it

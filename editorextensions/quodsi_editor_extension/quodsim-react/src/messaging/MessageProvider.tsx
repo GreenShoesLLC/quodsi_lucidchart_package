@@ -1,7 +1,7 @@
 import React, { useReducer, useRef } from "react";
 import { messagingReducer, initialState } from "./state";
 import { MessagingContext, MessagingDispatchContext } from "./MessageContext";
-import { useSendMessage } from "./hooks";
+import { useSendMessage } from "./hooks/useSendMessage";
 
 // Import effects
 import {

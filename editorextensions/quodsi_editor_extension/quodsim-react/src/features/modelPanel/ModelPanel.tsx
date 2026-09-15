@@ -28,13 +28,11 @@ export const ModelPanel: React.FC = () => {
     needsInitialization,
     diagramElementType,
     referenceData,
-    simulationStatus,
     // Actions
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onRemoveModel,
-    onConvertPage
+    onRemoveModel
   } = useModelPanel();
 
   // Get message senders

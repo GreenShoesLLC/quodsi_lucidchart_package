@@ -11,7 +11,6 @@ export * from './appSlice';
 export * from './selectionSlice';
 export * from './simulationSlice';
 export * from './validationSlice';
-export * from './elementOpsSlice';
 
 // Re-export the root reducer and initial state
 export * from './rootReducer';

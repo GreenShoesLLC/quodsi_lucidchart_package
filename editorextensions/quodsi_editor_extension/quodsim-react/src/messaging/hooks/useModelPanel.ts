@@ -4,7 +4,6 @@ import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
 import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData, getLogger } from '@quodsi/lucid-shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
-import { SimulationPollState } from '../../types/SimulationStatus';
 
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
@@ -216,12 +215,7 @@ export function useModelPanel() {
     logger.debug('Removing model');
     modelOpsSender.removeModel(documentContext.documentId);
   };
-  
-  const onConvertPage = () => {
-    logger.debug('Converting page to Quodsi model');
-    modelOpsSender.convertPage();
-  };
-  
+
   // Use reference data from selection state or provide empty default
   const referenceData: EditorReferenceData = selection.referenceData || EMPTY_REFERENCE_DATA;
   
@@ -266,16 +260,6 @@ export function useModelPanel() {
     // Do not automatically set Activity for blocks - allow user to choose
   }
   
-  // Create a proxy SimulationPollState object to match the expected interface
-  // This transforms from the state simulation to the component SimulationPollState
-  const simulationStatusProxy: SimulationPollState = {
-    pageStatus: null,  // We don't have this in the state
-    isPollingSimState: false,  // Default value
-    errorMessage: simulation.error || null,
-    lastChecked: simulation.lastUpdated ? new Date(simulation.lastUpdated).toISOString() : null,
-    newResultsAvailable: false  // Default value
-  };
-  
   // Create the return values object for logging
   const returnValues = {
     // Model and document data
@@ -309,7 +293,6 @@ export function useModelPanel() {
 
     // State data
     validationState,
-    simulationStatus: simulationStatusProxy,
     referenceData,
 
     // UI state
@@ -320,7 +303,6 @@ export function useModelPanel() {
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onRemoveModel,
-    onConvertPage
+    onRemoveModel
   };
 }

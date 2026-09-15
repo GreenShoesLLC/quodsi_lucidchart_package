@@ -1,58 +1,38 @@
-# Model Panel Components
+# Model Panel
 
-## Overview
+The always-on model panel: the container and chrome around the shared
+Studio editors.
 
-This directory contains the reimplemented components for the Quodsi Model Panel, leveraging the new messaging system while preserving the user interface and functionality of the original components.
+## Files
 
-## Component Structure
-
-- **ModelPanel**: The main container component that orchestrates the rendering of child components based on state
-- **PanelHeader**: Displays model/element information and provides action buttons
-- **ElementEditor**: Renders the appropriate editor based on element type
-- **ValidationPanel**: Displays validation messages for the model or selected element
-- **SimulationControls**: Provides controls for running simulations and viewing results
-
-## Implementation Details
-
-### Data Flow
-
-1. The `useModelPanel` hook transforms data from the messaging system to the format expected by the UI components
-2. The transformed data is passed to the ModelPanel component
-3. ModelPanel distributes the data to child components as props
-4. User interactions trigger actions that are sent back to the messaging system
-
-### Reused Components
-
-These new components integrate with existing editor components:
-- ActivityEditor (Studio's shared editor, through `LucidActivityEditor`)
-- GeneratorEditor (Studio's shared editor, through `LucidGeneratorEditor`)
-- EntityEditor
-- ConnectorRoutingView (shared with `quodsi_studio`; renders the line-selected Connector case)
-- ModelEditor
-
-### Styling
-
-Components use Tailwind CSS classes for styling, with a design that closely matches the original UI.
-
-## Testing
-
-Unit tests for the `useModelPanel` hook verify correct data transformation and action handling.
+- **`ModelPanel.tsx`** — top-level container. Uses `useModelPanel` for
+  selection/document/validation state, renders `AccountStrip`, `PanelHeader`,
+  `ElementEditor`, and the `ModelDefinitionViewer` modal; owns the
+  initialization/loading/unconverted-page states.
+- **`PanelHeader.tsx`** — model/element header: icon, name, accent stripe,
+  type selector, and the "..." overflow menu (Diagram Mapping, View Model
+  JSON, Developer Tools, Preferences, Status, Settings, About, Remove
+  Quodsi Model).
+- **`ElementEditor.tsx`** — dispatches to the right editor for the selected
+  element's type (the shared Studio Activity/Generator/Model editors via
+  their `Lucid*Editor` wrappers, `ResourceBlockEditor`, `SwimLaneEditor`,
+  `ConnectorRoutingView`).
+- **`ModelDefinitionViewer.tsx`** — modal that shows the host-built model
+  JSON (requested via `MODEL_JSON_REQUEST`/`MODEL_JSON_RESPONSE`).
+- **`AdvisorLaunchButton.tsx`** — sparkle button that opens the embedded
+  Advisor consult (`OPEN_ADVISOR_MODAL`), gated on the dev-tools flag.
+- **`StudiesLaunchButton.tsx`** — opens the Studies modal; disabled when
+  signed out or when validation has outstanding errors.
+- **`useModelEditorTab.ts`** — holds the Model editor's active tab across
+  `ElementEditor`'s page-keyed remounts, and applies a pending tab set by
+  `utils/pendingNavigation.ts`.
+- **`index.ts`** — re-exports `ModelPanel` (the only name imported through
+  this barrel elsewhere).
 
 ## Usage
 
-To use these components, import the ModelPanel from the features/modelPanel directory:
-
 ```tsx
 import { ModelPanel } from '../features/modelPanel';
-
-// In your component
-return (
-  <div className="app-container">
-    <ModelPanel />
-  </div>
-);
 ```
 
-## Feature Toggle
-
-The application includes a feature toggle that allows switching between the old and new implementations for testing and comparison.
+Tests live in `__tests__/`.

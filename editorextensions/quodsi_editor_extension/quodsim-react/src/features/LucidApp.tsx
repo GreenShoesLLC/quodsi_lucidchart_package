@@ -6,14 +6,10 @@ import { ModelPanel } from "./modelPanel";
 import { getLogger } from "@quodsi/lucid-shared";
 const logger = getLogger("LucidAppNew");
 
-interface LucidAppProps {
-  panelType?: "model";
-}
-
 /**
  * LucidApp component that serves as the main container for the application.
  */
-export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
+export const LucidApp: React.FC = () => {
 
   // Only show debug features in development
   const isDevelopment = import.meta.env.DEV;

@@ -3,7 +3,6 @@ import { v4 as uuid } from 'uuid';
 import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
 import type { SeizeReleaseDisposition } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
-import { useMessagingDispatch } from '../MessageContext';
 import type { ModelEditorTab } from 'quodsi_studio/platforms/shared';
 import { setPendingModelEditorTab } from '../../utils/pendingNavigation';
 
@@ -24,8 +23,7 @@ const ELEMENT_UPDATE_TIMEOUT_MS = 30_000;
  */
 export function useModelOpsSender() {
   const send = useSender();
-  const dispatch = useMessagingDispatch();
-  
+
   /**
    * Send a MODEL_VALIDATE message
    *
@@ -84,13 +82,6 @@ export function useModelOpsSender() {
     diagramElementType?: string,
     basedOnPageId?: string
   ) => {
-    // Dispatch ELEMENT_SAVE_START action to Redux to track save state
-    dispatch({
-      type: 'ELEMENT_SAVE_START',
-      elementId,
-      optimisticData: data, // Store optimistic data for immediate UI update
-    });
-
     // Send the ELEMENT_UPDATE message to the extension. A model settings save
     // carries the page id of the data it was based on (spec 2026-09-11 page
     // guard); shape writes carry none.
@@ -104,7 +95,7 @@ export function useModelOpsSender() {
       diagramElementType,
       ...(basedOnPageId !== undefined ? { basedOnPageId } : {})
     });
-  }, [send, dispatch]);
+  }, [send]);
   
   /**
    * Send a request to convert an element to a new type
