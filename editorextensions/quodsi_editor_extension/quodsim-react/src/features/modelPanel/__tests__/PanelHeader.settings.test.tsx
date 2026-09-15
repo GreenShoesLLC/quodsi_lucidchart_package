@@ -17,9 +17,6 @@ import { PanelHeader } from "../PanelHeader";
 
 // Heavy children that pull in messaging/auth context — irrelevant to this menu.
 vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
-vi.mock("../../SimulationComponentSelector", () => ({
-  SimulationComponentSelector: () => <div />,
-}));
 
 const baseProps = {
   modelName: "Test Model",

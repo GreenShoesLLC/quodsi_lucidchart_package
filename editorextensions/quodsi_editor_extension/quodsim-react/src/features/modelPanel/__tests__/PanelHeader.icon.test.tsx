@@ -5,9 +5,6 @@ import { render } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
 
 vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
-vi.mock("../../SimulationComponentSelector", () => ({
-  SimulationComponentSelector: () => <div />,
-}));
 const baseProps = {
   modelName: "Clinic",
   validationState: null,
