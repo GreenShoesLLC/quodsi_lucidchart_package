@@ -6,13 +6,11 @@
 // itself lives in the page's q_resources and outlives every claimant.
 //
 // So this editor owns no resource state. It chooses between the two SHARED
-// Studio panels the Resource block also uses:
-//   - no resourceId, or a resourceId that resolves to NOTHING in the
-//     model-root snapshot -> <ResourceLinkPicker claimantNoun="lane">, whose
-//     onLink writes ONLY the pointer into the lane. The create -> confirmed
-//     model-root write -> link ordering lives inside the picker; do not
-//     reimplement it here.
-//   - a resourceId that resolves -> <ResourceEditor> on that resource.
+// Studio panels the Resource block also uses, <ResourceEditor> and
+// <ResourceLinkPicker claimantNoun="lane">; which one is resolveClaimantView's
+// decision (below). The picker's onLink writes ONLY the pointer into the lane;
+// the create -> confirmed model-root write -> link ordering lives inside the
+// picker, so do not reimplement it here.
 //
 // Which of the two a lane gets is the SHARED resolveClaimantView's decision,
 // the same rule the Resource block and drawio/Visio shapes use: the row this
