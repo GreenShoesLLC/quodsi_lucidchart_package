@@ -264,7 +264,7 @@ batch, and a clear (`workScheduleId: undefined`) rides out as that shape's
 ### Debugging Tips
 1. Enable console logging in browser developer tools
 2. Use the test extension mode (`npm start`) for faster iteration
-3. The panel has no network access; data-connector calls go extension → Lucid → `quodsi_api` (`app/routers/lucid_router.py` in the monorepo), so watch the API's logs rather than the panel's Network tab
+3. Data-connector calls go extension → Lucid → `quodsi_api` (`app/routers/lucid_router.py` in the monorepo), so for those watch the API's logs rather than the panel's Network tab. The panels themselves can reach the network; only our API's CORS policy decides whether a browser call succeeds (see "Compiled Studies/Advisor modals" below)
 4. Validation messages appear in the React UI's validation panel
 5. Use browser's postMessage debugging to trace message flow
 
@@ -273,6 +273,12 @@ batch, and a clear (`workScheduleId: undefined`) rides out as that shape's
 The extension has no backend of its own. Simulation runs, results, auth sync and entitlements are served by the monorepo's FastAPI app (`quodsi_api/`), which fronts Azure Batch, Storage and Postgres. User authentication is Kinde, reached through Lucid's platform OAuth (see `_docs/auth-migration-to-kinde.md` for architecture).
 
 Local development against the backend: run `quodsi_api` locally (`uvicorn app.main:app --reload --port 8000` from `../quodsi_api/`) and build the extension with `manifest_local.json`, whose `callbackBaseUrl` is `http://localhost:8000/lucid/`.
+
+### Compiled Studies/Advisor modals
+
+The Studies and Advisor modals (quodsim-react `?view=studies` / `?view=advisor`, opened by `src/panels/StudiesModal.ts` / `AdvisorConsultModal.ts`) are Studio components compiled into the package. They call `quodsi_api` directly over REST, not through the data connector, so the target API's CORS (and Storage CORS, for browser-direct blob reads) must admit the Lucid extension origin (`https://<32 hex>.lucidextensions.app`, or `http://localhost:9900` in local test mode). Those lists are `corsOrigins` / `corsOriginRegex` in the monorepo's `infrastructure/bicep/env/*.bicepparam`.
+
+The API origin comes from `src/core/apiBaseUrl.ts` (keyed by package id). For local test mode, create `editorextensions/quodsi_editor_extension/local-api-url.txt` containing just the origin, e.g. `http://localhost:8000`. The file is gitignored, and `build-bundle.ps1` skips it (`QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1`), so cloud packages never carry it. Without it, a local test-mode build resolves by package id, so the modals hit the dev API.
 
 ## Lucid SDK Integration
 
