@@ -50,13 +50,15 @@ describe('useStudioApiSetup', () => {
     expect(requestToken).toHaveBeenCalledTimes(1)
   })
 
-  it('the refresher re-requests and reports true only for a new non-empty token', async () => {
+  it('the refresher re-requests and reports true for any non-empty token, even an unchanged one', async () => {
+    // Studio's interceptor retries a 401 at most once, so an unchanged token
+    // is still worth one retry (the extension may have refreshed it upstream).
     const { host, requestToken } = hostWith(['t1', 't2', 't2', undefined, ''])
     renderHook(() => useStudioApiSetup('https://api.example', host))
     expect(await h.getter!()).toBe('t1')
     expect(await h.refresher!()).toBe(true) // t2
     expect(await h.getter!()).toBe('t2') // cached from the refresh
-    expect(await h.refresher!()).toBe(false) // t2 again
+    expect(await h.refresher!()).toBe(true) // t2 again
     expect(await h.refresher!()).toBe(false) // undefined
     expect(await h.refresher!()).toBe(false) // ''
     expect(requestToken).toHaveBeenCalledTimes(5)

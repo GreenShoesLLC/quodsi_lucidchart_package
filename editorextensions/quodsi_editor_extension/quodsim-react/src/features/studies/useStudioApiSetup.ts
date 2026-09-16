@@ -15,14 +15,10 @@ export type TokenGetter = () => Promise<string | undefined>
 export function useStudioApiSetup(apiBaseUrl: string | null, host: LucidModalHost): TokenGetter {
   const [getToken] = useState(() => {
     let pending: Promise<string | undefined> | null = null
-    let token: string | undefined
     const request = (): Promise<string | undefined> => {
       const p: Promise<string | undefined> = host.requestToken().then(
         (t) => {
-          if (pending === p) {
-            token = t
-            if (!t) pending = null
-          }
+          if (pending === p && !t) pending = null
           return t
         },
         () => {
@@ -41,11 +37,9 @@ export function useStudioApiSetup(apiBaseUrl: string | null, host: LucidModalHos
     if (apiBaseUrl) {
       configureApi({ baseUrl: apiBaseUrl })
       registerTokenGetter(get)
-      registerAuthRefresher(async () => {
-        const previous = token
-        const fresh = await request()
-        return !!fresh && fresh !== previous
-      })
+      // Any non-empty token is worth the retry: Studio's interceptor retries
+      // a 401 at most once, so an unchanged token cannot loop.
+      registerAuthRefresher(async () => !!(await request()))
     }
     return get
   })
