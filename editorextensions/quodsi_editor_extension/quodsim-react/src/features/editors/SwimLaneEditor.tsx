@@ -20,10 +20,13 @@
 // resource deleted from the Resources tab leaves q_swimlane's pointer behind,
 // reported as `resource_link_dangling`) and a LOSING one (Lucid copies
 // shapeData wholesale on paste, so a copied swimlane carries the original's
-// resourceId) get the shared ResourceClaimNotice and the same picker, so this
-// lane can take another resource -- never ResourceEditor's "not found ...
-// Re-bootstrap" dead end. Lanes don't use ResourceClaimPanel because a linked
-// lane wraps the editor with assignment-mode controls.
+// resourceId) get the picker with `claimView` set, so this lane can take
+// another resource -- never ResourceEditor's "not found ... Re-bootstrap"
+// dead end. The picker itself renders the explanation (ResourceClaimNotice)
+// above its heading and drops its own "isn't linked to one yet" intro
+// whenever one applies, so this editor no longer renders that notice
+// itself. Lanes don't use ResourceClaimPanel because a linked lane wraps the
+// editor with assignment-mode controls.
 //
 // Two consequences worth stating, because both were true the other way round
 // until this task:
@@ -49,7 +52,6 @@ import {
   generateUUID,
 } from "@quodsi/lucid-shared";
 import {
-  ResourceClaimNotice,
   ResourceEditor,
   ResourceLinkPicker,
   resolveClaimantView,
@@ -206,12 +208,13 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({ elementData }) => {
         {activeLane && !editableResource && (
           /* Unlinked, DANGLING, or LOSING lane: pick or create the
              model-level resource it stands for. All three take the same
-             picker; only the copy above them differs. */
+             picker; `claimView` tells it which explanation (if any) to show
+             in place of its own intro paragraph. */
           <div className="space-y-2">
-            <ResourceClaimNotice view={claimView} claimantNoun="lane" />
             <ResourceLinkPicker
               accessor={accessor}
               claimantNoun="lane"
+              claimView={claimView}
               onLink={async (resourceId) => {
                 writeLane(activeLaneIndex, {
                   laneId: activeMapping?.laneId ?? generateUUID(),
