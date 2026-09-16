@@ -2,9 +2,9 @@
 //
 // Pure translation tests for embedWriteEnvelope.ts: one case per write kind,
 // asserting the envelope's type and data. Moved (and expanded to a
-// standalone file) from EmbeddedStudioFrame.write.test.tsx's "buildWriteEnvelope"
-// describe block when EmbeddedStudioFrame was deleted -- this module has no
-// DOM dependency, so it needs no component to exercise it.
+// standalone file) from the deleted Studio-iframe component's own write-relay
+// test, whose "buildWriteEnvelope" describe block covered this same module --
+// which has no DOM dependency, so it needs no component to exercise it.
 import { describe, it, expect } from 'vitest'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { buildWriteEnvelope, WRITE_ID_TTL_MS, WRITE_RESULT_TYPES, writeTtlMs } from '../embedWriteEnvelope'
