@@ -535,8 +535,8 @@ export class SimulationHandler {
 
         // NOTE: Pre-flight checks in SaveAndSubmitSimulation catch infrastructure errors immediately
         // (missing app package, pool not configured, etc.)
-        // Status updates will come from ListScenarios reconciliation (called by ScenarioEditor every 10s)
-        // ListScenarios has 3-minute stale detection as a fallback for runtime failures
+        // Status updates come from the API's run listing (the Studies surface polls the
+        // Studio REST routes), whose stale-run detection covers runtime failures
 
       } catch (submitError) {
         log.error('Error submitting simulation:', submitError);
