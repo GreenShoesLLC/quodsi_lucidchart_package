@@ -1,7 +1,7 @@
 // quodsim-react/src/features/studies/__tests__/lucidModalHost.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared'
-import { createLucidModalHost, type ModalHostPorts } from '../lucidModalHost'
+import { createLucidModalHost, windowPorts, type ModalHostPorts } from '../lucidModalHost'
 
 function harness() {
   const listeners = new Set<(e: EnvelopeBase) => void>()
@@ -90,5 +90,43 @@ describe('createLucidModalHost', () => {
     expect(env.source).toBe('studio-embed-iframe')
     reply(EnvelopeMessageType.STATES_UPDATE_RESULT, { success: true }, env.id)
     await expect(done).resolves.toEqual({})
+  })
+})
+
+describe('windowPorts', () => {
+  const envelope = { id: 'e1', type: EnvelopeMessageType.STUDIO_TOKEN, source: 'host', target: 'studio-embed-iframe', version: '1.0', data: {} }
+  // jsdom ignores a MessageEvent's constructor `source`; define it explicitly.
+  // In jsdom window.parent === window, so `window` stands in for the Lucid frame.
+  function dispatch(data: unknown, source: unknown) {
+    const ev = new MessageEvent('message', { data })
+    Object.defineProperty(ev, 'source', { value: source, configurable: true })
+    window.dispatchEvent(ev)
+  }
+
+  it('delivers only envelopes from the parent frame, until unlistened', () => {
+    const ports = windowPorts(vi.fn())
+    const cb = vi.fn()
+    const off = ports.listen(cb)
+    dispatch(envelope, null)
+    dispatch(envelope, {})
+    dispatch({ hello: 'not an envelope' }, window.parent)
+    expect(cb).not.toHaveBeenCalled()
+    dispatch(envelope, window.parent)
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenCalledWith(envelope)
+    off()
+    dispatch(envelope, window.parent)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('posts envelopes to the parent frame and sends through the given sender', () => {
+    const send = vi.fn()
+    const post = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {})
+    const ports = windowPorts(send)
+    ports.postEnvelope(envelope as EnvelopeBase)
+    expect(post).toHaveBeenCalledWith(envelope, '*')
+    ports.send(EnvelopeMessageType.CLOSE_MODAL)
+    expect(send).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+    post.mockRestore()
   })
 })
