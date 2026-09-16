@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { queryClientDefaultOptions } from 'quodsi_studio/lib/queryClientDefaults'
-import { useMessaging } from '../../messaging/MessageProvider'
-import { createLucidModalHost, windowPorts, type LucidModalHost } from './lucidModalHost'
+import type { LucidModalHost } from './lucidModalHost'
+import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
 import { ModalHeader } from './ModalHeader'
 
@@ -19,21 +19,21 @@ const Consult = lazy(() =>
 /** The Advisor modal: Studio's compiled consult surface, with a writer so its
  *  suggestions can be applied to the diagram through the extension. */
 export function AdvisorModalView() {
-  const { sendMessage } = useMessaging()
   const params = useMemo(() => new URLSearchParams(window.location.search), [])
   const apiBaseUrl = params.get('apiBaseUrl')
   const title = params.get('title') ?? 'Ask the Advisor'
-  const host = useMemo(() => createLucidModalHost(windowPorts(sendMessage), { withWriter: true }), [sendMessage])
+  const host = useLucidModalHost({ withWriter: true })
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
-  useStudioApiSetup(apiBaseUrl, host)
+  const getToken = useStudioApiSetup(apiBaseUrl, host)
 
   useEffect(() => {
     host.connect()
     let cancelled = false
-    void host.requestToken().then((t) => { if (!cancelled) setSignedIn(!!t) })
+    // Shares the api client's in-flight token request: one request per open.
+    void getToken().then((t) => { if (!cancelled) setSignedIn(!!t) })
     return () => { cancelled = true; host.disconnect() }
-  }, [host])
+  }, [host, getToken])
 
   return (
     <div className="h-full w-full flex flex-col bg-surface">

@@ -4,17 +4,19 @@ import type { FakeHost } from './fakeModalHost'
 
 const h = vi.hoisted(() => ({
   sendMessage: vi.fn(),
+  currentSend: null as null | ((...args: unknown[]) => void),
+  getter: null as null | (() => Promise<string | undefined>),
   order: [] as string[],
   consultProps: [] as Array<Record<string, any>>,
   hosts: [] as Array<{ host: unknown; opts: unknown }>,
 }))
 
 vi.mock('../../../messaging/MessageProvider', () => ({
-  useMessaging: () => ({ sendMessage: h.sendMessage }),
+  useMessaging: () => ({ sendMessage: h.currentSend ?? h.sendMessage }),
 }))
 vi.mock('quodsi_studio/lib/api', () => ({
   configureApi: vi.fn((opts: { baseUrl: string }) => { h.order.push(`configureApi:${opts.baseUrl}`) }),
-  registerTokenGetter: vi.fn(),
+  registerTokenGetter: vi.fn((g: () => Promise<string | undefined>) => { h.getter = g }),
   registerAuthRefresher: vi.fn(),
 }))
 vi.mock('quodsi_studio/platforms/studies', () => ({
@@ -49,6 +51,8 @@ const hostEntry = () => h.hosts[h.hosts.length - 1]
 describe('AdvisorModalView', () => {
   beforeEach(() => {
     h.sendMessage.mockClear()
+    h.currentSend = null
+    h.getter = null
     h.order.length = 0
     h.consultProps.length = 0
     h.hosts.length = 0
@@ -88,5 +92,28 @@ describe('AdvisorModalView', () => {
     expect(screen.getByText('Ask the Advisor')).toBeInTheDocument()
     fireEvent.click(screen.getByTitle('Close and return to your diagram'))
     expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+  })
+
+  it('keeps one live writer host when sendMessage changes identity after mount', async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Model')
+    const { rerender } = render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    const laterSend = vi.fn()
+    h.currentSend = laterSend
+    rerender(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+
+    expect(h.hosts).toHaveLength(1)
+    const host = hostEntry().host as FakeHost
+    expect(host.disconnect).not.toHaveBeenCalled()
+    expect(last().host).toBe(host)
+
+    const got = h.getter!()
+    await act(async () => { host.token.resolve('tok') })
+    await expect(got).resolves.toBe('tok')
+    expect(host.requestToken).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByTitle('Close and return to your diagram'))
+    expect(laterSend).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
   })
 })

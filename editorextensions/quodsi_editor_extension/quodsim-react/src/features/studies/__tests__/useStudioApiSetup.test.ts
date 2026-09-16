@@ -61,4 +61,33 @@ describe('useStudioApiSetup', () => {
     expect(await h.refresher!()).toBe(false) // ''
     expect(requestToken).toHaveBeenCalledTimes(5)
   })
+
+  it('coalesces concurrent getter calls into one request and returns the getter', async () => {
+    let release!: (t: string | undefined) => void
+    const requestToken = vi.fn(() => new Promise<string | undefined>((r) => { release = r }))
+    const host = { requestToken } as unknown as LucidModalHost
+    const { result } = renderHook(() => useStudioApiSetup('https://api.example', host))
+    const a = h.getter!()
+    const b = result.current()
+    release('t1')
+    await expect(a).resolves.toBe('t1')
+    await expect(b).resolves.toBe('t1')
+    expect(requestToken).toHaveBeenCalledTimes(1)
+  })
+
+  it('an empty token is not cached: the next call asks again', async () => {
+    const { host, requestToken } = hostWith([undefined, 't1'])
+    renderHook(() => useStudioApiSetup('https://api.example', host))
+    expect(await h.getter!()).toBeUndefined()
+    expect(await h.getter!()).toBe('t1')
+    expect(await h.getter!()).toBe('t1')
+    expect(requestToken).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns a working getter even without an apiBaseUrl', async () => {
+    const { host, requestToken } = hostWith(['t1'])
+    const { result } = renderHook(() => useStudioApiSetup(null, host))
+    expect(await result.current()).toBe('t1')
+    expect(requestToken).toHaveBeenCalledTimes(1)
+  })
 })

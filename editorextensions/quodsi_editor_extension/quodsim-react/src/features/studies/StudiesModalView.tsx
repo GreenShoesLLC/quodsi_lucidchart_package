@@ -2,8 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { queryClientDefaultOptions } from 'quodsi_studio/lib/queryClientDefaults'
 import type { EmbedSyncStatus, SurfaceScreen } from 'quodsi_studio/platforms/studies'
-import { useMessaging } from '../../messaging/MessageProvider'
-import { createLucidModalHost, windowPorts } from './lucidModalHost'
+import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
 import { ModalHeader } from './ModalHeader'
 
@@ -12,15 +11,14 @@ const StudiesSurface = lazy(() => import('quodsi_studio/platforms/studies').then
 /** The Studies modal: Studio's compiled Studies surface, fed by the extension
  *  (token, model sync, scenarios) over this modal's messaging. */
 export function StudiesModalView() {
-  const { sendMessage } = useMessaging()
   const params = useMemo(() => new URLSearchParams(window.location.search), [])
   const apiBaseUrl = params.get('apiBaseUrl')
   const title = params.get('title') ?? 'Studies'
   const cachedModelId = params.get('modelId') || null
 
-  const host = useMemo(() => createLucidModalHost(windowPorts(sendMessage)), [sendMessage])
+  const host = useLucidModalHost()
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
-  useStudioApiSetup(apiBaseUrl, host)
+  const getToken = useStudioApiSetup(apiBaseUrl, host)
 
   const [screen, setScreen] = useState<SurfaceScreen | null>(cachedModelId ? { kind: 'studies', modelId: cachedModelId } : null)
   const [resetKey, setResetKey] = useState(0)
@@ -31,7 +29,8 @@ export function StudiesModalView() {
   useEffect(() => {
     host.connect()
     let cancelled = false
-    void host.requestToken().then((t) => { if (!cancelled) setSignedIn(!!t) })
+    // Shares the api client's in-flight token request: one request per open.
+    void getToken().then((t) => { if (!cancelled) setSignedIn(!!t) })
     void host.requestModelSync().then((r) => {
       if (cancelled) return
       if (r.modelId && r.modelId !== cachedModelId) {
@@ -41,7 +40,7 @@ export function StudiesModalView() {
       setSyncStatus(r.synced ? 'done' : 'failed')
     })
     return () => { cancelled = true; host.disconnect() }
-  }, [host, cachedModelId])
+  }, [host, getToken, cachedModelId])
 
   return (
     <div className="h-full w-full flex flex-col bg-surface">

@@ -4,17 +4,21 @@ import type { FakeHost } from './fakeModalHost'
 
 const h = vi.hoisted(() => ({
   sendMessage: vi.fn(),
+  // What useMessaging currently returns; tests swap it to mimic the provider
+  // handing out a new sendMessage identity after mount.
+  currentSend: null as null | ((...args: unknown[]) => void),
+  getter: null as null | (() => Promise<string | undefined>),
   order: [] as string[],
   surfaceProps: [] as Array<Record<string, any>>,
   hosts: [] as Array<{ host: unknown; opts: unknown }>,
 }))
 
 vi.mock('../../../messaging/MessageProvider', () => ({
-  useMessaging: () => ({ sendMessage: h.sendMessage }),
+  useMessaging: () => ({ sendMessage: h.currentSend ?? h.sendMessage }),
 }))
 vi.mock('quodsi_studio/lib/api', () => ({
   configureApi: vi.fn((opts: { baseUrl: string }) => { h.order.push(`configureApi:${opts.baseUrl}`) }),
-  registerTokenGetter: vi.fn(),
+  registerTokenGetter: vi.fn((g: () => Promise<string | undefined>) => { h.getter = g }),
   registerAuthRefresher: vi.fn(),
 }))
 vi.mock('quodsi_studio/platforms/studies', () => ({
@@ -54,6 +58,8 @@ async function renderView() {
 describe('StudiesModalView', () => {
   beforeEach(() => {
     h.sendMessage.mockClear()
+    h.currentSend = null
+    h.getter = null
     h.order.length = 0
     h.surfaceProps.length = 0
     h.hosts.length = 0
@@ -138,5 +144,37 @@ describe('StudiesModalView', () => {
     expect(screen.getByText('My Studies')).toBeInTheDocument()
     fireEvent.click(screen.getByTitle('Close and return to your diagram'))
     expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+  })
+
+  it('keeps one live host when sendMessage changes identity after mount', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    const { rerender } = await renderView()
+    const laterSend = vi.fn()
+    h.currentSend = laterSend
+    rerender(<StudiesModalView />)
+    await screen.findByTestId('surface')
+
+    expect(h.hosts).toHaveLength(1)
+    expect(host().disconnect).not.toHaveBeenCalled()
+    expect(lastProps().scenariosSource.host).toBe(host())
+
+    // Studio's registered getter still answers through the live host.
+    const got = h.getter!()
+    await act(async () => { host().token.resolve('tok') })
+    await expect(got).resolves.toBe('tok')
+
+    // Sends go out through the current sendMessage.
+    fireEvent.click(screen.getByTitle('Close and return to your diagram'))
+    expect(laterSend).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+  })
+
+  it('one open sends one token request, shared by the sign-in probe and the api getter', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const got = h.getter!()
+    await act(async () => { host().token.resolve('tok') })
+    await expect(got).resolves.toBe('tok')
+    await expect(h.getter!()).resolves.toBe('tok')
+    expect(host().requestToken).toHaveBeenCalledTimes(1)
   })
 })
