@@ -87,4 +87,63 @@ describe('useLucidBlankSlateAccessor', () => {
     result.current.reviewDiagram?.()
     expect(openDiagramMappingModal).toHaveBeenCalledWith('doc-1', 'pg-1')
   })
+
+  it('two convertDiagram calls post only one AUTO_CONVERT_PAGE, and one success result resolves both', async () => {
+    const { result } = renderHook(() => useLucidBlankSlateAccessor(base))
+    const counts = { activities: 2, generators: 0, resources: 0, entities: 0, connectors: 1, skipped: 0 }
+    let p1!: Promise<unknown>
+    let p2!: Promise<unknown>
+    act(() => { p1 = result.current.convertDiagram() })
+    act(() => { p2 = result.current.convertDiagram() })
+
+    const requests = posted.filter((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)
+    expect(requests).toHaveLength(1)
+
+    hostReplies({ id: requests[0].id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true, result: counts } })
+    await expect(p1).resolves.toEqual(counts)
+    await expect(p2).resolves.toEqual(counts)
+  })
+
+  it('after a timeout, calling convertDiagram again posts no second message, and a late result resolves it', async () => {
+    vi.useFakeTimers()
+    const { result } = renderHook(() => useLucidBlankSlateAccessor(base))
+    const counts = { activities: 1, generators: 0, resources: 0, entities: 0, connectors: 0, skipped: 0 }
+
+    let p1!: Promise<unknown>
+    act(() => { p1 = result.current.convertDiagram() })
+    const request = posted.find((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)!
+
+    act(() => { vi.advanceTimersByTime(AUTO_CONVERT_TIMEOUT_MS + 1) })
+    await expect(p1).rejects.toThrow('Conversion timed out')
+
+    let p2!: Promise<unknown>
+    act(() => { p2 = result.current.convertDiagram() })
+    const requests = posted.filter((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)
+    expect(requests).toHaveLength(1)
+
+    hostReplies({ id: request.id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true, result: counts } })
+    await expect(p2).resolves.toEqual(counts)
+  })
+
+  it('unmounting mid-conversion clears the timer and listener: a later result does not throw or resolve anything', () => {
+    vi.useFakeTimers()
+    const removeSpy = vi.spyOn(window, 'removeEventListener')
+    const { result, unmount } = renderHook(() => useLucidBlankSlateAccessor(base))
+
+    let settled = false
+    act(() => {
+      result.current.convertDiagram().then(
+        () => { settled = true },
+        () => { settled = true },
+      )
+    })
+    const request = posted.find((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)!
+
+    unmount()
+    expect(removeSpy).toHaveBeenCalledWith('message', expect.any(Function))
+
+    expect(() => hostReplies({ id: request.id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true, result: {} } })).not.toThrow()
+    expect(() => vi.advanceTimersByTime(AUTO_CONVERT_TIMEOUT_MS + 1)).not.toThrow()
+    expect(settled).toBe(false)
+  })
 })
