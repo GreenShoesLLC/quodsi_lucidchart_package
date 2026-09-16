@@ -2,10 +2,10 @@
   "schemaVersion": "2026.12.01",
   "metadata": {
     "version": "2026.12.01",
-    "timestamp": "2026-08-17T11:46:39.973Z"
+    "timestamp": "2026-09-16T01:50:13.865Z"
   },
   "name": "Model E0A1R0G1",
-  "replications": 1,
+  "replications": 10,
   "seed": 12345,
   "timeUnit": "minutes",
   "runTime": {
@@ -26,7 +26,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "790d7142-e719-46d1-a984-ed59f94ac820",
+          "id": "b0ec8d9b-2fc9-4823-8123-3b5424f46dd5",
           "type": "delay",
           "duration": {
             "unit": "minutes",

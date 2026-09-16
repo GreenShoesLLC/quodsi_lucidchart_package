@@ -2,10 +2,10 @@
   "schemaVersion": "2026.12.01",
   "metadata": {
     "version": "2026.12.01",
-    "timestamp": "2026-08-17T11:46:40.106Z"
+    "timestamp": "2026-09-16T01:50:13.898Z"
   },
   "name": "Sequential Flow Model",
-  "replications": 1,
+  "replications": 10,
   "seed": 12345,
   "timeUnit": "minutes",
   "runTime": {
@@ -30,7 +30,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "b7ad695a-e27b-4b3c-823e-f4e08a9853af",
+          "id": "b47a9e24-be1e-4ad4-997d-99115dd40111",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -47,7 +47,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "b7ad695a-e27b-4b3c-823e-f4e08a9853af",
+          "id": "b47a9e24-be1e-4ad4-997d-99115dd40111",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -64,7 +64,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "b7ad695a-e27b-4b3c-823e-f4e08a9853af",
+          "id": "b47a9e24-be1e-4ad4-997d-99115dd40111",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",

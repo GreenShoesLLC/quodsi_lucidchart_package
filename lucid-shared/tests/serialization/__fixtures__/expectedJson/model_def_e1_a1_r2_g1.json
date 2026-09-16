@@ -2,10 +2,10 @@
   "schemaVersion": "2026.12.01",
   "metadata": {
     "version": "2026.12.01",
-    "timestamp": "2026-08-17T11:46:40.076Z"
+    "timestamp": "2026-09-16T01:50:13.881Z"
   },
   "name": "Model E1A1R2G1",
-  "replications": 1,
+  "replications": 10,
   "seed": 12345,
   "timeUnit": "minutes",
   "runTime": {
@@ -30,7 +30,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "3e8025be-cb15-4310-9e14-4b65afbfa8c0",
+          "id": "e7aa1723-981e-45e5-bbf2-94f984effbe5",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -39,7 +39,7 @@
           "resourceRequirementId": "resource-1"
         },
         {
-          "id": "3e556b39-18be-4657-b1d0-5c92353d9252",
+          "id": "d5cd1515-0c0c-4149-a2da-63c1818122ea",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
