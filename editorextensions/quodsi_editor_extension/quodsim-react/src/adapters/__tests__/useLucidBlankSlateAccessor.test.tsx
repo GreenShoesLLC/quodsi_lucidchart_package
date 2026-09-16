@@ -125,25 +125,56 @@ describe('useLucidBlankSlateAccessor', () => {
     await expect(p2).resolves.toEqual(counts)
   })
 
-  it('unmounting mid-conversion clears the timer and listener: a later result does not throw or resolve anything', () => {
+  it('unmounting mid-conversion tears down the in-flight state: a late result does not settle it, the pending timeout does not fire, and no second AUTO_CONVERT_PAGE is posted', async () => {
     vi.useFakeTimers()
-    const removeSpy = vi.spyOn(window, 'removeEventListener')
     const { result, unmount } = renderHook(() => useLucidBlankSlateAccessor(base))
 
-    let settled = false
+    let settled: 'pending' | 'resolved' | 'rejected' = 'pending'
     act(() => {
       result.current.convertDiagram().then(
-        () => { settled = true },
-        () => { settled = true },
+        () => { settled = 'resolved' },
+        () => { settled = 'rejected' },
       )
     })
     const request = posted.find((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)!
+    expect(posted.filter((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)).toHaveLength(1)
 
     unmount()
-    expect(removeSpy).toHaveBeenCalledWith('message', expect.any(Function))
 
-    expect(() => hostReplies({ id: request.id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true, result: {} } })).not.toThrow()
-    expect(() => vi.advanceTimersByTime(AUTO_CONVERT_TIMEOUT_MS + 1)).not.toThrow()
-    expect(settled).toBe(false)
+    // A late result for the now-torn-down in-flight id must not settle the promise.
+    hostReplies({ id: request.id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true, result: {} } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(settled).toBe('pending')
+
+    // The waiter's own 60s timeout must have been cancelled by teardown too --
+    // advancing past it must not fire a delayed rejection either.
+    await act(async () => { await vi.advanceTimersByTimeAsync(AUTO_CONVERT_TIMEOUT_MS + 1) })
+    expect(settled).toBe('pending')
+
+    expect(posted.filter((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)).toHaveLength(1)
+  })
+
+  it('a failure reply clears the in-flight entry, so a later convertDiagram call starts a genuinely new conversion', async () => {
+    const { result } = renderHook(() => useLucidBlankSlateAccessor(base))
+
+    let p1!: Promise<unknown>
+    act(() => { p1 = result.current.convertDiagram() })
+    const first = posted.find((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)!
+    expect(posted.filter((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)).toHaveLength(1)
+
+    hostReplies({ id: first.id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: false, error: 'page locked' } })
+    await expect(p1).rejects.toThrow('page locked')
+
+    // Unlike the timeout case, a settled (failed) conversion is no longer in
+    // flight, so the next call must post a brand new AUTO_CONVERT_PAGE.
+    let p2!: Promise<unknown>
+    act(() => { p2 = result.current.convertDiagram() })
+    const requests = posted.filter((m) => m.type === EnvelopeMessageType.AUTO_CONVERT_PAGE)
+    expect(requests).toHaveLength(2)
+    expect(requests[1].id).not.toBe(first.id)
+
+    const counts = { activities: 1, generators: 0, resources: 0, entities: 0, connectors: 0, skipped: 0 }
+    hostReplies({ id: requests[1].id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true, result: counts } })
+    await expect(p2).resolves.toEqual(counts)
   })
 })
