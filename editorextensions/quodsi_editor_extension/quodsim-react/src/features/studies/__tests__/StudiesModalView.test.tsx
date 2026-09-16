@@ -81,7 +81,7 @@ describe('StudiesModalView', () => {
     expect(lastProps().scenariosSource.host).toBe(host())
     const firstKey = lastProps().resetKey
 
-    await act(async () => { host().sync.resolve({ modelId: 'm1', synced: true }) })
+    await act(async () => { host().sync.emit({ modelId: 'm1', synced: true }) })
     expect(lastProps().syncStatus).toBe('done')
     expect(lastProps().resetKey).toBe(firstKey)
     expect(lastProps().initialScreen).toEqual({ kind: 'studies', modelId: 'm1' })
@@ -93,7 +93,7 @@ describe('StudiesModalView', () => {
     expect(lastProps().initialScreen).toBeNull()
     const firstKey = lastProps().resetKey
 
-    await act(async () => { host().sync.resolve({ modelId: 'm2', synced: true }) })
+    await act(async () => { host().sync.emit({ modelId: 'm2', synced: true }) })
     expect(lastProps().initialScreen).toEqual({ kind: 'studies', modelId: 'm2' })
     expect(lastProps().resetKey).not.toBe(firstKey)
     expect(lastProps().syncStatus).toBe('done')
@@ -102,8 +102,45 @@ describe('StudiesModalView', () => {
   it('a sync error marks sync failed', async () => {
     setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
     await renderView()
-    await act(async () => { host().sync.resolve({ synced: false, error: 'x' }) })
+    await act(async () => { host().sync.emit({ synced: false, error: 'x' }) })
     expect(lastProps().syncStatus).toBe('failed')
+  })
+
+  it('a late sync after the timeout moves a cached open from failed to done', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const firstKey = lastProps().resetKey
+    await act(async () => { host().sync.emit({ synced: false, error: 'The extension did not answer.' }) })
+    expect(lastProps().syncStatus).toBe('failed')
+    await act(async () => { host().sync.emit({ modelId: 'm1', synced: true }) })
+    expect(lastProps().syncStatus).toBe('done')
+    expect(lastProps().resetKey).toBe(firstKey)
+  })
+
+  it('a late sync after the timeout on a first open sets the screen and resets, as an on-time reply would', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example')
+    await renderView()
+    const firstKey = lastProps().resetKey
+    await act(async () => { host().sync.emit({ synced: false, error: 'The extension did not answer.' }) })
+    expect(lastProps().syncStatus).toBe('failed')
+    expect(lastProps().initialScreen).toBeNull()
+    await act(async () => { host().sync.emit({ modelId: 'm2', synced: true }) })
+    expect(lastProps().syncStatus).toBe('done')
+    expect(lastProps().initialScreen).toEqual({ kind: 'studies', modelId: 'm2' })
+    expect(lastProps().resetKey).not.toBe(firstKey)
+  })
+
+  it('unmount unsubscribes from model sync; a later result updates nothing', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example')
+    const { unmount } = await renderView()
+    const count = h.surfaceProps.length
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    unmount()
+    expect(host().sync.unsubscribe).toHaveBeenCalledTimes(1)
+    await act(async () => { host().sync.emit({ modelId: 'm2', synced: true }) })
+    expect(h.surfaceProps.length).toBe(count)
+    expect(errors).not.toHaveBeenCalled()
+    errors.mockRestore()
   })
 
   it('no token: asks the user to sign in instead of showing the surface', async () => {

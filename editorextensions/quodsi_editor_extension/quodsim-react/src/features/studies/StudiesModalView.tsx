@@ -31,7 +31,8 @@ export function StudiesModalView() {
     let cancelled = false
     // Shares the api client's in-flight token request: one request per open.
     void getToken().then((t) => { if (!cancelled) setSignedIn(!!t) })
-    void host.requestModelSync().then((r) => {
+    // May report twice: a timeout (failed), then a late reply (done).
+    const stopSync = host.requestModelSync((r) => {
       if (cancelled) return
       if (r.modelId && r.modelId !== cachedModelId) {
         setScreen({ kind: 'studies', modelId: r.modelId })
@@ -39,7 +40,7 @@ export function StudiesModalView() {
       }
       setSyncStatus(r.synced ? 'done' : 'failed')
     })
-    return () => { cancelled = true; host.disconnect() }
+    return () => { cancelled = true; stopSync(); host.disconnect() }
   }, [host, getToken, cachedModelId])
 
   return (

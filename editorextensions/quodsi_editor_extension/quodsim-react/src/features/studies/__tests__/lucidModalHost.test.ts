@@ -66,18 +66,47 @@ describe('createLucidModalHost', () => {
     await expect(second).resolves.toBeUndefined()
   })
 
-  it('reports model sync from STUDIO_EMBED_PATH and times out', async () => {
+  it('reports model sync from STUDIO_EMBED_PATH, then stops listening', () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)
     host.connect()
-    const p = host.requestModelSync()
+    const onResult = vi.fn()
+    host.requestModelSync(onResult)
     expect(ports.sent.at(-1)).toEqual([EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH, undefined])
     reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm1', synced: true })
-    await expect(p).resolves.toEqual({ modelId: 'm1', synced: true, error: undefined })
+    expect(onResult).toHaveBeenCalledTimes(1)
+    expect(onResult).toHaveBeenCalledWith({ modelId: 'm1', synced: true, error: undefined })
+    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm9', synced: true })
+    expect(onResult).toHaveBeenCalledTimes(1)
+  })
 
-    const q = host.requestModelSync()
-    await vi.advanceTimersByTimeAsync(30_000)
-    await expect(q).resolves.toEqual({ synced: false, error: 'The extension did not answer.' })
+  it('reports a timeout after 120 s (not before), then still delivers a late reply', async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const onResult = vi.fn()
+    host.requestModelSync(onResult)
+    await vi.advanceTimersByTimeAsync(119_999)
+    expect(onResult).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(onResult).toHaveBeenCalledTimes(1)
+    expect(onResult).toHaveBeenLastCalledWith({ synced: false, error: 'The extension did not answer.' })
+
+    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm1', synced: true })
+    expect(onResult).toHaveBeenCalledTimes(2)
+    expect(onResult).toHaveBeenLastCalledWith({ modelId: 'm1', synced: true, error: undefined })
+  })
+
+  it('unsubscribing stops both the timeout and a late reply', async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const onResult = vi.fn()
+    const off = host.requestModelSync(onResult)
+    off()
+    await vi.advanceTimersByTimeAsync(120_000)
+    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm1', synced: true })
+    expect(onResult).not.toHaveBeenCalled()
   })
 
   it('writes through extension envelopes and maps the *_RESULT back', async () => {

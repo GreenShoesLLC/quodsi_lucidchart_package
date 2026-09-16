@@ -16,7 +16,10 @@ import {
 } from 'quodsi_studio/platforms/lucid-host'
 import { buildWriteEnvelope, WRITE_RESULT_TYPES, writeTtlMs } from './embedWriteEnvelope'
 
-export const HOST_REQUEST_TIMEOUT_MS = 30_000
+/** How long model sync waits before reporting failure. The sync may call a
+ *  cold-starting dev API (30-60 s), so this is generous; a reply that still
+ *  arrives later is delivered too. */
+export const MODEL_SYNC_TIMEOUT_MS = 120_000
 const TOKEN_TIMEOUT_MS = 10_000
 const TOKEN_RETRY_MS = 1_000
 
@@ -26,9 +29,14 @@ export interface ModalHostPorts {
   listen(cb: (envelope: EnvelopeBase) => void): () => void
 }
 
+export interface ModelSyncResult { modelId?: string; synced: boolean; error?: string }
+
 export interface LucidModalHost extends LucidHost {
   requestToken(): Promise<string | undefined>
-  requestModelSync(): Promise<{ modelId?: string; synced: boolean; error?: string }>
+  /** Ask the extension to sync the model. `onResult` gets the reply; if none
+   *  arrives within MODEL_SYNC_TIMEOUT_MS it first gets a `{synced:false}`
+   *  timeout result, then still gets a late reply. Returns an unsubscribe. */
+  requestModelSync(onResult: (result: ModelSyncResult) => void): () => void
   connect(): void
   disconnect(): void
 }
@@ -137,20 +145,21 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
       const deadline = window.setTimeout(() => finish(undefined), TOKEN_TIMEOUT_MS)
       ports.send(EnvelopeMessageType.REQUEST_STUDIO_TOKEN)
     }),
-    requestModelSync: () => new Promise((resolve) => {
+    requestModelSync: (onResult) => {
+      const stop = () => { off(); window.clearTimeout(timer) }
       const off = on((env) => {
         if (env.type !== EnvelopeMessageType.STUDIO_EMBED_PATH) return
         const d = (env.data ?? {}) as { modelId?: string; synced?: boolean; error?: string }
-        off()
-        window.clearTimeout(timer)
-        resolve({ modelId: d.modelId, synced: !!d.synced, error: d.error })
+        stop()
+        onResult({ modelId: d.modelId, synced: !!d.synced, error: d.error })
       })
+      // Report the timeout but keep listening: a late reply is still delivered.
       const timer = window.setTimeout(() => {
-        off()
-        resolve({ synced: false, error: 'The extension did not answer.' })
-      }, HOST_REQUEST_TIMEOUT_MS)
+        onResult({ synced: false, error: 'The extension did not answer.' })
+      }, MODEL_SYNC_TIMEOUT_MS)
       ports.send(EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH)
-    }),
+      return stop
+    },
   }
   return host
 }
