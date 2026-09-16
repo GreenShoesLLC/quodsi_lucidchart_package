@@ -43,7 +43,7 @@ jest.mock('../../src/core/ModelManager', () => ({
 }));
 
 import { SimulationRunHandler } from '../../src/core/messaging/handlers/simulationRunHandler';
-import { ModelDefinition } from '@quodsi/lucid-shared';
+import { ModelDefinition, ModelSerializerFactory } from '@quodsi/lucid-shared';
 
 function makeFakePageWithTitle(id: string, title: string): any {
   const page = makeFakePage(id);
@@ -102,6 +102,26 @@ describe('SimulationRunHandler.handleRequestStudioCatalog (review R1)', () => {
   it('sends the catalog (does not throw) for a storage-parsed calendar-mode model, with finishDateTime intact', async () => {
     stubModelDefinition = buildStorageParsedCalendarModel();
 
+    // `startDateTime` and `finishDateTime` reach the catalog through two
+    // deliberately different shapes (see `simulationRunHandler.ts` ~:455-483,
+    // ~:517-534): `startDateTime` comes from the SERIALIZED wire model
+    // (`ISerializedModel`), which is local-naive by wire convention — the
+    // engine schema has no timezone-carrying wire format for it, so the
+    // serializer formats the `Date` using its local getters (see
+    // `@quodsi/shared`'s `toWallClockIso`), not `.toISOString()`. It is NOT a
+    // UTC instant. `finishDateTime` is a host-projection-only convenience
+    // with no clean-wire slot at all, read straight off the live domain
+    // `Model` and passed through as an ISO string, so it IS the UTC instant.
+    // Hand-typing a UTC literal for `startDateTime` only ever passed on a
+    // UTC-TZ machine; deriving it from the same serialization path the
+    // handler actually uses keeps the assertion honest under any timezone.
+    // Do not "fix" production to make `startDateTime` UTC to match a literal
+    // — that would break the wire convention every other host relies on.
+    const expectedSerializedModel = ModelSerializerFactory.create(stubModelDefinition).serialize(
+      stubModelDefinition,
+    ) as { startDateTime?: string | null };
+    expect(typeof expectedSerializedModel.startDateTime).toBe('string');
+
     const handled = SimulationRunHandler.handleMessage(requestCatalogMessage());
     expect(handled).toBe(true);
 
@@ -122,7 +142,7 @@ describe('SimulationRunHandler.handleRequestStudioCatalog (review R1)', () => {
         data: expect.objectContaining({
           catalog: expect.objectContaining({
             model: expect.objectContaining({
-              startDateTime: '2027-01-01T00:00:00.000Z',
+              startDateTime: expectedSerializedModel.startDateTime,
               finishDateTime: '2027-01-31T00:00:00.000Z',
             }),
           }),
