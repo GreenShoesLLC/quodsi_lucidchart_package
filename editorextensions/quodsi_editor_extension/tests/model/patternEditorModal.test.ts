@@ -3,9 +3,10 @@
 // Pins PatternEditorModal's constructor-time computation: the url it builds
 // for the packaged extension's quodsim-react bundle, and the size it derives
 // from the caller's ModalSize preference via MODAL_SIZE_DIMENSIONS /
-// DEFAULT_MODAL_SIZE (the same @quodsi/lucid-shared config StudioEmbedModal
-// already uses -- see that file's own `size === 'fullscreen' ? {fullScreen:
-// true} : MODAL_SIZE_DIMENSIONS[size]` branch, mirrored here).
+// DEFAULT_MODAL_SIZE (the same @quodsi/lucid-shared config StudiesModal /
+// AdvisorConsultModal already use -- see either file's own
+// `size === 'fullscreen' ? {fullScreen: true} : MODAL_SIZE_DIMENSIONS[size]`
+// branch, mirrored here).
 //
 // The real lucid-extension-sdk Modal is swapped for tests/__mocks__/lucid-extension-sdk.ts
 // via jest.config.ts's moduleNameMapper; that mock's Modal captures whatever
@@ -15,7 +16,7 @@
 //
 // core/messaging/index must be mocked BEFORE PatternEditorModal is imported.
 // RoutingModal imports `router` from there, and that barrel re-exports
-// MessageRouter -> handlers/index -> simulationRunHandler -> StudioEmbedModal
+// MessageRouter -> handlers/index -> simulationRunHandler -> StudiesModal
 // -> RoutingModal -- a real circular require. Reaching it via PatternEditorModal
 // (rather than via a handler test, which mocks this same module for the same
 // reason -- see simulationRunHandler.requestStudioCatalog.test.ts) makes the

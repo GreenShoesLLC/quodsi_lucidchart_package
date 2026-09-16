@@ -7,7 +7,8 @@ import { ModelManager } from '../../ModelManager';
 import { getLogger } from '@quodsi/lucid-shared';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
-import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
+import { StudiesModal } from '../../../panels/StudiesModal';
+import { AdvisorConsultModal } from '../../../panels/AdvisorConsultModal';
 import { DiagramMappingModal } from '../../../panels/DiagramMappingModal';
 import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
@@ -24,15 +25,11 @@ export class SimulationRunHandler {
    */
   private static scenarioModelIdCache = new Map<string, string>();
 
-  /**
-   * Context for the most recent pending (uncached) embed open: the surface and
-   * the in-flight UpsertModel promise. The embed view pulls the resolved path
-   * via REQUEST_STUDIO_EMBED_PATH, which awaits this promise. One studio-embed
-   * modal is open at a time, so a single slot suffices.
-   */
-  private static pendingEmbedResolve:
-    | { surface: 'studies'; idPromise: Promise<string | null | undefined> }
-    | null = null;
+  /** The most recent Studies open: resolves to the server model id once the
+   *  upsert AND the snapshot push are done; rejects with the failure. The
+   *  Studies view pulls the outcome via REQUEST_STUDIO_EMBED_PATH. One
+   *  studio-embed modal is open at a time, so a single slot suffices. */
+  private static studiesSync: { promise: Promise<string>; cachedModelId?: string } | null = null;
 
   /**
    * The diagram-mapping modal currently open, if any. SINGLETON GUARD, same
@@ -40,7 +37,7 @@ export class SimulationRunHandler {
    * (see that file's own comment for the full rationale): hold the open
    * modal, refuse a second open, release on frameClosed, identity-checked so
    * a late frameClosed from an earlier modal cannot clear a newer one's
-   * claim. Unlike the Studies embed above, opening this modal has no
+   * claim. Unlike the Studies modal above, opening this modal has no
    * server round trip in the way at all (no UpsertModel), so a double-click
    * would otherwise open two modals just as readily as the pattern/schedule
    * editors did before they got the same guard.
@@ -73,10 +70,6 @@ export class SimulationRunHandler {
 
       case EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL:
         SimulationRunHandler.handleOpenDiagramMappingModal(msg);
-        return true;
-
-      case EnvelopeMessageType.OPEN_STATUS_MODAL:
-        SimulationRunHandler.handleOpenStatusModal(msg);
         return true;
 
       case EnvelopeMessageType.OPEN_ADVISOR_MODAL:
@@ -132,46 +125,40 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Embed-modal opener for the Studies surface: ensure the model row exists
-   * in quodsi_api (UpsertModel) to resolve its server id, then open the
-   * embedded Studio at /embed/models/<serverModelId>/<surface>.
+   * Handle OPEN_STUDIES_MODAL: open the compiled Studies surface
+   * (quodsim-react ?view=studies, StudiesModal) at once, and sync the model in
+   * the background: UpsertModel (ensures the quodsi_api row exists and
+   * resolves its server id) AND the model-definition snapshot push. The view
+   * pulls the outcome via REQUEST_STUDIO_EMBED_PATH.
    *
-   * Diagram Mapping used to share this path too (a second `surface` union
-   * member) until it moved inline (spec 2026-09-15, "opens inline") — see
-   * DiagramMappingModal.ts's header for why the Studio embed was pure
-   * overhead for that screen. `surface` is narrowed to the one remaining
-   * caller rather than dropped as a parameter, so this function's shape and
-   * behaviour for Studies stay byte-identical.
+   * The modal opens before any network wait -- only canonicalModelName
+   * precedes it. A cached server id (earlier open of the same page) rides on
+   * the modal URL so the view can start loading immediately; the reply still
+   * waits for this open's snapshot push.
+   *
+   * Diagram Mapping used to share this path until it moved inline (spec
+   * 2026-09-15, "opens inline") -- see DiagramMappingModal.ts's header.
    *
    * IMPORTANT: do NOT push Lucid shapeData scenarios here. Scenarios are
-   * DB-authoritative once the embed owns them — the editor reads/writes
+   * DB-authoritative once the Studies surface owns them -- it reads/writes
    * quodsi_api directly. SyncScenarios is replace-all, so pushing shapeData
-   * (which lacks scenarios created in the embed) would soft-delete them.
-   * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
+   * (which lacks scenarios created in the Studies surface) would soft-delete
+   * them. upsertModel passes an empty list, so the helper skips SyncScenarios
+   * (UpsertModel only).
    */
-  private static async openEmbedSurfaceModal(
-    msg: EnvelopeBase, surface: 'studies', title: string,
-  ): Promise<void> {
+  private static async handleOpenStudiesModal(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
     const client = ModelManager.getClient();
     const viewport = new Viewport(client);
     const page = viewport.getCurrentPage();
     if (!page || !data?.documentId || !data?.pageId) {
-      SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: missing page/documentId/pageId`);
+      SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: missing page/documentId/pageId');
       return;
     }
     const cacheKey = `${data.documentId}:${data.pageId}`;
     const modelName = await canonicalModelName(ModelManager.getInstance());
 
-    const openModal = (serverModelId: string): void => {
-      new StudioEmbedModal(client, {
-        title,
-        studioPath: `/embed/models/${serverModelId}/${surface}`,
-        modalSize: data.modalSize,
-      }).show();
-    };
-
-    // Fire-and-forget upsert that keeps the DB row current and refreshes the cache.
+    // Upsert that keeps the DB row current and refreshes the id cache.
     const refreshUpsert = (): Promise<string | null | undefined> =>
       upsertModel(client, {
         documentId: data.documentId!,
@@ -182,60 +169,47 @@ export class SimulationRunHandler {
         return serverModelId;
       });
 
-    // Push the live model definition snapshot (envelope-level
-    // modelDefinitionSnapshot → models.model_definition_snapshot)
-    // fire-and-forget AFTER the modal opens — never block the Studies button on
-    // the serialize+sync.
-    const pushSnapshot = (): void => {
-      void pushModelDefinitionSnapshot(client, { documentId: data.documentId!, pageId: data.pageId!, modelName })
-        .catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: snapshot push failed', e));
-    };
-
     const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
-    if (cached) {
-      // Reopen: open immediately with the cached id; keep the row fresh in the
-      // background. The editor reads scenarios from quodsi_api anyway.
-      openModal(cached);
-      pushSnapshot();
-      void refreshUpsert().catch((e) =>
-        SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: background UpsertModel failed:`, e));
-      return;
-    }
-
-    // First (uncached) open: DON'T block the modal on UpsertModel. Open the modal
-    // INSTANTLY in a pending state, resolve the server model id in the background,
-    // and hand it to the embed view when it pulls REQUEST_STUDIO_EMBED_PATH. The
-    // upsert runs concurrently with the iframe + quodsim-react boot, so by the
-    // time the view asks, the id is usually already resolved.
+    new StudiesModal(client, { modelId: cached, modalSize: data.modalSize }).show();
     const idPromise = refreshUpsert();
-    idPromise.catch((e) => // never let it become an unhandled rejection
-      SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: UpsertModel failed:`, e));
-    SimulationRunHandler.pendingEmbedResolve = { surface, idPromise };
-    new StudioEmbedModal(client, { title, pending: true, modalSize: data.modalSize }).show();
-    pushSnapshot();
+    // Push the live model definition snapshot (envelope-level
+    // modelDefinitionSnapshot -> models.model_definition_snapshot) AFTER the
+    // modal opens -- never block the Studies button on the serialize+sync.
+    const snapshotPromise = pushModelDefinitionSnapshot(client, {
+      documentId: data.documentId!,
+      pageId: data.pageId!,
+      modelName,
+    });
+    const promise = Promise.all([idPromise, snapshotPromise]).then(([id]) => {
+      const resolved = id ?? cached;
+      if (!resolved) throw new Error('model id unresolved');
+      return resolved;
+    });
+    // Never let it become an unhandled rejection; the view receives the error
+    // through REQUEST_STUDIO_EMBED_PATH.
+    promise.catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: sync failed', e));
+    SimulationRunHandler.studiesSync = { promise, cachedModelId: cached };
   }
 
   /**
-   * Handle REQUEST_STUDIO_EMBED_PATH: the embed view (opened in pending mode)
-   * pulls the resolved studio path once its channel has registered. Await the
-   * in-flight UpsertModel, then reply STUDIO_EMBED_PATH with
-   * /embed/models/<id>/<surface> (or an error). Pull (not push) sidesteps the
-   * channel-registration race that drops messages sent before the view is ready.
+   * Handle REQUEST_STUDIO_EMBED_PATH: the Studies view pulls the outcome of
+   * the most recent open's sync once its channel has registered. Replies
+   * STUDIO_EMBED_PATH { modelId?, synced, error? } after both the upsert and
+   * the snapshot push settle. On failure the cached id (if any) still rides
+   * along. Pull (not push) sidesteps the channel-registration race that drops
+   * messages sent before the view is ready.
    */
   private static async handleRequestStudioEmbedPath(msg: EnvelopeBase): Promise<void> {
-    const ctx = SimulationRunHandler.pendingEmbedResolve;
     const channel = SimulationRunHandler.getResponseChannel(msg);
-    let studioPath: string | null = null;
-    let error: string | undefined;
-    if (!ctx) {
-      error = 'no pending embed open';
+    const sync = SimulationRunHandler.studiesSync;
+    let data: { modelId?: string; synced: boolean; error?: string };
+    if (!sync) {
+      data = { synced: false, error: 'no pending Studies open' };
     } else {
       try {
-        const id = await ctx.idPromise;
-        if (id) studioPath = `/embed/models/${id}/${ctx.surface}`;
-        else error = 'model id unresolved';
+        data = { modelId: await sync.promise, synced: true };
       } catch (e) {
-        error = e instanceof Error ? e.message : String(e);
+        data = { modelId: sync.cachedModelId, synced: false, error: e instanceof Error ? e.message : String(e) };
       }
     }
     router.send(channel, {
@@ -244,23 +218,15 @@ export class SimulationRunHandler {
       source: 'host',
       target: `${channel}-iframe`,
       version: '1.0',
-      data: { studioPath, error },
+      data,
     });
-  }
-
-  /**
-   * Handle OPEN_STUDIES_MODAL: open the embedded Studio Studies surface at
-   * /embed/models/<id>/studies.
-   */
-  private static async handleOpenStudiesModal(msg: EnvelopeBase): Promise<void> {
-    return SimulationRunHandler.openEmbedSurfaceModal(msg, 'studies', 'Studies');
   }
 
   /**
    * Handle OPEN_DIAGRAM_MAPPING_MODAL: open the Diagram Mapping screen
    * inline, in the extension's own quodsim-react bundle (spec 2026-09-15,
    * "opens inline") — see DiagramMappingModal.ts's header for why this no
-   * longer goes through openEmbedSurfaceModal. There is no server round trip
+   * longer goes through a Studio embed. There is no server round trip
    * in the way, so the modal opens synchronously and immediately, guarded
    * against a double-open the same way ModelRootHandler's pattern/schedule/
    * work-schedule/settings modals are (see openDiagramMappingModal's own
@@ -291,31 +257,15 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle OPEN_STATUS_MODAL: open the public Studio /status health page in the
-   * generic embed modal. Unlike Studies, /status is model-agnostic and public
-   * (no UpsertModel, no server model id, no token relay needed).
-   */
-  private static handleOpenStatusModal(msg: EnvelopeBase): void {
-    const data = msg.data as { modalSize?: ModalSize };
-    new StudioEmbedModal(ModelManager.getClient(), {
-      title: 'Status',
-      studioPath: '/status',
-      fullScreenPath: '/status', // enables the "↗ open full screen" pop-out
-      modalSize: data?.modalSize,
-      isPublic: true, // /status is public (PublicLayout) — no token relay/overlay
-    }).show();
-  }
-
-  /**
-   * Handle OPEN_ADVISOR_MODAL: open the embedded Studio Advisor consult at
-   * /embed/advisor with the focus on the query string. Like /status and
-   * unlike Studies, it needs no server model id -- the consult carries the
-   * document inline (relayed via STUDIO_CATALOG.document when the embed
-   * requests the catalog) -- so it opens concretely and instantly: no
-   * UpsertModel, no pending path. Not public: the token relay must run.
+   * Handle OPEN_ADVISOR_MODAL: open the compiled Advisor consult
+   * (quodsim-react ?view=advisor, AdvisorConsultModal) with the focus on its
+   * URL. Unlike Studies it needs no server model id -- the consult carries the
+   * document inline (relayed via STUDIO_CATALOG.document when the view
+   * requests the catalog) -- so it opens instantly: no UpsertModel. The token
+   * relay still runs (REQUEST_STUDIO_TOKEN).
    *
    * Malformed or missing fields degrade to a Model consult rather than a
-   * refused open; the Studio page applies the same fallback on its side.
+   * refused open (AdvisorConsultModal applies the defaults).
    */
   private static handleOpenAdvisorModal(msg: EnvelopeBase): void {
     const data = (msg.data ?? {}) as {
@@ -325,29 +275,20 @@ export class SimulationRunHandler {
       mode?: string;
       modalSize?: ModalSize;
     };
-    // Hand-encoded, like every sibling modal (PatternEditorModal,
-    // StudioEmbedModal, ...): the Lucid extension sandbox has no
-    // `URLSearchParams` (smoke 2026-09-04 -- `new URLSearchParams()` threw a
-    // ReferenceError the router swallowed, so the click did nothing).
-    const pairs: Array<[string, string]> = [
-      ['focusType', data.focusType ?? 'Model'],
-      ['focusId', data.focusId ?? ''],
-    ];
-    if (data.focusName) pairs.push(['focusName', data.focusName]);
-    pairs.push(['mode', data.mode ?? 'definition']);
-    const query = pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-    new StudioEmbedModal(ModelManager.getClient(), {
-      title: 'Ask the Advisor',
-      studioPath: `/embed/advisor?${query}`,
+    new AdvisorConsultModal(ModelManager.getClient(), {
+      focusType: data.focusType,
+      focusId: data.focusId,
+      focusName: data.focusName,
+      mode: data.mode,
       modalSize: data.modalSize,
     }).show();
   }
 
   /**
-   * Handle RUN_SCENARIO from the embedded Studio editor: delegate to the
+   * Handle RUN_SCENARIO from the Studies view: delegate to the
    * existing live run path (Studio can't serialize the live model or produce
    * the page SVG). Awaits the outcome from handleRunRequest and relays a
-   * RUN_SCENARIO_RESULT back to the embed iframe.
+   * RUN_SCENARIO_RESULT back to the Studies view.
    */
   private static async handleRunScenario(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { scenarioId?: string; enableAnimation?: boolean };
@@ -386,7 +327,7 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle LOCATE_ELEMENT from the embedded Studio iframe: select the
+   * Handle LOCATE_ELEMENT from the Studies/Advisor view: select the
    * corresponding block or line on the Lucid canvas so the user can see it.
    */
   private static async handleLocateElement(msg: EnvelopeBase): Promise<void> {
@@ -419,15 +360,15 @@ export class SimulationRunHandler {
 
   /**
    * Handle REQUEST_STUDIO_TOKEN: relay a FRESH Kinde access token back to the
-   * 'studio-embed' embed iframe. getTokenForRelay refreshes via Lucid when the
-   * cached token is expiring, so the embed never receives a dead token (which
-   * would 401 its scenario sync). Routing is derived from msg.source so a single
+   * 'studio-embed' channel (the compiled Studies/Advisor views).
+   * getTokenForRelay refreshes via Lucid when the cached token is expiring, so
+   * the view never receives a dead token (which would 401 its API calls). Routing is derived from msg.source so a single
    * handler serves the channel.
    */
   private static async handleRequestStudioToken(msg: EnvelopeBase): Promise<void> {
     const token = await AuthHandler.getTokenForRelay();
     const channel = SimulationRunHandler.getResponseChannel(msg);
-    SimulationRunHandler.logger.debug('Relaying Studio token to embed iframe', { hasToken: !!token, channel });
+    SimulationRunHandler.logger.debug('Relaying Studio token to the studio-embed view', { hasToken: !!token, channel });
     router.send(channel, {
       id: `msg-${Date.now()}`,
       type: EnvelopeMessageType.STUDIO_TOKEN,
@@ -441,7 +382,8 @@ export class SimulationRunHandler {
   /**
    * Handle REQUEST_STUDIO_CATALOG: serialize the live model, build the full
    * model catalog (model block + per-record fields), and send STUDIO_CATALOG
-   * back to the embed iframe for validation.
+   * back to the Studies/Advisor view (validation, and the Advisor's
+   * document).
    */
   private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
     const modelManager = ModelManager.getInstance();
@@ -496,8 +438,8 @@ export class SimulationRunHandler {
   /**
    * Build the full relay catalog from a serialized model. Populates the `model`
    * block (timing fields) and all per-record optional fields (capacity, weight,
-   * sourceConfig, rootClause, etc.) so the embedded Studio can validate the
-   * full model without a separate API round-trip.
+   * sourceConfig, rootClause, etc.) so the compiled Studies/Advisor modal can
+   * validate the full model without a separate API round-trip.
    *
    * The returned shape is structurally compatible with
    * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`
@@ -598,8 +540,8 @@ export class SimulationRunHandler {
       // even when the serializer sparse-omitted the key, so the catalog's own
       // shape stays stable across models.
       workSchedules: model.workSchedules ?? [],
-      // The WHOLE clean wire document, for the embedded Advisor consult
-      // (/embed/advisor). The catalog projection above is deliberately lossy
+      // The WHOLE clean wire document, for the Advisor consult (the compiled
+      // ?view=advisor modal; Studio's legacy /embed/advisor too). The catalog projection above is deliberately lossy
       // (no states, arrival patterns or connector conditions) and the Advisor
       // is grounded in the clean schema, so it must see the document the
       // serializer actually produced. Receiver: quodsi_studio

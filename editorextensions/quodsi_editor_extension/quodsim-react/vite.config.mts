@@ -58,7 +58,14 @@ export default defineConfig({
     // a null dispatcher ("Cannot read properties of null (reading 'useMemo')")
     // under Vitest's SSR-style resolution the moment ActivityActionsTab
     // actually rendered (clicking into the Actions tab).
-    dedupe: ['react', 'react-dom', 'lucide-react', '@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+    //
+    // @tanstack/react-query + recharts added (compiled Studies/Advisor modals):
+    // the Studies surface is the first Studio code here to use them. react-query
+    // must be ONE module instance or QueryClientProvider's context is invisible
+    // to Studio's useQuery ("No QueryClient set"); recharts calls React hooks.
+    // The lockfile pins react-query to Studio's version (5.99.2). recharts is
+    // not a dependency of this package: it resolves up to the monorepo root.
+    dedupe: ['react', 'react-dom', 'lucide-react', '@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@tanstack/react-query', 'recharts'],
   },
   build: {
     // The extension's webpack hook and both deploy scripts copy from `build/`,

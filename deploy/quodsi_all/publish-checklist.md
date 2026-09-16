@@ -33,6 +33,12 @@
 
 ## LucidChart extension
 
+- [ ] Before uploading, confirm the target env's API **and** Storage CORS admit this package's
+      extension origin (`https://<32 hex>.lucidextensions.app`). The compiled Studies/Advisor
+      modals call the API directly, so without it they fail in the browser. The lists are
+      `corsOrigins` / `corsOriginRegex` in the monorepo's
+      `infrastructure/bicep/env/<env>.bicepparam` (Storage CORS reuses `corsOrigins` only, not
+      the regex). Deploy the bicep first, then upload.
 - [ ] Run: `.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev`
   - Creates `package_v{VERSION}.zip` and git tag `lucid/v{VERSION}/Dev`
 - [ ] Upload `package_v{VERSION}.zip` to LucidChart developer portal

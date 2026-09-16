@@ -63,6 +63,8 @@ interface PanelHeaderProps {
   diagramElementType?: DiagramElementType;
   referenceData?: EditorReferenceData;
   onViewModelJson?: () => void;
+  /** Opens Studio's /status in a tab. The Status item is hidden when absent
+   *  (the extension reported no Studio URL). */
   onOpenStatus?: () => void;
   /**
    * Complexity Views (Task 11b) -- the DELIBERATE entry point to Settings,
@@ -216,16 +218,18 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               Developer Tools
             </button>
           )}
-          <button
-            onClick={() => {
-              setMenuOpen(false);
-              onOpenStatus?.();
-            }}
-            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
-          >
-            <Activity className="w-3 h-3 text-gray-500" />
-            Status
-          </button>
+          {onOpenStatus && (
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenStatus();
+              }}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+            >
+              <Activity className="w-3 h-3 text-gray-500" />
+              Status
+            </button>
+          )}
           <button
             onClick={() => {
               setMenuOpen(false);
@@ -299,7 +303,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           )}
         </div>
 
-        {/* Row 3: Studies launcher (primary action; opens the embedded Studio modal) */}
+        {/* Row 3: Studies launcher (primary action; opens the compiled Studies modal) */}
         <StudiesLaunchButton />
       </>
     );

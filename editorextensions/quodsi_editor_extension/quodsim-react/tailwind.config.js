@@ -4,6 +4,12 @@ module.exports = {
     // Studio panels imported into quodsim-react -- Tailwind needs to see
     // their source so utility classes used by them are not purged.
     "../../../../quodsi_studio/src/platforms/shared/**/*.{ts,tsx}",
+    // The compiled Studies/Advisor surfaces reach these Studio folders (same
+    // list quodsi_drawio uses).
+    "../../../../quodsi_studio/src/pages/{model-detail,study-detail,study-create,scenario-results,animation}/**/*.{ts,tsx}",
+    "../../../../quodsi_studio/src/features/results/**/*.{ts,tsx}",
+    "../../../../quodsi_studio/src/study-ui/**/*.{ts,tsx}",
+    "../../../../quodsi_studio/src/components/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

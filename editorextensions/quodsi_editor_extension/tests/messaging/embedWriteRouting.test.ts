@@ -1,7 +1,7 @@
 // tests/messaging/embedWriteRouting.test.ts
 //
-// Advisor write half: the embedded Studio iframe (via the panel's
-// EmbeddedStudioFrame) posts ELEMENT_UPDATE / MODEL_ROOT_UPDATE /
+// Advisor write half: the compiled Studies/Advisor modal (via
+// lucidModalHost.ts's writer) posts ELEMENT_UPDATE / MODEL_ROOT_UPDATE /
 // STATES_UPDATE / ENTITIES_UPDATE with source 'studio-embed-iframe'. Each
 // handler must answer on the 'studio-embed' channel -- on 'model' the result
 // would never reach the iframe and the write would hang for 30 s. Mocks

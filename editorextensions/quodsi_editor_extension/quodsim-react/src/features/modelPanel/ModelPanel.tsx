@@ -45,8 +45,16 @@ export const ModelPanel: React.FC = () => {
   // Selection context (document/page ids, selection changes) and sign-in state
   const { selection, auth } = useMessaging();
 
-  // Simulation run senders (diagram mapping, status, settings and Advisor modals)
-  const { openDiagramMappingModal, openStatusModal, openSettingsModal, openAdvisorModal } = useSimulationRunSender();
+  // Simulation run senders (diagram mapping, settings and Advisor modals)
+  const { openDiagramMappingModal, openSettingsModal, openAdvisorModal } = useSimulationRunSender();
+
+  // Status opens Studio's public /status page in a browser tab (no modal).
+  // The Studio origin comes from the extension's AUTH_STATUS config; without
+  // one there is nowhere to go, so PanelHeader hides the Status item.
+  const studioBaseUrl = auth?.config?.studioBaseUrl;
+  const onOpenStatus = studioBaseUrl
+    ? () => { window.open(`${studioBaseUrl}/status`, '_blank', 'noopener'); }
+    : undefined;
 
   // The Model editor's tab, held here so it survives ElementEditor's
   // page-keyed remount (spec 2026-09-13).
@@ -245,7 +253,7 @@ export const ModelPanel: React.FC = () => {
           diagramElementType={diagramElementType}
           referenceData={referenceData}
           onViewModelJson={handleViewModelJson}
-          onOpenStatus={() => openStatusModal()}
+          onOpenStatus={onOpenStatus}
           onOpenSettings={() => openSettingsModal()}
         />}
 

@@ -77,16 +77,16 @@ export enum EnvelopeMessageType {
   REQUEST_STUDIO_TOKEN = "REQUEST_STUDIO_TOKEN",
   STUDIO_TOKEN = "STUDIO_TOKEN",
 
-  // Studio Embed deferred-path relay. The modal opens INSTANTLY in a "pending"
-  // state (before the server model id is resolved); the embed view PULLS the
-  // resolved studioPath (REQUEST → reply) once its channel is registered — pull,
-  // not push, to avoid the channel-registration race that drops pushed messages.
+  // Studies sync relay. The Studies modal opens INSTANTLY (before the model
+  // upsert and snapshot push finish); the view PULLS the outcome
+  // (REQUEST → reply, data { modelId?, synced, error? }) once its channel is
+  // registered — pull, not push, to avoid the channel-registration race that
+  // drops pushed messages. The names are kept from the Studio-embed era.
   REQUEST_STUDIO_EMBED_PATH = "REQUEST_STUDIO_EMBED_PATH",
   STUDIO_EMBED_PATH = "STUDIO_EMBED_PATH",
 
   // Embedded Studio surfaces
   OPEN_STUDIES_MODAL = "OPEN_STUDIES_MODAL",
-  OPEN_STATUS_MODAL = "OPEN_STATUS_MODAL",
   OPEN_ADVISOR_MODAL = "OPEN_ADVISOR_MODAL",
   REQUEST_STUDIO_CATALOG = "REQUEST_STUDIO_CATALOG",
   STUDIO_CATALOG = "STUDIO_CATALOG",

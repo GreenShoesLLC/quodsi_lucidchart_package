@@ -89,8 +89,8 @@ export class ModelRootHandler {
    * Handle OPEN_PATTERN_MODAL: open the arrival-pattern editor in a real
    * Lucid modal over the whole application. Lives here (not
    * simulationRunHandler) because the pattern editor is a model-root-adjacent
-   * editor with no server-side model to resolve -- unlike the embedded Studio
-   * surface (Studies), it needs nothing but the shape id already on hand, and
+   * editor with no server-side model to resolve -- unlike the compiled
+   * Studies surface, it needs nothing but the shape id already on hand, and
    * this file is where the model-root projection it edits (arrivalPatterns)
    * is otherwise read/written.
    */
@@ -257,10 +257,10 @@ export class ModelRootHandler {
     if (msg.source === 'schedule-iframe') return 'schedule';
     if (msg.source === 'work-schedule-iframe') return 'work-schedule';
     if (msg.source === 'settings-iframe') return 'settings';
-    // The embedded Studio iframe (Advisor write half) writes through the
-    // panel's EmbeddedStudioFrame with source 'studio-embed-iframe'; its
-    // RESULT must come back on the studio-embed channel or the iframe's
-    // write hangs for the full 30 s timeout.
+    // The compiled Studies/Advisor modal (Advisor write half) writes with
+    // source 'studio-embed-iframe'; its RESULT must come back on the
+    // studio-embed channel or the modal's write hangs for the full 30 s
+    // timeout.
     if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     return 'model';
   }

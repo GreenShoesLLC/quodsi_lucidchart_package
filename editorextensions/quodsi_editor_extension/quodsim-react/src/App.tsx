@@ -2,12 +2,15 @@ import React from "react";
 import { MessageProvider } from "./messaging/MessageProvider";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
-import { StudioEmbedView } from "./features/embed/StudioEmbedView";
 import { PatternEditorView } from "./features/pattern/PatternEditorView";
 import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
 import { SettingsEditorView } from "./features/settings/SettingsEditorView";
 import { DiagramMappingView } from "./features/diagramMapping/DiagramMappingView";
+
+// Lazy: the compiled Studio surfaces stay out of the panel's entry chunk.
+const StudiesModalView = React.lazy(() => import("./features/studies/StudiesModalView").then((m) => ({ default: m.StudiesModalView })));
+const AdvisorModalView = React.lazy(() => import("./features/studies/AdvisorModalView").then((m) => ({ default: m.AdvisorModalView })));
 
 export const App: React.FC = () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -62,11 +65,13 @@ export const App: React.FC = () => {
     );
   }
 
-  if (urlParams.get("view") === "studio-embed") {
+  // Compiled Studies / Advisor modals keep the studio-embed channel role.
+  if (urlParams.get("view") === "studies" || urlParams.get("view") === "advisor") {
+    const View = urlParams.get("view") === "studies" ? StudiesModalView : AdvisorModalView;
     return (
       <MessageProvider initialPanelType="studio-embed">
         <div className="h-full w-full">
-          <StudioEmbedView />
+          <React.Suspense fallback={null}><View /></React.Suspense>
         </div>
       </MessageProvider>
     );

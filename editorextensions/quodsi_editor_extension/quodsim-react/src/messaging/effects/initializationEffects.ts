@@ -54,7 +54,10 @@ export function usePanelTypeDetectionEffect(
         // The Settings modal (Complexity Views, Task 11b) -- same reasoning
         // as work-schedule above.
         detectedType = "settings";
-      } else if (viewParam === "studio-embed") {
+      } else if (viewParam === "studies" || viewParam === "advisor") {
+        // The compiled Studies / Advisor modals keep the studio-embed channel
+        // role. App passes the same value as the prop; listed explicitly for
+        // the reason given under work-schedule.
         detectedType = "studio-embed";
       } else if (viewParam === "results") {
         // Modal mode: view=results takes precedence

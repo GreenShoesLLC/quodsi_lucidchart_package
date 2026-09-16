@@ -4,7 +4,9 @@
 // 2026-09-13 §1). The shared editor routes model-level issues to Basic and
 // entity issues to Entities itself; everything else with an element id is a
 // canvas shape the extension selects on LOCATE_ELEMENT -- the same rule
-// embedded Studio's resolver uses.
+// quodsi_studio's own lucid-embed resolver (createLucidSourceResolver in
+// platforms/lucid-embed/embeddedSourceResolver.ts, used by the compiled
+// Studies/Advisor modals) uses.
 
 import { useMemo } from 'react'
 import { isEntityIssue, isModelLevelIssue, type SourceResolver, type ValidationIssue } from '@quodsi/shared'

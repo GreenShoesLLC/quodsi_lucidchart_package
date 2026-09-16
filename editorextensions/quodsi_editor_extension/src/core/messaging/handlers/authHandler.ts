@@ -47,8 +47,8 @@ const STUDIO_URL_BY_PACKAGE_ID: Record<string, string> = {
  *   3. `undefined` — if the packageId is unknown or the Lucid global is not
  *      available (e.g. unit-test context).
  *
- * Exported so other extension modules (e.g. modals that embed Studio iframes)
- * can resolve the correct origin without duplicating this logic.
+ * Exported so other extension modules (e.g. the compiled Studies/Advisor
+ * modals) can resolve the correct origin without duplicating this logic.
  */
 export function getStudioBaseUrl(): string | undefined {
   if (__LOCAL_STUDIO_OVERRIDE__) {
@@ -561,10 +561,10 @@ export class AuthHandler {
   }
 
   /**
-   * Get a fresh token to relay into the embedded Studio iframe.
+   * Get a fresh token to relay into the compiled Studies/Advisor modal.
    *
    * The cached `currentToken` is set once at sign-in and never re-fetched, so
-   * after its ~1h TTL the embed would receive an expired token (sync 401s,
+   * after its ~1h TTL the modal would receive an expired token (sync 401s,
    * scenario create silently fails). Lucid's `getOAuthToken` refreshes the
    * access token server-side from its stored refresh token (prompting only if
    * the grant is truly dead), so re-calling it yields a fresh token. We only

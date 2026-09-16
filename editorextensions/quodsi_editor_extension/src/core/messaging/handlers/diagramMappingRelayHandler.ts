@@ -92,11 +92,12 @@ export function toPageConversionCounts(
  * APPLY_SHAPE_CHANGES.
  *
  * These messages now originate in the INLINE Diagram Mapping modal (spec
- * 2026-09-15, "opens inline") — not the embedded Studio diagram-mapping
- * screen (2B) this class originally served, which this handler no longer
- * relays for (see DiagramMappingModal.ts's header and EmbeddedStudioFrame.tsx
- * for that history). They are forwarded here by the extension message
- * router the same way regardless of source. The handler reuses the existing
+ * 2026-09-15, "opens inline") — not the Studio diagram-mapping screen (2B,
+ * formerly embedded via an iframe modal since removed) this class
+ * originally served, which this handler no longer relays for (see
+ * DiagramMappingModal.ts's header for that history). They are forwarded here
+ * by the extension message router the same way regardless of source. The
+ * handler reuses the existing
  * LucidPageAnalyzer.analyzePageForPreview() and
  * LucidPageConversionService.convertPageWithMappings() (the Phase-1
  * remove-then-add path). The inbound requestId is echoed in every result.

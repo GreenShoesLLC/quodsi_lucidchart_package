@@ -165,8 +165,8 @@ export function simulationsUsage(
  * not block users on transient state.
  *
  * Backend is the authoritative gate (returns 402 from
- * SaveAndSubmitSimulation / SubmitSimulationJob when a new run would
- * push the model over its cap); this helper just lets the panel grey
+ * SaveAndSubmitSimulation, or the Studio REST run routes, when a new run
+ * would push the model over its cap); this helper just lets the panel grey
  * out per-scenario Run buttons proactively.
  */
 export function canRunNewScenario(

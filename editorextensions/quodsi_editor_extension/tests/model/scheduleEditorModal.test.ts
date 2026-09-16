@@ -4,7 +4,7 @@
 // for the packaged extension's quodsim-react bundle, the size it derives
 // from the caller's ModalSize preference via MODAL_SIZE_DIMENSIONS /
 // DEFAULT_MODAL_SIZE (same @quodsi/lucid-shared config PatternEditorModal /
-// StudioEmbedModal already use), and that this modal carries a native Lucid
+// StudiesModal already use), and that this modal carries a native Lucid
 // title bar -- same as PatternEditorModal, and for the same reason: it gives
 // the modal a close affordance (Lucid's own X) that needs no CLOSE_MODAL
 // round trip through the iframe to work. See ScheduleEditorModal.ts's module
@@ -18,7 +18,7 @@
 //
 // core/messaging/index must be mocked BEFORE ScheduleEditorModal is imported.
 // RoutingModal imports `router` from there, and that barrel re-exports
-// MessageRouter -> handlers/index -> simulationRunHandler -> StudioEmbedModal
+// MessageRouter -> handlers/index -> simulationRunHandler -> StudiesModal
 // -> RoutingModal -- a real circular require. Reaching it via ScheduleEditorModal
 // (rather than via a handler test, which mocks this same module for the same
 // reason -- see simulationRunHandler.requestStudioCatalog.test.ts) makes the

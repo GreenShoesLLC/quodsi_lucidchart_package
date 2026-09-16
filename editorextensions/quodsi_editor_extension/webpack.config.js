@@ -39,6 +39,29 @@ function readLocalStudioOverride() {
   return "";
 }
 
+// Local-dev override for the quodsi_api URL the compiled Studies and Advisor
+// modals call (see src/core/apiBaseUrl.ts). Same rules as
+// readLocalStudioOverride(): read from `local-api-url.txt` (gitignored, one
+// line such as `http://localhost:8000`), skipped for cloud packages via
+// QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1.
+function readLocalApiOverride() {
+  if (process.env.QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE === "1") {
+    console.log("[webpack] __LOCAL_API_OVERRIDE__ skipped (QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1)");
+    return "";
+  }
+  const overrideFile = path.resolve(__dirname, "local-api-url.txt");
+  try {
+    const value = fs.readFileSync(overrideFile, "utf8").trim();
+    if (value) {
+      console.log(`[webpack] __LOCAL_API_OVERRIDE__ = ${value} (from ${overrideFile})`);
+      return value;
+    }
+  } catch {
+    // file doesn't exist — fine, no override
+  }
+  return "";
+}
+
 module.exports = (env, argv) => {
   // lucid-package's watch path calls this export with only an `env` argument,
   // so `argv` is undefined there - default to development. webpack-cli passes
@@ -72,6 +95,7 @@ module.exports = (env, argv) => {
   plugins: [
     new webpack.DefinePlugin({
       __LOCAL_STUDIO_OVERRIDE__: JSON.stringify(readLocalStudioOverride()),
+      __LOCAL_API_OVERRIDE__: JSON.stringify(readLocalApiOverride()),
       __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
     }),
     new WebpackShellPluginNext({

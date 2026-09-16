@@ -14,6 +14,11 @@ const config: Config.InitialOptions = {
   },
   // Route the real SDK to our hand-rolled mock for unit tests.
   setupFiles: [],
+  // webpack DefinePlugin constants (see webpack.config.js). Empty = no local
+  // override, the same as a cloud bundle.
+  globals: {
+    __LOCAL_API_OVERRIDE__: '',
+  },
   moduleDirectories: ['node_modules', '<rootDir>'],
 };
 

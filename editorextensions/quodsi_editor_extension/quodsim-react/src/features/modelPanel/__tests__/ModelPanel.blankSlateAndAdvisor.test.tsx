@@ -40,7 +40,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 vi.mock("../../../messaging/senders/simulationRunSender", () => ({
   useSimulationRunSender: () => ({
     openDiagramMappingModal: mocks.openDiagramMappingModal,
-    openStatusModal: vi.fn(),
     openSettingsModal: vi.fn(),
     openAdvisorModal: mocks.openAdvisorModal,
   }),
