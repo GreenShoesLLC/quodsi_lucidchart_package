@@ -55,26 +55,40 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
 
   // Writer: Studio's relay client, with ports that speak extension envelopes.
   const writeIds = new Map<string, { requestId: number; timer: number }>()
+  // The result callback createEmbedWriter registers via `addListener`, captured
+  // so `postMessage` can also deliver to it directly -- for the unknown-kind
+  // fast-fail below, which has no envelope/id to correlate through `on()`.
+  let resultListener: ((e: MessageEvent) => void) | null = null
   const writer = opts.withWriter
     ? createEmbedWriter({
         postMessage: (msg) => {
           const { requestId, kind, payload } = msg as EmbedWriteMessage
           const envelope = buildWriteEnvelope(kind as EmbedWriteKind, payload, uuid())
-          if (!envelope) return
+          if (!envelope) {
+            // Fail fast instead of leaving the writer to time out (mirrors the
+            // deleted EmbeddedStudioFrame's same fast-fail on an unknown kind).
+            resultListener?.(new MessageEvent('message', {
+              data: { type: QUODSI_EMBED_WRITE_RESULT, requestId, success: false, error: 'unknown write kind' },
+            }))
+            return
+          }
           const timer = window.setTimeout(() => writeIds.delete(envelope.id), writeTtlMs(kind as EmbedWriteKind))
           writeIds.set(envelope.id, { requestId, timer })
           ports.postEnvelope(envelope)
         },
-        addListener: (cb) => on((env) => {
-          const entry = writeIds.get(env.id)
-          if (!entry || !WRITE_RESULT_TYPES.has(env.type)) return
-          window.clearTimeout(entry.timer)
-          writeIds.delete(env.id)
-          const { success, errorMessage, ...rest } = (env.data ?? {}) as { success?: boolean; errorMessage?: string; [k: string]: unknown }
-          cb(new MessageEvent('message', {
-            data: { type: QUODSI_EMBED_WRITE_RESULT, requestId: entry.requestId, success: !!success, error: errorMessage, data: rest },
-          }))
-        }),
+        addListener: (cb) => {
+          resultListener = cb
+          return on((env) => {
+            const entry = writeIds.get(env.id)
+            if (!entry || !WRITE_RESULT_TYPES.has(env.type)) return
+            window.clearTimeout(entry.timer)
+            writeIds.delete(env.id)
+            const { success, errorMessage, ...rest } = (env.data ?? {}) as { success?: boolean; errorMessage?: string; [k: string]: unknown }
+            cb(new MessageEvent('message', {
+              data: { type: QUODSI_EMBED_WRITE_RESULT, requestId: entry.requestId, success: !!success, error: errorMessage, data: rest },
+            }))
+          })
+        },
       })
     : undefined
 

@@ -438,8 +438,8 @@ export class SimulationRunHandler {
   /**
    * Build the full relay catalog from a serialized model. Populates the `model`
    * block (timing fields) and all per-record optional fields (capacity, weight,
-   * sourceConfig, rootClause, etc.) so the embedded Studio can validate the
-   * full model without a separate API round-trip.
+   * sourceConfig, rootClause, etc.) so the compiled Studies/Advisor modal can
+   * validate the full model without a separate API round-trip.
    *
    * The returned shape is structurally compatible with
    * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`

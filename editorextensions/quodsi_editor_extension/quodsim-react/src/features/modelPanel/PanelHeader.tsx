@@ -303,7 +303,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           )}
         </div>
 
-        {/* Row 3: Studies launcher (primary action; opens the embedded Studio modal) */}
+        {/* Row 3: Studies launcher (primary action; opens the compiled Studies modal) */}
         <StudiesLaunchButton />
       </>
     );

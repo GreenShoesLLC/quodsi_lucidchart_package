@@ -89,8 +89,8 @@ export class ModelRootHandler {
    * Handle OPEN_PATTERN_MODAL: open the arrival-pattern editor in a real
    * Lucid modal over the whole application. Lives here (not
    * simulationRunHandler) because the pattern editor is a model-root-adjacent
-   * editor with no server-side model to resolve -- unlike the embedded Studio
-   * surface (Studies), it needs nothing but the shape id already on hand, and
+   * editor with no server-side model to resolve -- unlike the compiled
+   * Studies surface, it needs nothing but the shape id already on hand, and
    * this file is where the model-root projection it edits (arrivalPatterns)
    * is otherwise read/written.
    */

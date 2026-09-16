@@ -9,8 +9,9 @@
 // (model-root snapshots, referenceData), panel writes echo it back as
 // basedOnPageId, and handlers call assertWritePage before writing.
 //
-// Writes from the embedded Studio frame are exempt for now: that realm gets
-// its data from quodsi_api, not an extension snapshot (ClickUp 86e381h8g).
+// Writes from the compiled Studies/Advisor modal are exempt for now: that
+// realm gets its data from quodsi_api, not an extension snapshot (ClickUp
+// 86e381h8g).
 
 export const PAGE_GUARD_EXEMPT_SOURCE = 'studio-embed-iframe';
 

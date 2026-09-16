@@ -87,7 +87,7 @@ const MODEL_ROOT_KEYS = [
 
 /**
  * Handler for single-shape create/delete/move operations, driven by the
- * embedded Studio iframe (Advisor drawing half).
+ * compiled Advisor modal (AdvisorConsultModal, Advisor drawing half).
  */
 export class ShapeOpsHandler {
   /**
@@ -126,7 +126,7 @@ export class ShapeOpsHandler {
 
   /**
    * Determine which channel to send a response to. Today every shape-op
-   * message comes from the embedded Studio iframe ('studio-embed-iframe');
+   * message comes from the compiled Advisor modal ('studio-embed-iframe');
    * anything else falls back to 'model' the way ElementOpsHandler's own
    * getResponseChannel does for its unlisted sources.
    */

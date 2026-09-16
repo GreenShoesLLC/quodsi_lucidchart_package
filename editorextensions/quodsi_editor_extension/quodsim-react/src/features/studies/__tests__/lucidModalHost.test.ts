@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared'
 import { createLucidModalHost, windowPorts, type ModalHostPorts } from '../lucidModalHost'
+import { writeTtlMs } from '../embedWriteEnvelope'
 
 function harness() {
   const listeners = new Set<(e: EnvelopeBase) => void>()
@@ -90,6 +91,43 @@ describe('createLucidModalHost', () => {
     expect(env.source).toBe('studio-embed-iframe')
     reply(EnvelopeMessageType.STATES_UPDATE_RESULT, { success: true }, env.id)
     await expect(done).resolves.toEqual({})
+  })
+
+  it('an unknown write kind fails fast with no send, instead of waiting out the writer\'s own timeout', async () => {
+    const { ports } = harness()
+    const host = createLucidModalHost(ports, { withWriter: true })
+    host.connect()
+    host.writer!.connect()
+    await expect(host.writer!.write('bogus' as any, {} as any)).rejects.toThrow('unknown write kind')
+    expect(ports.posted).toHaveLength(0)
+  })
+
+  it('evicts an unanswered write after writeTtlMs and drops a late RESULT; the write itself already settled via its own timeout', async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports, { withWriter: true })
+    host.connect()
+    host.writer!.connect()
+    const done = host.writer!.write('states', { states: [] })
+    const env = ports.posted[0]
+    const settleSpy = vi.fn()
+    done.catch(settleSpy)
+    // Past both the writer's own 30s timeout and the host's own (longer) eviction window.
+    await vi.advanceTimersByTimeAsync(writeTtlMs('states'))
+    expect(settleSpy).toHaveBeenCalledTimes(1)
+    reply(EnvelopeMessageType.STATES_UPDATE_RESULT, { success: true }, env.id)
+    expect(settleSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('a matched result clears its eviction timer; advancing past the TTL afterward causes no further callback', async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports, { withWriter: true })
+    host.connect()
+    host.writer!.connect()
+    const done = host.writer!.write('entities', { entities: [] })
+    const env = ports.posted[0]
+    reply(EnvelopeMessageType.ENTITIES_UPDATE_RESULT, { success: true }, env.id)
+    await expect(done).resolves.toEqual({})
+    expect(() => { vi.advanceTimersByTime(writeTtlMs('entities')) }).not.toThrow()
   })
 })
 

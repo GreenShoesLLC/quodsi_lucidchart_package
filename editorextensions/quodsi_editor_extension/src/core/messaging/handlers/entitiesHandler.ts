@@ -37,7 +37,7 @@ export class EntitiesHandler {
     }
   }
 
-  /** Mirrors ElementOpsHandler.getResponseChannel: the embedded Studio iframe answers on its own channel. */
+  /** Mirrors ElementOpsHandler.getResponseChannel: the compiled Studies/Advisor modal answers on its own channel. */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     return 'model';
