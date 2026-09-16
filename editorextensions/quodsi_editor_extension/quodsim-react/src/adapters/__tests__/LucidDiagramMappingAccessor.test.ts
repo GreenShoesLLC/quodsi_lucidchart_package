@@ -9,9 +9,9 @@
 // which is a modal-local counter DiagramMappingRelayHandler reads for
 // logging and echoes back, but which restarts at 1 for every modal
 // instance.
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
-import { LucidDiagramMappingAccessor } from '../LucidDiagramMappingAccessor'
+import { LucidDiagramMappingAccessor, DIAGRAM_MAPPING_TIMEOUT_MS } from '../LucidDiagramMappingAccessor'
 
 function makePorts() {
   const posted: any[] = []
@@ -157,5 +157,57 @@ describe('LucidDiagramMappingAccessor', () => {
     accessor.disconnect()
     accessor.disconnect()
     expect(listenerCount()).toBe(0)
+  })
+
+  describe('timeouts', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('analyzePage rejects with a timeout message after DIAGRAM_MAPPING_TIMEOUT_MS with no reply', async () => {
+      vi.useFakeTimers()
+      const { ports } = makePorts()
+      const accessor = new LucidDiagramMappingAccessor(ports)
+      accessor.connect()
+
+      const promise = accessor.analyzePage()
+      vi.advanceTimersByTime(DIAGRAM_MAPPING_TIMEOUT_MS + 1)
+
+      await expect(promise).rejects.toThrow('Analyzing the diagram timed out')
+    })
+
+    it('applyChanges rejects with a timeout message after DIAGRAM_MAPPING_TIMEOUT_MS with no reply', async () => {
+      vi.useFakeTimers()
+      const { ports } = makePorts()
+      const accessor = new LucidDiagramMappingAccessor(ports)
+      accessor.connect()
+
+      const promise = accessor.applyChanges([])
+      vi.advanceTimersByTime(DIAGRAM_MAPPING_TIMEOUT_MS + 1)
+
+      await expect(promise).rejects.toThrow('Applying the mapping timed out')
+    })
+
+    it('a reply before the deadline resolves and no late timeout rejection follows', async () => {
+      vi.useFakeTimers()
+      const { posted, ports, dispatch } = makePorts()
+      const accessor = new LucidDiagramMappingAccessor(ports)
+      accessor.connect()
+
+      const promise = accessor.analyzePage()
+      const { id, data } = posted[0]
+
+      vi.advanceTimersByTime(DIAGRAM_MAPPING_TIMEOUT_MS - 1)
+      dispatch({
+        id,
+        type: EnvelopeMessageType.PAGE_ANALYSIS_RESULT,
+        data: { requestId: data.requestId, data: { pageId: 'p1', mappings: [] } },
+      })
+      await expect(promise).resolves.toEqual({ pageId: 'p1', mappings: [] })
+
+      // Advancing past the original deadline must not throw or reject anything
+      // further -- the timer was cleared when the reply resolved the request.
+      expect(() => vi.advanceTimersByTime(10)).not.toThrow()
+    })
   })
 })
