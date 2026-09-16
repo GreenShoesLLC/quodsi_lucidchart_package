@@ -98,6 +98,28 @@ describe('PAGE_COUNTS_REQUEST', () => {
     DiagramMappingRelayHandler.handleMessage(envelope(EnvelopeMessageType.PAGE_COUNTS_REQUEST, 'req-2'));
     expect(sendMock.mock.calls[0][1].data).toEqual({ pageId: '', shapeCount: 0, lineCount: 0 });
   });
+
+  it('replies zeros when reading the current page throws, so the panel never waits', () => {
+    const original = (Viewport.prototype as any).getCurrentPage;
+    (Viewport.prototype as any).getCurrentPage = () => {
+      throw new Error('boom');
+    };
+    try {
+      DiagramMappingRelayHandler.handleMessage(envelope(EnvelopeMessageType.PAGE_COUNTS_REQUEST, 'req-3'));
+    } finally {
+      (Viewport.prototype as any).getCurrentPage = original;
+    }
+
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    const [channel, reply] = sendMock.mock.calls[0];
+    expect(channel).toBe('model');
+    expect(reply).toMatchObject({
+      id: 'req-3',
+      type: EnvelopeMessageType.PAGE_COUNTS,
+      target: 'model-iframe',
+      data: { pageId: '', shapeCount: 0, lineCount: 0 },
+    });
+  });
 });
 
 describe('AUTO_CONVERT_PAGE result', () => {
