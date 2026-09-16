@@ -31,11 +31,11 @@
 //     App's wrapper, then this view's) is what gives it a real height. That
 //     chain was previously inert, because `fixed inset-0` escaped the flow.
 //   - `onClose` must ask the HOST to close the Lucid modal, not flip local
-//     state. CLOSE_MODAL is exactly this hook: StudioEmbedView's own close
-//     button (`sendMessage(EnvelopeMessageType.CLOSE_MODAL)`) is the
-//     existing precedent for a chromeless modal's content asking the host to
-//     hide it, since a chromeless modal has no native title-bar X. Once the
-//     host hides the modal it also fires ScheduleEditorModal's onClosed,
+//     state. CLOSE_MODAL is exactly this hook: the compiled Studies/Advisor
+//     modals' own close button (`sendMessage(EnvelopeMessageType.CLOSE_MODAL)`)
+//     is the existing precedent for a chromeless modal's content asking the
+//     host to hide it, since a chromeless modal has no native title-bar X.
+//     Once the host hides the modal it also fires ScheduleEditorModal's onClosed,
 //     which releases the extension's open-guard -- none of that is this
 //     view's concern.
 //   - No lifecycle wiring here resembling ensurePatternForGenerator.

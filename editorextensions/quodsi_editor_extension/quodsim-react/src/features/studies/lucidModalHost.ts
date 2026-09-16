@@ -1,8 +1,8 @@
 // quodsim-react/src/features/studies/lucidModalHost.ts
 //
-// LucidHost for the compiled Studies/Advisor modals: the same requests the old
-// EmbeddedStudioFrame relayed, sent straight to the extension over this
-// modal's messaging (channel role 'studio-embed').
+// LucidHost for the compiled Studies/Advisor modals (StudiesModal /
+// AdvisorConsultModal): requests are sent straight to the extension over
+// this modal's messaging (channel role 'studio-embed').
 import { v4 as uuid } from 'uuid'
 import { EnvelopeMessageType, isEnvelope, type EnvelopeBase } from '@quodsi/lucid-shared'
 import {
@@ -14,7 +14,7 @@ import {
   type RelayedCatalog,
   type RunResult,
 } from 'quodsi_studio/platforms/lucid-host'
-import { buildWriteEnvelope, WRITE_RESULT_TYPES, writeTtlMs } from '../embed/embedWriteEnvelope'
+import { buildWriteEnvelope, WRITE_RESULT_TYPES, writeTtlMs } from './embedWriteEnvelope'
 
 export const HOST_REQUEST_TIMEOUT_MS = 30_000
 const TOKEN_TIMEOUT_MS = 10_000

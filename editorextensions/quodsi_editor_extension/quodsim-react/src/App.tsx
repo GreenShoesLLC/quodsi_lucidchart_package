@@ -2,7 +2,6 @@ import React from "react";
 import { MessageProvider } from "./messaging/MessageProvider";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
-import { StudioEmbedView } from "./features/embed/StudioEmbedView";
 import { PatternEditorView } from "./features/pattern/PatternEditorView";
 import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
@@ -73,16 +72,6 @@ export const App: React.FC = () => {
       <MessageProvider initialPanelType="studio-embed">
         <div className="h-full w-full">
           <React.Suspense fallback={null}><View /></React.Suspense>
-        </div>
-      </MessageProvider>
-    );
-  }
-
-  if (urlParams.get("view") === "studio-embed") {
-    return (
-      <MessageProvider initialPanelType="studio-embed">
-        <div className="h-full w-full">
-          <StudioEmbedView />
         </div>
       </MessageProvider>
     );

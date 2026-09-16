@@ -18,8 +18,9 @@ import { getLogger } from '@quodsi/lucid-shared';
  *
  * Provides the four RoutablePanel lifecycle methods (relayToIframe,
  * messageFromFrame, frameLoaded, frameClosed) that are identical across
- * ResultsModal and StudioEmbedModal, differing only by their channel role
- * and the derived iframe-source string.
+ * ResultsModal and the compiled Studies/Advisor modals (StudiesModal,
+ * AdvisorConsultModal), differing only by their channel role and the
+ * derived iframe-source string.
  *
  * Subclasses supply the role via the constructor and are free to add their
  * own logic on top; they must NOT re-implement the four methods below.
@@ -30,7 +31,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
     /**
      * @param client      Lucid EditorClient
      * @param options     Passed straight through to Modal's constructor
-     * @param channelRole The PanelRole this modal owns ('results' | 'studio-embed')
+     * @param channelRole The PanelRole this modal owns ('results' | 'studio-embed' | ...)
      */
     protected constructor(
         client: EditorClient,
@@ -130,11 +131,11 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      * Reopen ordering race: a channel's panel (set here, on frameLoaded) and
      * its ready flag (set on REACT_APP_READY) can arrive in either order, but
      * the queue is only flushed on the REACT_APP_READY path. On a warm reopen
-     * the embedded Studio iframe loads from cache and completes its token
-     * round-trip — host relays STUDIO_TOKEN — *before* Lucid fires this
-     * frameLoaded, while REACT_APP_READY was processed earlier (its flush
+     * the compiled modal (e.g. StudiesModal) loads from cache and completes
+     * its token round-trip — host relays STUDIO_TOKEN — *before* Lucid fires
+     * this frameLoaded, while REACT_APP_READY was processed earlier (its flush
      * bailed because the panel wasn't registered yet). The reply is left
-     * stranded in the queue and the embed shows "Couldn't load the results
+     * stranded in the queue and the modal shows "Couldn't load the results
      * viewer …" after the 10s timeout. Now that the panel is registered, drain
      * the queue if the channel is already ready so the late panel still
      * delivers any reply queued before it arrived.
@@ -164,8 +165,8 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      * could otherwise clobber the *next* modal's already-registered, already-
      * ready channel (ready=false, panel=undefined, queue cleared), stranding
      * the host's STUDIO_TOKEN reply on a dead channel with no further
-     * REACT_APP_READY to flush it — the token never reaches the iframe and the
-     * embed shows "Couldn't load the results viewer …" after the 10s timeout.
+     * REACT_APP_READY to flush it — the token never reaches the modal and it
+     * shows "Couldn't load the results viewer …" after the 10s timeout.
      * Skipping the wipe when another modal has taken over avoids that race.
      */
     protected frameClosed(): void {

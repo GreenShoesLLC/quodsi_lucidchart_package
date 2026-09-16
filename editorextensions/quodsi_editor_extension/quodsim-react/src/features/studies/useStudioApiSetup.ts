@@ -17,13 +17,22 @@ export function useStudioApiSetup(apiBaseUrl: string | null, host: LucidModalHos
     let pending: Promise<string | undefined> | null = null
     let token: string | undefined
     const request = (): Promise<string | undefined> => {
-      const p: Promise<string | undefined> = host.requestToken().then((t) => {
-        if (pending === p) {
-          token = t
-          if (!t) pending = null
-        }
-        return t
-      })
+      const p: Promise<string | undefined> = host.requestToken().then(
+        (t) => {
+          if (pending === p) {
+            token = t
+            if (!t) pending = null
+          }
+          return t
+        },
+        () => {
+          // A rejected requestToken() behaves like an empty token: clear
+          // `pending` (if it's still ours) so the next call asks again,
+          // rather than leaving `pending` permanently settled to a rejection.
+          if (pending === p) pending = null
+          return undefined
+        },
+      )
       pending = p
       return p
     }

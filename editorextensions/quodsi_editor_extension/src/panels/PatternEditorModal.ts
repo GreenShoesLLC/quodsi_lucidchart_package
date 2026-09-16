@@ -10,8 +10,8 @@ import { RoutingModal } from './RoutingModal';
  * PatternModal's `position: fixed` resolved against that iframe's own
  * viewport (so `95vw` meant 95% of 300px, not the screen). Only a real Lucid
  * `Modal` -- constructed here, by the host -- draws over the whole app.
- * Registers the 'pattern' channel, same wiring StudioEmbedModal uses for
- * 'studio-embed'.
+ * Registers the 'pattern' channel, same wiring the compiled Studies/Advisor
+ * modals (StudiesModal, AdvisorConsultModal) use for 'studio-embed'.
  */
 export class PatternEditorModal extends RoutingModal {
   /**

@@ -3,9 +3,9 @@
 // Advisor drawing half, Task 4: creates, deletes and moves shapes on the
 // current page in response to SHAPE_CREATE / SHAPE_DELETE / SHAPE_MOVE.
 // These are the "single shape op" half of the Advisor's write path -- the
-// embedded Studio iframe (Task 3's EmbeddedStudioFrame) sends them with
-// source 'studio-embed-iframe' whenever the Advisor proposes adding,
-// removing or repositioning one Activity/Generator/Connector on the page.
+// compiled Advisor modal (AdvisorConsultModal) sends them with source
+// 'studio-embed-iframe' whenever the Advisor proposes adding, removing or
+// repositioning one Activity/Generator/Connector on the page.
 // MODEL_CREATE_PAGE (bulk page creation from an Advisor-authored document)
 // is Task 5 -- the switch below has a slot ready for it but does not handle
 // it yet, so it falls through to `default: return false` like any other

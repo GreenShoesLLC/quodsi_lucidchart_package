@@ -48,8 +48,8 @@ vi.mock('../../../adapters/useModelRootSource', () => ({
 // (URL read, loading gate, accessor wiring, unmount flush) rather than
 // GeneratorPatternTab's own behaviour, which has its own suite in
 // quodsi_studio. Mirrors the mocking approach in
-// StudioEmbedView.test.tsx (stub EmbeddedStudioFrame, assert what it was
-// handed).
+// StudiesModalView.test.tsx (stub the shared `platforms/studies` surface,
+// assert what it was handed).
 let lastProps: any = null
 vi.mock('quodsi_studio/platforms/shared', () => ({
   GeneratorPatternTab: (props: any) => {

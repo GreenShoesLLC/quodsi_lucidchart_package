@@ -34,7 +34,7 @@ export class DocumentProxy {
 }
 // Captures the config a subclass passes to `super(client, config)` on
 // `.config` so tests can assert on the url/size/title a RoutingModal
-// subclass (e.g. PatternEditorModal, StudioEmbedModal) computed, without
+// subclass (e.g. PatternEditorModal, StudiesModal) computed, without
 // pulling in the real SDK's iframe/platform machinery.
 // The two command names RoutingModal's forced hide reaches for. Values match
 // node_modules/lucid-extension-sdk/commandtypes.js.

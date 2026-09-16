@@ -90,4 +90,16 @@ describe('useStudioApiSetup', () => {
     expect(await result.current()).toBe('t1')
     expect(requestToken).toHaveBeenCalledTimes(1)
   })
+
+  it('a rejected requestToken behaves like an empty token: the next call asks again', async () => {
+    const requestToken = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce('tok')
+    const host = { requestToken } as unknown as LucidModalHost
+    renderHook(() => useStudioApiSetup('https://api.example', host))
+    expect(await h.getter!()).toBeUndefined()
+    expect(await h.getter!()).toBe('tok')
+    expect(requestToken).toHaveBeenCalledTimes(2)
+  })
 })
