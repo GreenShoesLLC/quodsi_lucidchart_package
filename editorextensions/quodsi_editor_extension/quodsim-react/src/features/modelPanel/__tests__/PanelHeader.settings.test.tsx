@@ -29,7 +29,7 @@ const baseProps = {
 const openMenu = () => fireEvent.click(screen.getByTitle("More options"));
 
 describe("PanelHeader — Settings (the deliberate entry point)", () => {
-  it("offers Settings in the overflow menu, alongside Status", () => {
+  it("offers Settings in the overflow menu", () => {
     render(<PanelHeader {...baseProps} onOpenSettings={vi.fn()} />);
     openMenu();
     expect(screen.getByRole("button", { name: /^Settings$/i })).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe("PanelHeader — Settings (the deliberate entry point)", () => {
     expect(screen.queryByRole("button", { name: /^Settings$/i })).toBeNull();
   });
 
-  it("renders even with no handler supplied -- the item itself is unconditional, matching Status", () => {
+  it("renders even with no handler supplied -- the item itself is unconditional", () => {
     render(<PanelHeader {...baseProps} />);
     openMenu();
     expect(screen.getByRole("button", { name: /^Settings$/i })).toBeInTheDocument();

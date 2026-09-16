@@ -1,18 +1,18 @@
 // tests/messaging/simulationRunHandler.openAdvisorModal.test.ts
 //
-// OPEN_ADVISOR_MODAL opens the embedded-Studio Advisor consult. Like
-// OPEN_STATUS_MODAL and unlike Studies, it needs no server model id (the
-// consult carries the document inline via STUDIO_CATALOG.document), so it
-// opens a CONCRETE studioPath instantly -- no UpsertModel, no pending path.
-// Mocks mirror modelRootHandler.settingsModalGuard.test.ts: router +
-// ModelManager stubbed, the modal's show() spied so the URL can be read off
-// the mock SDK's `.config`.
+// OPEN_ADVISOR_MODAL opens the compiled Advisor consult (quodsim-react
+// ?view=advisor) in an AdvisorConsultModal. Unlike Studies it needs no server
+// model id (the consult carries the document inline via
+// STUDIO_CATALOG.document), so it opens instantly with the focus on the query
+// string -- no UpsertModel. Mocks mirror
+// modelRootHandler.settingsModalGuard.test.ts: router + ModelManager stubbed,
+// the modal's show() spied so the URL can be read off the mock SDK's
+// `.config`.
 //
-// `new StudioEmbedModal(...)` resolves `getStudioBaseUrl()`, which reads the
-// webpack-injected `__LOCAL_STUDIO_OVERRIDE__` global (see authHandler.ts) --
-// undefined at jest runtime otherwise. Same workaround as
-// analyticsHandler.deferUntilAuth.test.ts / authHandler.cachedAuth.test.ts.
-(globalThis as any).__LOCAL_STUDIO_OVERRIDE__ = '';
+// `new AdvisorConsultModal(...)` resolves `getApiBaseUrl()`, which reads the
+// webpack-injected `__LOCAL_API_OVERRIDE__` global (see apiBaseUrl.ts) --
+// undefined at jest runtime otherwise.
+(globalThis as any).__LOCAL_API_OVERRIDE__ = '';
 
 const sendMock = jest.fn();
 jest.mock('../../src/core/messaging/index', () => ({
@@ -37,7 +37,7 @@ jest.mock('../../src/core/ModelManager', () => ({
 
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { SimulationRunHandler } from '../../src/core/messaging/handlers/simulationRunHandler';
-import { StudioEmbedModal } from '../../src/panels/StudioEmbedModal';
+import { AdvisorConsultModal } from '../../src/panels/AdvisorConsultModal';
 
 function openMessage(data: Record<string, unknown> | undefined): any {
   return {
@@ -50,23 +50,18 @@ function openMessage(data: Record<string, unknown> | undefined): any {
   };
 }
 
-let shown: StudioEmbedModal[];
+let shown: AdvisorConsultModal[];
 
-/** The Studio path the modal was opened at, decoded from the mock SDK's config url. */
-function studioPathOf(modal: StudioEmbedModal): string {
+/** The modal URL's query, decoded (the test runtime has URLSearchParams). */
+function queryOf(modal: AdvisorConsultModal): URLSearchParams {
   const url: string = (modal as any).config.url;
-  const q = new URLSearchParams(url.slice(url.indexOf('?') + 1));
-  return q.get('studioPath') ?? '';
-}
-function titleOf(modal: StudioEmbedModal): string {
-  const url: string = (modal as any).config.url;
-  const q = new URLSearchParams(url.slice(url.indexOf('?') + 1));
-  return q.get('title') ?? '';
+  expect(url.startsWith('quodsim-react/index.html?')).toBe(true);
+  return new URLSearchParams(url.slice(url.indexOf('?') + 1));
 }
 
 beforeEach(() => {
   shown = [];
-  jest.spyOn(StudioEmbedModal.prototype, 'show').mockImplementation(async function (this: StudioEmbedModal) {
+  jest.spyOn(AdvisorConsultModal.prototype, 'show').mockImplementation(async function (this: AdvisorConsultModal) {
     shown.push(this);
   });
 });
@@ -81,7 +76,7 @@ describe('OPEN_ADVISOR_MODAL', () => {
     // handling message") because the handler built its query string with
     // `new URLSearchParams()`, which exists in Node (so jest passed) but not
     // in the Lucid extension VM. Every sibling modal encodes by hand with
-    // `encodeURIComponent`; this pins that the handler does too.
+    // `encodeURIComponent`; this pins that the modal does too.
     const saved = (globalThis as any).URLSearchParams;
     delete (globalThis as any).URLSearchParams;
     try {
@@ -92,9 +87,7 @@ describe('OPEN_ADVISOR_MODAL', () => {
       (globalThis as any).URLSearchParams = saved;
     }
     expect(shown).toHaveLength(1);
-    const path = studioPathOf(shown[0]);
-    const q = new URLSearchParams(path.slice('/embed/advisor?'.length));
-    expect(q.get('focusName')).toBe('Triage & Sort');
+    expect(queryOf(shown[0]).get('focusName')).toBe('Triage & Sort');
   });
 
   it('is handled', () => {
@@ -102,29 +95,28 @@ describe('OPEN_ADVISOR_MODAL', () => {
     expect(shown).toHaveLength(1);
   });
 
-  it('opens /embed/advisor with the focus on the query string, titled "Ask the Advisor"', () => {
+  it('opens the compiled advisor view with the focus on the query string, titled "Ask the Advisor"', () => {
     SimulationRunHandler.handleMessage(openMessage({
       focusId: 'a1', focusType: 'Activity', focusName: 'Triage & Sort', mode: 'definition', modalSize: 'medium',
     }));
 
-    expect(titleOf(shown[0])).toBe('Ask the Advisor');
-    const path = studioPathOf(shown[0]);
-    expect(path.startsWith('/embed/advisor?')).toBe(true);
-    const q = new URLSearchParams(path.slice('/embed/advisor?'.length));
+    expect(shown[0]).toBeInstanceOf(AdvisorConsultModal);
+    const q = queryOf(shown[0]);
+    expect(q.get('view')).toBe('advisor');
+    expect(q.get('title')).toBe('Ask the Advisor');
+    expect(q.has('apiBaseUrl')).toBe(true);
     expect(q.get('focusType')).toBe('Activity');
     expect(q.get('focusId')).toBe('a1');
     expect(q.get('focusName')).toBe('Triage & Sort'); // encoded on the wire, decoded here
     expect(q.get('mode')).toBe('definition');
-    // Concrete open: never the pending/pull path.
-    expect((shown[0] as any).config.url).not.toContain('pending=1');
-    // Not a public page: the token relay must run.
-    expect((shown[0] as any).config.url).not.toContain('public=1');
+    expect((shown[0] as any).config.chromeless).toBe(true);
+    // No Studio iframe any more.
+    expect(q.has('studioPath')).toBe(false);
   });
 
   it('omits focusName when absent and defaults type/mode when the payload is empty', () => {
     SimulationRunHandler.handleMessage(openMessage(undefined));
-    const path = studioPathOf(shown[0]);
-    const q = new URLSearchParams(path.slice('/embed/advisor?'.length));
+    const q = queryOf(shown[0]);
     expect(q.get('focusType')).toBe('Model');
     expect(q.get('focusId')).toBe('');
     expect(q.has('focusName')).toBe(false);

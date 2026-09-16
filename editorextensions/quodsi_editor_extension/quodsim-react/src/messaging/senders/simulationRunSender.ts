@@ -40,14 +40,6 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
-   * Send an OPEN_STATUS_MODAL message to open the embedded-Studio public /status
-   * page. Status is model-agnostic, so no documentId/pageId is needed.
-   */
-  const openStatusModal = useCallback(() => {
-    send(EnvelopeMessageType.OPEN_STATUS_MODAL, { modalSize: getModalSizePref() });
-  }, [send]);
-
-  /**
    * Send an OPEN_PATTERN_MODAL message to open the arrival-pattern editor as
    * a real Lucid modal over the whole application. Handled by
    * modelRootHandler.ts on the host side (not simulationRunHandler.ts --
@@ -74,17 +66,16 @@ export function useSimulationRunSender() {
    * as a real Lucid modal over the whole application. Handled by
    * modelRootHandler.ts on the host side, same as the other OPEN_*_MODAL
    * senders -- but UNLIKE openPatternModal/openScheduleModal, Settings is
-   * global: no shapeId, mirroring openStatusModal's no-id shape instead.
+   * global: no shapeId.
    */
   const openSettingsModal = useCallback(() => {
     send(EnvelopeMessageType.OPEN_SETTINGS_MODAL, { modalSize: getModalSizePref() });
   }, [send]);
 
   /**
-   * Send an OPEN_ADVISOR_MODAL message to open the embedded-Studio Advisor
-   * consult (/embed/advisor) as a real Lucid modal. Handled by
-   * simulationRunHandler.ts beside OPEN_STATUS_MODAL: like /status it needs
-   * no server model id, so it opens concretely and instantly. The focus
+   * Send an OPEN_ADVISOR_MODAL message to open the compiled Advisor consult
+   * (?view=advisor) as a real Lucid modal. Handled by simulationRunHandler.ts:
+   * it needs no server model id, so it opens instantly. The focus
    * fields ride on the query string; modalSize follows the user's preference
    * like every other OPEN_*_MODAL.
    */
@@ -95,7 +86,6 @@ export function useSimulationRunSender() {
   return {
     openStudiesModal,
     openDiagramMappingModal,
-    openStatusModal,
     openPatternModal,
     openScheduleModal,
     openSettingsModal,

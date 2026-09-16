@@ -46,7 +46,10 @@ yarn-error.log*
 # Webpack's DefinePlugin reads this file at build time and bakes the
 # contents into the extension bundle as __LOCAL_STUDIO_OVERRIDE__.
 # Each developer creates their own; cloud bundles never have this file.
+# local-api-url.txt is the same idea for __LOCAL_API_OVERRIDE__ (the
+# quodsi_api origin the compiled Studies/Advisor modals call).
 local-studio-url.txt
+local-api-url.txt
 
 # Azure credentials and publish profiles
 *.publishsettings

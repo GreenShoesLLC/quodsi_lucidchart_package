@@ -14,6 +14,13 @@ declare namespace lucid {
  */
 declare const __LOCAL_STUDIO_OVERRIDE__: string;
 
+/**
+ * Build-time constant injected by webpack's DefinePlugin from
+ * `local-api-url.txt` (gitignored). Empty string when the file is absent.
+ * See apiBaseUrl.ts for usage and webpack.config.js for the inject logic.
+ */
+declare const __LOCAL_API_OVERRIDE__: string;
+
 /** Build-time log level, injected by webpack.config.js. 'warn' in production
  *  bundles, 'debug' otherwise. See the DefinePlugin block there. */
 declare const __QUODSI_LOG_LEVEL__: string;
