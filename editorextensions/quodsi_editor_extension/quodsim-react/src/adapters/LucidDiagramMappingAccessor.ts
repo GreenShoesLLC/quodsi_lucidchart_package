@@ -19,7 +19,15 @@ import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared'
 import type { ConversionPreviewData, MappingChange } from '@quodsi/shared'
 import type { DiagramMappingAccessor } from 'quodsi_studio/platforms/shared'
 
-type Pending = { resolve: (v: unknown) => void; reject: (e: Error) => void; kind: 'analyze' | 'apply' }
+/** How long analyzePage/applyChanges wait for a reply before rejecting. Matches the blank-slate card's AUTO_CONVERT_TIMEOUT_MS. */
+export const DIAGRAM_MAPPING_TIMEOUT_MS = 60_000
+
+type Pending = {
+  resolve: (v: unknown) => void
+  reject: (e: Error) => void
+  kind: 'analyze' | 'apply'
+  timeoutId: ReturnType<typeof setTimeout>
+}
 
 export interface DiagramMappingPorts {
   postMessage?: (msg: unknown) => void
@@ -75,12 +83,14 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
 
     if (p.kind === 'analyze' && envelope.type === EnvelopeMessageType.PAGE_ANALYSIS_RESULT) {
       this.pending.delete(id)
+      clearTimeout(p.timeoutId)
       if (data?.error) p.reject(new Error(data.error))
       else p.resolve(data?.data)
       return
     }
     if (p.kind === 'apply' && envelope.type === EnvelopeMessageType.APPLY_SHAPE_CHANGES_RESULT) {
       this.pending.delete(id)
+      clearTimeout(p.timeoutId)
       if (!data?.success) p.reject(new Error(data?.error ?? 'apply failed'))
       else p.resolve(undefined)
     }
@@ -93,7 +103,11 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
     const requestId = this.nextId++
     const id = uuid()
     return new Promise<ConversionPreviewData>((resolve, reject) => {
-      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, kind: 'analyze' })
+      const timeoutId = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error('Analyzing the diagram timed out'))
+      }, DIAGRAM_MAPPING_TIMEOUT_MS)
+      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, kind: 'analyze', timeoutId })
       this.post({
         id,
         type: EnvelopeMessageType.ANALYZE_PAGE,
@@ -109,7 +123,11 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
     const requestId = this.nextId++
     const id = uuid()
     return new Promise<void>((resolve, reject) => {
-      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, kind: 'apply' })
+      const timeoutId = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error('Applying the mapping timed out'))
+      }, DIAGRAM_MAPPING_TIMEOUT_MS)
+      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, kind: 'apply', timeoutId })
       this.post({
         id,
         type: EnvelopeMessageType.APPLY_SHAPE_CHANGES,

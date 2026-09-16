@@ -143,6 +143,9 @@ describe('SwimLaneEditor', () => {
 
     expect(await screen.findByText('Link this lane to a Resource')).toBeInTheDocument()
     expect(screen.queryByText(/already represented|no longer exists|not linked to a Resource/i)).toBeNull()
+    // No explanation is shown for a plain unlinked lane, so the picker's
+    // intro paragraph stays.
+    expect(screen.getByText(/isn't linked to one yet/)).toBeInTheDocument()
   })
 
   it('a linked lane renders the shared ResourceEditor for its resource', async () => {
@@ -299,6 +302,9 @@ describe('SwimLaneEditor', () => {
     expect(await screen.findByText(/already represented elsewhere/i)).toBeInTheDocument()
     expect(screen.queryByDisplayValue('Doctor')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Porter/ })).toBeInTheDocument()
+    // The notice already explains why this lane isn't linked -- the picker's
+    // own "isn't linked to one yet" intro must not also render.
+    expect(screen.queryByText(/isn't linked to one yet/)).toBeNull()
   })
 
   it('a lane whose resource is claimed by a BLOCK gets the notice too', async () => {

@@ -12,7 +12,7 @@
 //     mint-your-own-correlation-id idiom of modelOpsSender.updateElement);
 //   - reviewDiagram: the Diagram Mapping modal, as the old card's link did.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import {
   EnvelopeMessageType,
@@ -31,6 +31,17 @@ function postToHost(type: EnvelopeMessageType, data: unknown, id: string = uuid(
   window.parent.postMessage(envelope, '*')
 }
 
+interface ConvertWaiter {
+  resolve: (result: ConversionResult) => void
+  reject: (error: Error) => void
+  timeoutId: ReturnType<typeof setTimeout>
+}
+
+interface InFlightConversion {
+  id: string
+  waiters: ConvertWaiter[]
+}
+
 export function useLucidBlankSlateAccessor(options: {
   /** True only while the page is unconverted; nothing is sent otherwise. */
   enabled: boolean
@@ -42,6 +53,39 @@ export function useLucidBlankSlateAccessor(options: {
   const { enabled, documentId, pageId, selectionVersion } = options
   const { openDiagramMappingModal } = useSimulationRunSender()
   const [counts, setCounts] = useState({ shapeCount: 0, lineCount: 0 })
+  const inFlightRef = useRef<InFlightConversion | null>(null)
+
+  // One in-flight AUTO_CONVERT_PAGE conversion per accessor, many waiters:
+  // this listener is mounted once (independent of `enabled`, since a
+  // conversion started earlier must still be resolvable) and settles every
+  // waiter attached to the current in-flight conversion when its result
+  // arrives -- a waiter timing out does not stop this listener from hearing
+  // a later result for the same conversion. On unmount, every pending timer
+  // is cleared and the in-flight entry dropped so nothing fires after teardown.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const msg = event.data as EnvelopeBase | undefined
+      if (msg?.type !== EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT) return
+      const inFlight = inFlightRef.current
+      if (!inFlight || msg.id !== inFlight.id) return
+      inFlightRef.current = null
+      const data = msg.data as AutoConvertPageResultData
+      for (const waiter of inFlight.waiters) {
+        clearTimeout(waiter.timeoutId)
+        if (data.success) waiter.resolve(data.result)
+        else waiter.reject(new Error(data.error))
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => {
+      window.removeEventListener('message', onMessage)
+      const inFlight = inFlightRef.current
+      if (inFlight) {
+        for (const waiter of inFlight.waiters) clearTimeout(waiter.timeoutId)
+        inFlightRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!enabled) return
@@ -63,23 +107,29 @@ export function useLucidBlankSlateAccessor(options: {
   const convertDiagram = useCallback(
     () =>
       new Promise<ConversionResult>((resolve, reject) => {
-        const id = uuid()
-        let timeoutId: ReturnType<typeof setTimeout> | undefined
-        const onMessage = (event: MessageEvent) => {
-          const msg = event.data as EnvelopeBase | undefined
-          if (msg?.id !== id || msg.type !== EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT) return
-          window.removeEventListener('message', onMessage)
-          if (timeoutId !== undefined) clearTimeout(timeoutId)
-          const data = msg.data as AutoConvertPageResultData
-          if (data.success) resolve(data.result)
-          else reject(new Error(data.error))
+        const attach = (inFlight: InFlightConversion) => {
+          const waiter: ConvertWaiter = {
+            resolve,
+            reject,
+            timeoutId: setTimeout(() => {
+              const idx = inFlight.waiters.indexOf(waiter)
+              if (idx >= 0) inFlight.waiters.splice(idx, 1)
+              reject(new Error('Conversion timed out'))
+            }, AUTO_CONVERT_TIMEOUT_MS),
+          }
+          inFlight.waiters.push(waiter)
         }
-        window.addEventListener('message', onMessage)
-        timeoutId = setTimeout(() => {
-          window.removeEventListener('message', onMessage)
-          reject(new Error('Conversion timed out'))
-        }, AUTO_CONVERT_TIMEOUT_MS)
-        postToHost(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId }, id)
+
+        const existing = inFlightRef.current
+        if (existing) {
+          attach(existing)
+          return
+        }
+
+        const inFlight: InFlightConversion = { id: uuid(), waiters: [] }
+        inFlightRef.current = inFlight
+        attach(inFlight)
+        postToHost(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId }, inFlight.id)
       }),
     [documentId, pageId],
   )
