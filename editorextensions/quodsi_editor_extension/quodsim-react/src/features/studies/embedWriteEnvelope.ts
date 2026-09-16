@@ -1,11 +1,11 @@
-// quodsim-react/src/features/embed/embedWriteEnvelope.ts
+// quodsim-react/src/features/studies/embedWriteEnvelope.ts
 //
-// Pure translation from the iframe's write relay message to the extension's
-// own write envelope. Kept out of EmbeddedStudioFrame so it is unit-testable
-// without a DOM. The envelope shapes are exactly what the side panel's own
-// senders post (modelOpsSender.updateElement / useModelRootSource /
-// statesSender / entitiesSender), so the extension treats an Advisor write
-// like any other panel edit.
+// Pure translation from the compiled Studies/Advisor modal's write relay
+// message to the extension's own write envelope. Kept as a standalone
+// module so it is unit-testable without a DOM. The envelope shapes are
+// exactly what the side panel's own senders post (modelOpsSender.updateElement
+// / useModelRootSource / statesSender / entitiesSender), so the extension
+// treats an Advisor write like any other panel edit.
 import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared';
 
 export type EmbedWriteKind =
