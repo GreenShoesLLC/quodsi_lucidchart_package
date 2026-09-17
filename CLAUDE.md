@@ -168,7 +168,7 @@ cd lucid-shared && npm test -- --watch
 ## Important Development Notes
 
 ### Message Flow
-1. React → Extension: Use typed message builders from `quodsi-messaging`
+1. React → Extension: send an `EnvelopeBase` with an `EnvelopeMessageType` from `@quodsi/lucid-shared` (see `lucid-shared/src/quodsi-messaging/README.md`)
 2. Extension → React: Route through MessageRouter
 3. Always handle REACT_APP_READY before sending messages to panels
 

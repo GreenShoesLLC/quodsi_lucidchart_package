@@ -3,6 +3,7 @@ import {
   EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementSubjectType,
+  EntitlementsStatusData,
   getLogger,
 } from '@quodsi/lucid-shared';
 
@@ -61,23 +62,7 @@ export const initialEntitlementsState: EntitlementsState = {
 };
 
 export type EntitlementsAction =
-  | {
-      type: 'ENTITLEMENTS_STATUS_UPDATE';
-      subjectType: EntitlementSubjectType;
-      planKey: string;
-      planStatus: EntitlementPlanStatus;
-      trialExpiresAt?: string;
-      features: Record<string, EntitlementMeteredFeature | boolean>;
-      upgradeAvailable?: boolean;
-      planSource?: EntitlementPlanSource;
-      orgName?: string | null;
-      studiesUsed?: number;
-      studiesPerOrgLimit?: number | null;
-      scenariosPerStudyLimit?: number | null;
-      replicationsPerScenarioLimit?: number | null;
-      tradeoffAnalysis?: boolean;
-      chartExport?: boolean;
-    }
+  | ({ type: 'ENTITLEMENTS_STATUS_UPDATE' } & EntitlementsStatusData)
   | { type: 'ENTITLEMENTS_CLEAR' };
 
 export function entitlementsReducer(

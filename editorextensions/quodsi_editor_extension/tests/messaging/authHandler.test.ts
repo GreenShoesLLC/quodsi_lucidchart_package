@@ -59,12 +59,9 @@ describe('AuthHandler.broadcastEntitlements', () => {
       features: {},
     });
 
-    expect(sendMock).toHaveBeenCalledWith('broadcast', expect.objectContaining({
-      data: expect.objectContaining({
-        subjectType: 'user',
-        planSource: undefined,
-        orgName: undefined,
-      }),
-    }));
+    const data = sendMock.mock.calls[0][1].data;
+    expect(data).toMatchObject({ subjectType: 'user', planKey: 'quodsi_free_user' });
+    expect(data.planSource).toBeUndefined();
+    expect(data.orgName).toBeUndefined();
   });
 });

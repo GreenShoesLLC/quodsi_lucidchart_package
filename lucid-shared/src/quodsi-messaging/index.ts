@@ -5,7 +5,6 @@ export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 export {
   EnvelopeBase,
   MessageSource,
-  MessageTarget,
   isEnvelope
 } from './envelope/envelope';
 
@@ -18,23 +17,16 @@ export {
 // Selection payload pieces
 export { ElementShape } from './selection/messages';
 
-// Simulation job tracking
-export {
-  SimulationStatus,
-  SimulationJob
-} from './simulation/messages';
+// Simulation run status
+export { SimulationStatus } from './simulation/messages';
 
 // Entitlement payload pieces
 export {
   EntitlementSubjectType,
   EntitlementPlanStatus,
-  EntitlementMeteredFeature
+  EntitlementMeteredFeature,
+  EntitlementsStatusData
 } from './entitlements/messages';
-
-// Analytics messages
-export {
-  ClientAnalyticsEvent
-} from './analytics/messages';
 
 // Page conversion message payloads (blank-slate card)
 export type {

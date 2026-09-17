@@ -1,9 +1,16 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ClientAnalyticsEvent, getLogger } from '@quodsi/lucid-shared';
+import { getLogger } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { AuthHandler } from './authHandler';
 
 const log = getLogger('AnalyticsHandler');
+
+/** Event names the extension fires. Must match quodsi_api's TrackEvent allowlist (lucid_router.py). */
+export type ClientAnalyticsEvent =
+  | 'model_opened'
+  | 'first_model_created'
+  | 'results_viewed'
+  | 'first_results_viewed';
 
 /**
  * Fires product-telemetry events from the extension host to the backend

@@ -29,12 +29,12 @@ pairs.
 
 `data` is typed at each send and receive site (usually an inline
 `msg.data as {...}`). This package holds only the payload pieces both sides
-share: `QuodsiUserInfo`, `ExtensionConfig`, `ElementShape`, `SimulationStatus`
-/ `SimulationJob`, the entitlement enums, `ClientAnalyticsEvent`, the
-page-conversion payloads, and the validation types (declared in
-`@quodsi/shared`). A full typed payload map was removed on 2026-09-17 because
-nothing used it and it had drifted from the real messages; typing payloads
-end to end is ClickUp 86e39r8e9.
+share: `QuodsiUserInfo`, `ExtensionConfig`, `ElementShape`, `SimulationStatus`,
+the entitlement types (including the whole `ENTITLEMENTS_STATUS` payload,
+`EntitlementsStatusData`) and the page-conversion payloads. A type only one
+side uses lives on that side. A full typed payload map was removed on
+2026-09-17 because nothing used it and it had drifted from the real messages;
+typing payloads end to end is ClickUp 86e39r8e9.
 
 ## Adding a message type
 

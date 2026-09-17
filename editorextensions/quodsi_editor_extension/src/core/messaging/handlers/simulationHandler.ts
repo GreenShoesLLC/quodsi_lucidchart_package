@@ -2,7 +2,6 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   SimulationStatus,
-  SimulationJob,
   modelDefinitionToCleanDocument,
   Model,
   generateUUID,
@@ -25,6 +24,23 @@ import { alignModelToPageSvg } from '../../sync/pageSvg';
 
 const log = getLogger('SimulationHandler');
 
+/** A simulation job the extension is tracking. */
+interface ActiveJob {
+  jobId: string;
+  documentId: string;
+  scenarioId: string;
+  scenarioName: string;
+  status: SimulationStatus;
+  /** 0-100 */
+  progress: number;
+  startTime: Date;
+  lastUpdate: Date;
+  currentStep?: string;
+  error?: string;
+  resultUrl?: string;
+  pollInterval?: any;
+}
+
 export interface RunSubmitOutcome {
   accepted: boolean;
   error?: string;
@@ -34,15 +50,8 @@ export interface RunSubmitOutcome {
  * Handler for simulation-related messages
  */
 export class SimulationHandler {
-  /**
-   * Active simulation jobs
-   * Note: Uses Omit to exclude string-based timestamps and replace with Date objects for internal tracking
-   */
-  private static activeJobs: Map<string, Omit<SimulationJob, 'startTime' | 'lastUpdate'> & {
-    startTime: Date;
-    lastUpdate: Date;
-    pollInterval?: any;
-  }> = new Map();
+  /** Active simulation jobs, by job id. */
+  private static activeJobs: Map<string, ActiveJob> = new Map();
 
   /**
    * Turn a 402 entitlement-exceeded response into a friendly user message.

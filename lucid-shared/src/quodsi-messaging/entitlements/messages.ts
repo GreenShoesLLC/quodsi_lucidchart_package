@@ -1,3 +1,5 @@
+import type { EntitlementPlanSource } from '@quodsi/shared';
+
 /**
  * Whose plan is being enforced on this request — the user's personal plan,
  * or the org's plan (which takes precedence when a user belongs to an org
@@ -20,4 +22,28 @@ export type EntitlementPlanStatus = 'active' | 'trialing' | 'in_grace' | 'expire
 export interface EntitlementMeteredFeature {
   limit: number;
   used: number;
+}
+
+/**
+ * ENTITLEMENTS_STATUS payload (host -> panel). quodsi_api's GetMyEntitlements
+ * data action returns exactly this shape (camelCase end to end), and the host
+ * forwards it unchanged. The fields after `upgradeAvailable` are optional so
+ * an older backend that doesn't send them still works.
+ */
+export interface EntitlementsStatusData {
+  subjectType: EntitlementSubjectType;
+  planKey: string;
+  planStatus: EntitlementPlanStatus;
+  trialExpiresAt?: string;
+  /** Metered features as { limit, used }; unmetered flags as `true`. Absent key = feature disabled. */
+  features: Record<string, EntitlementMeteredFeature | boolean>;
+  upgradeAvailable?: boolean;
+  planSource?: EntitlementPlanSource;
+  orgName?: string | null;
+  studiesUsed?: number;
+  studiesPerOrgLimit?: number | null;
+  scenariosPerStudyLimit?: number | null;
+  replicationsPerScenarioLimit?: number | null;
+  tradeoffAnalysis?: boolean;
+  chartExport?: boolean;
 }
