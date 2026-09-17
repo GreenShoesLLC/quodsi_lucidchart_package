@@ -541,7 +541,7 @@ export class SimulationRunHandler {
       // shape stays stable across models.
       workSchedules: model.workSchedules ?? [],
       // The WHOLE clean wire document, for the Advisor consult (the compiled
-      // ?view=advisor modal; Studio's legacy /embed/advisor too). The catalog projection above is deliberately lossy
+      // ?view=advisor modal). The catalog projection above is deliberately lossy
       // (no states, arrival patterns or connector conditions) and the Advisor
       // is grounded in the clean schema, so it must see the document the
       // serializer actually produced. Receiver: quodsi_studio

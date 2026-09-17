@@ -4,9 +4,9 @@ import { useSender } from './useSender';
 import { getModalSizePref } from '../../lib/modalSizePref';
 
 /**
- * Focus carried to the embedded Advisor consult. Mirrors quodsi_studio's
- * AdvisorFocus, flattened into the field names the host puts on the
- * /embed/advisor query string (focusId/focusType/focusName/mode).
+ * Focus carried to the Advisor consult modal. Mirrors quodsi_studio's
+ * AdvisorFocus, flattened into the field names AdvisorConsultModal puts on
+ * the ?view=advisor query string (focusId/focusType/focusName/mode).
  */
 export interface AdvisorLaunchFocus {
   /** Shape id of the focused element; '' for the model as a whole. */
