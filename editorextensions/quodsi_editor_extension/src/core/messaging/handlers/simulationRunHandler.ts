@@ -11,6 +11,7 @@ import { StudiesModal } from '../../../panels/StudiesModal';
 import { AdvisorConsultModal } from '../../../panels/AdvisorConsultModal';
 import { DiagramMappingModal } from '../../../panels/DiagramMappingModal';
 import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
+import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 
 /**
  * Handler for simulation run management messages
@@ -131,8 +132,8 @@ export class SimulationRunHandler {
    * resolves its server id) AND the model-definition snapshot push. The view
    * pulls the outcome via REQUEST_STUDIO_EMBED_PATH.
    *
-   * The modal opens before any network wait -- only canonicalModelName
-   * precedes it. A cached server id (earlier open of the same page) rides on
+   * The modal opens before any network wait -- only canonicalModelName and,
+   * on the first data action of the session, the Lucid OAuth step precede it. A cached server id (earlier open of the same page) rides on
    * the modal URL so the view can start loading immediately; the reply still
    * waits for this open's snapshot push.
    *
@@ -170,6 +171,10 @@ export class SimulationRunHandler {
       });
 
     const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
+    // Settle the one-time Lucid OAuth step BEFORE the modal opens: its consent
+    // dialog cannot appear on top of our modal (Lucid does not stack dialogs),
+    // and the sync below would fail without it. A no-op once done.
+    await LucidDataActionUtility.ensureLucidOauth(client);
     new StudiesModal(client, { modelId: cached, modalSize: data.modalSize }).show();
     const idPromise = refreshUpsert();
     // Push the live model definition snapshot (envelope-level

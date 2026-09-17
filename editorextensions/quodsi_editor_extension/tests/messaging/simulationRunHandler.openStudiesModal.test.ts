@@ -53,6 +53,7 @@ jest.mock('lucid-extension-sdk', () => {
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { SimulationRunHandler } from '../../src/core/messaging/handlers/simulationRunHandler';
 import { StudiesModal } from '../../src/panels/StudiesModal';
+import { LucidDataActionUtility } from '../../src/utils/LucidDataActionUtility';
 
 function deferred<T>() {
   let resolve!: (v: T) => void;
@@ -115,6 +116,7 @@ beforeEach(() => {
   jest.spyOn(StudiesModal.prototype, 'show').mockImplementation(async function (this: StudiesModal) {
     shown.push(this);
   });
+  jest.spyOn(LucidDataActionUtility, 'ensureLucidOauth').mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -206,6 +208,24 @@ describe('OPEN_STUDIES_MODAL', () => {
     expect(data.synced).toBe(false);
     expect(data.error).toBe('model id unresolved');
     expect(data.modelId).toBeUndefined();
+  });
+
+  it('opens the modal only after the Lucid OAuth step settles (its consent dialog cannot sit on top of our modal)', async () => {
+    const oauth = deferred<void>();
+    (LucidDataActionUtility.ensureLucidOauth as jest.Mock).mockReturnValue(oauth.promise);
+    upsertModelMock.mockResolvedValue({ serverModelId: 'srv-1' });
+    pushSnapshotMock.mockResolvedValue(undefined);
+
+    SimulationRunHandler.handleMessage(openMessage());
+    await flush();
+    expect(LucidDataActionUtility.ensureLucidOauth).toHaveBeenCalledTimes(1);
+    expect(shown).toHaveLength(0);
+    expect(upsertModelMock).not.toHaveBeenCalled();
+
+    oauth.resolve();
+    await flush();
+    expect(shown).toHaveLength(1);
+    expect(upsertModelMock).toHaveBeenCalledTimes(1);
   });
 
   it('REQUEST_STUDIO_EMBED_PATH with no Studies open: replies no pending Studies open', async () => {
