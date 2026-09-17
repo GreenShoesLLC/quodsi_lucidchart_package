@@ -23,7 +23,7 @@ directly; add a re-export here only when a Lucid consumer needs it.
 | `src/types` | Lucid storage and panel view types: `ModelRootProjection`, `EditorReferenceData`, `StoredResourceRecord`, swimlane data, selection state, conversion results, devtools payloads. |
 | `src/core/logging` | Legacy `QuodsiLogger` / `ComponentLogger` (see the repo `CLAUDE.md`; new code uses `getLogger`). |
 | `src/embed` | Helpers for the Studio embed relay (`buildRelayConnectors`). |
-| `src/utils` | Small Lucid utilities (`resolveModelName`, `ensureBaselineScenario`). |
+| `src/utils` | `ensureBaselineScenario` (Lucid scenario storage). |
 
 ## Build and test
 

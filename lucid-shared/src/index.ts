@@ -32,7 +32,6 @@ export {
   SwimLaneContainment,
 } from './types/swimlane/SwimLaneQuodsiData';
 
-export * from './utils/resolveModelName';
 export * from './utils/scenarioUtils';
 
 export { parsePageTranslate } from './serialization/coordinateAlignment';
@@ -164,6 +163,8 @@ export { offsetLayoutCoordinates } from '@quodsi/shared';
 // NameableShape. DiagramElementType is the Lucid name for DiagramElementKind
 // (an alias, not a second enum: enums are nominal).
 export { classifyByTopology, pickName, pickConnectorName, ConversionNamer, generateUniqueName } from '@quodsi/shared';
+// The name a new model gets from its document title (generic -> timestamped).
+export { resolveModelName } from '@quodsi/shared';
 export { DiagramElementKind, DiagramElementKind as DiagramElementType } from '@quodsi/shared';
 export type { NameableShape, ElementMappingPreview, ConversionPreviewData, MappingSource, ElementTypeInfo } from '@quodsi/shared';
 export {
