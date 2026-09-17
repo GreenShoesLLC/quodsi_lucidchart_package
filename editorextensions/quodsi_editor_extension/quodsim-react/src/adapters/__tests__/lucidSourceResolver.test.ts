@@ -11,7 +11,6 @@ import { useLucidSourceResolver } from '../lucidSourceResolver'
 
 const { send } = vi.hoisted(() => ({ send: vi.fn() }))
 vi.mock('../../messaging/senders/useSender', () => ({ useSender: () => send }))
-vi.mock('../../messaging/MessageContext', () => ({ useMessagingDispatch: () => vi.fn() }))
 
 function issue(overrides: Partial<ValidationIssue> = {}): ValidationIssue {
   return {
