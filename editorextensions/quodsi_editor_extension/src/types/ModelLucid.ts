@@ -5,8 +5,6 @@ import {
     SimulationObjectType,
     PeriodUnit,
     SimulationTimeType,
-    PlatformMetadata,
-    PlatformType,
     ModelDefaults,
     ScenarioLever
 } from '@quodsi/lucid-shared';
@@ -189,10 +187,5 @@ export class ModelLucid extends SimObjectLucid<Model> {
     protected getElementName(): string {
         const page = this.element as PageProxy;
         return page.getTitle() || 'Unnamed Model';
-    }
-
-    public validate(): boolean {
-        return !!this.simObject.name &&
-            this.simObject.replications > 0;
     }
 }

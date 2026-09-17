@@ -1,25 +1,22 @@
 // @quodsi/lucid-shared -- the Lucid-only layer shared by the editor extension
 // and its panel. Local modules are exported whole; names from @quodsi/shared
-// are re-exported by name, and only those the extension or panel actually
-// import from here (trimmed 2026-09-17). A consumer may also import from
-// @quodsi/shared directly -- add a re-export below only when a Lucid consumer
-// needs it. Never `export *` from @quodsi/shared: its names collide with ours.
+// are re-exported by name, HERE and nowhere else in this package (no shim
+// files), and only those the extension or panel actually import from here
+// (trimmed 2026-09-17). A consumer may also import from @quodsi/shared
+// directly -- add a re-export below only when a Lucid consumer needs it.
+// Never `export *` from @quodsi/shared: its names collide with ours.
 
 // ---------------------------------------------------------------------------
 // Local modules
 // ---------------------------------------------------------------------------
 
-export * from './platform';
 export * from './core/logging/QuodsiLogger';
 export * from './core/logging/ComponentLogger';
 
 export * from './types/BlockAnalysis';
 export * from './types/common';
-export * from './types/ConversionPreview';
 export * from './types/ConversionResult';
-export * from './types/DiagramElementType';
 export * from './types/EditorReferenceData';
-export * from './types/ElementTypeInfo';
 export * from './types/ModelItemData';
 export * from './types/ModelRootProjection';
 export * from './types/PageStatus';
@@ -35,15 +32,13 @@ export {
   SwimLaneContainment,
 } from './types/swimlane/SwimLaneQuodsiData';
 
-export * from './utils/nameUtils';
 export * from './utils/resolveModelName';
 export * from './utils/scenarioUtils';
 
-export * from './serialization';
-export * from './validation';
+export { parsePageTranslate } from './serialization/coordinateAlignment';
+export type { PageTranslate } from './serialization/coordinateAlignment';
 export * from './quodsi-messaging';
 export * from './embed/buildRelayConnectors';
-export * from './config/modalSize';
 
 // ---------------------------------------------------------------------------
 // Re-exports from @quodsi/shared
@@ -54,6 +49,20 @@ export { MODEL_SCHEMA_VERSION, ENGINE_VERSION } from '@quodsi/shared';
 export { configureLogger, getLogger, consoleSink, installDebugGlobal, resetLoggerForTests } from '@quodsi/shared';
 export type { LogLevel } from '@quodsi/shared';
 export { QUODSI_ICON_BASE64 } from '@quodsi/shared';
+
+// Platform (the version manager registers its upgrader for PlatformType.Lucid)
+export { PlatformType } from '@quodsi/shared';
+
+// Modal window size preference (the extension sizes modals from it)
+export { DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/shared';
+export type { ModalSize } from '@quodsi/shared';
+
+// Validation: the gate, its copy, and the result types messages carry
+export { ValidationMessages, evaluateValidationGate, ValidationSeverity } from '@quodsi/shared';
+export type { ValidationIssue, ValidationResult } from '@quodsi/shared';
+
+// Entitlements
+export type { EntitlementPlanSource } from '@quodsi/shared';
 
 // Domain model
 export {
@@ -149,11 +158,14 @@ export type {
 // Shift layout coordinates into the page SVG's frame (after parsePageTranslate).
 export { offsetLayoutCoordinates } from '@quodsi/shared';
 
-// Page conversion: topology rule, naming policy, structured-name parsing and
-// per-pass name bookkeeping -- the same rules drawio and Visio use; the
-// extension adapts its SDK proxies to NameableShape.
-export { classifyByTopology, pickName, pickConnectorName, ConversionNamer } from '@quodsi/shared';
-export type { NameableShape } from '@quodsi/shared';
+// Page conversion: topology rule, naming policy, structured-name parsing,
+// unique names, per-pass name bookkeeping and the mapping preview -- the same
+// rules drawio and Visio use; the extension adapts its SDK proxies to
+// NameableShape. DiagramElementType is the Lucid name for DiagramElementKind
+// (an alias, not a second enum: enums are nominal).
+export { classifyByTopology, pickName, pickConnectorName, ConversionNamer, generateUniqueName } from '@quodsi/shared';
+export { DiagramElementKind, DiagramElementKind as DiagramElementType } from '@quodsi/shared';
+export type { NameableShape, ElementMappingPreview, ConversionPreviewData, MappingSource, ElementTypeInfo } from '@quodsi/shared';
 export {
   parseStructuredName,
   extractActivityFields,

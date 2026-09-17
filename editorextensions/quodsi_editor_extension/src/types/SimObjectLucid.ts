@@ -1,12 +1,8 @@
 import { BlockProxy, ElementProxy } from 'lucid-extension-sdk';
 import {
-    PlatformSimObject,
-    PlatformType,
-    PlatformMetadata,
     SimulationObject,
     SimulationObjectType,
     ComponentLogger,
-    MODEL_SCHEMA_VERSION,
     pickName
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -27,9 +23,9 @@ export const setSimObjectLucidLogging = (enabled: boolean): void => {
 
 /**
  * Base abstract class for Lucid-specific simulation objects.
- * Implements common functionality and enforces the PlatformSimObject contract.
+ * Wraps a Lucid element and the domain object stored on it.
  */
-export abstract class SimObjectLucid<T extends SimulationObject> implements PlatformSimObject<T> {
+export abstract class SimObjectLucid<T extends SimulationObject> {
     protected simObject: T;
 
     constructor(
@@ -86,30 +82,6 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
      */
     public abstract updateFromPlatform(): void;
 
-    /**
-     * Validates the Lucid element storage
-     */
-    public validate(): boolean {
-        const isValid = this.storageAdapter.validateStorage(this.element);
-        ComponentLogger.log(LOG_PREFIX, `Validation for element ID ${this.element.id}: ${isValid}`);
-        return isValid;
-    }
-
-    /**
-     * Gets Lucid-specific metadata
-     */
-    public getMetadata(): PlatformMetadata {
-        const metadata = {
-            platform: PlatformType.Lucid,
-            version: MODEL_SCHEMA_VERSION,
-            lastModified: new Date().toISOString(),
-            elementId: this.element.id,
-            elementType: this.type
-        };
-        ComponentLogger.log(LOG_PREFIX, `Getting metadata for element ID ${this.element.id}`, metadata);
-        return metadata;
-    }
-    
     /**
      * Name a block being converted, using the SHARED policy (@quodsi/shared
      * conversion/naming) that drawio and Visio run — canvas text, then the

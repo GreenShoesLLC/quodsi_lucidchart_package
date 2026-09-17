@@ -832,19 +832,6 @@ export class StorageAdapter {
         }
     }
 
-    /**
-     * Validates that an element has the required q_data storage key
-     */
-    public validateStorage(element: ElementProxy): boolean {
-        try {
-            const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
-            return typeof dataStr === 'string' && dataStr.length > 0;
-        } catch (error) {
-            this.logError('Error validating storage:', error);
-            return false;
-        }
-    }
-
     public clearAllModelData(page: PageProxy): void {
         try {
             // Clear model data from page

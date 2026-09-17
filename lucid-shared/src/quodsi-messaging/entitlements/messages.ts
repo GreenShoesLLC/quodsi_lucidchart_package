@@ -5,11 +5,6 @@
  */
 export type EntitlementSubjectType = 'user' | 'organization';
 
-/**
- * Where the active plan resolution came from, as computed by the backend's
- * EntitlementService (`quodsi_api`'s `plan_source`). Declared in @quodsi/shared.
- */
-export type { EntitlementPlanSource } from '@quodsi/shared';
 
 /**
  * Plan status mirrors Kinde. `trialing` grants full entitlements like

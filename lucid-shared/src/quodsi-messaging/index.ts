@@ -24,14 +24,9 @@ export {
   SimulationJob
 } from './simulation/messages';
 
-// Validation types (declared in @quodsi/shared, see validation/types.ts)
-export { ValidationSeverity } from './validation/types';
-export type { ValidationIssue, ValidationResult } from './validation/types';
-
 // Entitlement payload pieces
 export {
   EntitlementSubjectType,
-  EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementMeteredFeature
 } from './entitlements/messages';

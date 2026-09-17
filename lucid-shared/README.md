@@ -10,7 +10,8 @@ Everything platform-agnostic — the domain model (`ModelDefinition`,
 versioning and upgrade transforms, the wire document and its serializer — lives in the
 monorepo's `@quodsi/shared` (`../../quodsi_shared`). This package depends on it
 and re-exports the names the extension and panel pull through
-`@quodsi/lucid-shared`. A consumer may also import from `@quodsi/shared`
+`@quodsi/lucid-shared` -- all of them in `src/index.ts`; no other file here
+exists only to re-export core. A consumer may also import from `@quodsi/shared`
 directly; add a re-export here only when a Lucid consumer needs it.
 
 ## What lives here
@@ -21,9 +22,8 @@ directly; add a re-export here only when a Lucid consumer needs it.
 | `src/serialization` | `parsePageTranslate`, the page-SVG translate Lucid's `getSvg()` applies. The wire document (`modelDefinitionToCleanDocument`, the `ISerialized*` types) is in `@quodsi/shared`. |
 | `src/types` | Lucid storage and panel view types: `ModelRootProjection`, `EditorReferenceData`, `StoredResourceRecord`, swimlane data, selection state, conversion results, devtools payloads. |
 | `src/core/logging` | Legacy `QuodsiLogger` / `ComponentLogger` (see the repo `CLAUDE.md`; new code uses `getLogger`). |
-| `src/platform` | `PlatformSimObject`, the contract `SimObjectLucid` implements. |
 | `src/embed` | Helpers for the Studio embed relay (`buildRelayConnectors`). |
-| `src/validation`, `src/config`, `src/utils` | Mostly re-exports of `@quodsi/shared`, plus small Lucid utilities (`resolveModelName`, `ensureBaselineScenario`). |
+| `src/utils` | Small Lucid utilities (`resolveModelName`, `ensureBaselineScenario`). |
 
 ## Build and test
 
