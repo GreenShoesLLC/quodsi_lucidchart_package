@@ -9,7 +9,7 @@ Quodsi is a LucidChart extension that transforms diagrams into discrete event si
 ## Architecture
 
 ### Component Structure
-1. **Shared Library** (`/lucid-shared`, `@quodsi/lucid-shared`) - Lucid-only layer: messaging protocol, panel/extension shared types, embed helpers. Serialization, validation and logging come from `@quodsi/shared`. Domain models (`Activity`, `Resource`, `ModelDefinition`, ...) come from the monorepo's `@quodsi/shared` and are re-exported here, so extension and panel code imports everything from `@quodsi/lucid-shared`.
+1. **Shared Library** (`/lucid-shared`, `@quodsi/lucid-shared`) - Lucid-only layer: messaging protocol and panel/extension shared types. Serialization, validation, logging and the Studies catalog builder (`buildRelayedCatalog`) come from `@quodsi/shared`. Domain models (`Activity`, `Resource`, `ModelDefinition`, ...) come from the monorepo's `@quodsi/shared` and are re-exported here, so extension and panel code imports everything from `@quodsi/lucid-shared`.
 2. **Editor Extension** (`/editorextensions/quodsi_editor_extension`) - TypeScript-based LucidChart extension that manages the model lifecycle
 3. **React UI** (`/editorextensions/quodsi_editor_extension/quodsim-react`) - Embedded React app for model editing and simulation controls
 

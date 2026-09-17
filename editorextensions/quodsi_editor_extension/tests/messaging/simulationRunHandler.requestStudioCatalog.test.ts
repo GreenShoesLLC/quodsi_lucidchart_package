@@ -11,10 +11,9 @@
 // ENTIRE catalog send for every real calendar-mode model — the opposite of
 // what the F4 fix was trying to do.
 //
-// The direct-private-method tests in
-// simulationRunHandler.buildStudioCatalog.test.ts pin `buildStudioCatalog`'s
-// own field mapping correctly, but they construct their input by hand and
-// so never exercise the REAL storage-parsed value that actually broke this
+// The field-mapping tests of the builder (@quodsi/shared's
+// relayedCatalog.test.ts) construct their input by hand and so never
+// exercise the REAL storage-parsed value that actually broke this
 // — that's how it slipped. This file goes through the real
 // `handleRequestStudioCatalog` message handler, backed by a REAL
 // `ModelLucid` reading a REAL stored JSON blob (so `finishDateTime` is

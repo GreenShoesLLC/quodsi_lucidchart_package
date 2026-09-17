@@ -57,7 +57,7 @@ interface StoredModelData {
     // outright by the clean-era hop, not renamed) but still meaningful
     // in-memory (`Model.warmupDateTime`/`startDateTime`/`finishDateTime` —
     // see that class's own doc comment) and relayed to the Studio embed
-    // catalog (buildStudioCatalog). This class keeps writing them; the
+    // catalog (buildRelayedCatalog). This class keeps writing them; the
     // clean-era hop simply never re-materializes them once dropped.
     warmupDateTime?: Date | null;
     startDateTime?: Date | null;

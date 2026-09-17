@@ -1,5 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, modelDefinitionToCleanDocument, ModalSize, buildRelayConnectors } from '@quodsi/lucid-shared';
-import type { ISerializedModel } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, modelDefinitionToCleanDocument, ModalSize, buildRelayedCatalog } from '@quodsi/lucid-shared';
 import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
@@ -422,11 +421,10 @@ export class SimulationRunHandler {
       typeof rawFinishDateTime === 'string'
         ? rawFinishDateTime
         : (rawFinishDateTime as Date | null)?.toISOString?.() ?? null;
-    const catalog = SimulationRunHandler.buildStudioCatalog(
-      serializedModel,
-      modelDefinition.model.id,
+    const catalog = buildRelayedCatalog(serializedModel, {
+      modelId: modelDefinition.model.id,
       finishDateTime,
-    );
+    });
 
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
@@ -437,121 +435,6 @@ export class SimulationRunHandler {
       version: '1.0',
       data: { catalog },
     });
-  }
-
-  /**
-   * Build the full relay catalog from a serialized model. Populates the `model`
-   * block (timing fields) and all per-record optional fields (capacity, weight,
-   * sourceConfig, rootClause, etc.) so the compiled Studies/Advisor modal can
-   * validate the full model without a separate API round-trip.
-   *
-   * The returned shape is structurally compatible with
-   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`
-   * — wire-cleanup Phase B2 Task 9: this is the sender-side half of that
-   * file's documented gap ("buildStudioCatalog itself still sends old-era
-   * key names today ... bridged at the receive boundary by
-   * normalizeRelayedCatalog.ts ... until Task 9/10 lands"). Emits the CLEAN
-   * field names directly now (`timeMode`/`timeUnit`/`runTime`/`warmupTime`,
-   * `inboundCapacity`/`outboundCapacity`/`routing`, action `type`,
-   * `rootClause`, flat generator core fields) — `normalizeRelayedCatalog`
-   * on the Studio side can be collapsed to a no-op once this lands there.
-   * Connectors come from the model's top-level `connectors[]` and carry
-   * ONLY id/name/sourceId/targetId/weight (see `buildRelayConnectors` —
-   * `RelayCatalogConnector`'s own field list; condition/entityId/priority
-   * are NOT relayed today, fix round F4 comment correction).
-   */
-  private static buildStudioCatalog(model: ISerializedModel, modelId: string, finishDateTime: string | null) {
-    // Map + deduplicate the top-level connectors by id.
-    const connectors = buildRelayConnectors(model);
-
-    return {
-      model: {
-        id: modelId,
-        name: model.name,
-        timeMode: model.timeMode,
-        timeUnit: model.timeUnit,
-        runTime: model.runTime,
-        warmupTime: model.warmupTime,
-        replications: model.replications,
-        startDateTime: model.startDateTime ?? null,
-        // Host-projection-only convenience with no clean-wire slot — see
-        // the call site's comment. Every calendar-mode embed relies on this
-        // to satisfy the Studio side's `missing_finish_datetime` check.
-        finishDateTime,
-        // Opt-in model-level levers (reps/seed) so the live-relay embed path
-        // surfaces them in the New-Study roster (the receiver — RelayedCatalog.
-        // model.levers + composeModelDefinition — is already wired).
-        levers: model.levers ?? [],
-      },
-      activities: (model.activities ?? []).map((a) => ({
-        id: a.id,
-        name: a.name,
-        capacity: a.capacity,
-        inboundCapacity: a.inboundCapacity,
-        outboundCapacity: a.outboundCapacity,
-        routing: a.routing,
-        // Work-schedule link (spec 2026-08-27 §3.2). The embed's compiled
-        // CapacitySourcePicker derives its "Fixed capacity" / "Follow a
-        // schedule" state from this alone -- omitting it would show an
-        // already-scheduled activity as fixed, and the author's next edit
-        // would read as a brand-new link.
-        workScheduleId: a.workScheduleId,
-        actions: (a.actions ?? []).map((ac) => {
-          const base: {
-            id: string;
-            type: string;
-            duration?: unknown;
-            resourceRequirementId?: string | null;
-          } = { id: (ac as { id?: string }).id ?? '', type: (ac as { type: string }).type };
-          if ('duration' in ac) base.duration = (ac as { duration?: unknown }).duration;
-          if ('resourceRequirementId' in ac) {
-            base.resourceRequirementId = (ac as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
-          }
-          return base;
-        }),
-        sourceConfig: a.sourceConfig ? { ...a.sourceConfig } : undefined,
-      })),
-      resources: (model.resources ?? []).map((r) => ({
-        id: r.id,
-        name: r.name,
-        capacity: r.capacity,
-        // Same reason as the activity link above -- see its comment.
-        workScheduleId: r.workScheduleId,
-      })),
-      resourceRequirements: (model.resourceRequirements ?? []).map((rq) => ({
-        id: rq.id,
-        name: rq.name,
-        rootClause: rq.rootClause,
-      })),
-      generators: (model.generators ?? []).map((g) => ({
-        // Spread rather than enumerate fields by name: a hand-picked field
-        // list is exactly the shape that silently dropped PATTERN-mode fields
-        // (arrivalPatternId, volume) here in the past — this site was missed
-        // by an earlier grep-for-deleted-names sweep because it never
-        // referenced the deleted field, only omitted the ones that replaced
-        // it. Spreading means a future generator-core field reaches this
-        // relay automatically instead of needing another enumeration site to
-        // remember it. Generator's fields are already flat (dissolved
-        // EntitySourceConfig) — no nested `generationConfig` to unwrap.
-        ...g,
-      })),
-      connectors,
-      entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
-      // Model-level work schedules (spec 2026-08-27 §3.1). Relayed WHOLE --
-      // the embed's WorkSchedulesEditor and WorkScheduleModal both read every
-      // field, so there is nothing to trim, and the records are already the
-      // sparse wire shape `WorkSchedule.toJSON()` produced. Always an array,
-      // even when the serializer sparse-omitted the key, so the catalog's own
-      // shape stays stable across models.
-      workSchedules: model.workSchedules ?? [],
-      // The WHOLE clean wire document, for the Advisor consult (the compiled
-      // ?view=advisor modal). The catalog projection above is deliberately lossy
-      // (no states, arrival patterns or connector conditions) and the Advisor
-      // is grounded in the clean schema, so it must see the document the
-      // serializer actually produced. Receiver: quodsi_studio
-      // RelayedCatalog.document -> LucidEmbedModelAccessor.getRelayedDocument.
-      document: model,
-    };
   }
 
 }

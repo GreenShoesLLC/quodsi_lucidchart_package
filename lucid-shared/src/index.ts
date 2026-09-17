@@ -24,7 +24,6 @@ export {
 } from './types/swimlane/SwimLaneQuodsiData';
 
 export * from './quodsi-messaging';
-export * from './embed/buildRelayConnectors';
 
 // ---------------------------------------------------------------------------
 // Re-exports from @quodsi/shared
@@ -143,6 +142,9 @@ export type {
 
 // Shift layout coordinates into the page SVG's frame (the extension's pageSvg.ts).
 export { offsetLayoutCoordinates } from '@quodsi/shared';
+
+// The model catalog relayed to the compiled Studies/Advisor modals (STUDIO_CATALOG).
+export { buildRelayedCatalog } from '@quodsi/shared';
 
 // Page conversion: topology rule, naming policy, structured-name parsing,
 // unique names, per-pass name bookkeeping and the mapping preview -- the same
