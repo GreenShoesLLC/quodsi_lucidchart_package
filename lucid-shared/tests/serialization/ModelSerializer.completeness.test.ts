@@ -21,7 +21,7 @@
  * // Add new Model fields here if the automatic Object.keys check misses them
  */
 
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
 import { ModelDefinition } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
@@ -81,7 +81,7 @@ describe('ModelSerializer completeness — all Model fields round-trip through s
     beforeAll(() => {
         model = buildCompleteModel();
         const modelDef = buildModelDefinition(model);
-        const serialized = ModelSerializerFactory.create(modelDef).serialize(modelDef);
+        const serialized = modelDefinitionToCleanDocument(modelDef);
         serializedModel = serialized as unknown as Record<string, unknown>;
     });
 

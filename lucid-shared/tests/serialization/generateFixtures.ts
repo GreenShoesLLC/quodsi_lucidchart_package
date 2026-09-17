@@ -1,4 +1,4 @@
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -62,8 +62,7 @@ async function generateFixtureJson(modelNames?: string[]) {
     // Generate each model fixture
     for (const { create, name } of modelsToGenerate) {
         const model = create();
-        const serializer = ModelSerializerFactory.create(model);
-        const serialized = serializer.serialize(model);
+        const serialized = modelDefinitionToCleanDocument(model);
 
         const outputPath = path.join(expectedJsonPath, `${name}.json`);
         

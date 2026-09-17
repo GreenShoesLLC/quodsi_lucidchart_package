@@ -1,9 +1,5 @@
 {
   "schemaVersion": "2026.12.01",
-  "metadata": {
-    "version": "2026.12.01",
-    "timestamp": "2026-09-16T01:50:13.900Z"
-  },
   "name": "Model E2A3R2G1",
   "replications": 10,
   "seed": 12345,
@@ -26,6 +22,44 @@
       "name": "Entity2"
     }
   ],
+  "resources": [
+    {
+      "id": "resource-1",
+      "name": "Resource1"
+    },
+    {
+      "id": "resource-2",
+      "name": "Resource2"
+    }
+  ],
+  "resourceRequirements": [
+    {
+      "id": "resource-1",
+      "name": "Resource1",
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "resource-2",
+      "name": "Resource2",
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-2"
+          }
+        ]
+      }
+    }
+  ],
   "activities": [
     {
       "id": "activity-1",
@@ -34,7 +68,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "4e4670f5-c537-4067-967d-57d51ceb0351",
+          "id": "76e6d4ac-e28d-4e9b-8ae0-5fc183b8232a",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -45,7 +79,7 @@
           "resourceRequirementId": "resource-1"
         },
         {
-          "id": "377c590e-17cf-44c2-ab68-b9398dd9a6ca",
+          "id": "4b7b54ab-c491-4407-8fcb-14ea3bb7a347",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -64,7 +98,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "5cd138c7-f9a4-49f5-a624-284feaced266",
+          "id": "0dae347f-a124-404d-a38c-5943aa2e7af2",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -76,7 +110,7 @@
           "resourceRequirementId": "resource-1"
         },
         {
-          "id": "3a578987-ea2a-46a6-976d-abd4b005eee1",
+          "id": "583ec2af-e49f-4e83-9bfe-f189c1125fb5",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -96,7 +130,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "377e2589-6bd8-4aa0-b899-d94efa3698ca",
+          "id": "5a5db406-9c01-4fc6-8c74-eaca5ffb9128",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -105,7 +139,7 @@
           "resourceRequirementId": "resource-1"
         },
         {
-          "id": "0eca4a26-c627-4abb-ac95-817a2fde3186",
+          "id": "ac9458d4-f6e1-498e-8380-01a862216d5e",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -114,16 +148,6 @@
           "resourceRequirementId": "resource-2"
         }
       ]
-    }
-  ],
-  "resources": [
-    {
-      "id": "resource-1",
-      "name": "Resource1"
-    },
-    {
-      "id": "resource-2",
-      "name": "Resource2"
     }
   ],
   "generators": [
@@ -163,33 +187,13 @@
       "weight": 1
     }
   ],
-  "resourceRequirements": [
-    {
-      "id": "resource-1",
-      "name": "Resource1",
-      "rootClause": {
-        "id": "clause-1",
-        "mode": "require_all",
-        "requests": [
-          {
-            "resourceId": "resource-1"
-          }
-        ]
-      }
-    },
-    {
-      "id": "resource-2",
-      "name": "Resource2",
-      "rootClause": {
-        "id": "clause-1",
-        "mode": "require_all",
-        "requests": [
-          {
-            "resourceId": "resource-2"
-          }
-        ]
-      }
-    }
-  ],
-  "states": []
+  "states": [],
+  "arrivalPatterns": [],
+  "arrivalSchedules": [],
+  "workSchedules": [],
+  "scenarios": [],
+  "metadata": {
+    "version": "2026.12.01",
+    "timestamp": "2026-09-17T12:50:21.563Z"
+  }
 }

@@ -1,8 +1,10 @@
-import { ISerializedArrivalPattern } from '../serialization/interfaces/ISerializedArrivalPattern';
-import { ISerializedArrivalSchedule } from '../serialization/interfaces/ISerializedArrivalSchedule';
-import { ISerializedWorkSchedule } from '../serialization/interfaces/ISerializedWorkSchedule';
-import { ISerializedResourceRequirement } from '../serialization/interfaces/ISerializedResourceRequirement';
-import { ISerializedDuration } from '../serialization/interfaces/ISerializedDuration';
+import type {
+    ISerializedArrivalPattern,
+    ISerializedArrivalSchedule,
+    ISerializedWorkSchedule,
+    ISerializedResourceRequirement,
+    ISerializedDuration,
+} from '@quodsi/shared';
 import type { EditorReferenceActionSummary, EditorReferenceStateModification } from './EditorReferenceData';
 
 /**

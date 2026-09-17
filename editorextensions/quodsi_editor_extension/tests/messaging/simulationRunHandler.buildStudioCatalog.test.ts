@@ -164,9 +164,9 @@ describe('SimulationRunHandler.buildStudioCatalog (review F4)', () => {
 
     const catalog = buildCatalog(model, 'page-1', null);
 
-    // `[]`, not `undefined`: the serializer sparse-omits the key when empty,
-    // and the receiver's `?? []` would cope -- but relaying a real empty
-    // array keeps the catalog's own shape stable across models.
+    // `[]`, not `undefined`: the serializer writes the key even when empty,
+    // but a model object without it (as here) still yields a real empty
+    // array, which keeps the catalog's own shape stable across models.
     expect(catalog.workSchedules).toEqual([]);
   });
 

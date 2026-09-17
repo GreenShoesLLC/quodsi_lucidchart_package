@@ -1,9 +1,5 @@
 {
   "schemaVersion": "2026.12.01",
-  "metadata": {
-    "version": "2026.12.01",
-    "timestamp": "2026-09-16T01:50:13.898Z"
-  },
   "name": "Sequential Flow Model",
   "replications": 10,
   "seed": 12345,
@@ -22,6 +18,27 @@
       "name": "Entity1"
     }
   ],
+  "resources": [
+    {
+      "id": "resource-1",
+      "name": "Resource1"
+    }
+  ],
+  "resourceRequirements": [
+    {
+      "id": "resource-1",
+      "name": "Resource1",
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-1"
+          }
+        ]
+      }
+    }
+  ],
   "activities": [
     {
       "id": "activity-1",
@@ -30,7 +47,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "b47a9e24-be1e-4ad4-997d-99115dd40111",
+          "id": "c2e5bce3-1c27-4554-9959-79bd4488c58f",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -47,7 +64,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "b47a9e24-be1e-4ad4-997d-99115dd40111",
+          "id": "c2e5bce3-1c27-4554-9959-79bd4488c58f",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -64,7 +81,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "b47a9e24-be1e-4ad4-997d-99115dd40111",
+          "id": "c2e5bce3-1c27-4554-9959-79bd4488c58f",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -73,12 +90,6 @@
           "resourceRequirementId": "resource-1"
         }
       ]
-    }
-  ],
-  "resources": [
-    {
-      "id": "resource-1",
-      "name": "Resource1"
     }
   ],
   "generators": [
@@ -116,20 +127,13 @@
       "weight": 1
     }
   ],
-  "resourceRequirements": [
-    {
-      "id": "resource-1",
-      "name": "Resource1",
-      "rootClause": {
-        "id": "clause-1",
-        "mode": "require_all",
-        "requests": [
-          {
-            "resourceId": "resource-1"
-          }
-        ]
-      }
-    }
-  ],
-  "states": []
+  "states": [],
+  "arrivalPatterns": [],
+  "arrivalSchedules": [],
+  "workSchedules": [],
+  "scenarios": [],
+  "metadata": {
+    "version": "2026.12.01",
+    "timestamp": "2026-09-17T12:50:21.562Z"
+  }
 }

@@ -1,11 +1,11 @@
 /**
  * Task 6b-4: serializeAction must emit the action `id` so it reaches the engine.
  *
- * We test via the public serialize() entry-point because serializeAction() is protected.
+ * Tested through modelDefinitionToCleanDocument, the document Lucid actually sends.
  * A minimal ModelDefinition is built with one activity containing a SeizeAction (or
  * DelayAction) whose id is fixed, then we assert the serialized action carries the same id.
  */
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
 import { ModelDefinition } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
@@ -18,7 +18,9 @@ import { PeriodUnit } from '@quodsi/shared';
 import { ConstantDistribution } from '@quodsi/shared';
 import { createSeizeAction } from '@quodsi/shared';
 import { createDelayAction } from '@quodsi/shared';
-import { ISerializedActionBase } from '../../src/serialization/interfaces/ISerializedAction';
+import type { Action } from '@quodsi/shared';
+
+type ISerializedActionBase = Pick<Action, 'id' | 'type'> & { name?: string };
 
 /** Helper: build a minimal valid ModelDefinition with the supplied actions on its one activity. */
 function buildModelWith(actions: any[]): ModelDefinition {
@@ -73,8 +75,7 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
         generator.maxEntities = 999999;
         modelDef.generators.add(generator);
 
-        const serializer = ModelSerializerFactory.create(modelDef);
-        const serialized = serializer.serialize(modelDef);
+        const serialized = modelDefinitionToCleanDocument(modelDef);
 
         expect(serialized.activities).toHaveLength(1);
         const serializedActions = serialized.activities[0].actions as ISerializedActionBase[];
@@ -88,8 +89,7 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
         expect(delayAction.id).toBe('delay-action-fixed-id');
 
         const modelDef = buildModelWith([delayAction]);
-        const serializer = ModelSerializerFactory.create(modelDef);
-        const serialized = serializer.serialize(modelDef);
+        const serialized = modelDefinitionToCleanDocument(modelDef);
 
         expect(serialized.activities).toHaveLength(1);
         const serializedActions = serialized.activities[0].actions as ISerializedActionBase[];
@@ -103,8 +103,7 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
         const action2 = createDelayAction(duration, null, 'action-id-beta');
 
         const modelDef = buildModelWith([action1, action2]);
-        const serializer = ModelSerializerFactory.create(modelDef);
-        const serialized = serializer.serialize(modelDef);
+        const serialized = modelDefinitionToCleanDocument(modelDef);
 
         const serializedActions = serialized.activities[0].actions as ISerializedActionBase[];
         expect(serializedActions).toHaveLength(2);

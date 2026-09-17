@@ -1,4 +1,4 @@
-import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
+import type { ISerializedScenario } from "@quodsi/shared";
 import { LEGACY_BASELINE_SCENARIO_ID, DomainScenario as Scenario } from "@quodsi/shared";
 import { generateUUID } from '@quodsi/shared';
 

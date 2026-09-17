@@ -1,4 +1,4 @@
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -15,6 +15,7 @@ import {
     createModel_def_e1_a1_r2_g1,
     createModel_def_e1_a2_r0_g1,
     createModel_def_e1_a2_r2_g1,
+    createModel_def_e3_a30_r3_g2,
     createModelWithMixedDistributions
 } from '../__fixtures__/models/valid';
 import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
@@ -31,6 +32,9 @@ const TEST_CASES = [
     { name: 'model_def_e1_a1_r2_g1', create: createModel_def_e1_a1_r2_g1 },
     { name: 'model_def_e1_a2_r0_g1', create: createModel_def_e1_a2_r0_g1 },
     { name: 'model_def_e1_a2_r2_g1', create: createModel_def_e1_a2_r2_g1 },
+    // The large model (3 entities, 30 activities): its fixture is regenerated
+    // with the rest, so compare it too.
+    { name: 'model_def_e3_a30_r3_g2', create: createModel_def_e3_a30_r3_g2 },
     { name: 'non_sequential_flow', create: createNonSequentialFlowModel },
     // Review F7 (nit): wired in so the on-disk sequential_flow.json fixture
     // is actually asserted, not left to drift untouched.
@@ -55,7 +59,7 @@ function normalizeForComparison(obj: any): any {
             if (key === 'timestamp') continue;
             if (key === 'parentClauseId') continue;
             // metadata.version carries MODEL_SCHEMA_VERSION (changes every release); it's
-            // asserted in ModelSerializerFactory.test.ts, so skip it in structural snapshots.
+            // asserted in quodsi_shared's modelDefinitionToCleanDocument tests, so skip it here.
             if (key === 'version') continue;
             
             normalized[key] = normalizeForComparison(value);
@@ -77,8 +81,7 @@ function normalizeForComparison(obj: any): any {
 function testFixture(name: string, createModel: () => any) {
     it(`should match ${name} snapshot`, () => {
         const model = createModel();
-        const serializer = ModelSerializerFactory.create(model);
-        const serialized = serializer.serialize(model);
+        const serialized = modelDefinitionToCleanDocument(model);
         
         const expectedJsonPath = path.join(
             __dirname,

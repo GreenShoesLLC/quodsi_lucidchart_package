@@ -1,9 +1,5 @@
 {
   "schemaVersion": "2026.12.01",
-  "metadata": {
-    "version": "2026.12.01",
-    "timestamp": "2026-09-16T01:50:13.886Z"
-  },
   "name": "Model E1A2R2G1",
   "replications": 10,
   "seed": 12345,
@@ -22,60 +18,6 @@
       "name": "Entity1"
     }
   ],
-  "activities": [
-    {
-      "id": "activity-1",
-      "name": "Activity1",
-      "inboundCapacity": 1,
-      "outboundCapacity": 1,
-      "actions": [
-        {
-          "id": "7522ef13-eb19-42dd-bd19-3b78990de2e7",
-          "type": "delay_with_resource",
-          "duration": {
-            "unit": "minutes",
-            "value": 1
-          },
-          "resourceRequirementId": "resource-1"
-        },
-        {
-          "id": "8f87853b-27b9-4d64-a4fc-2e088bcb8d61",
-          "type": "delay_with_resource",
-          "duration": {
-            "unit": "minutes",
-            "value": 1
-          },
-          "resourceRequirementId": "resource-2"
-        }
-      ]
-    },
-    {
-      "id": "activity-2",
-      "name": "Activity2",
-      "inboundCapacity": 1,
-      "outboundCapacity": 1,
-      "actions": [
-        {
-          "id": "95892465-7bf7-45b8-90ba-80dce519e225",
-          "type": "delay_with_resource",
-          "duration": {
-            "unit": "minutes",
-            "value": 1
-          },
-          "resourceRequirementId": "resource-1"
-        },
-        {
-          "id": "2c8ca8b6-faf9-4f18-bda7-61e176a8d60e",
-          "type": "delay_with_resource",
-          "duration": {
-            "unit": "minutes",
-            "value": 1
-          },
-          "resourceRequirementId": "resource-2"
-        }
-      ]
-    }
-  ],
   "resources": [
     {
       "id": "resource-1",
@@ -84,34 +26,6 @@
     {
       "id": "resource-2",
       "name": "Resource2"
-    }
-  ],
-  "generators": [
-    {
-      "id": "generator-1",
-      "name": "Generator1",
-      "entityId": "entity-1",
-      "interarrivalTime": {
-        "value": 1,
-        "unit": "hours"
-      },
-      "maxCycles": 10
-    }
-  ],
-  "connectors": [
-    {
-      "id": "connector-gen-1",
-      "name": "Generator1ToActivity1",
-      "sourceId": "generator-1",
-      "targetId": "activity-1",
-      "weight": 1
-    },
-    {
-      "id": "connector-1",
-      "name": "Activity1ToActivity2",
-      "sourceId": "activity-1",
-      "targetId": "activity-2",
-      "weight": 1
     }
   ],
   "resourceRequirements": [
@@ -142,5 +56,95 @@
       }
     }
   ],
-  "states": []
+  "activities": [
+    {
+      "id": "activity-1",
+      "name": "Activity1",
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
+      "actions": [
+        {
+          "id": "aaa2aad2-db73-4a26-8c17-5e013e6e312a",
+          "type": "delay_with_resource",
+          "duration": {
+            "unit": "minutes",
+            "value": 1
+          },
+          "resourceRequirementId": "resource-1"
+        },
+        {
+          "id": "c539ea0b-48a3-44ef-a477-9cccd654cdb3",
+          "type": "delay_with_resource",
+          "duration": {
+            "unit": "minutes",
+            "value": 1
+          },
+          "resourceRequirementId": "resource-2"
+        }
+      ]
+    },
+    {
+      "id": "activity-2",
+      "name": "Activity2",
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
+      "actions": [
+        {
+          "id": "65ee8c8b-8fa7-4b4c-8b87-b3606f49a7d9",
+          "type": "delay_with_resource",
+          "duration": {
+            "unit": "minutes",
+            "value": 1
+          },
+          "resourceRequirementId": "resource-1"
+        },
+        {
+          "id": "c213c001-7122-4f77-9c15-0932c3a70bbc",
+          "type": "delay_with_resource",
+          "duration": {
+            "unit": "minutes",
+            "value": 1
+          },
+          "resourceRequirementId": "resource-2"
+        }
+      ]
+    }
+  ],
+  "generators": [
+    {
+      "id": "generator-1",
+      "name": "Generator1",
+      "entityId": "entity-1",
+      "interarrivalTime": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "maxCycles": 10
+    }
+  ],
+  "connectors": [
+    {
+      "id": "connector-gen-1",
+      "name": "Generator1ToActivity1",
+      "sourceId": "generator-1",
+      "targetId": "activity-1",
+      "weight": 1
+    },
+    {
+      "id": "connector-1",
+      "name": "Activity1ToActivity2",
+      "sourceId": "activity-1",
+      "targetId": "activity-2",
+      "weight": 1
+    }
+  ],
+  "states": [],
+  "arrivalPatterns": [],
+  "arrivalSchedules": [],
+  "workSchedules": [],
+  "scenarios": [],
+  "metadata": {
+    "version": "2026.12.01",
+    "timestamp": "2026-09-17T12:50:21.556Z"
+  }
 }

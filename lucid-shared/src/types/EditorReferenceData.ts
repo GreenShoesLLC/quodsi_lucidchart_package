@@ -2,8 +2,7 @@ import { ResourceRequirement } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { ConnectType } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/shared';
-import { ISerializedDuration } from "../serialization/interfaces/ISerializedDuration";
-import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
+import type { ISerializedDuration, ISerializedScenario } from "@quodsi/shared";
 import { SwimLaneContainment } from "./swimlane/SwimLaneQuodsiData";
 
 /**

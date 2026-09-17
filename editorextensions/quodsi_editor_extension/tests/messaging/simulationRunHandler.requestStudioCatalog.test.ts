@@ -43,7 +43,7 @@ jest.mock('../../src/core/ModelManager', () => ({
 }));
 
 import { SimulationRunHandler } from '../../src/core/messaging/handlers/simulationRunHandler';
-import { ModelDefinition, ModelSerializerFactory } from '@quodsi/lucid-shared';
+import { ModelDefinition, modelDefinitionToCleanDocument } from '@quodsi/lucid-shared';
 
 function makeFakePageWithTitle(id: string, title: string): any {
   const page = makeFakePage(id);
@@ -117,9 +117,7 @@ describe('SimulationRunHandler.handleRequestStudioCatalog (review R1)', () => {
     // handler actually uses keeps the assertion honest under any timezone.
     // Do not "fix" production to make `startDateTime` UTC to match a literal
     // — that would break the wire convention every other host relies on.
-    const expectedSerializedModel = ModelSerializerFactory.create(stubModelDefinition).serialize(
-      stubModelDefinition,
-    ) as { startDateTime?: string | null };
+    const expectedSerializedModel = modelDefinitionToCleanDocument(stubModelDefinition) as { startDateTime?: string | null };
     expect(typeof expectedSerializedModel.startDateTime).toBe('string');
 
     const handled = SimulationRunHandler.handleMessage(requestCatalogMessage());

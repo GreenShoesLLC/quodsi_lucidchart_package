@@ -1,4 +1,4 @@
-import type { ISerializedModel } from '../serialization/interfaces/ISerializedModel';
+import type { ISerializedModel } from '@quodsi/shared';
 
 /**
  * A single connector entry in the relay catalog.

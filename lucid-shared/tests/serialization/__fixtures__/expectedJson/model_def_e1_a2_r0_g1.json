@@ -1,9 +1,5 @@
 {
   "schemaVersion": "2026.12.01",
-  "metadata": {
-    "version": "2026.12.01",
-    "timestamp": "2026-09-16T01:50:13.883Z"
-  },
   "name": "Model E1A2R0G1",
   "replications": 10,
   "seed": 12345,
@@ -22,6 +18,8 @@
       "name": "Entity1"
     }
   ],
+  "resources": [],
+  "resourceRequirements": [],
   "activities": [
     {
       "id": "activity-1",
@@ -30,7 +28,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "830039ac-cf83-4f4e-9c1b-feefa3369524",
+          "id": "831f802d-2382-4231-b34f-529f6894ac4f",
           "type": "delay",
           "duration": {
             "unit": "minutes",
@@ -46,7 +44,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "fe5d6400-9a9f-4caf-9c93-34b4d325a20f",
+          "id": "cfb78917-afb5-4694-89f8-109dd3de796c",
           "type": "delay",
           "duration": {
             "unit": "minutes",
@@ -56,7 +54,6 @@
       ]
     }
   ],
-  "resources": [],
   "generators": [
     {
       "id": "generator-1",
@@ -85,6 +82,13 @@
       "weight": 1
     }
   ],
-  "resourceRequirements": [],
-  "states": []
+  "states": [],
+  "arrivalPatterns": [],
+  "arrivalSchedules": [],
+  "workSchedules": [],
+  "scenarios": [],
+  "metadata": {
+    "version": "2026.12.01",
+    "timestamp": "2026-09-17T12:50:21.555Z"
+  }
 }

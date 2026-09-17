@@ -1,7 +1,7 @@
 import { ModelDefinition, ArrivalPattern } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
-import { ISerializedModel } from '../../src/serialization/interfaces/ISerializedModel';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
+import type { ISerializedModel } from '@quodsi/shared';
 
 describe('arrivalPatterns serialization', () => {
   function buildModel(): ModelDefinition {
@@ -15,8 +15,7 @@ describe('arrivalPatterns serialization', () => {
     pattern.seasonWeights = [1, 2, 3];
     def.arrivalPatterns.add(pattern);
 
-    const serializer = ModelSerializerFactory.create(def);
-    const out = serializer.serialize(def) as ISerializedModel;
+    const out = modelDefinitionToCleanDocument(def);
 
     expect(out.arrivalPatterns).toBeDefined();
     expect(out.arrivalPatterns!.length).toBe(1);
@@ -24,11 +23,10 @@ describe('arrivalPatterns serialization', () => {
     expect(out.arrivalPatterns![0].seasonWeights).toEqual([1, 2, 3]);
   });
 
-  it('omits arrivalPatterns entirely when there are none', () => {
+  it('writes arrivalPatterns as [] when there are none (every list is always present)', () => {
     const def = buildModel();
-    const serializer = ModelSerializerFactory.create(def);
-    const out = serializer.serialize(def) as ISerializedModel;
+    const out = modelDefinitionToCleanDocument(def);
 
-    expect(out.arrivalPatterns).toBeUndefined();
+    expect(out.arrivalPatterns).toEqual([]);
   });
 });

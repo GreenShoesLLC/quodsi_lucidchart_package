@@ -7,7 +7,7 @@ npm workspace — never published.
 
 Everything platform-agnostic — the domain model (`ModelDefinition`,
 `Activity`, `Resource`, ...), validation rules and `ModelValidationService`,
-versioning and upgrade transforms, the wire-document projection — lives in the
+versioning and upgrade transforms, the wire document and its serializer — lives in the
 monorepo's `@quodsi/shared` (`../../quodsi_shared`). This package depends on it
 and re-exports the names the extension and panel pull through
 `@quodsi/lucid-shared`. A consumer may also import from `@quodsi/shared`
@@ -18,7 +18,7 @@ directly; add a re-export here only when a Lucid consumer needs it.
 | Directory | Contents |
 |---|---|
 | `src/quodsi-messaging` | The postMessage protocol between the extension and its panels/modals: `EnvelopeBase`, `EnvelopeMessageType`, `isEnvelope`, and the few payload types both sides share. See its README. |
-| `src/serialization` | Lucid's serialized-model types and the page-SVG coordinate alignment (`parsePageTranslate`). |
+| `src/serialization` | `parsePageTranslate`, the page-SVG translate Lucid's `getSvg()` applies. The wire document (`modelDefinitionToCleanDocument`, the `ISerialized*` types) is in `@quodsi/shared`. |
 | `src/types` | Lucid storage and panel view types: `ModelRootProjection`, `EditorReferenceData`, `StoredResourceRecord`, swimlane data, selection state, conversion results, devtools payloads. |
 | `src/core/logging` | Legacy `QuodsiLogger` / `ComponentLogger` (see the repo `CLAUDE.md`; new code uses `getLogger`). |
 | `src/platform` | `PlatformSimObject`, the contract `SimObjectLucid` implements. |

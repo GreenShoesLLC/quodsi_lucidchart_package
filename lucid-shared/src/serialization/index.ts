@@ -1,41 +1,5 @@
-// Core exports
-export { ModelSerializerFactory, SchemaVersion } from './ModelSerializerFactory';
-export { BaseModelDefinitionSerializer } from './BaseModelDefinitionSerializer';
-
-// SVG <-> layout coordinate alignment (Approach A)
+// The page-SVG translate Lucid's getSvg() applies. The wire document itself
+// (modelDefinitionToCleanDocument, the ISerialized* types) lives in
+// @quodsi/shared and is re-exported from the package index.
 export { parsePageTranslate } from './coordinateAlignment';
 export type { PageTranslate } from './coordinateAlignment';
-
-// V1 Serializer
-export { ModelDefinitionSerializerV1 } from './v1/ModelDefinitionSerializerV1';
-// Interfaces
-export type { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
-export type { ISchemaVersion } from './interfaces/ISchemaVersion';
-export type { ISerializedModel, ISerializedMetadata } from './interfaces/ISerializedModel';
-export type { ISerializedActivity } from './interfaces/ISerializedActivity';
-export type { ISerializedConnector } from './interfaces/ISerializedConnector';
-export type { ISerializedDuration } from './interfaces/ISerializedDuration';
-export type { ISerializedEntity } from './interfaces/ISerializedEntity';
-export type { ISerializedGenerator } from './interfaces/ISerializedGenerator';
-export type { ISerializedResource } from './interfaces/ISerializedResource';
-export type { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
-export type { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
-export type { ISerializedResourceRequirement } from './interfaces/ISerializedResourceRequirement';
-export type { ISerializedState } from './interfaces/ISerializedState';
-export type {
-    ISerializedAction,
-    ISerializedActionBase,
-    ISerializedSeizeAction,
-    ISerializedReleaseAction,
-} from './interfaces/ISerializedAction';
-export type { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
-export type { ISerializedScenarioChangeRequest } from './interfaces/ISerializedScenarioChangeRequest';
-export type { ISerializedScenario } from './interfaces/ISerializedScenario';
-export type { ISerializedArrivalPattern } from './interfaces/ISerializedArrivalPattern';
-export type { ISerializedArrivalSchedule } from './interfaces/ISerializedArrivalSchedule';
-export type { ISerializedWorkSchedule } from './interfaces/ISerializedWorkSchedule';
-// Errors
-export { SerializerError } from './errors/SerializerError';
-export { InvalidModelError } from './errors/InvalidModelError';
-export { UnsupportedVersionError } from './errors/UnsupportedVersionError';
-export { SerializationError } from './errors/SerializationError';

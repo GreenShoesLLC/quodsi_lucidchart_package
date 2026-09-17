@@ -1,7 +1,7 @@
 import { EditorClient, Viewport } from 'lucid-extension-sdk';
 import {
   resolveModelName,
-  ModelSerializerFactory,
+  modelDefinitionToCleanDocument,
   parsePageTranslate,
   offsetLayoutCoordinates,
   evaluateValidationGate,
@@ -66,7 +66,7 @@ export async function pushModelDefinitionSnapshot(
 ): Promise<void> {
   const def = await ModelManager.getInstance().getModelDefinition();
   if (!def) return;
-  const snapshot = ModelSerializerFactory.create(def).serialize(def);
+  const snapshot = modelDefinitionToCleanDocument(def);
   // Capture the page SVG paired with this snapshot (its visual twin) so studies
   // get a background diagram. Best-effort: a getSvg failure must not block the
   // snapshot push — we just omit the SVG (animation renders without a diagram).

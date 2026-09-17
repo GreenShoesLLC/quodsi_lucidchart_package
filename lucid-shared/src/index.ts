@@ -129,6 +129,23 @@ export {
 } from '@quodsi/shared';
 export type { ScenarioLever } from '@quodsi/shared';
 
+// The clean wire document: Lucid serializes a live ModelDefinition with the
+// same assembly step drawio, Visio and Studio use (defToCleanDocument), and
+// types its stored page data with the same ISerialized* shapes.
+export { modelDefinitionToCleanDocument } from '@quodsi/shared';
+export type {
+  ISerializedModel,
+  ISerializedEntity,
+  ISerializedState,
+  ISerializedScenario,
+  ISerializedResourceRequirement,
+  ISerializedArrivalPattern,
+  ISerializedArrivalSchedule,
+  ISerializedWorkSchedule,
+  ISerializedSeizeAction,
+  ISerializedReleaseAction,
+} from '@quodsi/shared';
+
 // Shift layout coordinates into the page SVG's frame (after parsePageTranslate).
 export { offsetLayoutCoordinates } from '@quodsi/shared';
 

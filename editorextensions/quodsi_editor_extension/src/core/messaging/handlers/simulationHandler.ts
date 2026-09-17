@@ -3,7 +3,7 @@ import {
   EnvelopeMessageType,
   SimulationStatus,
   SimulationJob,
-  ModelSerializerFactory,
+  modelDefinitionToCleanDocument,
   Model,
   generateUUID,
   ENGINE_VERSION,
@@ -320,8 +320,7 @@ export class SimulationHandler {
       }
 
       // Serialize the model
-      const serializer = ModelSerializerFactory.create(modelDefinition);
-      const serializedModel = serializer.serialize(modelDefinition);
+      const serializedModel = modelDefinitionToCleanDocument(modelDefinition);
 
       // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
       SwimLaneResourceInjector.inject(serializedModel, activePageProxy);

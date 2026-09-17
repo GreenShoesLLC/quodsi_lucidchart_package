@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, ModelSerializerFactory, resolveModelName } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, modelDefinitionToCleanDocument, resolveModelName } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -593,8 +593,7 @@ export class ModelOpsHandler {
 
         // Serialize the model (same as simulation button)
         ModelOpsHandler.logger.debug('Serializing model...');
-        const serializer = ModelSerializerFactory.create(currentModelDef);
-        const serializedModel = serializer.serialize(currentModelDef);
+        const serializedModel = modelDefinitionToCleanDocument(currentModelDef);
 
         // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
         SwimLaneResourceInjector.inject(serializedModel, activePageProxy);

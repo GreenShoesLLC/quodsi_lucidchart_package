@@ -9,10 +9,10 @@
  *   - a component WITHOUT levers OMITS the key entirely (conditional inclusion
  *     => no snapshot churn for the overwhelmingly common lever-less model).
  *
- * We go through the public serialize() entry-point because the per-component
- * serialize methods are protected.
+ * Tested through modelDefinitionToCleanDocument, the document Lucid actually
+ * sends.
  */
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
 import { ModelDefinition } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
@@ -65,7 +65,7 @@ function buildModel(opts?: {
 }
 
 function serialize(modelDef: ModelDefinition) {
-    return ModelSerializerFactory.create(modelDef).serialize(modelDef);
+    return modelDefinitionToCleanDocument(modelDef);
 }
 
 describe('ModelDefinitionSerializer carries component levers', () => {

@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, buildRelayConnectors } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, modelDefinitionToCleanDocument, ModalSize, buildRelayConnectors } from '@quodsi/lucid-shared';
 import type { ISerializedModel } from '@quodsi/lucid-shared';
 import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
@@ -392,8 +392,7 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error('REQUEST_STUDIO_CATALOG: no model definition available');
       return;
     }
-    const serializer = ModelSerializerFactory.create(modelDefinition);
-    const serializedModel = serializer.serialize(modelDefinition) as ISerializedModel;
+    const serializedModel = modelDefinitionToCleanDocument(modelDefinition);
     // `modelDefinition.model.id`/`.finishDateTime` (the Lucid page/document
     // id, and the host-projection-only finish-date convenience) have no
     // clean-wire equivalent (wire-cleanup Phase B2 Task 9 — dropped from

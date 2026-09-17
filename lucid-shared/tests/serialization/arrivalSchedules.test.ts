@@ -1,7 +1,7 @@
 import { ModelDefinition, ArrivalSchedule } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
-import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
-import { ISerializedModel } from '../../src/serialization/interfaces/ISerializedModel';
+import { modelDefinitionToCleanDocument } from '@quodsi/shared';
+import type { ISerializedModel } from '@quodsi/shared';
 
 describe('arrivalSchedules serialization', () => {
   function buildModel(): ModelDefinition {
@@ -15,8 +15,7 @@ describe('arrivalSchedules serialization', () => {
     schedule.arrivals = [{ time: 10, entityId: 'ent-1', quantity: 2 }];
     def.arrivalSchedules.add(schedule);
 
-    const serializer = ModelSerializerFactory.create(def);
-    const out = serializer.serialize(def) as ISerializedModel;
+    const out = modelDefinitionToCleanDocument(def);
 
     expect(out.arrivalSchedules).toBeDefined();
     expect(out.arrivalSchedules!.length).toBe(1);
@@ -26,22 +25,20 @@ describe('arrivalSchedules serialization', () => {
     ]);
   });
 
-  it('omits arrivalSchedules entirely when there are none', () => {
+  it('writes arrivalSchedules as [] when there are none (every list is always present)', () => {
     const def = buildModel();
-    const serializer = ModelSerializerFactory.create(def);
-    const out = serializer.serialize(def) as ISerializedModel;
+    const out = modelDefinitionToCleanDocument(def);
 
-    expect(out.arrivalSchedules).toBeUndefined();
+    expect(out.arrivalSchedules).toEqual([]);
   });
 
-  it('omits both arrivalSchedules and the schedule\'s own optional fields when a schedule is left at its defaults', () => {
+  it('omits a schedule\'s own optional fields when it is left at its defaults', () => {
     const def = buildModel();
     const schedule = new ArrivalSchedule('sched-2', 'Schedule 2');
     // timeUnit left at its default (MINUTES); arrivals left empty.
     def.arrivalSchedules.add(schedule);
 
-    const serializer = ModelSerializerFactory.create(def);
-    const out = serializer.serialize(def) as ISerializedModel;
+    const out = modelDefinitionToCleanDocument(def);
 
     expect(out.arrivalSchedules).toBeDefined();
     expect(out.arrivalSchedules!.length).toBe(1);
