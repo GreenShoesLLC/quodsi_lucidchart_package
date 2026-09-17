@@ -35,7 +35,6 @@ Core system messages for initialization and error handling.
 | Message | Direction | Purpose |
 |---------|-----------|---------|
 | REACT_APP_READY | React → Extension | Initial handshake, panel ready |
-| ERROR_LOGGING | React → Extension | Error reporting |
 
 ### [Authentication](./auth/)
 User authentication and session management.
@@ -62,7 +61,6 @@ Operations on individual simulation objects.
 | ELEMENT_UPDATE | React → Extension | Update element properties |
 | ELEMENT_UPDATE_RESULT | Extension → React | Update result feedback |
 | ELEMENT_CONVERT | React → Extension | Convert element type |
-| ELEMENT_CONVERT_RESULT | Extension → React | Conversion result |
 
 ### [Model Operations](./model-ops/)
 Operations on the entire model.

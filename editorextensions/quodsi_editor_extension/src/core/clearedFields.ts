@@ -46,28 +46,6 @@ export const CLEARED_FIELDS_KEY = '__clearedFields';
 export type WithClearedFields<T> = T & { [CLEARED_FIELDS_KEY]?: string[] };
 
 /**
- * Copy `data`, marking `clearedFields` as affirmatively cleared by the caller.
- *
- * Only call this from a panel/write-back that renders (or otherwise fully owns)
- * the fields it names — the declaration is a promise that the payload speaks
- * for them. Declaring nothing returns the payload untouched, so the common
- * case adds no marker at all.
- *
- * The prototype is preserved so domain instances (e.g. Activity) stay instances.
- */
-export function declareClearedFields<T extends object>(
-    data: T,
-    clearedFields: readonly string[]
-): WithClearedFields<T> {
-    if (!clearedFields.length) {
-        return data as WithClearedFields<T>;
-    }
-    const marked: any = Object.assign(Object.create(Object.getPrototypeOf(data)), data);
-    marked[CLEARED_FIELDS_KEY] = [...clearedFields];
-    return marked;
-}
-
-/**
  * Split a payload into the declaration and the data that may be persisted.
  *
  * ALWAYS call this before storing or registering an incoming payload, for every

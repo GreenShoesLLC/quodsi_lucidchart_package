@@ -22,7 +22,8 @@
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelManager } from '../../src/core/ModelManager';
 import { activityStorageRemoveKeys } from '../../src/types/ActivityLucid';
-import { CLEARED_FIELDS_KEY, SimulationObjectType } from '@quodsi/lucid-shared';
+import { SimulationObjectType } from '@quodsi/lucid-shared';
+import { CLEARED_FIELDS_KEY } from '../../src/core/clearedFields';
 import { makeFakeBlock, makeFakePage } from '../helpers/fakeProxies';
 
 const LINKED_ACTIVITY = {

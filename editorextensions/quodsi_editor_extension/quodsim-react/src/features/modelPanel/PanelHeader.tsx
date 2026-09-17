@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Wrench, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Activity, Trash2, Settings } from "lucide-react";
 import {
-  ValidationState,
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
@@ -51,7 +50,6 @@ const TYPE_SELECT_CLASS =
 
 interface PanelHeaderProps {
   modelName: string;
-  validationState: ValidationState | null;
   currentElement: ExtendedModelItemData | null;
   editorType: string;
   onRemoveModel?: () => void;
@@ -84,7 +82,6 @@ interface PanelHeaderProps {
  */
 export const PanelHeader: React.FC<PanelHeaderProps> = ({
   modelName,
-  validationState,
   currentElement,
   editorType,
   onRemoveModel,

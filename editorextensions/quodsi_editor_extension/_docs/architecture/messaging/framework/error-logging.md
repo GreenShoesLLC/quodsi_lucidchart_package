@@ -1,5 +1,9 @@
 # Error and Logging Exchange
 
+> **Retired 2026-09-17.** Nothing ever sent `ERROR` or `LOG`, so both message
+> types, `FrameworkHandler` and the panel's `framework.mapper.ts` were removed.
+> Both sides log locally through `getLogger` instead. This page is kept as history.
+
 ## Overview
 Error and logging messages provide bidirectional communication for debugging, error reporting, and system monitoring between the extension and React panels.
 

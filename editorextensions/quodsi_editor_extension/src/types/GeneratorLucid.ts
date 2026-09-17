@@ -97,8 +97,9 @@ export const GENERATOR_CLEARABLE_KEYS: readonly string[] = ['arrivalPatternId', 
  *
  * Mirrors activityStorageRemoveKeys (ActivityLucid.ts) exactly: deletion is
  * opt-in from the writer, never inferred from a missing key -- a payload
- * that means to clear arrivalPatternId names it in CLEARED_FIELDS_KEY (see
- * `declareClearedFields` in @quodsi/lucid-shared). A partial payload that
+ * that means to clear arrivalPatternId names it in CLEARED_FIELDS_KEY (the
+ * model-root batch sets it from a shape's `clearedFields`; see
+ * modelRootHandler.ts). A partial payload that
  * simply never mentions the field stays silent and the stored value
  * survives. The declaration is filtered here rather than trusted: a payload
  * cannot talk the extension into deleting arbitrary stored keys.

@@ -8,7 +8,6 @@ export type { PageTranslate } from './coordinateAlignment';
 
 // V1 Serializer
 export { ModelDefinitionSerializerV1 } from './v1/ModelDefinitionSerializerV1';
-export { EnumMapper } from './utilities/EnumMapper'
 // Interfaces
 export type { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 export type { ISchemaVersion } from './interfaces/ISchemaVersion';
@@ -26,18 +25,8 @@ export type { ISerializedState } from './interfaces/ISerializedState';
 export type {
     ISerializedAction,
     ISerializedActionBase,
-    ISerializedAssignAction,
     ISerializedSeizeAction,
     ISerializedReleaseAction,
-    ISerializedDelayAction,
-    ISerializedDelayWithResourceAction,
-    ISerializedSplitAction,
-    ISerializedCreateAction,
-    ISerializedDisposeAction,
-    ISerializedJoinAction,
-    ISerializedLoopAction,
-    ISerializedBranchAction,
-    SerializedActionType
 } from './interfaces/ISerializedAction';
 export type { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
 export type { ISerializedScenarioChangeRequest } from './interfaces/ISerializedScenarioChangeRequest';

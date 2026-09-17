@@ -13,8 +13,8 @@
 //
 // Mocks lucid-extension-sdk's Viewport in place on the SAME module instance
 // swimlaneHandler.ts resolves through jest's moduleNameMapper, and mocks
-// core/messaging so `router.send` is observable (which also sidesteps the
-// messaging <-> modal circular require). ModelManager is the REAL class: the
+// core/messaging so `router.send` is observable -- the handler sends no
+// reply -- which also sidesteps the messaging <-> modal circular require. ModelManager is the REAL class: the
 // last assertion is about its prototype.
 import { Viewport } from '../__mocks__/lucid-extension-sdk';
 
@@ -82,11 +82,7 @@ describe('SwimLaneHandler.handleUpdate', () => {
       { id: 'res-1', name: 'Nurse', capacity: 1, description: '' },
     ]);
     expect(invalidated).toBe(1);
-    expect(sendMock).toHaveBeenCalledWith('model', expect.objectContaining({
-      id: 'msg-1',
-      type: EnvelopeMessageType.SWIMLANE_UPDATE_RESULT,
-      data: { success: true, error: undefined },
-    }));
+    expect(sendMock).not.toHaveBeenCalled();
   });
 
   it('no longer has a resource-deleting cascade to call', () => {
@@ -162,11 +158,7 @@ describe('SwimLaneHandler.handleUpdate -- linking a lane', () => {
       { id: 'res-1', name: 'Doctor', capacity: 1, description: '' },
     ]);
     expect(invalidated).toBe(1);
-    expect(sendMock).toHaveBeenCalledWith('model', expect.objectContaining({
-      id: 'msg-2',
-      type: EnvelopeMessageType.SWIMLANE_UPDATE_RESULT,
-      data: { success: true, error: undefined },
-    }));
+    expect(sendMock).not.toHaveBeenCalled();
   });
 
   it('has no lane-side resource-creation entry point left', () => {

@@ -34,10 +34,10 @@ import {
 } from '../../src/types/ActivityLucid';
 import {
     Activity,
-    CLEARED_FIELDS_KEY,
     ConnectType,
     SimulationObjectType,
 } from '@quodsi/lucid-shared';
+import { CLEARED_FIELDS_KEY } from '../../src/core/clearedFields';
 import { makeFakeBlock, makeFakePage } from '../helpers/fakeProxies';
 
 // ─── helpers ────────────────────────────────────────────────────────────────

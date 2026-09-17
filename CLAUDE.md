@@ -42,8 +42,8 @@ so both the extension and the React panel import it from
 **`QuodsiLogger` and `ComponentLogger`** (`lucid-shared/src/core/logging/`)
 are legacy and deliberately NOT migrated — they still call `console.*`
 directly. `QuodsiLogger`'s abstract base plus its concrete subclasses
-(`ModelValidationService`, `ModelDataSource`, `ModelDefinitionRepository`,
-`LucidPageAnalyzer`, `LucidPageConversionService`) survive by design; do not
+(`ModelDataSource`, `ModelDefinitionRepository`, `LucidPageAnalyzer`,
+`LucidPageConversionService`) survive by design; do not
 route new code through them.
 
 **Host configuration.** Each host calls `configureLogger({ level, sinks:
@@ -158,7 +158,7 @@ cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
 ### Running Individual Tests
 ```bash
 # Run a specific test file
-cd lucid-shared && npm test -- ModelValidationService.test.ts
+cd lucid-shared && npm test -- ModelSerializer.snapshot.test.ts
 
 # Run tests in watch mode
 cd lucid-shared && npm test -- --watch
@@ -189,7 +189,7 @@ cd lucid-shared && npm test -- --watch
 - `StorageAdapter`: Handles persistence to LucidChart storage
 - `MessageRouter`: Routes messages between extension and panels
 - `ModelDefinition`: Core domain model containing all simulation objects
-- `ModelValidationService`: Validates model correctness before simulation
+- `ModelValidationService` (`@quodsi/shared`, run through `evaluateValidationGate`): Validates model correctness before simulation
 
 **Storage format 2 (2026-08-23, Plan 2b — global resources).** Resources
 are model-level, not per-shape: each page's `q_resources` shapeData key

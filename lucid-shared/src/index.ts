@@ -7,13 +7,10 @@ export * from './core/logging/ComponentLogger';
 export { MODEL_SCHEMA_VERSION, ENGINE_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
 export { configureLogger, getLogger, consoleSink, installDebugGlobal, resetLoggerForTests } from '@quodsi/shared';
 export type { LogLevel, Logger, LogRecord, Sink, LoggerConfig } from '@quodsi/shared';
-export { LUCID_MIN_MODEL_SCHEMA_VERSION, assertPackagedSchemaVersion } from './constants/schemaFloor';
 export type { VersionInfo } from '@quodsi/shared';
-export * from './constants/branding';
-export * from './constants/clearedFields';
+export { QUODSI_ICON_BASE64 } from '@quodsi/shared';
 
 // Type exports
-export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/common';
 export * from './types/ConversionPreview';
@@ -26,7 +23,6 @@ export * from './types/PageStatus';
 export * from './types/ProcessAnalysisResult';
 export * from './types/SelectionState';
 export * from './types/SelectionType';
-export * from './types/simComponentType';
 export * from './types/ElementTypeInfo';
 export * from './types/StoredResourceRecord';
 
@@ -438,11 +434,6 @@ export {
   LEGACY_BASELINE_SCENARIO_ID,
 } from '@quodsi/shared';
 
-// Export accordion types
-export * from './types/accordion/ModelElement';
-export * from './types/accordion/ModelStructure';
-export * from './types/accordion/ValidationState';
-
 // Swimlane types
 export {
   SwimLaneResourceData,
@@ -481,7 +472,12 @@ export * from './serialization';
 
 // Validation exports
 export * from './validation';
-export * from './versioning';
+// Version-upgrade framework, the pure upgrade engine and the element
+// envelope helpers -- all in @quodsi/shared (versioning SP1-SP3). The Lucid
+// glue that uses them lives in the extension's src/versioning. isEnvelope is
+// deliberately not re-exported: it would collide with the messaging one.
+export { BaseVersionUpgrader, VersionManager, VersionUpgraderFactory, UpgradeIssueSeverity, upgradeElements, flattenEnvelope, makeEnvelope } from '@quodsi/shared';
+export type { UpgradeOptions, VersionManagerOptions, UpgradeIssue, RawElement } from '@quodsi/shared';
 
 // DevTools types
 export * from './types/devtools/DevToolsTypes';
@@ -490,7 +486,6 @@ export * from './types/devtools/DevToolsTypes';
 export * from './quodsi-messaging';
 
 // Embed utilities
-export * from './embed/reduceModelToCatalog';
 export * from './embed/buildRelayConnectors';
 
 // Config / feature flags

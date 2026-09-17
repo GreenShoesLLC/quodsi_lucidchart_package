@@ -39,7 +39,8 @@ jest.mock('../../src/core/messaging/handlers/selection/SelectionHandler', () => 
   },
 }));
 
-import { CLEARED_FIELDS_KEY, EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared';
+import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared';
+import { CLEARED_FIELDS_KEY } from '../../src/core/clearedFields';
 import { ModelRootHandler } from '../../src/core/messaging/handlers/modelRootHandler';
 
 function flush(): Promise<void> {

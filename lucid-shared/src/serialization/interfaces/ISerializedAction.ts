@@ -1,18 +1,7 @@
 import {
     Action,
-    ActionType,
-    AssignAction,
     SeizeAction,
     ReleaseAction,
-    DelayAction,
-    DelayWithResourceAction,
-    SplitAction,
-    CreateAction,
-    DisposeAction,
-    JoinAction,
-    LoopAction,
-    BranchAction,
-    ScriptAction,
 } from '@quodsi/shared';
 
 /**
@@ -31,20 +20,9 @@ import {
  * `ScriptAction` (new action type, absent from the pre-Task-9 interface
  * entirely) is included in the union via the shared re-export.
  */
-export type SerializedActionType = ActionType;
 export type ISerializedActionBase = Pick<Action, 'id' | 'type'> & { name?: string };
-export type ISerializedAssignAction = AssignAction;
 export type ISerializedSeizeAction = SeizeAction;
 export type ISerializedReleaseAction = ReleaseAction;
-export type ISerializedDelayAction = DelayAction;
-export type ISerializedDelayWithResourceAction = DelayWithResourceAction;
-export type ISerializedSplitAction = SplitAction;
-export type ISerializedCreateAction = CreateAction;
-export type ISerializedDisposeAction = DisposeAction;
-export type ISerializedJoinAction = JoinAction;
-export type ISerializedLoopAction = LoopAction;
-export type ISerializedBranchAction = BranchAction;
-export type ISerializedScriptAction = ScriptAction;
 
 /**
  * Union type for all serialized actions — identical to `@quodsi/shared`'s

@@ -18,9 +18,6 @@ export type {
     ModelDefinitionState,
 } from '@quodsi/shared';
 
-// Service export (stays in lucid — extends QuodsiLogger, a Bucket-B dependency)
-export { ModelValidationService } from './services/ModelValidationService';
-
 // Gate helpers — re-exported from @quodsi/shared so extension code can import from @quodsi/lucid-shared
 export { evaluateValidationGate, getIssueTitle, wrapProjectionAsModelDefinition } from '@quodsi/shared';
 export type { ValidationGateResult, SourceResolver } from '@quodsi/shared';

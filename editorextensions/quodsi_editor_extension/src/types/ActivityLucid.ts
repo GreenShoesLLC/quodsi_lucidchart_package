@@ -96,8 +96,9 @@ export const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking', 'work
  * removeKeys existed the merge quietly rescued both).
  *
  * So deletion is now opt-in from the writer, never inferred: a payload that
- * means to clear a field names it in CLEARED_FIELDS_KEY (see
- * `declareClearedFields` in @quodsi/lucid-shared). Only a panel that renders the
+ * means to clear a field names it in CLEARED_FIELDS_KEY (the
+ * model-root batch sets it from a shape's `clearedFields`; see
+ * modelRootHandler.ts). Only a panel that renders the
  * control, or a write-back built from a fully hydrated simObject, can make that
  * declaration — a partial payload stays silent and its stored value survives.
  *

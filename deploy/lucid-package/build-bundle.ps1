@@ -178,6 +178,8 @@ catch {
 # BUILD time, so a stale monorepo checkout silently ships documents stamped at
 # an old MODEL_SCHEMA_VERSION that the engine rejects at run submission.
 # Step 1.45 rebuilt it; this asserts the value it produced. ClickUp 86e2p4prk.
+# The floor (2026.08.20, in FLOOR and the error message below) lives only in
+# this script -- raise both together.
 Write-Host "--------------------------------------------------"
 Write-Host "Step 1.46: Verifying packaged MODEL_SCHEMA_VERSION..."
 Write-Host "--------------------------------------------------"

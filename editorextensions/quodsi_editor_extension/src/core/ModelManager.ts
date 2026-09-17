@@ -1,4 +1,3 @@
-// import { ModelValidationService } from "@quodsi/lucid-shared/src/validation/ModelValidationService";
 import {
     evaluateValidationGate,
     Activity,
@@ -12,8 +11,6 @@ import {
     SimulationObjectType,
     ValidationResult,
     ElementTypeInfo,
-    ModelStructure,
-    ModelElement,
     ActivityListManager,
     ValidationMessages,
     ISerializedState,
@@ -28,7 +25,6 @@ import {
     ValidationSeverity,
     ValidationIssue,
     ensureBaselineScenario,
-    takeClearedFields,
     ModelRootProjection,
     stripTransientResourceMarkers,
     StoredResourceRecord,
@@ -61,10 +57,10 @@ type SharedCleanupResult = {
 };
 import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
+import { takeClearedFields } from "./clearedFields";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
 import { upsertModel, canonicalModelName } from "./sync/scenarioSync";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
-import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { activityStorageRemoveKeys } from "../types/ActivityLucid";
 import { resourceStorageRemoveKeys } from "../types/ResourceLucid";
@@ -2282,13 +2278,5 @@ export class ModelManager {
             return `Block ${className}`;
         }
         return 'Unnamed Connector';
-    }
-
-    public async getModelStructure(): Promise<ModelStructure | undefined> {
-        const modelDef = await this.getModelDefinition();
-        if (modelDef) {
-            return ModelStructureBuilder.buildModelStructure(modelDef);
-        }
-        return undefined;
     }
 }

@@ -39,29 +39,17 @@ export class ModelOpsHandler {
       case EnvelopeMessageType.MODEL_VALIDATE:
         return ModelOpsHandler.handleValidate(msg);
 
-      case EnvelopeMessageType.MODEL_VALIDATION_RESULT:
-        return ModelOpsHandler.handleValidationResult(msg);
-
       case EnvelopeMessageType.MODEL_CONVERT:
         // Start async process but return true immediately
         ModelOpsHandler.handleConvert(msg)
           .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_CONVERT:', err));
         return true;
 
-      case EnvelopeMessageType.MODEL_CONVERSION_RESULT:
-        return ModelOpsHandler.handleConversionResult(msg);
-
       case EnvelopeMessageType.MODEL_REMOVE:
         return ModelOpsHandler.handleRemove(msg);
 
-      case EnvelopeMessageType.MODEL_REMOVE_RESULT:
-        return ModelOpsHandler.handleRemoveResult(msg);
-
       case EnvelopeMessageType.MODEL_JSON_REQUEST:
         return ModelOpsHandler.handleModelJsonRequest(msg);
-
-      case EnvelopeMessageType.MODEL_JSON_RESPONSE:
-        return ModelOpsHandler.handleModelJsonResponse(msg);
 
       // Not a model operations message
       default:
@@ -181,37 +169,7 @@ export class ModelOpsHandler {
       });
     }
   }
-  
-  /**
-   * Handle validation result
-   * 
-   * @param msg MODEL_VALIDATION_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleValidationResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      isValid: boolean;
-      issues: ValidationIssue[];
-      summary: {
-        errorCount: number;
-        warningCount: number;
-        infoCount: number;
-      };
-    };
-    
-    ModelOpsHandler.logger.debug('Validation result received', {
-      isValid: data.isValid,
-      errorCount: data.summary.errorCount,
-      warningCount: data.summary.warningCount,
-      infoCount: data.summary.infoCount
-    });
-    
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
+
   /**
    * Handle model conversion request
    * 
@@ -371,32 +329,7 @@ export class ModelOpsHandler {
       return false;
     }
   }
-  
-  /**
-   * Handle conversion result
-   * 
-   * @param msg MODEL_CONVERSION_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleConversionResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      convertedElementIds: string[];
-      error?: string;
-    };
-    
-    ModelOpsHandler.logger.debug('Conversion result received', {
-      success: data.success,
-      convertedCount: data.convertedElementIds.length,
-      error: data.error
-    });
-    
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
+
   /**
    * Handle model removal request
    * 
@@ -546,30 +479,7 @@ export class ModelOpsHandler {
       });
     }
   }
-  
-  /**
-   * Handle removal result
-   * 
-   * @param msg MODEL_REMOVE_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleRemoveResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      error?: string;
-    };
-    
-    ModelOpsHandler.logger.debug('Removal result received', {
-      success: data.success,
-      error: data.error
-    });
-    
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
+
   /**
    * Handle model JSON request
    *
@@ -725,31 +635,6 @@ export class ModelOpsHandler {
         }
       });
     }
-  }
-
-  /**
-   * Handle model JSON response
-   *
-   * @param msg MODEL_JSON_RESPONSE message
-   * @returns True indicating message was handled
-   */
-  private static handleModelJsonResponse(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      modelJson?: any;
-      error?: string;
-    };
-
-    ModelOpsHandler.logger.debug('Model JSON response received', {
-      success: data.success,
-      hasJson: !!data.modelJson,
-      error: data.error
-    });
-
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-
-    return true;
   }
 
   /**

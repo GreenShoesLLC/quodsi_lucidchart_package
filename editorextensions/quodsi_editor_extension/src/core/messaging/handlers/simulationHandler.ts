@@ -90,9 +90,6 @@ export class SimulationHandler {
         });
         return true;
 
-      case EnvelopeMessageType.MODEL_RUN_STATUS:
-        return SimulationHandler.handleRunStatus(msg);
-
       // Not a simulation message
       default:
         return false;
@@ -620,44 +617,6 @@ export class SimulationHandler {
 
     return { accepted: runAccepted, error: runError };
   }
-
-  /**
-   * Handle run status update
-   * 
-   * @param msg MODEL_RUN_STATUS message
-   * @returns True indicating message was handled
-   */
-  private static handleRunStatus(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      jobId: string;
-      status: SimulationStatus;
-      progress: number;
-      currentStep?: string;
-      error?: string;
-      resultUrl?: string;
-      details?: Record<string, unknown>;
-    };
-    
-    log.debug('Simulation status update', {
-      jobId: data.jobId,
-      status: data.status,
-      progress: data.progress
-    });
-    
-    // Update job tracking
-    const job = SimulationHandler.activeJobs.get(data.jobId);
-    if (job) {
-      job.status = data.status;
-      job.progress = data.progress;
-      job.lastUpdate = new Date();
-    }
-    
-    // Forward to any services that track simulation state
-    // ...
-    
-    return true;
-  }
-  
 
   /**
    * Stop polling for a job

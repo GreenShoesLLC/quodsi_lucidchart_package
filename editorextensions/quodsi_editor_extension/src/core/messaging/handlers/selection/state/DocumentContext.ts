@@ -1,4 +1,4 @@
-import { EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
+import { getLogger } from '@quodsi/lucid-shared';
 import { DocumentContextData } from '../types';
 
 const log = getLogger('DocumentContext');
@@ -10,35 +10,7 @@ export class DocumentContext {
   private context: DocumentContextData = {
     isQuodsiModel: false
   };
-  
-  /**
-   * Update context from a message
-   * @param msg The envelope message to process
-   * @returns true if successful, false otherwise
-   */
-  public updateFromMessage(msg: EnvelopeBase): boolean {
-    try {
-      const data = msg.data as Partial<DocumentContextData>;
-      
-      // Update context with message data
-      this.context = {
-        ...this.context,
-        ...data
-      };
-      
-      log.debug('Updated from message:', {
-        documentId: this.context.documentId,
-        pageId: this.context.pageId,
-        isQuodsiModel: this.context.isQuodsiModel
-      });
-      
-      return true;
-    } catch (error) {
-      log.error('Error updating from message:', error);
-      return false;
-    }
-  }
-  
+
   /**
    * Update context with new data
    * @param documentId Document ID

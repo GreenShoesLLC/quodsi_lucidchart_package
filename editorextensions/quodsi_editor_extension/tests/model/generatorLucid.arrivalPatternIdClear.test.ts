@@ -20,7 +20,8 @@
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelManager } from '../../src/core/ModelManager';
 import { generatorStorageRemoveKeys } from '../../src/types/GeneratorLucid';
-import { CLEARED_FIELDS_KEY, GeneratorType, SimulationObjectType } from '@quodsi/lucid-shared';
+import { GeneratorType, SimulationObjectType } from '@quodsi/lucid-shared';
+import { CLEARED_FIELDS_KEY } from '../../src/core/clearedFields';
 import { makeFakeBlock, makeFakePage } from '../helpers/fakeProxies';
 
 const LINKED_GENERATOR = {
@@ -72,8 +73,8 @@ describe('clearing a generator arrivalPatternId link persists (Task 10 review ro
         const manager = newManager(storage);
 
         // The switch-away-from-PATTERN handler declares the clear (mirrors
-        // GeneratorEditor.tsx: declareClearedFields({ name, mode: 'frequency' },
-        // ['arrivalPatternId'])) -- `name` is included on purpose: this
+        // the model-root batch's { name, mode: 'frequency',
+        // [CLEARED_FIELDS_KEY]: ['arrivalPatternId'] }) -- `name` is included on purpose: this
         // repo's fake BlockProxy is not `instanceof BlockProxy`, so
         // ModelManager.getDefaultElementName's shape-derived fallback would
         // otherwise stand in for a real block's on-canvas text label, which

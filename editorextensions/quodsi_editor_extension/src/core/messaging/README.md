@@ -78,13 +78,16 @@ An interface implemented by panel classes (ContentDockPanel and RightDockPanel) 
 ### Handlers (`handlers/`)
 
 A collection of specialized handlers organized by message category:
-- **AuthHandler**: Processes login, logout, and authentication state
-- **FrameworkHandler**: Manages basic protocol messages (READY, ERROR, LOG)
-- **SubscriptionHandler**: Handles subscription tier and feature flags
-- **SelectionHandler**: Processes diagram selection changes
-- **SimulationHandler**: Manages simulation run lifecycle
-- **ModelOpsHandler**: Handles model validation, conversion, and results
-- **StorageHandler**: Manages cloud storage integration
+`handlers/index.ts` (`MessageHandlers`) tries each in turn; see that file for
+the full, ordered list. Among them:
+- **AuthHandler**: login, logout, authentication state, entitlements
+- **SelectionHandler**: sends SELECTION_CHANGED for Lucid selection events
+  (it receives no messages; REACT_APP_READY is handled by the router itself)
+- **SimulationHandler** / **SimulationRunHandler**: simulation run lifecycle
+- **ModelOpsHandler**: model validation, conversion, removal, model JSON
+- **ElementOpsHandler**, **StatesHandler**, **EntitiesHandler**,
+  **ModelRootHandler**, **ResourceRequirementsHandler**, **SwimLaneHandler**:
+  element and model-root writes
 
 ## Usage
 
@@ -102,7 +105,7 @@ initializeMessaging(true);
 Panels must implement the `RoutablePanel` interface:
 
 ```typescript
-import { EnvelopeBase } from '@quodsi/shared';
+import { EnvelopeBase } from '@quodsi/lucid-shared';
 import { router, RoutablePanel } from './core/messaging';
 
 export class ContentDockPanel extends Panel implements RoutablePanel {

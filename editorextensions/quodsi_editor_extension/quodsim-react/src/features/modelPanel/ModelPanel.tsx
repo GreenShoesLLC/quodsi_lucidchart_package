@@ -241,7 +241,6 @@ export const ModelPanel: React.FC = () => {
         <AccountStrip />
         {!isSwimLane && <PanelHeader
           modelName={modelName}
-          validationState={validationState}
           currentElement={currentElement}
           editorType={editorType}
           onRemoveModel={onRemoveModel}

@@ -9,7 +9,6 @@ vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> })
 
 const baseProps = {
   modelName: "Clinic",
-  validationState: null,
   editorType: "Model",
   onElementTypeChange: vi.fn(),
 };

@@ -1,5 +1,4 @@
 import { 
-  EnvelopeBase, 
   ElementShape, 
   ModelItemData, 
   ValidationResult, 
@@ -30,34 +29,7 @@ export class SelectionState {
     documentId: '',
     hasModel: false
   };
-  
-  /**
-   * Update state from a message
-   * @param msg The envelope message to process
-   * @returns true if successful, false otherwise
-   */
-  public updateFromMessage(msg: EnvelopeBase): boolean {
-    try {
-      const data = msg.data as Partial<SelectionStateData>;
-      
-      // Update state with message data
-      this.state = {
-        ...this.state,
-        ...data
-      };
-      
-      log.trace('Updated from message:', {
-        selectionType: this.state.selectionType,
-        selectionCount: this.state.selectionCount
-      });
-      
-      return true;
-    } catch (error) {
-      log.error('Error updating from message:', error);
-      return false;
-    }
-  }
-  
+
   /**
    * Update state with new data
    * @param data The data to update state with
