@@ -32,7 +32,7 @@ describe('ModelManager.updateModelRoot', () => {
     expect(saved.arrivalPatterns).toEqual([{ id: 'ap-1', name: 'P1' }]);
 
     // Pins the sibling convention (updateStates / updateEntities /
-    // updateResourceRequirements / updateScenarios all self-invalidate):
+    // updateResourceRequirements all self-invalidate):
     // a caller that reads buildModelRootProjection right after a write must
     // not see a stale cached ModelDefinition, even without an intervening
     // validateModel() call.

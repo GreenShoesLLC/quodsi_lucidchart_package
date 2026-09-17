@@ -1,42 +1,27 @@
 import { BlockProxy, ElementProxy } from 'lucid-extension-sdk';
 import {
-    PlatformSimObject,
-    PlatformType,
-    PlatformMetadata,
     SimulationObject,
     SimulationObjectType,
-    ComponentLogger,
-    MODEL_SCHEMA_VERSION,
+    getLogger,
     pickName
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { blockToNameable } from './nameableShape';
 
-// Define a constant for the logger prefix
-const LOG_PREFIX = '[SimObjectLucid]';
-
-// Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
-
-/**
- * Enable or disable logging for SimObjectLucid and its subclasses
- */
-export const setSimObjectLucidLogging = (enabled: boolean): void => {
-    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
-};
+const log = getLogger('SimObjectLucid');
 
 /**
  * Base abstract class for Lucid-specific simulation objects.
- * Implements common functionality and enforces the PlatformSimObject contract.
+ * Wraps a Lucid element and the domain object stored on it.
  */
-export abstract class SimObjectLucid<T extends SimulationObject> implements PlatformSimObject<T> {
+export abstract class SimObjectLucid<T extends SimulationObject> {
     protected simObject: T;
 
     constructor(
         protected element: ElementProxy,
         protected storageAdapter: StorageAdapter
     ) {
-        ComponentLogger.log(LOG_PREFIX, `Constructing ${this.constructor.name} for element ID: ${element.id}`);
+        log.trace(`Constructing ${this.constructor.name} for element ID: ${element.id}`);
         this.simObject = this.createSimObject();
     }
 
@@ -64,7 +49,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         element: ElementProxy,
         storageAdapter: StorageAdapter
     ): SimObjectLucid<SimulationObject> {
-        ComponentLogger.log(LOG_PREFIX, `createFromConversion called for element ID: ${element.id}`);
+        log.trace(`createFromConversion called for element ID: ${element.id}`);
         throw new Error('createFromConversion must be implemented by subclass');
     }
 
@@ -87,30 +72,6 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
     public abstract updateFromPlatform(): void;
 
     /**
-     * Validates the Lucid element storage
-     */
-    public validate(): boolean {
-        const isValid = this.storageAdapter.validateStorage(this.element);
-        ComponentLogger.log(LOG_PREFIX, `Validation for element ID ${this.element.id}: ${isValid}`);
-        return isValid;
-    }
-
-    /**
-     * Gets Lucid-specific metadata
-     */
-    public getMetadata(): PlatformMetadata {
-        const metadata = {
-            platform: PlatformType.Lucid,
-            version: MODEL_SCHEMA_VERSION,
-            lastModified: new Date().toISOString(),
-            elementId: this.element.id,
-            elementType: this.type
-        };
-        ComponentLogger.log(LOG_PREFIX, `Getting metadata for element ID ${this.element.id}`, metadata);
-        return metadata;
-    }
-    
-    /**
      * Name a block being converted, using the SHARED policy (@quodsi/shared
      * conversion/naming) that drawio and Visio run — canvas text, then the
      * block class for the types where it means something, then a unique
@@ -130,7 +91,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         opts: { typeLabel: string; includeMasterName: boolean; sequence?: number }
     ): string {
         const name = pickName(blockToNameable(block), opts);
-        ComponentLogger.log(LOG_PREFIX, `Generated name for element ID ${block.id}: ${name}`);
+        log.trace(`Generated name for element ID ${block.id}: ${name}`);
         return name;
     }
 
@@ -155,7 +116,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         if (block.textAreas && block.textAreas.size > 0) {
             const firstKey = Array.from(block.textAreas.keys())[0];
             block.textAreas.set(firstKey, newText);
-            ComponentLogger.log(LOG_PREFIX, `Updated block ${block.id} text to: ${newText}`);
+            log.trace(`Updated block ${block.id} text to: ${newText}`);
         }
     }
 }

@@ -1,8 +1,11 @@
-import { ISerializedArrivalPattern } from '../serialization/interfaces/ISerializedArrivalPattern';
-import { ISerializedArrivalSchedule } from '../serialization/interfaces/ISerializedArrivalSchedule';
-import { ISerializedWorkSchedule } from '../serialization/interfaces/ISerializedWorkSchedule';
-import { ISerializedResourceRequirement } from '../serialization/interfaces/ISerializedResourceRequirement';
-import { ISerializedDuration } from '../serialization/interfaces/ISerializedDuration';
+import type {
+    ISerializedArrivalPattern,
+    ISerializedArrivalSchedule,
+    ISerializedWorkSchedule,
+    ISerializedResourceRequirement,
+    ISerializedDuration,
+    ResourceFinancialPropertiesJson,
+} from '@quodsi/shared';
 import type { EditorReferenceActionSummary, EditorReferenceStateModification } from './EditorReferenceData';
 
 /**
@@ -109,12 +112,7 @@ export type ModelRootProjection = ModelRootModelFields & {
         name: string;
         capacity?: number;
         description?: string;
-        financialProperties?: {
-            enabled: boolean;
-            costPerSeize: number;
-            costPerHourUtilized: number;
-            costPerHourIdle: number;
-        };
+        financialProperties?: ResourceFinancialPropertiesJson;
         levers?: unknown[];
         // The resource half of the work-schedule link (CapacitySourcePicker,
         // workScheduleUsage). Absent means fixed capacity.

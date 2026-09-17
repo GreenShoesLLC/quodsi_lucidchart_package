@@ -1,5 +1,4 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
-import { mapFramework } from './framework.mapper';
 import { mapAuth } from './auth.mapper';
 import { mapSelection } from './selection.mapper';
 import { mapSimulation } from './simulation.mapper';
@@ -16,7 +15,6 @@ const logger = getLogger('MessageMapper');
  * could handle the same message type
  */
 const mappers = [
-  mapFramework,
   mapAuth,
   mapSelection,
   mapSimulation,

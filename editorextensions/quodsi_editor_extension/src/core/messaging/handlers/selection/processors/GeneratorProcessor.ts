@@ -4,7 +4,8 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, ValidationResult, getLogger } from '@quodsi/lucid-shared';
+import { ValidationResult, getLogger } from '@quodsi/lucid-shared';
+import { SelectionType } from '../types';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';

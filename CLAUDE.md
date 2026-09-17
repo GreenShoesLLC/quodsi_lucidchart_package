@@ -9,7 +9,7 @@ Quodsi is a LucidChart extension that transforms diagrams into discrete event si
 ## Architecture
 
 ### Component Structure
-1. **Shared Library** (`/lucid-shared`, `@quodsi/lucid-shared`) - Lucid-only layer: messaging protocol, Lucid serialization/validation services, platform adapters, logging. Domain models (`Activity`, `Resource`, `ModelDefinition`, ...) come from the monorepo's `@quodsi/shared` and are re-exported here, so extension and panel code imports everything from `@quodsi/lucid-shared`.
+1. **Shared Library** (`/lucid-shared`, `@quodsi/lucid-shared`) - Lucid-only layer: messaging protocol and panel/extension shared types. Serialization, validation, logging and the Studies catalog builder (`buildRelayedCatalog`) come from `@quodsi/shared`. Domain models (`Activity`, `Resource`, `ModelDefinition`, ...) come from the monorepo's `@quodsi/shared` and are re-exported here, so extension and panel code imports everything from `@quodsi/lucid-shared`.
 2. **Editor Extension** (`/editorextensions/quodsi_editor_extension`) - TypeScript-based LucidChart extension that manages the model lifecycle
 3. **React UI** (`/editorextensions/quodsi_editor_extension/quodsim-react`) - Embedded React app for model editing and simulation controls
 
@@ -39,12 +39,13 @@ resetLoggerForTests } from '@quodsi/shared';` in `lucid-shared/src/index.ts`)
 so both the extension and the React panel import it from
 `@quodsi/lucid-shared`.
 
-**`QuodsiLogger` and `ComponentLogger`** (`lucid-shared/src/core/logging/`)
-are legacy and deliberately NOT migrated — they still call `console.*`
-directly. `QuodsiLogger`'s abstract base plus its concrete subclasses
-(`ModelValidationService`, `ModelDataSource`, `ModelDefinitionRepository`,
-`LucidPageAnalyzer`, `LucidPageConversionService`) survive by design; do not
-route new code through them.
+It is the only logger. The legacy `QuodsiLogger` / `ComponentLogger`
+classes and the per-class `setLogging(bool)` switches were removed
+(2026-09-17): a class takes `const log = getLogger('<ClassName>')`, uses
+`trace` for step-by-step detail (hidden unless a namespace is raised with
+`window.QUODSI_DEBUG`) and `error`/`warn` for real problems. The one
+remaining switch is `MessageRouter.setLogging`, which also fills the
+`window.__msgLog` message-history buffer.
 
 **Host configuration.** Each host calls `configureLogger({ level, sinks:
 [consoleSink()], namespaceLevels: {...} })` once at startup, then
@@ -148,8 +149,8 @@ npm run bundle
 # Run shared library tests
 cd lucid-shared && npm test
 
-# Update test snapshots
-cd lucid-shared && npm run test:update-snapshots
+# Serialization corpus (lives in the monorepo's core package)
+cd ../quodsi_shared && npx vitest run src/serialization/__tests__/modelCorpus
 
 # Run React app tests
 cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
@@ -158,7 +159,7 @@ cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
 ### Running Individual Tests
 ```bash
 # Run a specific test file
-cd lucid-shared && npm test -- ModelValidationService.test.ts
+cd lucid-shared && npm test -- envelope.test.ts
 
 # Run tests in watch mode
 cd lucid-shared && npm test -- --watch
@@ -167,7 +168,7 @@ cd lucid-shared && npm test -- --watch
 ## Important Development Notes
 
 ### Message Flow
-1. React → Extension: Use typed message builders from `quodsi-messaging`
+1. React → Extension: send an `EnvelopeBase` with an `EnvelopeMessageType` from `@quodsi/lucid-shared` (see `lucid-shared/src/quodsi-messaging/README.md`)
 2. Extension → React: Route through MessageRouter
 3. Always handle REACT_APP_READY before sending messages to panels
 
@@ -189,7 +190,7 @@ cd lucid-shared && npm test -- --watch
 - `StorageAdapter`: Handles persistence to LucidChart storage
 - `MessageRouter`: Routes messages between extension and panels
 - `ModelDefinition`: Core domain model containing all simulation objects
-- `ModelValidationService`: Validates model correctness before simulation
+- `ModelValidationService` (`@quodsi/shared`, run through `evaluateValidationGate`): Validates model correctness before simulation
 
 **Storage format 2 (2026-08-23, Plan 2b — global resources).** Resources
 are model-level, not per-shape: each page's `q_resources` shapeData key

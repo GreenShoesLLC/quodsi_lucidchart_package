@@ -1,22 +1,16 @@
-// shared/src/types/swimlane/SwimLaneQuodsiData.ts
+import type { ResourceFinancialPropertiesJson } from '@quodsi/shared';
 
 /**
- * Inline Resource data stored within q_swimlane.
- * The swimlane block is the single persistence host for its lane Resources —
- * there are no separate blocks on the canvas for these Resources.
- * On model load, the loader reads q_swimlane and injects these into ModelDefinition.
+ * Storage format 1 (legacy): a lane's Resource stored inline in q_swimlane.
+ * Read only by the extension's ResourceStorageMigration, which moves it into
+ * the page's q_resources list.
  */
 export interface SwimLaneResourceData {
   id: string;
   name: string;
   capacity: number;
   description: string;
-  financialProperties?: {
-    enabled: boolean;
-    costPerSeize: number;
-    costPerHourUtilized: number;
-    costPerHourIdle: number;
-  };
+  financialProperties?: ResourceFinancialPropertiesJson;
 }
 
 /**

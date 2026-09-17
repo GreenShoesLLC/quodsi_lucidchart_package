@@ -12,7 +12,7 @@
       (engine only — it does not track the schema version)
 - [ ] Update `"version"` in all `manifest*.json` files to 1 day before target (Lucid auto-increments)
   - `manifest.json`, `manifest_dev.json`, `manifest_test.json`, `manifest_prod.json`, `manifest_local.json`
-- [ ] Add version transformation in `shared/src/versioning/transformations/`
+- [ ] Add version transformation in the monorepo's `quodsi_shared/src/versioning/transformations/`
   - Determine which transform files need entries (Activity, Connector, Entity, Generator, Resource, Model)
   - Use identity transform if no schema changes for that element type
 - [ ] Build shared library: `npm run build -w @quodsi/shared`

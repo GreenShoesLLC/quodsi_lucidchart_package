@@ -1,4 +1,5 @@
-import { CLEARED_FIELDS_KEY, EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi/lucid-shared';
+import { CLEARED_FIELDS_KEY } from '../../clearedFields';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

@@ -8,13 +8,13 @@ import {
   PageProxy
 } from 'lucid-extension-sdk';
 import {
-  SelectionType,
-  DiagramElementType,
-  ValidationResult,
-  ValidationMessages,
-  ValidationSeverity,
-  getLogger
+    DiagramElementType,
+    ValidationResult,
+    ValidationMessages,
+    ValidationSeverity,
+    getLogger,
 } from '@quodsi/lucid-shared';
+import { SelectionType } from '../types';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { selectionTypeUtils } from '../utils/selectionTypeUtils';

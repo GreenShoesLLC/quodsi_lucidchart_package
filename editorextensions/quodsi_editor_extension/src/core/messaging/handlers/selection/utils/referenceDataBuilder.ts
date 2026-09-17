@@ -55,9 +55,6 @@ export const referenceDataBuilder = {
         // Include states - serialize State objects to ISerializedState format
         referenceData.states = modelDef.states.getAll().map(state => summarizeState(state));
 
-        // Include scenarios - serialize Scenario objects
-        referenceData.scenarios = modelDef.scenarios.getAll().map(scenario => scenario.toJSON());
-
         this.debug.debug('Reference data built:', {
           activities: referenceData.activities?.length || 0,
           activityActionsTotal: referenceData.activities?.reduce((sum, a) => sum + (a.actions?.length || 0), 0) || 0,
@@ -66,8 +63,7 @@ export const referenceDataBuilder = {
           entities: referenceData.entities?.length || 0,
           resourceRequirements: referenceData.resourceRequirements?.length || 0,
           connectors: referenceData.connectors?.length || 0,
-          states: referenceData.states?.length || 0,
-          scenarios: referenceData.scenarios?.length || 0
+          states: referenceData.states?.length || 0
         });
       } else {
         this.debug.warn('No model definition available');

@@ -11,10 +11,9 @@
 // ENTIRE catalog send for every real calendar-mode model — the opposite of
 // what the F4 fix was trying to do.
 //
-// The direct-private-method tests in
-// simulationRunHandler.buildStudioCatalog.test.ts pin `buildStudioCatalog`'s
-// own field mapping correctly, but they construct their input by hand and
-// so never exercise the REAL storage-parsed value that actually broke this
+// The field-mapping tests of the builder (@quodsi/shared's
+// relayedCatalog.test.ts) construct their input by hand and so never
+// exercise the REAL storage-parsed value that actually broke this
 // — that's how it slipped. This file goes through the real
 // `handleRequestStudioCatalog` message handler, backed by a REAL
 // `ModelLucid` reading a REAL stored JSON blob (so `finishDateTime` is
@@ -43,7 +42,7 @@ jest.mock('../../src/core/ModelManager', () => ({
 }));
 
 import { SimulationRunHandler } from '../../src/core/messaging/handlers/simulationRunHandler';
-import { ModelDefinition, ModelSerializerFactory } from '@quodsi/lucid-shared';
+import { ModelDefinition, modelDefinitionToCleanDocument } from '@quodsi/lucid-shared';
 
 function makeFakePageWithTitle(id: string, title: string): any {
   const page = makeFakePage(id);
@@ -117,9 +116,7 @@ describe('SimulationRunHandler.handleRequestStudioCatalog (review R1)', () => {
     // handler actually uses keeps the assertion honest under any timezone.
     // Do not "fix" production to make `startDateTime` UTC to match a literal
     // — that would break the wire convention every other host relies on.
-    const expectedSerializedModel = ModelSerializerFactory.create(stubModelDefinition).serialize(
-      stubModelDefinition,
-    ) as { startDateTime?: string | null };
+    const expectedSerializedModel = modelDefinitionToCleanDocument(stubModelDefinition) as { startDateTime?: string | null };
     expect(typeof expectedSerializedModel.startDateTime).toBe('string');
 
     const handled = SimulationRunHandler.handleMessage(requestCatalogMessage());

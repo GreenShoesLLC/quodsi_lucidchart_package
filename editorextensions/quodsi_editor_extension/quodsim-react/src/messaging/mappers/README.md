@@ -7,10 +7,8 @@ directly, and other consumers import mapper functions by file path.
 ## Files
 
 - **`mapEnvelopeToAction.ts`** — the dispatcher: tries each category mapper
-  in order (`mapFramework`, `mapAuth`, `mapSelection`, `mapSimulation`,
-  `mapModelOps`, `mapEntitlements`) and returns the first non-null action.
-- **`framework.mapper.ts`** — core protocol messages (`REACT_APP_READY`,
-  `ERROR`, `LOG`).
+  in order (`mapAuth`, `mapSelection`, `mapSimulation`, `mapModelOps`,
+  `mapEntitlements`) and returns the first non-null action.
 - **`auth.mapper.ts`** — authentication status messages.
 - **`selection.mapper.ts`** — selection/document-context updates.
 - **`simulation.mapper.ts`** — simulation run status.

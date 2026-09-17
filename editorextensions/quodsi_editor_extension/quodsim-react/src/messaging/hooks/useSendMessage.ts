@@ -58,10 +58,7 @@ export function useSendMessage(
       };
 
       // Record outgoing requests in state when needed
-      if (
-        type !== EnvelopeMessageType.REACT_APP_READY &&
-        type !== EnvelopeMessageType.LOG
-      ) {
+      if (type !== EnvelopeMessageType.REACT_APP_READY) {
         dispatch({
           type: "ADD_PENDING_REQUEST",
           id: envelope.id,

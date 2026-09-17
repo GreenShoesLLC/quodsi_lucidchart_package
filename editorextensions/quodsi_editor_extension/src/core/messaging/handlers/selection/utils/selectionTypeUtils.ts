@@ -5,11 +5,11 @@ import {
   LineProxy 
 } from 'lucid-extension-sdk';
 import {
-  SelectionType,
-  SimulationObjectType,
-  ElementShape,
-  getLogger
+    SimulationObjectType,
+    ElementShape,
+    getLogger,
 } from '@quodsi/lucid-shared';
+import { SelectionType } from '../types';
 import { ModelManager } from '../../../../../core/ModelManager';
 
 const log = getLogger('selectionTypeUtils');

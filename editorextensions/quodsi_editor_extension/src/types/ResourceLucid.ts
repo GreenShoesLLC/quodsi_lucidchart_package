@@ -2,7 +2,7 @@ import { BlockProxy } from 'lucid-extension-sdk';
 import {
     Resource,
     SimulationObjectType,
-    ComponentLogger,
+    getLogger,
     parseStructuredName,
     extractResourceFields,
     generateUniqueName,
@@ -11,18 +11,7 @@ import {
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 
-// Define a constant for the logger prefix
-const LOG_PREFIX = '[ResourceLucid]';
-
-// Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
-
-/**
- * Enable or disable logging for ResourceLucid
- */
-export const setResourceLucidLogging = (enabled: boolean): void => {
-    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
-};
+const log = getLogger('ResourceLucid');
 
 /**
  * What a Resource BLOCK stores under q_data in storage format 2: a POINTER at
@@ -91,7 +80,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         block: BlockProxy, 
         storageAdapter: StorageAdapter
     ) {
-        ComponentLogger.log(LOG_PREFIX, `Constructing ResourceLucid for block ID: ${block.id}`);
+        log.trace(`Constructing ResourceLucid for block ID: ${block.id}`);
         super(block, storageAdapter);
     }
 
@@ -112,7 +101,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
      * off the wrapper sees the block it is drawn as.
      */
     protected createSimObject(): Resource {
-        ComponentLogger.log(LOG_PREFIX, `Creating placeholder Resource for element ID: ${this.platformElementId}`);
+        log.trace(`Creating placeholder Resource for element ID: ${this.platformElementId}`);
 
         const stored = this.storageAdapter.getElementData(this.element) as StoredResourceData | null;
         const box = (this.element as BlockProxy).getBoundingBox();
@@ -138,7 +127,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
      * the format-1 shape-owned record this plan removes.
      */
     public updateFromPlatform(): void {
-        ComponentLogger.log(LOG_PREFIX, `Updating Resource pointer from platform for element ID: ${this.platformElementId}`);
+        log.trace(`Updating Resource pointer from platform for element ID: ${this.platformElementId}`);
 
         const stored = this.storageAdapter.getElementData(this.element) as StoredResourceData | null;
         const dataToStore: StoredResourceData = {
@@ -146,7 +135,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             resourceId: stored?.resourceId
         };
 
-        ComponentLogger.log(LOG_PREFIX, `Storing pointer for element ID: ${this.platformElementId}`, dataToStore);
+        log.trace(`Storing pointer for element ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -158,7 +147,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
                     const name = text.trim();
-                    ComponentLogger.log(LOG_PREFIX, `Using text area content as name for element ID ${block.id}: ${name}`);
+                    log.trace(`Using text area content as name for element ID ${block.id}: ${name}`);
                     return name;
                 }
             }
@@ -167,7 +156,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         // If no text found, use class name
         const className = block.getClassName() || 'Block';
         const name = `${defaultPrefix} ${className}`;
-        ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
+        log.trace(`Generated default name for element ID ${block.id}: ${name}`);
         return name;
     }
 
@@ -185,7 +174,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
      * re-run de-duplication against the record's own name.
      */
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): ResourceLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
+        log.trace(`Creating ResourceLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         const page = block.getPage();
 
@@ -197,7 +186,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         });
         const fields = extractResourceFields(parseStructuredName(rawName));
 
-        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+        log.trace(`Parsed structured name for block ${block.id}:`, { rawName, fields });
 
         // Update shape text to clean name if we parsed structured data
         if (rawName.includes('|') && fields.name) {
@@ -218,7 +207,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             storageAdapter.setResources(page, existing);
         }
 
-        ComponentLogger.log(LOG_PREFIX, `Setting pointer for converted resource, block ID: ${block.id}`);
+        log.trace(`Setting pointer for converted resource, block ID: ${block.id}`);
 
         // The block stores the POINTER and nothing else -- see StoredResourceData.
         storageAdapter.setElementData(

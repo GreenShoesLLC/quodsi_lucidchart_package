@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, EntitlementPlanSource, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, EntitlementsStatusData, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { getLogger } from '@quodsi/lucid-shared';
@@ -369,48 +369,15 @@ export class AuthHandler {
     }
   }
 
-  private static broadcastEntitlements(data: {
-    subjectType: string;
-    planKey: string;
-    planStatus: string;
-    trialExpiresAt?: string;
-    upgradeAvailable?: boolean;
-    features: Record<string, unknown>;
-    // quodsi_api's /lucid/GetMyEntitlements action is camelCase end-to-end
-    // (unlike the snake_case /me/entitlements REST endpoint) specifically so
-    // the extension can consume it directly without a field rename. Optional
-    // here so this tolerates older backends that don't send them yet.
-    planSource?: EntitlementPlanSource;
-    orgName?: string | null;
-    studiesUsed?: number;
-    studiesPerOrgLimit?: number | null;
-    scenariosPerStudyLimit?: number | null;
-    replicationsPerScenarioLimit?: number | null;
-    tradeoffAnalysis?: boolean;
-    chartExport?: boolean;
-  }): void {
+  /** quodsi_api's GetMyEntitlements response is the ENTITLEMENTS_STATUS payload itself. */
+  private static broadcastEntitlements(data: EntitlementsStatusData): void {
     router.send('broadcast', {
       id: generateId(),
       type: EnvelopeMessageType.ENTITLEMENTS_STATUS,
       source: 'host',
       target: 'broadcast',
       version: '1.0',
-      data: {
-        subjectType: data.subjectType,
-        planKey: data.planKey,
-        planStatus: data.planStatus,
-        trialExpiresAt: data.trialExpiresAt,
-        features: data.features,
-        upgradeAvailable: data.upgradeAvailable,
-        planSource: data.planSource,
-        orgName: data.orgName,
-        studiesUsed: data.studiesUsed,
-        studiesPerOrgLimit: data.studiesPerOrgLimit,
-        scenariosPerStudyLimit: data.scenariosPerStudyLimit,
-        replicationsPerScenarioLimit: data.replicationsPerScenarioLimit,
-        tradeoffAnalysis: data.tradeoffAnalysis,
-        chartExport: data.chartExport,
-      },
+      data,
     });
   }
 

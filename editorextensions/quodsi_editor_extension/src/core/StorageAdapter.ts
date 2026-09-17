@@ -1,5 +1,6 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedWorkSchedule, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger, StoredResourceRecord } from '@quodsi/lucid-shared';
+import { SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedWorkSchedule, ISerializedResourceRequirement, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from './StoredResourceRecord';
 
 const log = getLogger('StorageAdapter');
 
@@ -18,36 +19,15 @@ export class StorageAdapter {
     private static readonly WORK_SCHEDULES_KEY = 'q_work_schedules';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
+    // Legacy: pages once stored a scenario list here. Scenarios now live in the
+    // database; the key is only cleared (clearAllModelData) so old pages tidy up.
     private static readonly SCENARIOS_KEY = 'q_scenarios';
     private static readonly SWIMLANE_DATA_KEY = 'q_swimlane';
     private static readonly RESOURCES_KEY = 'q_resources';
     private static readonly STORAGE_FORMAT_KEY = 'q_lucid_format';
-    private static readonly LOG_PREFIX = '[StorageAdapter]';
-    private loggingEnabled: boolean = false;
 
     constructor() {
-        this.log('StorageAdapter initialized');
-    }
-
-    public setLogging(enabled: boolean): void {
-        this.loggingEnabled = enabled;
-        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
-    }
-
-    private isLoggingEnabled(): boolean {
-        return this.loggingEnabled;
-    }
-
-    private log(message: string, ...args: any[]): void {
-        if (this.isLoggingEnabled()) {
-            log.debug(message, ...args);
-        }
-    }
-
-    private logError(message: string, ...args: any[]): void {
-        if (this.isLoggingEnabled()) {
-            log.error(message, ...args);
-        }
+        log.trace('StorageAdapter initialized');
     }
 
     /**
@@ -58,7 +38,7 @@ export class StorageAdapter {
             const typeInfo = this.getElementType(element);
             return typeInfo !== null && typeInfo.type === SimulationObjectType.Model;
         } catch (error) {
-            this.logError('Error checking model status:', error);
+            log.error('Error checking model status:', error);
             return false;
         }
     }
@@ -80,57 +60,21 @@ export class StorageAdapter {
             const data = JSON.parse(dataStr);
             return data.version || null;
         } catch (error) {
-            this.logError('Error getting model version:', error);
+            log.error('Error getting model version:', error);
             return null;
         }
     }
 
     /**
-     * Sets the simulation status for a page
-     */
-    public setSimulationStatus(page: ElementProxy, status: PageStatus): void {
-        try {
-            this.log('Setting simulation status for page:', {
-                pageId: page.id,
-                status
-            });
-            const serializedStatus = JSON.stringify(status);
-            page.shapeData.set(StorageAdapter.SIMULATION_STATUS_KEY, serializedStatus);
-            this.log('Successfully set simulation status');
-        } catch (error) {
-            this.logError('Error setting simulation status:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Gets the simulation status for a page
-     */
-    public getSimulationStatus(page: ElementProxy): PageStatus | null {
-        try {
-            this.log('Getting simulation status for page:', page.id);
-            const statusStr = page.shapeData.get(StorageAdapter.SIMULATION_STATUS_KEY);
-            if (!statusStr || typeof statusStr !== 'string') {
-                this.log('No simulation status found');
-                return null;
-            }
-            const status = JSON.parse(statusStr) as PageStatus;
-            this.log('Retrieved simulation status:', status);
-            return status;
-        } catch (error) {
-            this.logError('Error getting simulation status:', error);
-            return null;
-        }
-    }
-    /**
-     * Clears the simulation status for a page
+     * Clears the legacy page-level simulation status (q_simulation_status).
+     * Nothing writes it any more; it is cleared so old pages tidy up.
      */
     public clearSimulationStatus(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.SIMULATION_STATUS_KEY);
-            this.log('Successfully cleared simulation status');
+            log.trace('Successfully cleared simulation status');
         } catch (error) {
-            this.logError('Error clearing simulation status:', error);
+            log.error('Error clearing simulation status:', error);
             throw error;
         }
     }
@@ -140,15 +84,15 @@ export class StorageAdapter {
      */
     public setStates(page: ElementProxy, states: ISerializedState[]): void {
         try {
-            this.log('Setting states for page:', {
+            log.trace('Setting states for page:', {
                 pageId: page.id,
                 statesCount: states.length
             });
             const serializedStates = JSON.stringify(states);
             page.shapeData.set(StorageAdapter.STATES_KEY, serializedStates);
-            this.log('Successfully set states');
+            log.trace('Successfully set states');
         } catch (error) {
-            this.logError('Error setting states:', error);
+            log.error('Error setting states:', error);
             throw error;
         }
     }
@@ -158,17 +102,17 @@ export class StorageAdapter {
      */
     public getStates(page: ElementProxy): ISerializedState[] {
         try {
-            this.log('Getting states for page:', page.id);
+            log.trace('Getting states for page:', page.id);
             const statesStr = page.shapeData.get(StorageAdapter.STATES_KEY);
             if (!statesStr || typeof statesStr !== 'string') {
-                this.log('No states found, returning empty array');
+                log.trace('No states found, returning empty array');
                 return [];
             }
             const states = JSON.parse(statesStr) as ISerializedState[];
-            this.log('Retrieved states:', { count: states.length });
+            log.trace('Retrieved states:', { count: states.length });
             return states;
         } catch (error) {
-            this.logError('Error getting states:', error);
+            log.error('Error getting states:', error);
             return [];
         }
     }
@@ -179,9 +123,9 @@ export class StorageAdapter {
     public clearStates(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.STATES_KEY);
-            this.log('Successfully cleared states');
+            log.trace('Successfully cleared states');
         } catch (error) {
-            this.logError('Error clearing states:', error);
+            log.error('Error clearing states:', error);
             throw error;
         }
     }
@@ -191,15 +135,15 @@ export class StorageAdapter {
      */
     public setEntities(page: ElementProxy, entities: ISerializedEntity[]): void {
         try {
-            this.log('Setting entities for page:', {
+            log.trace('Setting entities for page:', {
                 pageId: page.id,
                 entitiesCount: entities.length
             });
             const serializedEntities = JSON.stringify(entities);
             page.shapeData.set(StorageAdapter.ENTITIES_KEY, serializedEntities);
-            this.log('Successfully set entities');
+            log.trace('Successfully set entities');
         } catch (error) {
-            this.logError('Error setting entities:', error);
+            log.error('Error setting entities:', error);
             throw error;
         }
     }
@@ -209,17 +153,17 @@ export class StorageAdapter {
      */
     public getEntities(page: ElementProxy): ISerializedEntity[] {
         try {
-            this.log('Getting entities for page:', page.id);
+            log.trace('Getting entities for page:', page.id);
             const entitiesStr = page.shapeData.get(StorageAdapter.ENTITIES_KEY);
             if (!entitiesStr || typeof entitiesStr !== 'string') {
-                this.log('No entities found, returning empty array');
+                log.trace('No entities found, returning empty array');
                 return [];
             }
             const entities = JSON.parse(entitiesStr) as ISerializedEntity[];
-            this.log('Retrieved entities:', { count: entities.length });
+            log.trace('Retrieved entities:', { count: entities.length });
             return entities;
         } catch (error) {
-            this.logError('Error getting entities:', error);
+            log.error('Error getting entities:', error);
             return [];
         }
     }
@@ -230,9 +174,9 @@ export class StorageAdapter {
     public clearEntities(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.ENTITIES_KEY);
-            this.log('Successfully cleared entities');
+            log.trace('Successfully cleared entities');
         } catch (error) {
-            this.logError('Error clearing entities:', error);
+            log.error('Error clearing entities:', error);
             throw error;
         }
     }
@@ -240,9 +184,9 @@ export class StorageAdapter {
     public setResources(page: ElementProxy, resources: StoredResourceRecord[]): void {
         try {
             page.shapeData.set(StorageAdapter.RESOURCES_KEY, JSON.stringify(resources));
-            this.log('Set resources', { pageId: page.id, count: resources.length });
+            log.trace('Set resources', { pageId: page.id, count: resources.length });
         } catch (error) {
-            this.logError('Error setting resources:', error);
+            log.error('Error setting resources:', error);
             throw error;
         }
     }
@@ -254,7 +198,7 @@ export class StorageAdapter {
             const parsed = JSON.parse(str);
             return Array.isArray(parsed) ? (parsed as StoredResourceRecord[]) : [];
         } catch (error) {
-            this.logError('Error getting resources:', error);
+            log.error('Error getting resources:', error);
             return [];
         }
     }
@@ -263,7 +207,7 @@ export class StorageAdapter {
         try {
             page.shapeData.delete(StorageAdapter.RESOURCES_KEY);
         } catch (error) {
-            this.logError('Error clearing resources:', error);
+            log.error('Error clearing resources:', error);
             throw error;
         }
     }
@@ -282,19 +226,19 @@ export class StorageAdapter {
     /**
      * Sets the arrival-pattern list for a page.
      *
-     * Model-level list, sibling of q_entities/q_scenarios — NOT shape-mapped.
+     * Model-level list, sibling of q_entities — NOT shape-mapped.
      * One pattern per generator is enforced by the UI, not here.
      */
     public setArrivalPatterns(page: ElementProxy, patterns: ISerializedArrivalPattern[]): void {
         try {
-            this.log('Setting arrival patterns for page:', {
+            log.trace('Setting arrival patterns for page:', {
                 pageId: page.id,
                 patternsCount: patterns.length
             });
             page.shapeData.set(StorageAdapter.ARRIVAL_PATTERNS_KEY, JSON.stringify(patterns));
-            this.log('Successfully set arrival patterns');
+            log.trace('Successfully set arrival patterns');
         } catch (error) {
-            this.logError('Error setting arrival patterns:', error);
+            log.error('Error setting arrival patterns:', error);
             throw error;
         }
     }
@@ -308,14 +252,14 @@ export class StorageAdapter {
         try {
             const raw = page.shapeData.get(StorageAdapter.ARRIVAL_PATTERNS_KEY);
             if (!raw || typeof raw !== 'string') {
-                this.log('No arrival patterns found, returning empty array');
+                log.trace('No arrival patterns found, returning empty array');
                 return [];
             }
             const patterns = JSON.parse(raw) as ISerializedArrivalPattern[];
-            this.log('Retrieved arrival patterns:', { count: patterns.length });
+            log.trace('Retrieved arrival patterns:', { count: patterns.length });
             return patterns;
         } catch (error) {
-            this.logError('Error getting arrival patterns:', error);
+            log.error('Error getting arrival patterns:', error);
             return [];
         }
     }
@@ -326,9 +270,9 @@ export class StorageAdapter {
     public clearArrivalPatterns(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.ARRIVAL_PATTERNS_KEY);
-            this.log('Successfully cleared arrival patterns');
+            log.trace('Successfully cleared arrival patterns');
         } catch (error) {
-            this.logError('Error clearing arrival patterns:', error);
+            log.error('Error clearing arrival patterns:', error);
             throw error;
         }
     }
@@ -342,14 +286,14 @@ export class StorageAdapter {
      */
     public setArrivalSchedules(page: ElementProxy, schedules: ISerializedArrivalSchedule[]): void {
         try {
-            this.log('Setting arrival schedules for page:', {
+            log.trace('Setting arrival schedules for page:', {
                 pageId: page.id,
                 schedulesCount: schedules.length
             });
             page.shapeData.set(StorageAdapter.ARRIVAL_SCHEDULES_KEY, JSON.stringify(schedules));
-            this.log('Successfully set arrival schedules');
+            log.trace('Successfully set arrival schedules');
         } catch (error) {
-            this.logError('Error setting arrival schedules:', error);
+            log.error('Error setting arrival schedules:', error);
             throw error;
         }
     }
@@ -363,14 +307,14 @@ export class StorageAdapter {
         try {
             const raw = page.shapeData.get(StorageAdapter.ARRIVAL_SCHEDULES_KEY);
             if (!raw || typeof raw !== 'string') {
-                this.log('No arrival schedules found, returning empty array');
+                log.trace('No arrival schedules found, returning empty array');
                 return [];
             }
             const schedules = JSON.parse(raw) as ISerializedArrivalSchedule[];
-            this.log('Retrieved arrival schedules:', { count: schedules.length });
+            log.trace('Retrieved arrival schedules:', { count: schedules.length });
             return schedules;
         } catch (error) {
-            this.logError('Error getting arrival schedules:', error);
+            log.error('Error getting arrival schedules:', error);
             return [];
         }
     }
@@ -381,9 +325,9 @@ export class StorageAdapter {
     public clearArrivalSchedules(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.ARRIVAL_SCHEDULES_KEY);
-            this.log('Successfully cleared arrival schedules');
+            log.trace('Successfully cleared arrival schedules');
         } catch (error) {
-            this.logError('Error clearing arrival schedules:', error);
+            log.error('Error clearing arrival schedules:', error);
             throw error;
         }
     }
@@ -408,7 +352,7 @@ export class StorageAdapter {
      */
     public setWorkSchedules(page: ElementProxy, schedules: ISerializedWorkSchedule[]): void {
         try {
-            this.log('Setting work schedules for page:', {
+            log.trace('Setting work schedules for page:', {
                 pageId: page.id,
                 schedulesCount: schedules.length
             });
@@ -417,9 +361,9 @@ export class StorageAdapter {
                 return rest;
             });
             page.shapeData.set(StorageAdapter.WORK_SCHEDULES_KEY, JSON.stringify(clean));
-            this.log('Successfully set work schedules');
+            log.trace('Successfully set work schedules');
         } catch (error) {
-            this.logError('Error setting work schedules:', error);
+            log.error('Error setting work schedules:', error);
             throw error;
         }
     }
@@ -433,14 +377,14 @@ export class StorageAdapter {
         try {
             const raw = page.shapeData.get(StorageAdapter.WORK_SCHEDULES_KEY);
             if (!raw || typeof raw !== 'string') {
-                this.log('No work schedules found, returning empty array');
+                log.trace('No work schedules found, returning empty array');
                 return [];
             }
             const schedules = JSON.parse(raw) as ISerializedWorkSchedule[];
-            this.log('Retrieved work schedules:', { count: schedules.length });
+            log.trace('Retrieved work schedules:', { count: schedules.length });
             return schedules;
         } catch (error) {
-            this.logError('Error getting work schedules:', error);
+            log.error('Error getting work schedules:', error);
             return [];
         }
     }
@@ -451,48 +395,10 @@ export class StorageAdapter {
     public clearWorkSchedules(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.WORK_SCHEDULES_KEY);
-            this.log('Successfully cleared work schedules');
+            log.trace('Successfully cleared work schedules');
         } catch (error) {
-            this.logError('Error clearing work schedules:', error);
+            log.error('Error clearing work schedules:', error);
             throw error;
-        }
-    }
-
-    /**
-     * Sets the scenarios array for a page
-     */
-    public setScenarios(page: ElementProxy, scenarios: ISerializedScenario[]): void {
-        try {
-            this.log('Setting scenarios for page:', {
-                pageId: page.id,
-                scenariosCount: scenarios.length
-            });
-            const serialized = JSON.stringify(scenarios);
-            page.shapeData.set(StorageAdapter.SCENARIOS_KEY, serialized);
-            this.log('Successfully set scenarios');
-        } catch (error) {
-            this.logError('Error setting scenarios:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Gets the scenarios array for a page
-     */
-    public getScenarios(page: ElementProxy): ISerializedScenario[] {
-        try {
-            this.log('Getting scenarios for page:', page.id);
-            const str = page.shapeData.get(StorageAdapter.SCENARIOS_KEY);
-            if (!str || typeof str !== 'string') {
-                this.log('No scenarios found, returning empty array');
-                return [];
-            }
-            const scenarios = JSON.parse(str) as ISerializedScenario[];
-            this.log('Retrieved scenarios:', { count: scenarios.length });
-            return scenarios;
-        } catch (error) {
-            this.logError('Error getting scenarios:', error);
-            return [];
         }
     }
 
@@ -502,9 +408,9 @@ export class StorageAdapter {
     public clearScenarios(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.SCENARIOS_KEY);
-            this.log('Successfully cleared scenarios');
+            log.trace('Successfully cleared scenarios');
         } catch (error) {
-            this.logError('Error clearing scenarios:', error);
+            log.error('Error clearing scenarios:', error);
             throw error;
         }
     }
@@ -514,15 +420,15 @@ export class StorageAdapter {
      */
     public setResourceRequirements(page: ElementProxy, requirements: ISerializedResourceRequirement[]): void {
         try {
-            this.log('Setting resource requirements for page:', {
+            log.trace('Setting resource requirements for page:', {
                 pageId: page.id,
                 requirementsCount: requirements.length
             });
             const serializedRequirements = JSON.stringify(requirements);
             page.shapeData.set(StorageAdapter.RESOURCE_REQUIREMENTS_KEY, serializedRequirements);
-            this.log('Successfully set resource requirements');
+            log.trace('Successfully set resource requirements');
         } catch (error) {
-            this.logError('Error setting resource requirements:', error);
+            log.error('Error setting resource requirements:', error);
             throw error;
         }
     }
@@ -532,17 +438,17 @@ export class StorageAdapter {
      */
     public getResourceRequirements(page: ElementProxy): ISerializedResourceRequirement[] {
         try {
-            this.log('Getting resource requirements for page:', page.id);
+            log.trace('Getting resource requirements for page:', page.id);
             const requirementsStr = page.shapeData.get(StorageAdapter.RESOURCE_REQUIREMENTS_KEY);
             if (!requirementsStr || typeof requirementsStr !== 'string') {
-                this.log('No resource requirements found, returning empty array');
+                log.trace('No resource requirements found, returning empty array');
                 return [];
             }
             const requirements = JSON.parse(requirementsStr) as ISerializedResourceRequirement[];
-            this.log('Retrieved resource requirements:', { count: requirements.length });
+            log.trace('Retrieved resource requirements:', { count: requirements.length });
             return requirements;
         } catch (error) {
-            this.logError('Error getting resource requirements:', error);
+            log.error('Error getting resource requirements:', error);
             return [];
         }
     }
@@ -553,9 +459,9 @@ export class StorageAdapter {
     public clearResourceRequirements(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.RESOURCE_REQUIREMENTS_KEY);
-            this.log('Successfully cleared resource requirements');
+            log.trace('Successfully cleared resource requirements');
         } catch (error) {
-            this.logError('Error clearing resource requirements:', error);
+            log.error('Error clearing resource requirements:', error);
             throw error;
         }
     }
@@ -567,15 +473,15 @@ export class StorageAdapter {
      */
     public setSkippedElements(page: ElementProxy, skipped: SkippedElementsRecord): void {
         try {
-            this.log('Setting skipped elements for page:', {
+            log.trace('Setting skipped elements for page:', {
                 pageId: page.id,
                 count: Object.keys(skipped).length
             });
             const serialized = JSON.stringify(skipped);
             page.shapeData.set(StorageAdapter.SKIPPED_ELEMENTS_KEY, serialized);
-            this.log('Successfully set skipped elements');
+            log.trace('Successfully set skipped elements');
         } catch (error) {
-            this.logError('Error setting skipped elements:', error);
+            log.error('Error setting skipped elements:', error);
             throw error;
         }
     }
@@ -585,17 +491,17 @@ export class StorageAdapter {
      */
     public getSkippedElements(page: ElementProxy): SkippedElementsRecord {
         try {
-            this.log('Getting skipped elements for page:', page.id);
+            log.trace('Getting skipped elements for page:', page.id);
             const str = page.shapeData.get(StorageAdapter.SKIPPED_ELEMENTS_KEY);
             if (!str || typeof str !== 'string') {
-                this.log('No skipped elements found, returning empty record');
+                log.trace('No skipped elements found, returning empty record');
                 return {};
             }
             const skipped = JSON.parse(str) as SkippedElementsRecord;
-            this.log('Retrieved skipped elements:', { count: Object.keys(skipped).length });
+            log.trace('Retrieved skipped elements:', { count: Object.keys(skipped).length });
             return skipped;
         } catch (error) {
-            this.logError('Error getting skipped elements:', error);
+            log.error('Error getting skipped elements:', error);
             return {};
         }
     }
@@ -606,9 +512,9 @@ export class StorageAdapter {
     public clearSkippedElements(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.SKIPPED_ELEMENTS_KEY);
-            this.log('Successfully cleared skipped elements');
+            log.trace('Successfully cleared skipped elements');
         } catch (error) {
-            this.logError('Error clearing skipped elements:', error);
+            log.error('Error clearing skipped elements:', error);
             throw error;
         }
     }
@@ -638,13 +544,13 @@ export class StorageAdapter {
 
             element.shapeData.set(StorageAdapter.DATA_KEY, JSON.stringify(envelope));
 
-            this.log('Successfully set element data:', {
+            log.trace('Successfully set element data:', {
                 elementId: id,
                 type: type,
                 dataKeys: Object.keys(domain)
             });
         } catch (error) {
-            this.logError('Error setting element data:', error);
+            log.error('Error setting element data:', error);
             throw error;
         }
     }
@@ -705,12 +611,12 @@ export class StorageAdapter {
 
             element.shapeData.set(StorageAdapter.DATA_KEY, JSON.stringify(envelope));
 
-            this.log('Successfully updated element data:', {
+            log.trace('Successfully updated element data:', {
                 elementId: existing.id,
                 type
             });
         } catch (error) {
-            this.logError('Error updating element data:', error);
+            log.error('Error updating element data:', error);
             throw new Error(`Failed to update element data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -737,7 +643,7 @@ export class StorageAdapter {
                 mappingSource
             };
         } catch (error) {
-            this.logError('Error getting element type:', error);
+            log.error('Error getting element type:', error);
             return null;
         }
     }
@@ -747,7 +653,7 @@ export class StorageAdapter {
      */
     public getElementData<T>(element: ElementProxy): T | null {
         try {
-            this.log('Getting element data:', {
+            log.trace('Getting element data:', {
                 elementId: element.id,
                 elementType: typeof element,
                 contextInfo: 'Attempting to retrieve stored data'
@@ -755,7 +661,7 @@ export class StorageAdapter {
 
             const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
 
-            this.log('Raw data string:', {
+            log.trace('Raw data string:', {
                 exists: !!dataStr,
                 isString: typeof dataStr === 'string',
                 valueType: typeof dataStr,
@@ -765,13 +671,13 @@ export class StorageAdapter {
             });
 
             if (!dataStr || typeof dataStr !== 'string') {
-                this.log('No valid data found for element:', element.id);
+                log.trace('No valid data found for element:', element.id);
                 return null;
             }
 
             const parsedData = flattenEnvelope(JSON.parse(dataStr)) as T;
 
-            this.log('Successfully parsed element data:', {
+            log.trace('Successfully parsed element data:', {
                 elementId: element.id,
                 parsedDataKeys: Object.keys(parsedData as object),
                 timestamp: new Date().toISOString()
@@ -779,7 +685,7 @@ export class StorageAdapter {
 
             return parsedData;
         } catch (error) {
-            this.logError('Error getting element data:', {
+            log.error('Error getting element data:', {
                 elementId: element.id,
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : undefined,
@@ -803,12 +709,12 @@ export class StorageAdapter {
                     // If delete fails, try setting to empty string as fallback
                     element.shapeData.set(key, '');
                 }
-                this.log(`Cleared ${key} from element:`, element.id);
+                log.trace(`Cleared ${key} from element:`, element.id);
             } else {
-                this.log(`No ${key} found on element:`, element.id);
+                log.trace(`No ${key} found on element:`, element.id);
             }
         } catch (error) {
-            this.logError('Error clearing element data:', error);
+            log.error('Error clearing element data:', error);
             throw new Error(`Failed to clear element data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -825,23 +731,10 @@ export class StorageAdapter {
                 } catch {
                     element.shapeData.set(key, '');
                 }
-                this.log(`Cleared ${key} from element:`, element.id);
+                log.trace(`Cleared ${key} from element:`, element.id);
             }
         } catch (error) {
-            this.logError(`Error clearing ${key}:`, error);
-        }
-    }
-
-    /**
-     * Validates that an element has the required q_data storage key
-     */
-    public validateStorage(element: ElementProxy): boolean {
-        try {
-            const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
-            return typeof dataStr === 'string' && dataStr.length > 0;
-        } catch (error) {
-            this.logError('Error validating storage:', error);
-            return false;
+            log.error(`Error clearing ${key}:`, error);
         }
     }
 
@@ -878,7 +771,7 @@ export class StorageAdapter {
                 this.clearElementData(line);
             }
         } catch (error) {
-            this.logError('Error clearing model data:', error);
+            log.error('Error clearing model data:', error);
             throw error;
         }
     }

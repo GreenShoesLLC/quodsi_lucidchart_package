@@ -3,7 +3,6 @@ import {
   EnvelopeMessageType,
   SwimLaneQuodsiData,
 } from '@quodsi/lucid-shared';
-import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { getLogger } from '@quodsi/lucid-shared';
@@ -32,8 +31,6 @@ export class SwimLaneHandler {
         SwimLaneHandler.handleUpdate(msg)
           .catch(err => SwimLaneHandler.logger.error('Error in SWIMLANE_UPDATE:', err));
         return true;
-      case EnvelopeMessageType.SWIMLANE_UPDATE_RESULT:
-        return true; // Sent by extension, not received
       default:
         return false;
     }
@@ -47,6 +44,9 @@ export class SwimLaneHandler {
    * record lives in the page's q_resources and outlives every claimant, so a
    * lane that lets go of one simply leaves it unclaimed -- cascading a delete
    * from here would destroy model-level data the user never asked to remove.
+   *
+   * No reply is sent: SwimLaneEditor's SWIMLANE_UPDATE is fire-and-forget,
+   * so a failure here is only logged.
    */
   private static async handleUpdate(msg: EnvelopeBase): Promise<void> {
     try {
@@ -60,13 +60,13 @@ export class SwimLaneHandler {
       const currentPage = viewport.getCurrentPage();
 
       if (!currentPage) {
-        SwimLaneHandler.sendUpdateResult(msg.id, false, 'No current page');
+        SwimLaneHandler.logger.error('SWIMLANE_UPDATE: no current page');
         return;
       }
 
       const block = currentPage.allBlocks.get(data.swimlaneBlockId);
       if (!block) {
-        SwimLaneHandler.sendUpdateResult(msg.id, false, 'Swimlane block not found');
+        SwimLaneHandler.logger.error('SWIMLANE_UPDATE: swimlane block not found', { blockId: data.swimlaneBlockId });
         return;
       }
 
@@ -82,22 +82,8 @@ export class SwimLaneHandler {
         laneCount: data.swimlaneData.lanes.length,
         mappedLanes: data.swimlaneData.lanes.filter(l => l !== null).length,
       });
-
-      SwimLaneHandler.sendUpdateResult(msg.id, true);
     } catch (error) {
       SwimLaneHandler.logger.error('Error updating swimlane:', error);
-      SwimLaneHandler.sendUpdateResult(msg.id, false, error instanceof Error ? error.message : String(error));
     }
-  }
-
-  private static sendUpdateResult(correlationId: string, success: boolean, error?: string): void {
-    router.send('model', {
-      id: correlationId,
-      type: EnvelopeMessageType.SWIMLANE_UPDATE_RESULT,
-      source: 'host',
-      target: 'model-iframe',
-      version: '1.0',
-      data: { success, error },
-    });
   }
 }

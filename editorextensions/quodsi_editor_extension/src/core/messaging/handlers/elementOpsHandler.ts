@@ -32,17 +32,11 @@ export class ElementOpsHandler {
           .catch(err => log.error('Error in handleElementUpdate:', err));
         return true;
 
-      case EnvelopeMessageType.ELEMENT_UPDATE_RESULT:
-        return ElementOpsHandler.handleElementUpdateResult(msg);
-
       case EnvelopeMessageType.ELEMENT_CONVERT:
         // Start the async process but return true synchronously
         ElementOpsHandler.handleElementConvert(msg)
           .catch(err => log.error('Error in handleElementConvert:', err));
         return true;
-
-      case EnvelopeMessageType.ELEMENT_CONVERT_RESULT:
-        return ElementOpsHandler.handleElementConvertResult(msg);
 
       // Not an element operations message
       default:
@@ -74,13 +68,10 @@ export class ElementOpsHandler {
    * Used only by handleElementUpdate (ELEMENT_UPDATE / ELEMENT_UPDATE_RESULT)
    * -- the route the pattern/schedule modals' bufferingAccessor actually
    * calls (via useModelRootSource's saveShape). handleElementConvert
-   * (ELEMENT_CONVERT / ELEMENT_CONVERT_RESULT) intentionally does NOT use
-   * this: neither modal sends ELEMENT_CONVERT (their tabs only call
-   * accessor.updateShape/updateModel), and shape-type conversion is only
-   * reachable from the side panel's element editors
-   * (ActivityEditor/GeneratorEditor/ModelEditor via
-   * modelOpsSender.convertElement) -- see elementOpsHandler.ts's
-   * handleElementConvert sends, left hardcoded to 'model'.
+   * (ELEMENT_CONVERT) sends no reply at all: the side panel's
+   * modelOpsSender.convertElement is fire-and-forget, and the panel learns
+   * the outcome from the SELECTION_CHANGED re-send that follows a
+   * conversion (and from the validation broadcast).
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'pattern-iframe') return 'pattern';
@@ -281,31 +272,6 @@ export class ElementOpsHandler {
   }
 
   /**
-   * Handle element update result
-   * 
-   * @param msg ELEMENT_UPDATE_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleElementUpdateResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      elementId: string;
-      errorMessage?: string;
-    };
-    
-    log.debug('Element update result received', {
-      success: data.success,
-      elementId: data.elementId,
-      error: data.errorMessage
-    });
-    
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
-  /**
    * Handle element conversion request
    *
    * @param msg ELEMENT_CONVERT message
@@ -382,23 +348,6 @@ export class ElementOpsHandler {
       // Validate the model after conversion
       await modelManager.validateModel();
 
-      // Send success response -- deliberately hardcoded to 'model', not
-      // getResponseChannel(msg). ELEMENT_CONVERT is only ever sent by the
-      // side panel's element editors (modelOpsSender.convertElement); the
-      // pattern-editor modal has no conversion UI and never issues this
-      // message. See getResponseChannel's doc comment above.
-      router.send('model', {
-        id: msg.id, // Use same ID for correlation
-        type: EnvelopeMessageType.ELEMENT_CONVERT_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: true,
-          elementId: data.elementId
-        }
-      });
-
       // Refresh the UI by re-processing the current selection
       // This ensures React receives fresh data with the updated element type
       log.debug('Re-processing selection after convert:', data.newType);
@@ -410,50 +359,10 @@ export class ElementOpsHandler {
     } catch (error) {
       log.error('Error converting element', error);
 
-      // Send error response -- same hardcoded 'model' as the success path
-      // above (see that comment for why).
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.ELEMENT_CONVERT_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: false,
-          elementId: data.elementId,
-          errorMessage: error instanceof Error ? error.message : String(error)
-        }
-      });
-
       return false;
     }
   }
-  
-  /**
-   * Handle element conversion result
-   * 
-   * @param msg ELEMENT_CONVERT_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleElementConvertResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      elementId: string;
-      errorMessage?: string;
-    };
-    
-    log.debug('Element conversion result received', {
-      success: data.success,
-      elementId: data.elementId,
-      error: data.errorMessage
-    });
-    
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
+
   /**
    * Helper method to find an element by ID
    *

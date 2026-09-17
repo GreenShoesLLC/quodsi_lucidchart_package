@@ -1,9 +1,8 @@
 // Product analytics fire from panel init (SelectionHandler.setDocumentContext →
-// fireModelOpenedIfNew) BEFORE Kinde auth. Every data action first runs the
-// 2025 "temporary workaround" oauthXhr('lucid', folders/search); for a local
-// package (extensionId __local__) that Lucid-provider OAuth fails, and Lucid
-// then suppresses the Kinde flow — no auto sign-in, dead Sign-in click
-// (2026-08-27). Events raised before auth must wait for auth-ready.
+// fireModelOpenedIfNew) BEFORE Kinde auth. A data action then has no Kinde
+// token to carry, so events raised before auth must wait for auth-ready.
+// (Data actions used to run an oauthXhr('lucid', ...) workaround whose consent
+// dialog, before auth, suppressed the Kinde flow -- 2026-08-27.)
 (globalThis as any).__LOCAL_STUDIO_OVERRIDE__ = '';
 const sendMock = jest.fn();
 jest.mock('../../src/core/messaging/index', () => ({ router: { send: sendMock } }));
@@ -26,7 +25,6 @@ function jwt(claims: Record<string, unknown>): string {
 beforeEach(() => {
   jest.clearAllMocks();
   (AuthHandler as any).resetForTests();
-  LucidDataActionUtility.resetOauthTriggerStatus();
   AnalyticsHandler.initialize(client as any);
 });
 

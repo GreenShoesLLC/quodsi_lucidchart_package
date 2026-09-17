@@ -28,9 +28,6 @@ export class EntitiesHandler {
           .catch(err => log.error('Error in handleEntitiesUpdate:', err));
         return true;
 
-      case EnvelopeMessageType.ENTITIES_UPDATE_RESULT:
-        return EntitiesHandler.handleEntitiesUpdateResult(msg);
-
       // Not an entities operations message
       default:
         return false;
@@ -131,26 +128,4 @@ export class EntitiesHandler {
     }
   }
 
-  /**
-   * Handle entities update result
-   *
-   * @param msg ENTITIES_UPDATE_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleEntitiesUpdateResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      errorMessage?: string;
-    };
-
-    log.debug('Entities update result received', {
-      success: data.success,
-      error: data.errorMessage
-    });
-
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-
-    return true;
-  }
 }

@@ -16,7 +16,7 @@ const values = () =>
     .getAllByRole("option")
     .map((o) => (o as HTMLOptionElement).value);
 
-const baseProps = { modelName: "Clinic", validationState: null };
+const baseProps = { modelName: "Clinic" };
 
 beforeEach(() => {
   localStorage.clear();

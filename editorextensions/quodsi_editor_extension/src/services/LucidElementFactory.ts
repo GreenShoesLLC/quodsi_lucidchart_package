@@ -1,7 +1,7 @@
 import { ElementProxy, LineProxy, BlockProxy, PageProxy } from 'lucid-extension-sdk';
 import {
     SimulationObjectType,
-    ComponentLogger,
+    getLogger,
     MappingSource
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -15,24 +15,14 @@ import {
     ModelLucid
 } from '../types';
 
-// Define a constant for the logger prefix
-const LOG_PREFIX = '[LucidElementFactory]';
+const log = getLogger('LucidElementFactory');
 
 /**
  * Factory for creating platform-specific simulation objects from Lucid elements.
  */
 export class LucidElementFactory {
-    constructor(private storageAdapter: StorageAdapter) {
-        // Logging is disabled by default
-        this.setLogging(false);
-    }
+    constructor(private storageAdapter: StorageAdapter) {}
 
-    /**
-     * Enable or disable logging for this component
-     */
-    public setLogging(enabled: boolean): void {
-        ComponentLogger.setEnabled(LOG_PREFIX, enabled);
-    }
 
     /**
      * Creates the appropriate platform-specific simulation object based on the element type
@@ -50,7 +40,7 @@ export class LucidElementFactory {
         mappingSource?: MappingSource,
         nameSequence?: number
     ): SimObjectLucid<any> {
-        ComponentLogger.log(LOG_PREFIX, `Creating platform object`, {
+        log.trace(`Creating platform object`, {
             elementId: element.id,
             type: type,
             elementType: element.constructor.name,
@@ -61,83 +51,83 @@ export class LucidElementFactory {
         try {
             switch (type) {
                 case SimulationObjectType.Model:
-                    ComponentLogger.log(LOG_PREFIX, `Checking PageProxy for Model`);
+                    log.trace(`Checking PageProxy for Model`);
                     if (this.isPageProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating ModelLucid`);
+                        log.trace(`Creating ModelLucid`);
                         return new ModelLucid(element, this.storageAdapter);
                     }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a PageProxy for Model`);
+                    log.error(`Element is not a PageProxy for Model`);
                     break;
 
                 case SimulationObjectType.Activity:
-                    ComponentLogger.log(LOG_PREFIX, `Checking BlockProxy for Activity`);
+                    log.trace(`Checking BlockProxy for Activity`);
                     if (this.isBlockProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid`);
+                        log.trace(`Creating ActivityLucid`);
                         return isConversion
                             ? ActivityLucid.createFromConversion(element, this.storageAdapter, mappingSource, nameSequence)
                             : new ActivityLucid(element, this.storageAdapter);
                     }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Activity`);
+                    log.error(`Element is not a BlockProxy for Activity`);
                     break;
 
                 case SimulationObjectType.Connector:
-                    ComponentLogger.log(LOG_PREFIX, `Checking LineProxy for Connector`);
+                    log.trace(`Checking LineProxy for Connector`);
                     if (this.isLineProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating ConnectorLucid`);
+                        log.trace(`Creating ConnectorLucid`);
                         return isConversion
                             ? ConnectorLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new ConnectorLucid(element, this.storageAdapter);
                     }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a LineProxy for Connector`);
+                    log.error(`Element is not a LineProxy for Connector`);
                     break;
 
                 case SimulationObjectType.Generator:
-                    ComponentLogger.log(LOG_PREFIX, `Checking BlockProxy for Generator`);
+                    log.trace(`Checking BlockProxy for Generator`);
                     if (this.isBlockProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid`);
+                        log.trace(`Creating GeneratorLucid`);
                         return isConversion
                             ? GeneratorLucid.createFromConversion(element, this.storageAdapter, mappingSource, nameSequence)
                             : new GeneratorLucid(element, this.storageAdapter);
                     }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Generator`);
+                    log.error(`Element is not a BlockProxy for Generator`);
                     break;
 
                 case SimulationObjectType.Resource:
-                    ComponentLogger.log(LOG_PREFIX, `Checking BlockProxy for Resource`);
+                    log.trace(`Checking BlockProxy for Resource`);
                     if (this.isBlockProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid`);
+                        log.trace(`Creating ResourceLucid`);
                         return isConversion
                             ? ResourceLucid.createFromConversion(element, this.storageAdapter, mappingSource, nameSequence)
                             : new ResourceLucid(element, this.storageAdapter);
                     }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Resource`);
+                    log.error(`Element is not a BlockProxy for Resource`);
                     break;
 
                 case SimulationObjectType.ResourceRequirement:
-                    ComponentLogger.log(LOG_PREFIX, `Checking BlockProxy for ResourceRequirement`);
+                    log.trace(`Checking BlockProxy for ResourceRequirement`);
                     if (this.isBlockProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating ResourceRequirementLucid`);
+                        log.trace(`Creating ResourceRequirementLucid`);
                         return isConversion
                             ? ResourceRequirementLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new ResourceRequirementLucid(element, this.storageAdapter);
                     }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for ResourceRequirement`);
+                    log.error(`Element is not a BlockProxy for ResourceRequirement`);
                     break;
 
                 default:
-                    ComponentLogger.error(LOG_PREFIX, `Unsupported simulation object type: ${type}`);
+                    log.error(`Unsupported simulation object type: ${type}`);
             }
 
             throw new Error(`Cannot create platform object for type ${type} from element ${element.id}`);
         } catch (error) {
-            ComponentLogger.error(LOG_PREFIX, `Error creating platform object:`, {
+            log.error(`Error creating platform object:`, {
                 type: type,
                 elementId: element.id,
                 error: error instanceof Error ? error.message : String(error)
             });
 
             if (error instanceof Error) {
-                ComponentLogger.error(LOG_PREFIX, `Error stack:`, error.stack);
+                log.error(`Error stack:`, error.stack);
             }
 
             throw error;
@@ -149,7 +139,7 @@ export class LucidElementFactory {
      */
     private isBlockProxy(element: ElementProxy): element is BlockProxy {
         const isBlock = 'getClassName' in element && 'textAreas' in element;
-        ComponentLogger.log(LOG_PREFIX, `isBlockProxy check:`, {
+        log.trace(`isBlockProxy check:`, {
             elementId: element.id,
             result: isBlock,
             hasGetClassName: 'getClassName' in element,
@@ -163,7 +153,7 @@ export class LucidElementFactory {
      */
     private isLineProxy(element: ElementProxy): element is LineProxy {
         const isLine = 'getEndpoint1' in element && 'getEndpoint2' in element;
-        ComponentLogger.log(LOG_PREFIX, `isLineProxy check:`, {
+        log.trace(`isLineProxy check:`, {
             elementId: element.id,
             result: isLine,
             hasGetEndpoint1: 'getEndpoint1' in element,
@@ -177,7 +167,7 @@ export class LucidElementFactory {
      */
     public isPageProxy(element: ElementProxy): element is PageProxy {
         const isPage = element && 'getTitle' in element && 'allBlocks' in element;
-        ComponentLogger.log(LOG_PREFIX, `isPageProxy check:`, {
+        log.trace(`isPageProxy check:`, {
             elementId: element?.id,
             result: isPage,
             element: element,

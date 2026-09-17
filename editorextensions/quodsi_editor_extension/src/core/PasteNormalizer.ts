@@ -39,7 +39,6 @@ import {
     Action,
     ScenarioLever,
     SimulationObjectType,
-    StoredResourceRecord,
     SwimLaneLaneMapping,
     SwimLaneQuodsiData,
     generateUUID,
@@ -47,6 +46,7 @@ import {
     getLogger,
     pickConnectorName,
 } from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from './StoredResourceRecord';
 import { StorageAdapter } from './StorageAdapter';
 import { liveEndpointIds } from '../types/ConnectorLucid';
 import { lineToNameable } from '../types/nameableShape';

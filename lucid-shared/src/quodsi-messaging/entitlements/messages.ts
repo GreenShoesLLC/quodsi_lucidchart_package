@@ -1,5 +1,4 @@
-import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
+import type { EntitlementPlanSource } from '@quodsi/shared';
 
 /**
  * Whose plan is being enforced on this request — the user's personal plan,
@@ -8,11 +7,6 @@ import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
  */
 export type EntitlementSubjectType = 'user' | 'organization';
 
-/**
- * Where the active plan resolution came from, as computed by the backend's
- * EntitlementService. Mirrors `quodsi_api`'s flat REST field `plan_source`.
- */
-export type EntitlementPlanSource = 'kinde_org' | 'kinde_user' | 'free_fallback';
 
 /**
  * Plan status mirrors Kinde. `trialing` grants full entitlements like
@@ -31,70 +25,25 @@ export interface EntitlementMeteredFeature {
 }
 
 /**
- * Resolved entitlements for the current request as computed by
- * `quodsi_api`'s EntitlementService. This is a snapshot — the authoritative
- * state lives in Kinde.
+ * ENTITLEMENTS_STATUS payload (host -> panel). quodsi_api's GetMyEntitlements
+ * data action returns exactly this shape (camelCase end to end), and the host
+ * forwards it unchanged. The fields after `upgradeAvailable` are optional so
+ * an older backend that doesn't send them still works.
  */
-export interface EntitlementsStatusMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.ENTITLEMENTS_STATUS;
-  data: {
-    /** Whether the active plan comes from the user's org or the user directly. */
-    subjectType: EntitlementSubjectType;
-
-    /** Plan key (e.g. "quodsi_pro_user", "quodsi_pro_team"). */
-    planKey: string;
-
-    /** Active / trialing / etc. Used by the UI to decide whether to show a trial badge. */
-    planStatus: EntitlementPlanStatus;
-
-    /**
-     * ISO timestamp of when the current trial expires. Present only when
-     * planStatus === 'trialing'.
-     */
-    trialExpiresAt?: string;
-
-    /**
-     * Features the subject is entitled to.
-     *   - Metered feature: value is `{ limit, used }`.
-     *   - Unmetered feature: key is present with value `true`.
-     *   - Absent: feature is not enabled.
-     */
-    features: Record<string, EntitlementMeteredFeature | boolean>;
-
-    /** From backend BILLING_MODE; false => hide Upgrade UI. Absent => show (fail-open). */
-    upgradeAvailable?: boolean;
-
-    /**
-     * The following fields mirror `quodsi_api`'s flat `GET /me/entitlements`
-     * REST response (camelCased). All are OPTIONAL so older extension builds
-     * (built against a prior envelope shape) keep compiling and working
-     * against newer hosts/backends that don't yet send them.
-     */
-
-    /** Whether the resolved plan came from the user's org, the user directly, or the free fallback. */
-    planSource?: EntitlementPlanSource;
-
-    /** Display name of the org whose plan is active, or null when not org-scoped. */
-    orgName?: string | null;
-
-    /** Studies used so far in the current period, for study-keyed limits. */
-    studiesUsed?: number;
-
-    /** Max studies allowed per org (null = unlimited). */
-    studiesPerOrgLimit?: number | null;
-
-    /** Max scenarios allowed per study (null = unlimited). */
-    scenariosPerStudyLimit?: number | null;
-
-    /** Max replications allowed per scenario (null = unlimited). */
-    replicationsPerScenarioLimit?: number | null;
-
-    /** Whether the Tradeoff Analysis feature is enabled for the current plan. */
-    tradeoffAnalysis?: boolean;
-
-    /** Whether chart export is enabled for the current plan. */
-    chartExport?: boolean;
-  };
+export interface EntitlementsStatusData {
+  subjectType: EntitlementSubjectType;
+  planKey: string;
+  planStatus: EntitlementPlanStatus;
+  trialExpiresAt?: string;
+  /** Metered features as { limit, used }; unmetered flags as `true`. Absent key = feature disabled. */
+  features: Record<string, EntitlementMeteredFeature | boolean>;
+  upgradeAvailable?: boolean;
+  planSource?: EntitlementPlanSource;
+  orgName?: string | null;
+  studiesUsed?: number;
+  studiesPerOrgLimit?: number | null;
+  scenariosPerStudyLimit?: number | null;
+  replicationsPerScenarioLimit?: number | null;
+  tradeoffAnalysis?: boolean;
+  chartExport?: boolean;
 }
-
-export type EntitlementMessage = EntitlementsStatusMessage;

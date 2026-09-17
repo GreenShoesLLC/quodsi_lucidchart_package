@@ -2,13 +2,10 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   SimulationStatus,
-  SimulationJob,
-  ModelSerializerFactory,
+  modelDefinitionToCleanDocument,
   Model,
   generateUUID,
   ENGINE_VERSION,
-  parsePageTranslate,
-  offsetSerializedModelCoordinates,
   getLogger,
 } from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
@@ -22,11 +19,27 @@ import {
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
-import { StorageAdapter } from '../../StorageAdapter';
 import { upsertModel, canonicalModelName } from '../../sync/scenarioSync';
-import { sampleConnectorPaths } from '../../sync/connectorPathSampling';
+import { alignModelToPageSvg } from '../../sync/pageSvg';
 
 const log = getLogger('SimulationHandler');
+
+/** A simulation job the extension is tracking. */
+interface ActiveJob {
+  jobId: string;
+  documentId: string;
+  scenarioId: string;
+  scenarioName: string;
+  status: SimulationStatus;
+  /** 0-100 */
+  progress: number;
+  startTime: Date;
+  lastUpdate: Date;
+  currentStep?: string;
+  error?: string;
+  resultUrl?: string;
+  pollInterval?: any;
+}
 
 export interface RunSubmitOutcome {
   accepted: boolean;
@@ -37,15 +50,8 @@ export interface RunSubmitOutcome {
  * Handler for simulation-related messages
  */
 export class SimulationHandler {
-  /**
-   * Active simulation jobs
-   * Note: Uses Omit to exclude string-based timestamps and replace with Date objects for internal tracking
-   */
-  private static activeJobs: Map<string, Omit<SimulationJob, 'startTime' | 'lastUpdate'> & {
-    startTime: Date;
-    lastUpdate: Date;
-    pollInterval?: any;
-  }> = new Map();
+  /** Active simulation jobs, by job id. */
+  private static activeJobs: Map<string, ActiveJob> = new Map();
 
   /**
    * Turn a 402 entitlement-exceeded response into a friendly user message.
@@ -89,9 +95,6 @@ export class SimulationHandler {
           log.error('Error in handleRunRequest:', error);
         });
         return true;
-
-      case EnvelopeMessageType.MODEL_RUN_STATUS:
-        return SimulationHandler.handleRunStatus(msg);
 
       // Not a simulation message
       default:
@@ -323,33 +326,17 @@ export class SimulationHandler {
       }
 
       // Serialize the model
-      const serializer = ModelSerializerFactory.create(modelDefinition);
-      const serializedModel = serializer.serialize(modelDefinition);
+      const serializedModel = modelDefinitionToCleanDocument(modelDefinition);
 
       // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
       SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
 
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
-      let scenarioId = data.scenarioDefinitionId || generateUUID();
+      const scenarioId = data.scenarioDefinitionId || generateUUID();
 
-      // Sampled connector paths for the animation (connectorPathSampling.ts),
-      // BEFORE the SVG-frame offset below so `path` shifts with the endpoints.
-      const pathStats = sampleConnectorPaths(serializedModel.connectors, (id) => activePageProxy.allLines.get(id));
-      log.debug('Sampled connector paths', pathStats);
-
-      // Get SVG representation of the current page
-      const diagramSvg = await activePageProxy.getSvg(undefined, true);
-
-      // getSvg() wraps the page in a translate() to normalize negative
-      // coordinates into a positive viewBox. layout.json uses the raw model
-      // coordinates, so align the serialized model into the SVG's frame by
-      // applying the same page-translate. Keeps the SVG and skeleton/entities
-      // in one coordinate space; a {0,0} translate is a no-op.
-      const pageTranslate = parsePageTranslate(diagramSvg);
-      if (pageTranslate.x !== 0 || pageTranslate.y !== 0) {
-        offsetSerializedModelCoordinates(serializedModel, pageTranslate.x, pageTranslate.y);
-        log.debug('Aligned model coords to SVG page-translate', pageTranslate);
-      }
+      // Page SVG for the animation, with the model moved into its frame
+      // (connector paths sampled first). A capture failure fails the run.
+      const diagramSvg = await alignModelToPageSvg(serializedModel, activePageProxy, { bestEffort: false });
       const timestamp = new Date();
       const queuedAt = timestamp.toISOString();
       const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
@@ -403,32 +390,15 @@ export class SimulationHandler {
         currentStep: 'Submitting simulation to Azure'
       });
       
-      // Guarantee the scenario row exists in quodsi_api before submitting.
-      // On a brand-new model the auto-created Baseline may not have synced yet;
-      // SaveAndSubmitSimulation only looks the scenario up (404 if missing).
-      // SyncScenarios is replace-all (idempotent), so this is safe to run every time.
+      // Guarantee the model row exists in quodsi_api before submitting
+      // (UpsertModel is idempotent, so this is safe to run every time). The
+      // scenario itself lives in the database -- the run names it by id.
       try {
-        const storageAdapter = new StorageAdapter();
-        const scenarios = storageAdapter.getScenarios(activePageProxy);
-        const { substitutions } = await upsertModel(client, {
+        await upsertModel(client, {
           documentId: documentProxy.id,
           pageId: activePageProxy.id,
           modelName: await canonicalModelName(modelManager),
         });
-        // If the server rewrote the Baseline id, persist it and re-target the run.
-        if (substitutions.size > 0) {
-          const updated = scenarios.map(s =>
-            substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
-          );
-          await modelManager.updateScenarios(updated, activePageProxy);
-          if (substitutions.has(scenarioId)) {
-            scenarioId = substitutions.get(scenarioId)!;
-            // Keep the optimistic job's scenarioId in sync with the re-targeted
-            // id so the active-jobs tracker matches on the correct scenarioId.
-            const job = SimulationHandler.activeJobs.get(jobId);
-            if (job) { job.scenarioId = scenarioId; }
-          }
-        }
       } catch (syncErr) {
         log.error('Pre-run sync failed:', syncErr);
         const job = SimulationHandler.activeJobs.get(jobId);
@@ -620,44 +590,6 @@ export class SimulationHandler {
 
     return { accepted: runAccepted, error: runError };
   }
-
-  /**
-   * Handle run status update
-   * 
-   * @param msg MODEL_RUN_STATUS message
-   * @returns True indicating message was handled
-   */
-  private static handleRunStatus(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      jobId: string;
-      status: SimulationStatus;
-      progress: number;
-      currentStep?: string;
-      error?: string;
-      resultUrl?: string;
-      details?: Record<string, unknown>;
-    };
-    
-    log.debug('Simulation status update', {
-      jobId: data.jobId,
-      status: data.status,
-      progress: data.progress
-    });
-    
-    // Update job tracking
-    const job = SimulationHandler.activeJobs.get(data.jobId);
-    if (job) {
-      job.status = data.status;
-      job.progress = data.progress;
-      job.lastUpdate = new Date();
-    }
-    
-    // Forward to any services that track simulation state
-    // ...
-    
-    return true;
-  }
-  
 
   /**
    * Stop polling for a job

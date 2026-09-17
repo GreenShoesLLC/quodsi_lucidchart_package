@@ -28,9 +28,9 @@
 import {
     ScenarioPropertyName,
     SimulationObjectType,
-    StoredResourceRecord,
     SwimLaneQuodsiData,
 } from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from '../../src/core/StoredResourceRecord';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { normalizePastedItems } from '../../src/core/PasteNormalizer';
 import { migrateResourcesToModelLevel } from '../../src/core/ResourceStorageMigration';

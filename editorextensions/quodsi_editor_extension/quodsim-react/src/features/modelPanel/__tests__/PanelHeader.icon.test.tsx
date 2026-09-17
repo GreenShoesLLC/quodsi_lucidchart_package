@@ -7,7 +7,6 @@ import { PanelHeader } from "../PanelHeader";
 vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
 const baseProps = {
   modelName: "Clinic",
-  validationState: null,
   onElementTypeChange: vi.fn(),
 };
 

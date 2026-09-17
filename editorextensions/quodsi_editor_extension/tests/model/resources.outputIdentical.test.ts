@@ -8,7 +8,7 @@ import * as path from 'path';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelDefinitionPageBuilder } from '../../src/core/ModelDefinitionPageBuilder';
 import { LucidElementFactory } from '../../src/services/LucidElementFactory';
-import { ModelSerializerFactory } from '@quodsi/lucid-shared';
+import { modelDefinitionToCleanDocument } from '@quodsi/lucid-shared';
 import { migrateResourcesToModelLevel } from '../../src/core/ResourceStorageMigration';
 import { buildLegacyResourcesPage, IDS } from '../fixtures/legacyResourcesPage';
 
@@ -25,17 +25,16 @@ function upgradeAndBuild(page: any) {
 
 /**
  * Engine-facing JSON, produced by the SAME serializer the extension calls
- * before submission (ModelSerializerFactory.create(def).serialize(def) --
+ * before submission (modelDefinitionToCleanDocument(def) --
  * see simulationHandler.ts / simulationRunHandler.ts), with resource
  * geometry removed (lanes were 0/0, now unpositioned) and the serializer's
- * own wall-clock stamp (`metadata.timestamp`, BaseModelDefinitionSerializer.
- * getMetadata()) normalized -- it is `new Date().toISOString()` at
+ * own wall-clock stamp (`metadata.timestamp`, set by
+ * modelDefinitionToCleanDocument) normalized -- it is `new Date().toISOString()` at
  * serialize time, not a property of the model, so it differs on every run
  * and would never let this golden compare equal twice.
  */
 function comparable(def: any) {
-    const serializer = ModelSerializerFactory.create(def);
-    const serialized = serializer.serialize(def);
+    const serialized = modelDefinitionToCleanDocument(def);
     const json = JSON.parse(JSON.stringify(serialized));
     const sortById = (xs: any[]) => [...xs].sort((a, b) => String(a.id).localeCompare(String(b.id)));
     json.resources = sortById(json.resources ?? []).map(({ x, y, width, height, ...rest }: any) => rest);

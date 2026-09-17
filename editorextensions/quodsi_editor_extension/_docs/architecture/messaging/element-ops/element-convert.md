@@ -1,5 +1,10 @@
 # Element Convert Exchange
 
+> **Updated 2026-09-17.** `ELEMENT_CONVERT_RESULT` was removed: the panel's
+> `convertElement` is fire-and-forget and never read it. The host still
+> re-sends SELECTION_CHANGED after a conversion, which is how the panel sees
+> the new type. The `ELEMENT_CONVERT_RESULT` sections below are history.
+
 ## Overview
 Element convert messages handle the transformation of simulation elements from one type to another (e.g., converting an Activity to a Generator), preserving applicable properties while updating the element's behavior.
 

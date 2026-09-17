@@ -1,5 +1,4 @@
 import { EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
-import { FrameworkHandler } from './frameworkHandler';
 
 import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
@@ -36,22 +35,11 @@ export class MessageHandlers {
     
     // Try each handler in order of priority
 
-    // Framework messages have highest priority
-    if (FrameworkHandler.handleMessage(msg)) {
-      log.trace(`Message ${msg.type} handled by FrameworkHandler`);
-      return true;
-    }
-
     // Auth messages
     if (AuthHandler.handleMessage(msg)) {
       return true;
     }
 
-    // Selection messages
-    if (SelectionHandler.handleMessage(msg)) {
-      return true;
-    }
-    
     // Simulation messages
     if (SimulationHandler.handleMessage(msg)) {
       return true;
@@ -136,7 +124,6 @@ export class MessageHandlers {
 
 // Re-export handlers for direct access
 export {
-  FrameworkHandler,
   AuthHandler,
   SelectionHandler,
   SimulationHandler,

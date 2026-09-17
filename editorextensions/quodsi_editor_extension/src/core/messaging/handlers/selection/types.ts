@@ -3,10 +3,36 @@ import {
   ModelItemData, 
   ValidationResult, 
   EditorReferenceData, 
-  DiagramElementType, 
-  SelectionType,
-  SelectionState
+  DiagramElementType
 } from '@quodsi/lucid-shared';
+
+/**
+ * What kind of thing is selected on the canvas.
+ */
+export enum SelectionType {
+  NONE = 'none',
+  UNCONVERTED_ELEMENT = 'unconverted_element',
+  MULTIPLE = 'multiple',
+  UNKNOWN_BLOCK = 'unknown_block',
+  UNKNOWN_LINE = 'unknown_line',
+  ACTIVITY = 'activity',
+  CONNECTOR = 'connector',
+  ENTITY = 'entity',
+  GENERATOR = 'generator',
+  RESOURCE = 'resource',
+  MODEL = 'model',
+  SWIMLANE = 'swimlane'
+}
+
+/**
+ * The page, the selected element ids and the selection type -- sent to the
+ * panel as SELECTION_CHANGED's `selectionState`.
+ */
+export interface SelectionSnapshot {
+  pageId: string;
+  selectedIds: string[];
+  selectionType: SelectionType;
+}
 
 /**
  * Complete selection state data structure
@@ -20,7 +46,7 @@ export interface SelectionStateData {
 
   // Core selection fields (from old system)
   selectionType: SelectionType;
-  selectionState: SelectionState;
+  selectionState: SelectionSnapshot;
   documentId: string;
 
   // Model data

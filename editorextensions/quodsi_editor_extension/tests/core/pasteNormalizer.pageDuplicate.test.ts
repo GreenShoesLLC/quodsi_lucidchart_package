@@ -43,7 +43,8 @@
 // lines, with the new lines' LIVE endpoints attached to the NEW blocks.
 // That is exactly what Lucid's page duplication leaves behind.
 
-import { ISerializedArrivalPattern, PageStatus, SimulationObjectType, StoredResourceRecord, SwimLaneQuodsiData } from '@quodsi/lucid-shared';
+import { ISerializedArrivalPattern, SimulationObjectType, SwimLaneQuodsiData } from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from '../../src/core/StoredResourceRecord';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { normalizePastedItems, PasteNormalizerOptions } from '../../src/core/PasteNormalizer';
 import { makeFakeBlock, makeFakeLine, makeFakePage, addBlock, addLine } from '../helpers/fakeProxies';
@@ -60,7 +61,11 @@ const PATTERN: ISerializedArrivalPattern = {
     hourWeights: [1, 2, 3],
 };
 
-const STATUS: PageStatus = { hasContainer: true, simulationRuns: [], statusDateTime: '2026-08-20T00:00:00.000Z' };
+// The legacy page-level simulation status. Nothing writes it any more, but old
+// pages still carry it, so the page-duplicate path must clear it on the copy.
+const STATUS_KEY = 'q_simulation_status';
+const STATUS = { hasContainer: true, simulationRuns: [], statusDateTime: '2026-08-20T00:00:00.000Z' };
+const statusOf = (p: { shapeData: { get(k: string): unknown } }): unknown => p.shapeData.get(STATUS_KEY) ?? null;
 
 const SWIMLANE: SwimLaneQuodsiData = {
     lanes: [{ laneId: 'lane-1', titleSnapshot: 'Nurses', assignmentMode: 'explicit', resourceId: 'res-1' }],
@@ -92,7 +97,7 @@ function buildSourcePage(sa: StorageAdapter): Fixture {
     sa.setResources(page, [RESOURCE]);
     sa.setArrivalPatterns(page, [PATTERN]);
     sa.setSkippedElements(page, { 'src-note': 'user' });
-    sa.setSimulationStatus(page, STATUS);
+    page.shapeData.set(STATUS_KEY, JSON.stringify(STATUS));
 
     const resBlock = addBlock(page, makeFakeBlock('src-res'));
     sa.setElementData(resBlock, { id: 'src-res', resourceId: 'res-1' }, SimulationObjectType.Resource, { mappingSource: 'user' });
@@ -285,11 +290,11 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
         expect(dup.page.shapeData.get('q_skipped_elements')).toBeUndefined();
         expect(dup.page.shapeData.get('q_simulation_status')).toBeUndefined();
         expect(sa.getSkippedElements(dup.page)).toEqual({});
-        expect(sa.getSimulationStatus(dup.page)).toBeNull();
+        expect(statusOf(dup.page)).toBeNull();
         expect(result.notices).toEqual(['Duplicated page normalized']);
         expect(result.changed).toBe(true);
         // the source page keeps its own run state
-        expect(sa.getSimulationStatus(source.page)).not.toBeNull();
+        expect(statusOf(source.page)).not.toBeNull();
     });
 
     it('is idempotent: a second pass writes nothing', () => {
@@ -384,7 +389,7 @@ describe('PasteNormalizer — duplicated pages (Task 8)', () => {
         expect(data.name).not.toBe('Triage');                      // deduped against the original
         expect(result.notices).not.toContain('Duplicated page normalized');
         // and the page's own run state is left alone
-        expect(sa.getSimulationStatus(source.page)).not.toBeNull();
+        expect(statusOf(source.page)).not.toBeNull();
     });
 });
 
@@ -444,7 +449,7 @@ describe('PasteNormalizer — page mode needs a witness when allPages is supplie
 
         expect(result.notices).not.toContain('Duplicated page normalized');
         expect(JSON.parse(dup.page.shapeData.get('q_data')!).id).toBe('document-abc');   // envelope left alone
-        expect(sa.getSimulationStatus(dup.page)).not.toBeNull();                          // run state kept
+        expect(statusOf(dup.page)).not.toBeNull();                          // run state kept
         expect(sa.getSkippedElements(dup.page)).toEqual({ 'src-note': 'user' });
         // per-item rules ran instead
         expect(sa.getElementData<{ actions: { id: string }[] }>(dup.actBlock)!.actions.map((a) => a.id)).not.toEqual(['action-1']);

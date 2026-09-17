@@ -1,4 +1,4 @@
-import { ElementTypeInfo } from "./ElementTypeInfo";
+import type { ElementTypeInfo } from "@quodsi/shared";
 import { JsonObject } from "./common";
 
 export interface ModelItemData {

@@ -1,8 +1,7 @@
-import { 
-  EnvelopeBase, 
-  EnvelopeMessageType, 
-  SelectionType
+import {
+    EnvelopeMessageType,
 } from '@quodsi/lucid-shared';
+import { SelectionType } from './types';
 import { 
   EditorClient, 
   ItemProxy, 
@@ -36,25 +35,6 @@ export class SelectionHandler {
   private static modelManager: ModelManager | null = null;
   private static isHandlingSelectionChange = false;
 
-  /**
-   * Handle messages related to selection and document context
-   * 
-   * @param msg The received message
-   * @returns Whether the message was handled
-   */
-  public static handleMessage(msg: EnvelopeBase): boolean {
-    switch (msg.type) {
-      case EnvelopeMessageType.MODEL_CONTEXT:
-        return SelectionHandler.documentContext.updateFromMessage(msg);
-        
-      case EnvelopeMessageType.SELECTION_CHANGED:
-        return SelectionHandler.selectionState.updateFromMessage(msg);
-        
-      default:
-        return false;
-    }
-  }
-  
   /**
    * Set the model manager reference
    * @param manager The model manager instance

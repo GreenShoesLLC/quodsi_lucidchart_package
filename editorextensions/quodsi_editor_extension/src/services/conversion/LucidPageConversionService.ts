@@ -1,23 +1,22 @@
 import { PageProxy, BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import {
-    ConversionResult,
     Model,
     SimulationObjectType,
     Connector,
     ConnectType,
-    QuodsiLogger,
-    ProcessAnalysisResult,
+    getLogger,
     DiagramElementKind,
     MappingSource,
     SimulationObject,
     generateUniqueName,
-    StoredResourceRecord,
     SwimLaneQuodsiData,
     SwimLaneLaneMapping,
     generateUUID,
     planAutoResources,
-    type ActivityResourceRef
+    type ActivityResourceRef,
 } from '@quodsi/lucid-shared';
+import { ConversionResult, ProcessAnalysisResult } from './types';
+import { StoredResourceRecord } from '../../core/StoredResourceRecord';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 
@@ -25,6 +24,8 @@ import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter
 import { ModelManager } from '../../core/ModelManager';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
+
+const log = getLogger('LucidPageConversionService');
 
 // Interface for stored activity data (matches ActivityLucid's StoredActivityData)
 interface StoredActivityData {
@@ -34,8 +35,7 @@ interface StoredActivityData {
     [key: string]: any;
 }
 
-export class LucidPageConversionService extends QuodsiLogger {
-    protected readonly LOG_PREFIX = '[LucidPageConversionService]';
+export class LucidPageConversionService {
     private pageAnalyzer: LucidPageAnalyzer;
 
     constructor(
@@ -43,8 +43,6 @@ export class LucidPageConversionService extends QuodsiLogger {
         private elementFactory: LucidElementFactory,
         private storageAdapter: StorageAdapter
     ) {
-        super();
-        this.setLogging(false);
         this.pageAnalyzer = new LucidPageAnalyzer();
     }
 
@@ -69,12 +67,12 @@ export class LucidPageConversionService extends QuodsiLogger {
      * Converts a LucidChart page to a Quodsi simulation model
      */
     public async convertPage(page: PageProxy): Promise<ConversionResult> {
-        this.log('Starting page conversion');
+        log.trace('Starting page conversion');
 
         try {
             // First, remove any existing model data
             if (this.storageAdapter.isQuodsiModel(page)) {
-                this.log('Removing existing model data');
+                log.trace('Removing existing model data');
                 this.modelManager.removeModelFromPage(page);
             }
 
@@ -101,14 +99,14 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             // Convert blocks and connections
             const convertedBlocks = await this.convertBlocks(page, analysis);
-            this.log('Blocks converted:', convertedBlocks);
+            log.trace('Blocks converted:', convertedBlocks);
 
             const convertedConnectors = await this.convertConnections(page, analysis);
-            this.log('Connectors converted:', convertedConnectors);
+            log.trace('Connectors converted:', convertedConnectors);
 
             // Validate the converted model
             const validationResult = await this.modelManager.validateModel();
-            this.log('Validation result:', validationResult);
+            log.trace('Validation result:', validationResult);
 
             return {
                 success: true,
@@ -121,7 +119,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                 }
             };
         } catch (error) {
-            this.logError('Conversion failed:', error);
+            log.error('Conversion failed:', error);
             throw error;
         }
     }
@@ -139,14 +137,14 @@ export class LucidPageConversionService extends QuodsiLogger {
         mappings: Map<string, SimulationObjectType | null>,
         userOverrideIds: Set<string> = new Set()
     ): Promise<ConversionResult> {
-        this.log('Starting page conversion with explicit mappings');
+        log.trace('Starting page conversion with explicit mappings');
 
         try {
             // Check if this is a re-conversion (page already has model data)
             const isReconversion = this.storageAdapter.isQuodsiModel(page);
 
             if (isReconversion) {
-                this.log('Re-conversion: removing changed elements before re-adding');
+                log.trace('Re-conversion: removing changed elements before re-adding');
                 for (const [blockId] of page.allBlocks) {
                     if (mappings.has(blockId)) {
                         // removeElement clears q_data AND removes from every collection
@@ -181,7 +179,7 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             // Validate the converted model
             const validationResult = await this.modelManager.validateModel();
-            this.log('Validation result:', validationResult);
+            log.trace('Validation result:', validationResult);
 
             return {
                 success: true,
@@ -194,7 +192,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                 }
             };
         } catch (error) {
-            this.logError('Conversion with mappings failed:', error);
+            log.error('Conversion with mappings failed:', error);
             throw error;
         }
     }
@@ -230,19 +228,19 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             // Skip if null (explicitly skipped) - track at page level
             if (targetType === null) {
-                this.log(`Skipping block ${blockId} (explicitly skipped, source: ${mappingSource})`);
+                log.trace(`Skipping block ${blockId} (explicitly skipped, source: ${mappingSource})`);
                 skippedElements[blockId] = mappingSource;
                 continue;
             }
 
             // Skip if not in mappings at all (not part of conversion)
             if (targetType === undefined) {
-                this.log(`Skipping block ${blockId} (not in mappings)`);
+                log.trace(`Skipping block ${blockId} (not in mappings)`);
                 continue;
             }
 
             try {
-                this.log(`Converting block ${blockId} to ${targetType} (source: ${mappingSource})`);
+                log.trace(`Converting block ${blockId} to ${targetType} (source: ${mappingSource})`);
 
                 // Remove from skipped if it was previously skipped (being converted now)
                 delete skippedElements[blockId];
@@ -285,7 +283,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                         break;
                 }
             } catch (error) {
-                this.logError(`Failed to convert block ${blockId}:`, error);
+                log.error(`Failed to convert block ${blockId}:`, error);
                 throw error;
             }
         }
@@ -298,14 +296,14 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             // Skip if null (explicitly skipped) - track at page level
             if (targetType === null) {
-                this.log(`Skipping line ${lineId} (explicitly skipped, source: ${mappingSource})`);
+                log.trace(`Skipping line ${lineId} (explicitly skipped, source: ${mappingSource})`);
                 skippedElements[lineId] = mappingSource;
                 continue;
             }
 
             // Skip if not a Connector
             if (targetType !== SimulationObjectType.Connector) {
-                this.log(`Skipping line ${lineId} (not mapped to Connector)`);
+                log.trace(`Skipping line ${lineId} (not mapped to Connector)`);
                 continue;
             }
 
@@ -313,12 +311,12 @@ export class LucidPageConversionService extends QuodsiLogger {
             const endpoint2 = line.getEndpoint2();
 
             if (!endpoint1?.connection || !endpoint2?.connection) {
-                this.log(`Line ${lineId} has invalid endpoints, skipping`);
+                log.trace(`Line ${lineId} has invalid endpoints, skipping`);
                 continue;
             }
 
             try {
-                this.log(`Converting line ${lineId} to Connector (source: ${mappingSource})`);
+                log.trace(`Converting line ${lineId} to Connector (source: ${mappingSource})`);
 
                 // Remove from skipped if it was previously skipped (being converted now)
                 delete skippedElements[lineId];
@@ -355,14 +353,14 @@ export class LucidPageConversionService extends QuodsiLogger {
                 await this.modelManager.registerElement(connector, line);
                 connectors++;
             } catch (error) {
-                this.logError(`Failed to convert line ${lineId}:`, error);
+                log.error(`Failed to convert line ${lineId}:`, error);
                 throw error;
             }
         }
 
         // Save skipped elements to page
         this.storageAdapter.setSkippedElements(page, skippedElements);
-        this.log(`Saved ${Object.keys(skippedElements).length} skipped elements to page`);
+        log.trace(`Saved ${Object.keys(skippedElements).length} skipped elements to page`);
 
         // Process auto-created resources from Activity resourceName fields
         const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
@@ -372,7 +370,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         const swimlaneResourceCount = this.convertSwimLanes(page, usedNamesByType);
         resources += swimlaneResourceCount;
 
-        this.log('Conversion counts:', { activities, generators, resources, connectors });
+        log.trace('Conversion counts:', { activities, generators, resources, connectors });
         return { activities, generators, resources, connectors };
     }
 
@@ -383,7 +381,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         page: PageProxy,
         analysis: ProcessAnalysisResult
     ): Promise<{ activities: number; generators: number; resources: number }> {
-        this.log('Starting block conversion');
+        log.trace('Starting block conversion');
 
         let activities = 0;
         let generators = 0;
@@ -398,12 +396,12 @@ export class LucidPageConversionService extends QuodsiLogger {
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
             if (!blockAnalysis?.elementType) {
-                this.logError(`Missing element type for block ${blockId}`);
+                log.error(`Missing element type for block ${blockId}`);
                 continue;
             }
 
             try {
-                this.log(`Creating element for block ${blockId}:`, {
+                log.trace(`Creating element for block ${blockId}:`, {
                     type: blockAnalysis.elementType,
                     blockClass: block.getClassName()
                 });
@@ -443,13 +441,13 @@ export class LucidPageConversionService extends QuodsiLogger {
                         break;
                 }
 
-                this.log(`Successfully converted block ${blockId}:`, {
+                log.trace(`Successfully converted block ${blockId}:`, {
                     type: element.type,
                     name: element.name
                 });
 
             } catch (error) {
-                this.logError(`Failed to convert block ${blockId}:`, error);
+                log.error(`Failed to convert block ${blockId}:`, error);
                 throw error;
             }
         }
@@ -503,7 +501,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         page: PageProxy,
         analysis: ProcessAnalysisResult
     ): Promise<number> {
-        this.log('Converting connections');
+        log.trace('Converting connections');
         let connectorCount = 0;
         // Legacy auto-conversion path (convertPage) — its own name tracker, since
         // it has no usedNamesByType of its own. Same reason as the mapped path.
@@ -511,12 +509,12 @@ export class LucidPageConversionService extends QuodsiLogger {
 
         for (const [lineId, line] of page.allLines) {
             try {
-                this.log(`Processing line ${lineId}`);
+                log.trace(`Processing line ${lineId}`);
                 const endpoint1 = line.getEndpoint1();
                 const endpoint2 = line.getEndpoint2();
 
                 if (!endpoint1?.connection || !endpoint2?.connection) {
-                    this.log(`Line ${lineId} has invalid endpoints`);
+                    log.trace(`Line ${lineId} has invalid endpoints`);
                     continue;
                 }
 
@@ -552,12 +550,12 @@ export class LucidPageConversionService extends QuodsiLogger {
                 connectorCount++;
 
             } catch (error) {
-                this.logError(`Failed to convert connection ${lineId}:`, error);
+                log.error(`Failed to convert connection ${lineId}:`, error);
                 throw error;
             }
         }
 
-        this.log(`Converted ${connectorCount} connections`);
+        log.trace(`Converted ${connectorCount} connections`);
         return connectorCount;
     }
 
@@ -635,7 +633,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         page: PageProxy,
         usedNamesByType: Map<SimulationObjectType, Set<string>>
     ): Promise<number> {
-        this.log('Processing auto-created resources from Activity resourceName fields');
+        log.trace('Processing auto-created resources from Activity resourceName fields');
 
         // Ensure we have a Set for Resource names
         let resourceNames = usedNamesByType.get(SimulationObjectType.Resource);
@@ -660,7 +658,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         // bounding box, which is wasted work on the overwhelmingly common page
         // where nothing asked for a resource.
         if (refs.length === 0) {
-            this.log('No auto-resources to create');
+            log.trace('No auto-resources to create');
             return 0;
         }
 
@@ -681,11 +679,11 @@ export class LucidPageConversionService extends QuodsiLogger {
         );
 
         if (plan.length === 0) {
-            this.log('No auto-resources to create');
+            log.trace('No auto-resources to create');
             return 0;
         }
 
-        this.log(`Found ${plan.length} unique resource names to create`);
+        log.trace(`Found ${plan.length} unique resource names to create`);
 
         // Load block class for creating new shapes
         const client = ModelManager.getClient();
@@ -696,7 +694,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         // Create visual blocks for each planned resource
         for (const planned of plan) {
             const resourceName = planned.name;
-            this.log(`Creating Resource block for: ${resourceName}`);
+            log.trace(`Creating Resource block for: ${resourceName}`);
 
             // Add new block to page
             const newBlock = page.addBlock({
@@ -725,11 +723,11 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             createdResources.set(resourceName, newBlock);
 
-            this.log(`Created Resource block ${newBlock.id} for: ${resourceName}`);
+            log.trace(`Created Resource block ${newBlock.id} for: ${resourceName}`);
             // Note: Resource linking to Activities is now managed through the actions system
         }
 
-        this.log(`Created ${createdResources.size} auto-resources`);
+        log.trace(`Created ${createdResources.size} auto-resources`);
         return createdResources.size;
     }
 
@@ -761,7 +759,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         page: PageProxy,
         usedNamesByType: Map<SimulationObjectType, Set<string>>
     ): number {
-        this.log('Processing swimlane lanes as Resources');
+        log.trace('Processing swimlane lanes as Resources');
         let resourceCount = 0;
 
         let resourceNames = usedNamesByType.get(SimulationObjectType.Resource);
@@ -796,19 +794,19 @@ export class LucidPageConversionService extends QuodsiLogger {
         for (const [blockId, block] of page.allBlocks) {
             if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
 
-            this.log(`Found swimlane block: ${blockId}`);
+            log.trace(`Found swimlane block: ${blockId}`);
 
             const swimlaneProxy = block as any;
             let lanes: any[];
             try {
                 lanes = swimlaneProxy.getPrimaryLanes();
             } catch (e) {
-                this.logError(`Could not get lanes for swimlane ${blockId}:`, e);
+                log.error(`Could not get lanes for swimlane ${blockId}:`, e);
                 continue;
             }
 
             if (!lanes || lanes.length === 0) {
-                this.log(`Swimlane ${blockId} has no lanes, skipping`);
+                log.trace(`Swimlane ${blockId} has no lanes, skipping`);
                 continue;
             }
 
@@ -823,7 +821,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                     const parsed = JSON.parse(existingSwimStr) as SwimLaneQuodsiData;
                     if (Array.isArray(parsed?.lanes)) existingLanes = parsed.lanes;
                 } catch {
-                    this.log(`Unreadable q_swimlane on ${blockId}; treating every lane as new`);
+                    log.trace(`Unreadable q_swimlane on ${blockId}; treating every lane as new`);
                 }
             }
 
@@ -842,7 +840,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                     laneMappings.push(existing);
                     takenNames.add(existingRecord.name);
                     resourceNames.add(existingRecord.name);
-                    this.log(`Lane ${i} of swimlane ${blockId} already points at "${existingRecord.name}"; reusing`);
+                    log.trace(`Lane ${i} of swimlane ${blockId} already points at "${existingRecord.name}"; reusing`);
                     continue;
                 }
 
@@ -871,7 +869,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                 });
 
                 resourceCount++;
-                this.log(`Created Resource "${resourceName}" for lane ${i} of swimlane ${blockId}`);
+                log.trace(`Created Resource "${resourceName}" for lane ${i} of swimlane ${blockId}`);
             }
 
             const swimlaneData: SwimLaneQuodsiData = {
@@ -880,15 +878,15 @@ export class LucidPageConversionService extends QuodsiLogger {
             };
             block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(swimlaneData));
 
-            this.log(`Persisted q_swimlane for block ${blockId} with ${laneMappings.length} lane mappings`);
+            log.trace(`Persisted q_swimlane for block ${blockId} with ${laneMappings.length} lane mappings`);
         }
 
         if (createdRecords.length > 0) {
             this.storageAdapter.setResources(page, [...this.storageAdapter.getResources(page), ...createdRecords]);
-            this.log(`Appended ${createdRecords.length} lane resources to q_resources`);
+            log.trace(`Appended ${createdRecords.length} lane resources to q_resources`);
         }
 
-        this.log(`Auto-converted ${resourceCount} swimlane lanes to Resources`);
+        log.trace(`Auto-converted ${resourceCount} swimlane lanes to Resources`);
         return resourceCount;
     }
 

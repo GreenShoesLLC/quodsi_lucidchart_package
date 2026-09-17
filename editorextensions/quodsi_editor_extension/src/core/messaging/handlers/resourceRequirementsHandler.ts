@@ -26,9 +26,6 @@ export class ResourceRequirementsHandler {
           .catch(err => log.error('Error in handleResourceRequirementsUpdate:', err));
         return true;
 
-      case EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT:
-        return ResourceRequirementsHandler.handleResourceRequirementsUpdateResult(msg);
-
       // Not a resource requirements operations message
       default:
         return false;
@@ -123,26 +120,4 @@ export class ResourceRequirementsHandler {
     }
   }
 
-  /**
-   * Handle resource requirements update result
-   *
-   * @param msg RESOURCE_REQUIREMENTS_UPDATE_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleResourceRequirementsUpdateResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      errorMessage?: string;
-    };
-
-    log.debug('Resource requirements update result received', {
-      success: data.success,
-      error: data.errorMessage
-    });
-
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-
-    return true;
-  }
 }

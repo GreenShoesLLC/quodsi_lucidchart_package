@@ -145,5 +145,9 @@
       }
     }
   ],
-  "states": []
+  "states": [],
+  "arrivalPatterns": [],
+  "arrivalSchedules": [],
+  "workSchedules": [],
+  "scenarios": []
 }

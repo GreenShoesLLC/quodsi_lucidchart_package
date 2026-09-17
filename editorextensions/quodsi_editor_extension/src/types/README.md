@@ -5,7 +5,7 @@ This directory contains Lucid-specific implementations of simulation objects, ma
 ## Base Class
 
 ### SimObjectLucid
-Abstract base class that implements the `PlatformSimObject` interface from `@quodsi/shared`. Provides common functionality for all Lucid-specific implementations.
+Abstract base class for all Lucid-specific implementations: wraps a Lucid element and the domain object stored on it (`getSimulationObject`, `updateFromPlatform`, `platformElementId`).
 
 ## Block-Based Types
 

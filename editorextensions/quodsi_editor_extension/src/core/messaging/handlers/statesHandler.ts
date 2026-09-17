@@ -26,9 +26,6 @@ export class StatesHandler {
           .catch(err => log.error('Error in handleStatesUpdate:', err));
         return true;
 
-      case EnvelopeMessageType.STATES_UPDATE_RESULT:
-        return StatesHandler.handleStatesUpdateResult(msg);
-
       // Not a states operations message
       default:
         return false;
@@ -130,26 +127,4 @@ export class StatesHandler {
     }
   }
 
-  /**
-   * Handle states update result
-   *
-   * @param msg STATES_UPDATE_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleStatesUpdateResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      errorMessage?: string;
-    };
-
-    log.debug('States update result received', {
-      success: data.success,
-      error: data.errorMessage
-    });
-
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-
-    return true;
-  }
 }

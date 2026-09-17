@@ -1,218 +1,36 @@
-import { AuthErrorMessage, AuthLogoutMessage, AuthMessage, AuthRequiredMessage, AuthStatusMessage } from './auth/messages';
-import { isEnvelope } from './envelope/envelope';
-import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
-import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
-import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ModelJsonRequestMessage, ModelJsonResponseMessage } from './modelOps/messages';
-import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage } from './elementOps/messages';
-import { ShapeCreateMessage, ShapeCreateResultMessage, ShapeDeleteMessage, ShapeDeleteResultMessage, ShapeMoveMessage, ShapeMoveResultMessage, ModelCreatePageMessage, ModelCreatePageResultMessage, ShapeOpsMessage } from './shapeOps/messages';
-import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
-import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
-import { SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
-import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanSource, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
-import { ClientAnalyticsEvent } from './analytics/messages';
-
-// Export message types enum
+// Message type enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 
-// Export envelope base
+// Envelope base
 export {
   EnvelopeBase,
   MessageSource,
-  MessageTarget,
   isEnvelope
 } from './envelope/envelope';
 
-// Export guard utilities
-export {
-  createMessageTypeGuard,
-  isFromSource,
-  isForTarget,
-  hasRequiredDataFields
-} from './envelope/guards';
-
-// Export framework messages
-export {
-  ReactAppReadyMessage,
-  ErrorMessage,
-  LogMessage,
-  FrameworkMessage
-} from './framework/messages';
-
-// Export auth messages
+// Auth payload pieces
 export {
   QuodsiUserInfo,
-  ExtensionConfig,
-  AuthLogoutMessage,
-  AuthStatusMessage,
-  AuthRequiredMessage,
-  AuthErrorMessage,
-  AuthMessage
+  ExtensionConfig
 } from './auth/messages';
 
-// Export selection messages
-export {
-  ElementShape,
-  ModelContextMessage,
-  SelectionChangedMessage,
-  SelectionMessage
-} from './selection/messages';
+// Selection payload pieces
+export { ElementShape } from './selection/messages';
 
-// Export simulation messages
-export {
-  SimulationStatus,
-  SimulationJob,
-  ModelRunRequestMessage,
-  ModelRunStatusMessage,
-  SimulationMessage
-} from './simulation/messages';
+// Simulation run status
+export { SimulationStatus } from './simulation/messages';
 
-// Export model operations messages
+// Entitlement payload pieces
 export {
-  ValidationSeverity,
-  ValidationIssue,
-  ValidationResult,
-  ModelValidateMessage,
-  ModelValidationResultMessage,
-  ModelConvertMessage,
-  ModelConversionResultMessage,
-  ModelRemoveMessage,
-  ModelRemoveResultMessage,
-  ModelJsonRequestMessage,
-  ModelJsonResponseMessage,
-  ModelOpsMessage
-} from './modelOps/messages';
-
-// Export element operations messages
-export {
-  ElementSelectMessage,
-  ElementUpdateMessage,
-  ElementUpdateResultMessage,
-  ElementConvertMessage,
-  ElementConvertResultMessage,
-  StatesUpdateMessage,
-  StatesUpdateResultMessage,
-  ResourceRequirementsUpdateMessage,
-  ResourceRequirementsUpdateResultMessage,
-  ElementOpsMessage
-} from './elementOps/messages';
-
-// Export shape operations messages
-export {
-  ShapeSide,
-  ShapeCreateMessage,
-  ShapeCreateResultMessage,
-  ShapeDeleteMessage,
-  ShapeDeleteResultMessage,
-  ShapeMoveMessage,
-  ShapeMoveResultMessage,
-  ModelCreatePageMessage,
-  ModelCreatePageResultMessage,
-  ShapeOpsMessage
-} from './shapeOps/messages';
-
-
-// Export simulation run messages
-export {
-  SimulationRunInfo,
-  SimulationRunDownloadInfo
-} from './simulationRun/simulationRunMessages';
-
-// Export entitlement messages
-export {
-  EntitlementsStatusMessage,
   EntitlementSubjectType,
-  EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementMeteredFeature,
-  EntitlementMessage
+  EntitlementsStatusData
 } from './entitlements/messages';
 
-// Export analytics messages
-export {
-  ClientAnalyticsEvent
-} from './analytics/messages';
-
-// Export page conversion message payloads (blank-slate card)
+// Page conversion message payloads (blank-slate card)
 export type {
   PageCountsData,
   PageConversionCounts,
   AutoConvertPageResultData,
 } from './pageConversion/messages';
-
-// Define the union type of all possible messages
-export type QuodsiMessage =
-  | FrameworkMessage
-  | AuthMessage
-  | SelectionMessage
-  | SimulationMessage
-  | ModelOpsMessage
-  | ElementOpsMessage
-  | ShapeOpsMessage
-  | EntitlementMessage
-;
-
-// Define payload type mapping
-export interface EnvelopMessagePayloads {
-  [EnvelopeMessageType.REACT_APP_READY]: ReactAppReadyMessage['data'];
-  [EnvelopeMessageType.ERROR]: ErrorMessage['data'];
-  [EnvelopeMessageType.LOG]: LogMessage['data'];
-
-  [EnvelopeMessageType.AUTH_LOGOUT]: AuthLogoutMessage['data'];
-  [EnvelopeMessageType.AUTH_STATUS]: AuthStatusMessage['data'];
-  [EnvelopeMessageType.AUTH_REQUIRED]: AuthRequiredMessage['data'];
-  [EnvelopeMessageType.AUTH_ERROR]: AuthErrorMessage['data'];
-
-  [EnvelopeMessageType.MODEL_CONTEXT]: ModelContextMessage['data'];
-  [EnvelopeMessageType.SELECTION_CHANGED]: SelectionChangedMessage['data'];
-
-  [EnvelopeMessageType.MODEL_RUN_REQUEST]: ModelRunRequestMessage['data'];
-  [EnvelopeMessageType.MODEL_RUN_STATUS]: ModelRunStatusMessage['data'];
-
-  [EnvelopeMessageType.MODEL_VALIDATE]: ModelValidateMessage['data'];
-  [EnvelopeMessageType.MODEL_VALIDATION_RESULT]: ModelValidationResultMessage['data'];
-  [EnvelopeMessageType.MODEL_CONVERT]: ModelConvertMessage['data'];
-  [EnvelopeMessageType.MODEL_CONVERSION_RESULT]: ModelConversionResultMessage['data'];
-  [EnvelopeMessageType.MODEL_REMOVE]: ModelRemoveMessage['data'];
-  [EnvelopeMessageType.MODEL_REMOVE_RESULT]: ModelRemoveResultMessage['data'];
-  [EnvelopeMessageType.MODEL_JSON_REQUEST]: ModelJsonRequestMessage['data'];
-  [EnvelopeMessageType.MODEL_JSON_RESPONSE]: ModelJsonResponseMessage['data'];
-
-  [EnvelopeMessageType.ELEMENT_SELECT]: ElementSelectMessage['data'];
-  [EnvelopeMessageType.ELEMENT_UPDATE]: ElementUpdateMessage['data'];
-  [EnvelopeMessageType.ELEMENT_UPDATE_RESULT]: ElementUpdateResultMessage['data'];
-  [EnvelopeMessageType.ELEMENT_CONVERT]: ElementConvertMessage['data'];
-  [EnvelopeMessageType.ELEMENT_CONVERT_RESULT]: ElementConvertResultMessage['data'];
-  [EnvelopeMessageType.STATES_UPDATE]: StatesUpdateMessage['data'];
-  [EnvelopeMessageType.STATES_UPDATE_RESULT]: StatesUpdateResultMessage['data'];
-  [EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE]: ResourceRequirementsUpdateMessage['data'];
-  [EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT]: ResourceRequirementsUpdateResultMessage['data'];
-
-  [EnvelopeMessageType.SHAPE_CREATE]: ShapeCreateMessage['data'];
-  [EnvelopeMessageType.SHAPE_CREATE_RESULT]: ShapeCreateResultMessage['data'];
-  [EnvelopeMessageType.SHAPE_DELETE]: ShapeDeleteMessage['data'];
-  [EnvelopeMessageType.SHAPE_DELETE_RESULT]: ShapeDeleteResultMessage['data'];
-  [EnvelopeMessageType.SHAPE_MOVE]: ShapeMoveMessage['data'];
-  [EnvelopeMessageType.SHAPE_MOVE_RESULT]: ShapeMoveResultMessage['data'];
-  [EnvelopeMessageType.MODEL_CREATE_PAGE]: ModelCreatePageMessage['data'];
-  [EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT]: ModelCreatePageResultMessage['data'];
-
-
-  [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST]: Record<string, never>;
-  [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_RESULT]: import('../types/devtools/DevToolsTypes').SwimLaneScanResult;
-  [EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_REQUEST]: Record<string, never>;
-  [EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_RESULT]: { success: boolean; claims?: Record<string, any>; error?: string };
-
-  [EnvelopeMessageType.SWIMLANE_UPDATE]: { swimlaneBlockId: string; swimlaneData: import('../types/swimlane/SwimLaneQuodsiData').SwimLaneQuodsiData };
-  [EnvelopeMessageType.SWIMLANE_UPDATE_RESULT]: { success: boolean; errorMessage?: string };
-
-  [EnvelopeMessageType.ENTITLEMENTS_STATUS]: EntitlementsStatusMessage['data'];
-
-
-}
-
-/**
- * Type guard to check if a message is a valid Quodsi message
- */
-export function isValidEnvelopMsg(value: unknown): value is QuodsiMessage {
-  return isEnvelope(value);
-}

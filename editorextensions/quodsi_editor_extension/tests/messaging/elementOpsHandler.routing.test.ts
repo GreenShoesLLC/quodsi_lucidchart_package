@@ -10,15 +10,10 @@
 // router.send('model', …), so a modal-originated ELEMENT_UPDATE was
 // answered on the side panel's channel and the modal's 30s timeout fired.
 //
-// handleElementConvert (ELEMENT_CONVERT / ELEMENT_CONVERT_RESULT) is a
-// DIFFERENT message pair, reachable only from the side panel's element
-// editors (modelOpsSender.convertElement) -- the pattern modal never sends
-// ELEMENT_CONVERT (confirmed: PatternEditorView / bufferingAccessor only
-// ever call accessor.updateShape and accessor.updateModel). Its two
-// router.send('model', …) sites were deliberately left hardcoded; the last
-// test below pins that they stay hardcoded even if a caller mislabels the
-// message source, so a later "fix for consistency" doesn't silently change
-// panel-only behaviour.
+// handleElementConvert (ELEMENT_CONVERT) is a DIFFERENT message, reachable
+// only from the side panel's element editors (modelOpsSender.convertElement,
+// fire-and-forget). It has no reply at all -- the panel learns the outcome
+// from the selection re-send that follows -- and the last test pins that.
 //
 // Mocking style mirrors tests/messaging/modelRootHandler.broadcast.test.ts
 // (Task 2's closely-related test): mock lucid-extension-sdk's Viewport in
@@ -127,21 +122,13 @@ describe('ElementOpsHandler.getResponseChannel routing -- ELEMENT_UPDATE (the pa
   });
 });
 
-describe('ElementOpsHandler -- ELEMENT_CONVERT_RESULT stays hardcoded to "model" (panel-only route, not used by the pattern modal)', () => {
-  it('a panel-originated (model-iframe) ELEMENT_CONVERT_RESULT still goes to "model"', async () => {
-    await (ElementOpsHandler as any).handleElementConvert(convertMsg('model-iframe', 'req-panel-convert'));
+describe('ElementOpsHandler -- ELEMENT_CONVERT sends no reply', () => {
+  it.each(['model-iframe', 'pattern-iframe'])('a %s-sourced ELEMENT_CONVERT posts nothing back', async (source) => {
+    const ok = await (ElementOpsHandler as any).handleElementConvert(convertMsg(source, `req-convert-${source}`));
 
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    const [target, msg] = sendMock.mock.calls[0];
-    expect(target).toBe('model');
-    expect(msg.type).toBe(EnvelopeMessageType.ELEMENT_CONVERT_RESULT);
-  });
-
-  it('even a (hypothetical) pattern-sourced ELEMENT_CONVERT still gets routed to "model" -- deliberately not wired to getResponseChannel', async () => {
-    await (ElementOpsHandler as any).handleElementConvert(convertMsg('pattern-iframe', 'req-hypothetical-convert'));
-
-    expect(sendMock).toHaveBeenCalledTimes(1);
-    const [target] = sendMock.mock.calls[0];
-    expect(target).toBe('model');
+    // The success path ran to its selection refresh -- and still sent nothing.
+    expect(ok).toBe(true);
+    expect(handleLucidSelectionEventMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });
