@@ -20,16 +20,12 @@ export async function canonicalModelName(modelManager: ModelManager): Promise<st
 export interface UpsertModelResult {
   /** Server model id from UpsertModel's response (`model.id`), or null if absent. */
   serverModelId: string | null;
-  /** Always empty — UpsertModel does not rewrite scenario ids.
-   *  Kept so call sites can share the same guard (`if (substitutions.size > 0)`). */
-  substitutions: Map<string, string>;
 }
 
 /**
- * Ensures the model row exists in quodsi_api (UpsertModel only).
- * The extension is not scenario-authoritative — SyncScenarios has been removed
- * from this path. Callers that previously guarded on substitutions.size > 0
- * are safe: the map is always empty.
+ * Ensures the model row exists in quodsi_api (UpsertModel only). The extension
+ * is not scenario-authoritative: scenarios live in the database and are never
+ * sent from here.
  */
 export async function upsertModel(
   client: EditorClient,
@@ -54,7 +50,7 @@ export async function upsertModel(
   const upsertBody = (upsertResult as { json?: { model?: { id?: string } } })?.json ?? (upsertResult as unknown as { model?: { id?: string } });
   const serverModelId = upsertBody?.model?.id ?? null;
 
-  return { serverModelId, substitutions: new Map() };
+  return { serverModelId };
 }
 
 /** Serialize the live model and push it as the envelope-level model snapshot

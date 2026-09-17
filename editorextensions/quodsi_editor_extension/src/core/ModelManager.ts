@@ -20,11 +20,9 @@ import {
     ISerializedWorkSchedule,
     ModelDefaults,
     ISerializedResourceRequirement,
-    ISerializedScenario,
     EnvelopeMessageType,
     ValidationSeverity,
     ValidationIssue,
-    ensureBaselineScenario,
     ModelRootProjection,
     stripTransientResourceMarkers,
     StoredResourceRecord,
@@ -58,8 +56,7 @@ type SharedCleanupResult = {
 import { projectModelRoot } from "./modelRootProjection";
 import { StorageAdapter } from "./StorageAdapter";
 import { takeClearedFields } from "./clearedFields";
-import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
-import { upsertModel, canonicalModelName } from "./sync/scenarioSync";
+import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { activityStorageRemoveKeys } from "../types/ActivityLucid";
@@ -298,8 +295,8 @@ export class ModelManager {
                             }
                         };
                         this.broadcastValidationResults(this.currentValidationResult);
-                        // Deliberately do NOT set versionCheckedPageId, run
-                        // ensureBaselineScenario, or reach the builder below --
+                        // Deliberately do NOT set versionCheckedPageId or
+                        // reach the builder below --
                         // leaving the gate unmarked means the NEXT
                         // ensureModelDefinition call retries the version check
                         // instead of latching this failure forever (mirrors
@@ -307,9 +304,6 @@ export class ModelManager {
                         // on a caught upgrade-on-open failure).
                         return null;
                     }
-                    // Ensure a Baseline scenario exists for this model page
-                    this.ensureBaselineScenario(this.currentPage);
-
                 }
                 this.versionCheckedPageId = this.currentPage.id;
             }
@@ -863,11 +857,10 @@ export class ModelManager {
         this.currentValidationResult = null;
         this.pageBuilder = null;
         this.pendingNotices = [];
-        // Reset the once-per-page version/baseline gate. Without this, after a
-        // model is removed and re-created on the SAME page in the same session,
-        // the gate at ensureModelDefinition() still sees this page as "checked"
-        // and skips ensureBaselineScenario(), so the re-created model is left
-        // with no Baseline scenario.
+        // Reset the once-per-page version gate. Without this, after a model is
+        // removed and re-created on the SAME page in the same session, the gate
+        // at ensureModelDefinition() still sees this page as "checked" and
+        // skips the version check for the re-created model.
         this.versionCheckedPageId = null;
 
         // Reset change tracking
@@ -1518,7 +1511,7 @@ export class ModelManager {
      * by a loud failure.
      *
      * Mirrors its siblings (updateStates / updateEntities /
-     * updateResourceRequirements / updateScenarios): every one of them calls
+     * updateResourceRequirements): every one of them calls
      * `markModelDirty()` after writing, and this does too, so the cached
      * ModelDefinition is never left stale for a caller that reads it without
      * also calling `validateModel()` first.
@@ -1720,85 +1713,6 @@ export class ModelManager {
             });
         } catch (error) {
             this.debug.error('Error in updateResourceRequirements:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Ensures a Baseline scenario exists for the given page.
-     * If no scenario has isBaseline === true, creates one and persists it.
-     * Also migrates any legacy zero-UUID baseline ids (predates the
-     * database) to fresh UUIDs so SyncScenarios won't collide on the
-     * server-side global PK. Called once per page load during model
-     * definition initialization.
-     */
-    private ensureBaselineScenario(page: PageProxy): void {
-        const scenarios = this.storageAdapter.getScenarios(page);
-        const { scenarios: updated, baselineAdded, migrated } = ensureBaselineScenario(scenarios);
-        if (baselineAdded || migrated) {
-            if (baselineAdded) {
-                this.debug.debug('ensureBaselineScenario - Creating Baseline scenario');
-            }
-            if (migrated) {
-                this.debug.debug('ensureBaselineScenario - Migrated legacy zero-UUID baseline to a real UUID');
-            }
-            this.storageAdapter.setScenarios(page, updated);
-
-            // Push the new/migrated Baseline to quodsi_api now, so a Run (or the
-            // Scenarios list) doesn't depend on panel-init sync timing. Fire-and-forget:
-            // never block model build on a network call; the run path also syncs.
-            void this.syncBaselineAfterCreate(page, updated);
-        }
-    }
-
-    /**
-     * Fire-and-forget sync of scenarios right after the Baseline is auto-created
-     * or migrated. Errors are logged only -- the sync-before-run guarantee covers
-     * the Run path regardless. Applies any server id substitution back to storage.
-     */
-    private async syncBaselineAfterCreate(
-        page: PageProxy,
-        scenarios: ISerializedScenario[],
-    ): Promise<void> {
-        try {
-            const client = ModelManager.getClient();
-            const documentProxy = new DocumentProxy(client);
-            const { substitutions } = await upsertModel(client, {
-                documentId: documentProxy.id,
-                pageId: page.id,
-                modelName: await canonicalModelName(this),
-            });
-            if (substitutions.size > 0) {
-                const updated = scenarios.map(s =>
-                    substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
-                );
-                this.storageAdapter.setScenarios(page, updated);
-                this.debug.debug('Baseline synced + id substitution applied after create');
-            } else {
-                this.debug.debug('Baseline synced after create');
-            }
-        } catch (err) {
-            this.debug.error('Baseline post-create sync failed (non-fatal):', err);
-        }
-    }
-
-    /**
-     * Updates the scenarios array for the model.
-     * Scenarios have no cross-references to clean up, so this is a simple save.
-     */
-    public async updateScenarios(scenarios: ISerializedScenario[], page: PageProxy): Promise<void> {
-        this.debug.debug('updateScenarios - Start', {
-            scenariosCount: scenarios.length,
-            pageId: page.id,
-        });
-
-        try {
-            this.storageAdapter.setScenarios(page, scenarios);
-            this.markModelDirty();
-
-            this.debug.debug('updateScenarios - Complete');
-        } catch (error) {
-            this.debug.error('Error in updateScenarios:', error);
             throw error;
         }
     }

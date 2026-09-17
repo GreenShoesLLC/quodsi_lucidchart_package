@@ -22,7 +22,6 @@ import {
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
-import { StorageAdapter } from '../../StorageAdapter';
 import { upsertModel, canonicalModelName } from '../../sync/scenarioSync';
 import { sampleConnectorPaths } from '../../sync/connectorPathSampling';
 
@@ -326,7 +325,7 @@ export class SimulationHandler {
       SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
 
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
-      let scenarioId = data.scenarioDefinitionId || generateUUID();
+      const scenarioId = data.scenarioDefinitionId || generateUUID();
 
       // Sampled connector paths for the animation (connectorPathSampling.ts),
       // BEFORE the SVG-frame offset below so `path` shifts with the endpoints.
@@ -399,32 +398,15 @@ export class SimulationHandler {
         currentStep: 'Submitting simulation to Azure'
       });
       
-      // Guarantee the scenario row exists in quodsi_api before submitting.
-      // On a brand-new model the auto-created Baseline may not have synced yet;
-      // SaveAndSubmitSimulation only looks the scenario up (404 if missing).
-      // SyncScenarios is replace-all (idempotent), so this is safe to run every time.
+      // Guarantee the model row exists in quodsi_api before submitting
+      // (UpsertModel is idempotent, so this is safe to run every time). The
+      // scenario itself lives in the database -- the run names it by id.
       try {
-        const storageAdapter = new StorageAdapter();
-        const scenarios = storageAdapter.getScenarios(activePageProxy);
-        const { substitutions } = await upsertModel(client, {
+        await upsertModel(client, {
           documentId: documentProxy.id,
           pageId: activePageProxy.id,
           modelName: await canonicalModelName(modelManager),
         });
-        // If the server rewrote the Baseline id, persist it and re-target the run.
-        if (substitutions.size > 0) {
-          const updated = scenarios.map(s =>
-            substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
-          );
-          await modelManager.updateScenarios(updated, activePageProxy);
-          if (substitutions.has(scenarioId)) {
-            scenarioId = substitutions.get(scenarioId)!;
-            // Keep the optimistic job's scenarioId in sync with the re-targeted
-            // id so the active-jobs tracker matches on the correct scenarioId.
-            const job = SimulationHandler.activeJobs.get(jobId);
-            if (job) { job.scenarioId = scenarioId; }
-          }
-        }
       } catch (syncErr) {
         log.error('Pre-run sync failed:', syncErr);
         const job = SimulationHandler.activeJobs.get(jobId);

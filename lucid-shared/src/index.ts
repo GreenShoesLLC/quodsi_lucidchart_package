@@ -32,7 +32,6 @@ export {
   SwimLaneContainment,
 } from './types/swimlane/SwimLaneQuodsiData';
 
-export * from './utils/scenarioUtils';
 
 export { parsePageTranslate } from './serialization/coordinateAlignment';
 export type { PageTranslate } from './serialization/coordinateAlignment';
@@ -145,7 +144,6 @@ export type {
   ISerializedModel,
   ISerializedEntity,
   ISerializedState,
-  ISerializedScenario,
   ISerializedResourceRequirement,
   ISerializedArrivalPattern,
   ISerializedArrivalSchedule,

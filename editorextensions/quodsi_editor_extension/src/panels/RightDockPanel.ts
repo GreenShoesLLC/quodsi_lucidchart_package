@@ -20,7 +20,6 @@ import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
-import { StorageAdapter } from '../core/StorageAdapter';
 import { getLogger } from '@quodsi/lucid-shared';
 import { upsertModel } from '../core/sync/scenarioSync';
 import { planInitSync } from './initSyncPolicy';
@@ -340,15 +339,8 @@ export class RightDockPanel extends Panel implements RoutablePanel {
     }
 
     /**
-     * Sequentially upsert the model + sync scenarios on panel init.
-     * Awaiting UpsertModel before SyncScenarios prevents the race where
-     * SyncScenarios's binding lookup fires before UpsertModel's commit
-     * is visible -- which would 404 with "Model not found" and silently
-     * skip writing the scenario rows.
-     *
-     * After SyncScenarios responds, apply any server-side id
-     * substitutions (`replaced_id`) back into Lucid shape data so
-     * future syncs use the canonical id.
+     * Upsert the model row in quodsi_api on panel init, so the Studies surface
+     * finds it. Scenarios live in the database; the extension sends none.
      */
     private async upsertAndSyncOnPanelInit(
         document: DocumentProxy,
@@ -356,28 +348,14 @@ export class RightDockPanel extends Panel implements RoutablePanel {
     ): Promise<void> {
         this.lastSyncContext = { document, currentPage };
 
-        const storageAdapter = new StorageAdapter();
-        const scenarios = storageAdapter.getScenarios(currentPage);
-
         try {
-            const { substitutions } = await upsertModel(this.client, {
+            await upsertModel(this.client, {
                 documentId: document.id,
                 pageId: currentPage.id,
                 modelName: document.getTitle() || 'Untitled Model',
             });
             this.modelSyncSucceeded = true;
-            this.debug.debug('Model upserted + scenarios synced on panel init', {
-                count: scenarios.length,
-            });
-
-            if (substitutions.size > 0) {
-                const modelManager = ModelManager.getInstance();
-                const updated = scenarios.map(s =>
-                    substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
-                );
-                await modelManager.updateScenarios(updated, currentPage);
-                this.debug.debug('Applied server id substitutions:', Array.from(substitutions.entries()));
-            }
+            this.debug.debug('Model upserted on panel init');
         } catch (err) {
             this.debug.error('Failed to upsert/sync on panel init:', err);
         }

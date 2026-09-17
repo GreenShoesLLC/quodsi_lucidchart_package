@@ -12,7 +12,6 @@ import {
     WorkSchedule,
     SeasonMode,
     UnitlessSample,
-    Scenario,
     SwimLaneQuodsiData,
     ResourceFinancialProperties,
     ResourceClaim,
@@ -238,9 +237,6 @@ export class ModelDefinitionPageBuilder {
             // resource/activity passes is incidental -- the link is an id on
             // the target, resolved by validation, not by construction here.
             this.loadWorkSchedules(page, modelDefinition);
-
-            // Load scenarios from storage
-            this.loadScenarios(page, modelDefinition);
 
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
@@ -639,28 +635,6 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final work schedules count: ${modelDefinition.workSchedules.size()}`);
-    }
-
-    /**
-     * Loads scenarios from storage and adds them to the model definition.
-     */
-    private loadScenarios(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading scenarios from storage');
-
-        const serializedScenarios = this.storageAdapter.getScenarios(page);
-        this.log(`Found ${serializedScenarios.length} scenarios in storage`);
-
-        for (const serializedScenario of serializedScenarios) {
-            try {
-                const scenario = Scenario.fromJSON(serializedScenario);
-                modelDefinition.scenarios.add(scenario);
-                this.log(`Added scenario: ${scenario.name}`);
-            } catch (error) {
-                this.log(`Error deserializing scenario: ${error}`, 'error');
-            }
-        }
-
-        this.log(`Final scenarios count: ${modelDefinition.scenarios.size()}`);
     }
 
     /**
