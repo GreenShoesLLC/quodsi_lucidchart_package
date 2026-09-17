@@ -28,13 +28,9 @@ import { getLogger } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 
-// Named moduleLog, not log, because this class already has a private log()
-// method and an unqualified `log` inside it would be ambiguous to a reader.
-const moduleLog = getLogger('ModelDefinitionPageBuilder');
+const log = getLogger('ModelDefinitionPageBuilder');
 
 export class ModelDefinitionPageBuilder {
-    private loggingEnabled: boolean = false;
-
     private lastResourceLinkRejections: ResourceLinkRejection[] = [];
     /** Claims the last build rejected (dangling / duplicate). ModelManager.validateModel turns these into WARNINGs. */
     public getLastResourceLinkRejections(): ResourceLinkRejection[] { return this.lastResourceLinkRejections; }
@@ -44,53 +40,19 @@ export class ModelDefinitionPageBuilder {
         private elementFactory: LucidElementFactory) { }
 
     /**
-     * Method to toggle logging
-     */
-    public setLogging(enabled: boolean): void {
-        this.loggingEnabled = enabled;
-        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
-    }
-
-    /**
-     * Checks if logging is enabled
-     */
-    private isLoggingEnabled(): boolean {
-        return this.loggingEnabled;
-    }
-
-    /**
-     * Logs a message if logging is enabled
-     */
-    private log(message: string, level: 'log' | 'warn' | 'error' = 'log'): void {
-        if (!this.isLoggingEnabled()) {
-            return;
-        }
-        // The shared console sink prefixes [ModelDefinitionPageBuilder] itself,
-        // so the template prefix this used to build by hand is gone - keeping it
-        // would print the name twice.
-        if (level === 'error') {
-            moduleLog.error(message);
-        } else if (level === 'warn') {
-            moduleLog.warn(message);
-        } else {
-            moduleLog.debug(message);
-        }
-    }
-
-    /**
      * Builds a ModelDefinition from an existing converted page
      */
     public buildFromConvertedPage(page: PageProxy): ModelDefinition | null {
         try {
             // First validate that we have a valid page
             if (!page) {
-                this.log('Page is undefined', 'error');
+                log.error('Page is undefined');
                 return null;
             }
 
             // Log page details
-            this.log('Page details:', 'log');
-            this.log(JSON.stringify({
+            log.trace('Page details:');
+            log.trace(JSON.stringify({
                 pageExists: !!page,
                 pageId: page.id,
                 pageTitle: page.getTitle?.(),
@@ -98,10 +60,10 @@ export class ModelDefinitionPageBuilder {
                 hasGetTitle: 'getTitle' in page,
                 constructor: page.constructor.name
             }));
-            this.log(`Starting model definition build for page ${page.id}`);
+            log.trace(`Starting model definition build for page ${page.id}`);
             // Add explicit type check before creating ModelLucid
             if (!this.elementFactory.isPageProxy(page)) {
-                this.log('Invalid page proxy provided', 'error');
+                log.error('Invalid page proxy provided');
                 return null;
             }
 
@@ -110,13 +72,13 @@ export class ModelDefinitionPageBuilder {
             try {
                 modelLucid = this.elementFactory.createPlatformObject(page, SimulationObjectType.Model) as ModelLucid;
                 if (!modelLucid) {
-                    this.log('Failed to create ModelLucid', 'error');
+                    log.error('Failed to create ModelLucid');
                     return null;
                 }
             } catch (error) {
-                this.log(`Error creating ModelLucid: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                log.error(`Error creating ModelLucid: ${error instanceof Error ? error.message : String(error)}`);
                 if (error instanceof Error && error.stack) {
-                    this.log(`Stack trace: ${error.stack}`, 'error');
+                    log.error(`Stack trace: ${error.stack}`);
                 }
                 return null;
             }
@@ -125,11 +87,11 @@ export class ModelDefinitionPageBuilder {
             try {
                 modelData = modelLucid.getSimulationObject();
                 if (!modelData) {
-                    this.log('Model data is undefined', 'error');
+                    log.error('Model data is undefined');
                     return null;
                 }
             } catch (error) {
-                this.log(`Error getting simulation object: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                log.error(`Error getting simulation object: ${error instanceof Error ? error.message : String(error)}`);
                 return null;
             }
 
@@ -150,7 +112,7 @@ export class ModelDefinitionPageBuilder {
             for (const key of managerKeys) {
                 const manager = modelDefinition[key];
                 if (!manager || typeof manager.add !== 'function') {
-                    this.log(`ModelDefinition ${key} not properly initialized`, 'error');
+                    log.error(`ModelDefinition ${key} not properly initialized`);
                     return null;
                 }
             }
@@ -178,7 +140,7 @@ export class ModelDefinitionPageBuilder {
             for (const [blockId, block] of page.allBlocks) {
                 const typeInfo = this.storageAdapter.getElementType(block);
                 if (!typeInfo) {
-                    this.log(`No type info found for block ${blockId}`, 'warn');
+                    log.warn(`No type info found for block ${blockId}`);
                     continue;
                 }
                 blocksByType.get(typeInfo.type)?.push(block);
@@ -188,7 +150,7 @@ export class ModelDefinitionPageBuilder {
             // Process each type in order
             for (const type of processingOrder) {
                 const blocks = blocksByType.get(type) || [];
-                this.log(`Processing ${blocks.length} blocks of type ${type}`);
+                log.trace(`Processing ${blocks.length} blocks of type ${type}`);
 
                 for (const block of blocks) {
                     try {
@@ -198,16 +160,16 @@ export class ModelDefinitionPageBuilder {
                         switch (type) {
                             case SimulationObjectType.Activity:
                                 modelDefinition.activities.add(simObject);
-                                this.log(`Added activity: ${simObject.name}`);
+                                log.trace(`Added activity: ${simObject.name}`);
                                 break;
 
                             case SimulationObjectType.Generator:
                                 modelDefinition.generators.add(simObject);
-                                this.log(`Added generator: ${simObject.name}`);
+                                log.trace(`Added generator: ${simObject.name}`);
                                 break;
                         }
                     } catch (error) {
-                        this.log(`Error processing block of type ${type}: ${error}`, 'error');
+                        log.error(`Error processing block of type ${type}: ${error}`);
                     }
                 }
             }
@@ -239,7 +201,7 @@ export class ModelDefinitionPageBuilder {
             this.loadWorkSchedules(page, modelDefinition);
 
             // Process all lines (connectors)
-            this.log(`Processing ${page.allLines.size} lines`);
+            log.trace(`Processing ${page.allLines.size} lines`);
             for (const [lineId, line] of page.allLines) {
                 const typeInfo = this.storageAdapter.getElementType(line);
                 if (!typeInfo || typeInfo.type !== SimulationObjectType.Connector) continue;
@@ -250,13 +212,13 @@ export class ModelDefinitionPageBuilder {
 
                     // Skip adding self-referencing connectors
                     if (connector.sourceId && connector.targetId && connector.sourceId === connector.targetId) {
-                        this.log(`Skipping self-referencing connector from ${connector.sourceId} to itself`, 'warn');
+                        log.warn(`Skipping self-referencing connector from ${connector.sourceId} to itself`);
                         continue;
                     }
 
                     modelDefinition.connectors.add(connector);
                 } catch (error) {
-                    this.log(`Error processing line ${lineId}`, 'error');
+                    log.error(`Error processing line ${lineId}`);
                 }
             }
 
@@ -266,9 +228,9 @@ export class ModelDefinitionPageBuilder {
             return modelDefinition;
 
         } catch (error) {
-            this.log(`Error building ModelDefinition: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            log.error(`Error building ModelDefinition: ${error instanceof Error ? error.message : 'Unknown error'}`);
             if (error instanceof Error) {
-                this.log(`Error stack: ${error.stack}`, 'error');
+                log.error(`Error stack: ${error.stack}`);
             }
             return null;
         }
@@ -326,10 +288,10 @@ export class ModelDefinitionPageBuilder {
                 if (Array.isArray(stored.levers)) resource.levers = stored.levers;
                 modelDefinition.resources.add(resource);
             } catch (error) {
-                this.log(`Error deserializing resource ${stored?.id}: ${error}`, 'error');
+                log.error(`Error deserializing resource ${stored?.id}: ${error}`);
             }
         }
-        this.log(`Final resources count: ${modelDefinition.resources.size()}`);
+        log.trace(`Final resources count: ${modelDefinition.resources.size()}`);
     }
 
     /**
@@ -374,7 +336,7 @@ export class ModelDefinitionPageBuilder {
                                 });
                             }
                         }
-                    } catch (error) { this.log(`Bad q_swimlane on ${blockId}: ${error}`, 'warn'); }
+                    } catch (error) { log.warn(`Bad q_swimlane on ${blockId}: ${error}`); }
                 }
             }
         }
@@ -400,7 +362,7 @@ export class ModelDefinitionPageBuilder {
         }
         this.lastResourceLinkRejections = resolution.rejected;
         if (resolution.rejected.length) {
-            this.log(`Rejected ${resolution.rejected.length} resource claim(s)`, 'warn');
+            log.warn(`Rejected ${resolution.rejected.length} resource claim(s)`);
         }
     }
 
@@ -416,7 +378,7 @@ export class ModelDefinitionPageBuilder {
      * drawio and Visio run too.
      */
     private loadResourceRequirements(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading resource requirements');
+        log.trace('Loading resource requirements');
 
         const stored = this.storageAdapter.getResourceRequirements(page) as unknown as Array<Record<string, unknown>>;
         const reconciled = reconcileAutoRequirements(modelDefinition.resources.getAll(), stored);
@@ -432,35 +394,35 @@ export class ModelDefinitionPageBuilder {
                     new ResourceRequirement(String(raw.id), String(raw.name ?? ''), rootClause)
                 );
             } catch (error) {
-                this.log(`Error deserializing resource requirement ${raw?.id}: ${error}`, 'error');
+                log.error(`Error deserializing resource requirement ${raw?.id}: ${error}`);
             }
         }
 
-        this.log(`Final requirements count: ${modelDefinition.resourceRequirements.size()}`);
+        log.trace(`Final requirements count: ${modelDefinition.resourceRequirements.size()}`);
     }
 
     /**
      * Loads state definitions from storage and adds them to the model definition.
      */
     private loadStates(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading states from storage');
+        log.trace('Loading states from storage');
 
         // Get states from page storage
         const serializedStates = this.storageAdapter.getStates(page);
-        this.log(`Found ${serializedStates.length} states in storage`);
+        log.trace(`Found ${serializedStates.length} states in storage`);
 
         // Deserialize and add each state to the model definition
         for (const serializedState of serializedStates) {
             try {
                 const state = State.fromJSON(serializedState);
                 modelDefinition.states.add(state);
-                this.log(`Added state: ${state.name} (${state.componentType})`);
+                log.trace(`Added state: ${state.name} (${state.componentType})`);
             } catch (error) {
-                this.log(`Error deserializing state: ${error}`, 'error');
+                log.error(`Error deserializing state: ${error}`);
             }
         }
 
-        this.log(`Final states count: ${modelDefinition.states.size()}`);
+        log.trace(`Final states count: ${modelDefinition.states.size()}`);
     }
 
     /**
@@ -473,11 +435,11 @@ export class ModelDefinitionPageBuilder {
      * cleanly replaces the seeded default. Other ids are added alongside.
      */
     private loadEntities(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading entities from storage');
+        log.trace('Loading entities from storage');
 
         // Get entities from page storage
         const serializedEntities = this.storageAdapter.getEntities(page);
-        this.log(`Found ${serializedEntities.length} entities in storage`);
+        log.trace(`Found ${serializedEntities.length} entities in storage`);
 
         // Deserialize and add each entity to the model definition
         for (const serializedEntity of serializedEntities) {
@@ -490,13 +452,13 @@ export class ModelDefinitionPageBuilder {
                 );
                 entity.description = serializedEntity.description ?? '';
                 modelDefinition.entities.add(entity);
-                this.log(`Added entity: ${entity.name}`);
+                log.trace(`Added entity: ${entity.name}`);
             } catch (error) {
-                this.log(`Error deserializing entity: ${error}`, 'error');
+                log.error(`Error deserializing entity: ${error}`);
             }
         }
 
-        this.log(`Final entities count: ${modelDefinition.entities.size()}`);
+        log.trace(`Final entities count: ${modelDefinition.entities.size()}`);
     }
 
     /**
@@ -520,10 +482,10 @@ export class ModelDefinitionPageBuilder {
      * `if (serialized.seasonMode !== undefined) ...` — that is the bug.
      */
     private loadArrivalPatterns(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading arrival patterns from storage');
+        log.trace('Loading arrival patterns from storage');
 
         const serializedPatterns = this.storageAdapter.getArrivalPatterns(page);
-        this.log(`Found ${serializedPatterns.length} arrival patterns in storage`);
+        log.trace(`Found ${serializedPatterns.length} arrival patterns in storage`);
 
         for (const serialized of serializedPatterns) {
             try {
@@ -541,13 +503,13 @@ export class ModelDefinitionPageBuilder {
                     pattern.withinHourOffset = UnitlessSample.fromJSON(serialized.withinHourOffset);
                 }
                 modelDefinition.arrivalPatterns.add(pattern);
-                this.log(`Added arrival pattern: ${pattern.name}`);
+                log.trace(`Added arrival pattern: ${pattern.name}`);
             } catch (error) {
-                this.log(`Error deserializing arrival pattern: ${error}`, 'error');
+                log.error(`Error deserializing arrival pattern: ${error}`);
             }
         }
 
-        this.log(`Final arrival patterns count: ${modelDefinition.arrivalPatterns.size()}`);
+        log.trace(`Final arrival patterns count: ${modelDefinition.arrivalPatterns.size()}`);
     }
 
     /**
@@ -566,10 +528,10 @@ export class ModelDefinitionPageBuilder {
      * drops it unconditionally, so the constructor default stands.
      */
     private loadArrivalSchedules(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading arrival schedules from storage');
+        log.trace('Loading arrival schedules from storage');
 
         const serializedSchedules = this.storageAdapter.getArrivalSchedules(page);
-        this.log(`Found ${serializedSchedules.length} arrival schedules in storage`);
+        log.trace(`Found ${serializedSchedules.length} arrival schedules in storage`);
 
         for (const serialized of serializedSchedules) {
             try {
@@ -577,13 +539,13 @@ export class ModelDefinitionPageBuilder {
                 if (serialized.timeUnit !== undefined) schedule.timeUnit = serialized.timeUnit as any;
                 if (serialized.arrivals !== undefined) schedule.arrivals = serialized.arrivals;
                 modelDefinition.arrivalSchedules.add(schedule);
-                this.log(`Added arrival schedule: ${schedule.name}`);
+                log.trace(`Added arrival schedule: ${schedule.name}`);
             } catch (error) {
-                this.log(`Error deserializing arrival schedule: ${error}`, 'error');
+                log.error(`Error deserializing arrival schedule: ${error}`);
             }
         }
 
-        this.log(`Final arrival schedules count: ${modelDefinition.arrivalSchedules.size()}`);
+        log.trace(`Final arrival schedules count: ${modelDefinition.arrivalSchedules.size()}`);
     }
 
     /**
@@ -607,10 +569,10 @@ export class ModelDefinitionPageBuilder {
      * `extra="forbid"` parser.
      */
     private loadWorkSchedules(page: PageProxy, modelDefinition: ModelDefinition): void {
-        this.log('Loading work schedules from storage');
+        log.trace('Loading work schedules from storage');
 
         const serializedSchedules = this.storageAdapter.getWorkSchedules(page);
-        this.log(`Found ${serializedSchedules.length} work schedules in storage`);
+        log.trace(`Found ${serializedSchedules.length} work schedules in storage`);
 
         for (const serialized of serializedSchedules) {
             try {
@@ -628,36 +590,36 @@ export class ModelDefinitionPageBuilder {
                     schedule.exceptions = serialized.exceptions as typeof schedule.exceptions;
                 }
                 modelDefinition.workSchedules.add(schedule);
-                this.log(`Added work schedule: ${schedule.name}`);
+                log.trace(`Added work schedule: ${schedule.name}`);
             } catch (error) {
-                this.log(`Error deserializing work schedule: ${error}`, 'error');
+                log.error(`Error deserializing work schedule: ${error}`);
             }
         }
 
-        this.log(`Final work schedules count: ${modelDefinition.workSchedules.size()}`);
+        log.trace(`Final work schedules count: ${modelDefinition.workSchedules.size()}`);
     }
 
     /**
      * Logs a summary of the ModelDefinition contents
      */
     private logModelDefinitionSummary(modelDefinition: ModelDefinition): void {
-        if (!this.isLoggingEnabled()) return;
+        if (!log.isEnabled('trace')) return;
 
-        this.log('Model Definition Summary:');
-        this.log(`- Model ID: ${modelDefinition.id}`);
-        this.log(`- Model Name: ${modelDefinition.name}`);
+        log.trace('Model Definition Summary:');
+        log.trace(`- Model ID: ${modelDefinition.id}`);
+        log.trace(`- Model Name: ${modelDefinition.name}`);
 
         // Log activities with names
         const activities = modelDefinition.activities.getAll();
-        this.log(`- Activities: ${activities.length}`);
+        log.trace(`- Activities: ${activities.length}`);
         activities.forEach((activity, index) => {
-            this.log(`  ${index + 1}. ${activity.name}`);
+            log.trace(`  ${index + 1}. ${activity.name}`);
         });
 
-        this.log(`- Generators: ${modelDefinition.generators.size()}`);
-        this.log(`- Resources: ${modelDefinition.resources.size()}`);
-        this.log(`- Requirements: ${modelDefinition.resourceRequirements.size()}`);
-        this.log(`- Entities: ${modelDefinition.entities.size()}`);
-        this.log(`- Connectors: ${modelDefinition.connectors.size()}`);
+        log.trace(`- Generators: ${modelDefinition.generators.size()}`);
+        log.trace(`- Resources: ${modelDefinition.resources.size()}`);
+        log.trace(`- Requirements: ${modelDefinition.resourceRequirements.size()}`);
+        log.trace(`- Entities: ${modelDefinition.entities.size()}`);
+        log.trace(`- Connectors: ${modelDefinition.connectors.size()}`);
     }
 }

@@ -6,7 +6,7 @@ import {
     ModelDefaults,
     PeriodUnit,
     SimulationObjectType,
-    ComponentLogger,
+    getLogger,
     StateModification,
     parseStructuredName,
     extractGeneratorFields,
@@ -18,18 +18,7 @@ import {
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 
-// Define a constant for the logger prefix
-const LOG_PREFIX = '[GeneratorLucid]';
-
-// Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
-
-/**
- * Enable or disable logging for GeneratorLucid
- */
-export const setGeneratorLucidLogging = (enabled: boolean): void => {
-    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
-};
+const log = getLogger('GeneratorLucid');
 
 /**
  * Wire-cleanup Phase B2 Task 9: `EntitySourceConfig` was dissolved (Task 5) —
@@ -122,7 +111,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         block: BlockProxy,
         storageAdapter: StorageAdapter
     ) {
-        ComponentLogger.log(LOG_PREFIX, `Constructing GeneratorLucid for block ID: ${block.id}`);
+        log.trace(`Constructing GeneratorLucid for block ID: ${block.id}`);
         super(block, storageAdapter);
     }
 
@@ -131,7 +120,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
     }
 
     protected createSimObject(): Generator {
-        ComponentLogger.log(LOG_PREFIX, `Creating Generator simulation object for element ID: ${this.platformElementId}`);
+        log.trace(`Creating Generator simulation object for element ID: ${this.platformElementId}`);
 
         // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredGeneratorData;
@@ -209,7 +198,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             generator.name = this.getElementName('Generator');
         }
 
-        ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
+        log.trace('Updated platform-specific fields', {
             x: generator.x,
             y: generator.y,
             width: generator.width,
@@ -219,7 +208,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
     }
 
     public updateFromPlatform(): void {
-        ComponentLogger.log(LOG_PREFIX, `Updating Generator from platform for element ID: ${this.platformElementId}`);
+        log.trace(`Updating Generator from platform for element ID: ${this.platformElementId}`);
 
         // Extract location AND shape size from platform (Path X-lite).
         const box = (this.element as BlockProxy).getBoundingBox();
@@ -268,7 +257,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
-        ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
+        log.trace(`Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -280,7 +269,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
                     const name = text.trim();
-                    ComponentLogger.log(LOG_PREFIX, `Using text area content as name for element ID ${block.id}: ${name}`);
+                    log.trace(`Using text area content as name for element ID ${block.id}: ${name}`);
                     return name;
                 }
             }
@@ -289,12 +278,12 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         // If no text found, use class name
         const className = block.getClassName() || 'Block';
         const name = `${defaultPrefix} ${className}`;
-        ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
+        log.trace(`Generated default name for element ID ${block.id}: ${name}`);
         return name;
     }
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): GeneratorLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
+        log.trace(`Creating GeneratorLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location AND shape size (Path X-lite)
         const box = block.getBoundingBox();
@@ -317,7 +306,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         const parsed = parseStructuredName(rawName);
         const fields = extractGeneratorFields(parsed);
 
-        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+        log.trace(`Parsed structured name for block ${block.id}:`, { rawName, fields });
 
         // Update shape text to clean name if we parsed structured data
         if (rawName.includes('|') && fields.name) {
@@ -345,10 +334,10 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         };
 
         if (fields.interval !== undefined) {
-            ComponentLogger.log(LOG_PREFIX, `Using parsed interval: ${fields.interval} minutes`);
+            log.trace(`Using parsed interval: ${fields.interval} minutes`);
         }
 
-        ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted generator, block ID: ${block.id}`, storedData);
+        log.trace(`Setting initial data for converted generator, block ID: ${block.id}`, storedData);
 
         // Set up element data (type + component data merged into single q_data)
         storageAdapter.setElementData(

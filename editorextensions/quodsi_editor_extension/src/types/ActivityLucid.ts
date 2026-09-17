@@ -3,7 +3,7 @@ import {
     Activity,
     Action,
     SimulationObjectType,
-    ComponentLogger,
+    getLogger,
     ActivityFinancialProperties,
     FailureProperties,
     ConnectType,
@@ -21,18 +21,7 @@ import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { hydrateActions } from './hydrateActions';
 
-// Define a constant for the logger prefix
-const LOG_PREFIX = '[ActivityLucid]';
-
-// Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
-
-/**
- * Enable or disable logging for ActivityLucid
- */
-export const setActivityLucidLogging = (enabled: boolean): void => {
-    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
-};
+const log = getLogger('ActivityLucid');
 
 interface StoredActivityData {
     id: string;
@@ -140,7 +129,7 @@ export function activityAuthoritativeClearedFields(
  */
 export class ActivityLucid extends SimObjectLucid<Activity> {
     constructor(block: BlockProxy, storageAdapter: StorageAdapter) {
-        ComponentLogger.log(LOG_PREFIX, `Constructing ActivityLucid for block ID: ${block.id}`);
+        log.trace(`Constructing ActivityLucid for block ID: ${block.id}`);
         super(block, storageAdapter);
     }
 
@@ -149,7 +138,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     }
 
     protected createSimObject(): Activity {
-        ComponentLogger.log(LOG_PREFIX, `Creating Activity simulation object for element ID: ${this.platformElementId}`);
+        log.trace(`Creating Activity simulation object for element ID: ${this.platformElementId}`);
 
         // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredActivityData;
@@ -236,7 +225,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             activity.name = this.getElementName('Activity');
         }
 
-        ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
+        log.trace('Updated platform-specific fields', {
             x: activity.x,
             y: activity.y,
             width: activity.width,
@@ -246,7 +235,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     }
 
     public updateFromPlatform(): void {
-        ComponentLogger.log(LOG_PREFIX, `Updating Activity from platform for element ID: ${this.platformElementId}`);
+        log.trace(`Updating Activity from platform for element ID: ${this.platformElementId}`);
 
         // Extract location AND shape size from platform (Path X-lite).
         const box = (this.element as BlockProxy).getBoundingBox();
@@ -286,7 +275,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
-        ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
+        log.trace(`Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
         // removeKeys, not just the undefined above: see activityStorageRemoveKeys.
         // This write-back may declare the clear itself — dataToStore is built
         // from this.simObject, which createSimObject hydrated from storage with
@@ -308,7 +297,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
                     const name = text.trim();
-                    ComponentLogger.log(LOG_PREFIX, `Using text area content as name for element ID ${block.id}: ${name}`);
+                    log.trace(`Using text area content as name for element ID ${block.id}: ${name}`);
                     return name;
                 }
             }
@@ -317,12 +306,12 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         // If no text found, use class name
         const className = block.getClassName() || 'Block';
         const name = `${defaultPrefix} ${className}`;
-        ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
+        log.trace(`Generated default name for element ID ${block.id}: ${name}`);
         return name;
     }
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): ActivityLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
+        log.trace(`Creating ActivityLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location AND shape size (Path X-lite)
         const box = block.getBoundingBox();
@@ -345,7 +334,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         const parsed = parseStructuredName(rawName);
         const fields = extractActivityFields(parsed);
 
-        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+        log.trace(`Parsed structured name for block ${block.id}:`, { rawName, fields });
 
         // Update shape text to clean name if we parsed structured data
         if (rawName.includes('|') && fields.name) {
@@ -360,7 +349,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
                 ConstantDistribution.create(fields.duration)
             );
             actions = [createDelayAction(duration)];
-            ComponentLogger.log(LOG_PREFIX, `Using parsed duration: ${fields.duration} minutes`);
+            log.trace(`Using parsed duration: ${fields.duration} minutes`);
         }
 
         // Convert to StoredActivityData format, using parsed values where available
@@ -381,7 +370,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             resourceName: fields.resource  // Store for auto-creation during conversion
         };
 
-        ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted activity, block ID: ${block.id}`, storedData);
+        log.trace(`Setting initial data for converted activity, block ID: ${block.id}`, storedData);
 
         // Set up element data (type + component data merged into single q_data)
         storageAdapter.setElementData(

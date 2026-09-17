@@ -3,7 +3,7 @@ import {
     ProcessAnalysisResult,
     BlockAnalysis,
     SimulationObjectType,
-    QuodsiLogger,
+    getLogger,
     ConversionPreviewData,
     ElementMappingPreview,
     DiagramElementKind,
@@ -18,6 +18,8 @@ import { StorageAdapter } from '../../core/StorageAdapter';
 
 import { blockToNameable, lineToNameable } from '../../types/nameableShape';
 
+const log = getLogger('LucidPageAnalyzer');
+
 /**
  * Naming metadata per simulation type, matching what conversion passes to the
  * shared policy (see ActivityLucid / ResourceLucid / GeneratorLucid).
@@ -28,21 +30,14 @@ const NAME_OPTS_BY_TYPE: Partial<Record<SimulationObjectType, { typeLabel: strin
     [SimulationObjectType.Resource]: { typeLabel: 'Resource', includeMasterName: false },
 };
 
-export class LucidPageAnalyzer extends QuodsiLogger {
-    protected readonly LOG_PREFIX = '[LucidPageAnalyzer]';
-
-    constructor() {
-        super();
-        this.setLogging(false);
-    }
-
+export class LucidPageAnalyzer {
     public analyzePage(page: PageProxy): ProcessAnalysisResult {
-        this.log('Analyzing page structure');
+        log.trace('Analyzing page structure');
         const blockAnalysis = new Map<string, BlockAnalysis>();
 
         // Log all blocks first
-        this.log('All blocks:', Array.from(page.allBlocks.keys()));
-        this.log('All lines:', Array.from(page.allLines.keys()));
+        log.trace('All blocks:', Array.from(page.allBlocks.keys()));
+        log.trace('All lines:', Array.from(page.allLines.keys()));
 
         // First pass: Initialize all blocks and analyze connections
         this.initializeBlocks(page, blockAnalysis);
@@ -65,7 +60,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         page: PageProxy,
         storageAdapter: StorageAdapter
     ): ConversionPreviewData {
-        this.log('Analyzing page for preview');
+        log.trace('Analyzing page for preview');
 
         // First, run the standard analysis to get block types
         const analysis = this.analyzePage(page);
@@ -253,7 +248,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             const endpoint1 = line.getEndpoint1();
             const endpoint2 = line.getEndpoint2();
 
-            this.log(`Analyzing line ${lineId}:`, {
+            log.trace(`Analyzing line ${lineId}:`, {
                 hasEndpoint1Connection: !!endpoint1?.connection,
                 hasEndpoint2Connection: !!endpoint2?.connection,
                 endpoint1Id: endpoint1?.connection?.id,
@@ -291,7 +286,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         page: PageProxy,
         blockAnalysis: Map<string, BlockAnalysis>
     ): void {
-        this.log('Determining types from explicit type field and connection patterns');
+        log.trace('Determining types from explicit type field and connection patterns');
 
         for (const [blockId, analysis] of blockAnalysis) {
             const block = page.allBlocks.get(blockId);
@@ -322,7 +317,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
                     // q_entities). An explicitly entity-named shape is left unconverted
                     // (elementType stays undefined → proposedType null → skipped).
                 }
-                this.log(`Block ${blockId} set as ${explicitType} based on explicit type field`, {
+                log.trace(`Block ${blockId} set as ${explicitType} based on explicit type field`, {
                     blockName,
                     explicitType
                 });
@@ -347,7 +342,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
                 analysis.elementType = SimulationObjectType.Activity;
             }
             if (verdict) {
-                this.log(`Block ${blockId} set as ${verdict} based on connections`, {
+                log.trace(`Block ${blockId} set as ${verdict} based on connections`, {
                     incomingCount: analysis.incomingCount,
                     outgoingCount: analysis.outgoingCount
                 });
@@ -356,9 +351,9 @@ export class LucidPageAnalyzer extends QuodsiLogger {
     }
 
     private logFinalAnalysis(blockAnalysis: Map<string, BlockAnalysis>): void {
-        this.log('Final Analysis Results:');
+        log.trace('Final Analysis Results:');
         for (const [blockId, analysis] of blockAnalysis) {
-            this.log(`Block ${blockId}:`, {
+            log.trace(`Block ${blockId}:`, {
                 elementType: analysis.elementType,
                 incomingCount: analysis.incomingCount,
                 outgoingCount: analysis.outgoingCount

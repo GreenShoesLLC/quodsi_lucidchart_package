@@ -39,12 +39,13 @@ resetLoggerForTests } from '@quodsi/shared';` in `lucid-shared/src/index.ts`)
 so both the extension and the React panel import it from
 `@quodsi/lucid-shared`.
 
-**`QuodsiLogger` and `ComponentLogger`** (`lucid-shared/src/core/logging/`)
-are legacy and deliberately NOT migrated — they still call `console.*`
-directly. `QuodsiLogger`'s abstract base plus its concrete subclasses
-(`ModelDataSource`, `ModelDefinitionRepository`, `LucidPageAnalyzer`,
-`LucidPageConversionService`) survive by design; do not
-route new code through them.
+It is the only logger. The legacy `QuodsiLogger` / `ComponentLogger`
+classes and the per-class `setLogging(bool)` switches were removed
+(2026-09-17): a class takes `const log = getLogger('<ClassName>')`, uses
+`trace` for step-by-step detail (hidden unless a namespace is raised with
+`window.QUODSI_DEBUG`) and `error`/`warn` for real problems. The one
+remaining switch is `MessageRouter.setLogging`, which also fills the
+`window.__msgLog` message-history buffer.
 
 **Host configuration.** Each host calls `configureLogger({ level, sinks:
 [consoleSink()], namespaceLevels: {...} })` once at startup, then

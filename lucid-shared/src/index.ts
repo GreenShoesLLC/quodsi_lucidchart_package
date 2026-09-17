@@ -10,8 +10,6 @@
 // Local modules
 // ---------------------------------------------------------------------------
 
-export * from './core/logging/QuodsiLogger';
-export * from './core/logging/ComponentLogger';
 
 export * from './types/BlockAnalysis';
 export * from './types/common';

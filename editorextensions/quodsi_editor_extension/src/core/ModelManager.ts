@@ -309,7 +309,6 @@ export class ModelManager {
             }
 
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
-            lucidElementFactory.setLogging(false);
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter, lucidElementFactory);
             this.pageBuilder = builder;
             try {
@@ -1832,7 +1831,6 @@ export class ModelManager {
 
             // Use LucidElementFactory to create proper platform object
             const factory = new LucidElementFactory(this.storageAdapter);
-            factory.setLogging(false);
 
             this.debug.debug('Creating platform object using factory');
             const platformObject = factory.createPlatformObject(
@@ -1940,7 +1938,6 @@ export class ModelManager {
                 this.debug.debug('Auto-converting line to Connector', { lineId });
 
                 const factory = new LucidElementFactory(this.storageAdapter);
-                factory.setLogging(false);
 
                 const platformObject = factory.createPlatformObject(
                     line,
