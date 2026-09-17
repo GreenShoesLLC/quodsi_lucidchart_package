@@ -23,8 +23,6 @@ export {
   SwimLaneContainment,
 } from './types/swimlane/SwimLaneQuodsiData';
 
-export { parsePageTranslate } from './serialization/coordinateAlignment';
-export type { PageTranslate } from './serialization/coordinateAlignment';
 export * from './quodsi-messaging';
 export * from './embed/buildRelayConnectors';
 
@@ -143,7 +141,7 @@ export type {
   ISerializedReleaseAction,
 } from '@quodsi/shared';
 
-// Shift layout coordinates into the page SVG's frame (after parsePageTranslate).
+// Shift layout coordinates into the page SVG's frame (the extension's pageSvg.ts).
 export { offsetLayoutCoordinates } from '@quodsi/shared';
 
 // Page conversion: topology rule, naming policy, structured-name parsing,

@@ -7,8 +7,6 @@ import {
   Model,
   generateUUID,
   ENGINE_VERSION,
-  parsePageTranslate,
-  offsetLayoutCoordinates,
   getLogger,
 } from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
@@ -23,7 +21,7 @@ import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { upsertModel, canonicalModelName } from '../../sync/scenarioSync';
-import { sampleConnectorPaths } from '../../sync/connectorPathSampling';
+import { alignModelToPageSvg } from '../../sync/pageSvg';
 
 const log = getLogger('SimulationHandler');
 
@@ -327,24 +325,9 @@ export class SimulationHandler {
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
       const scenarioId = data.scenarioDefinitionId || generateUUID();
 
-      // Sampled connector paths for the animation (connectorPathSampling.ts),
-      // BEFORE the SVG-frame offset below so `path` shifts with the endpoints.
-      const pathStats = sampleConnectorPaths(serializedModel.connectors, (id) => activePageProxy.allLines.get(id));
-      log.debug('Sampled connector paths', pathStats);
-
-      // Get SVG representation of the current page
-      const diagramSvg = await activePageProxy.getSvg(undefined, true);
-
-      // getSvg() wraps the page in a translate() to normalize negative
-      // coordinates into a positive viewBox. layout.json uses the raw model
-      // coordinates, so align the serialized model into the SVG's frame by
-      // applying the same page-translate. Keeps the SVG and skeleton/entities
-      // in one coordinate space; a {0,0} translate is a no-op.
-      const pageTranslate = parsePageTranslate(diagramSvg);
-      if (pageTranslate.x !== 0 || pageTranslate.y !== 0) {
-        offsetLayoutCoordinates(serializedModel, pageTranslate.x, pageTranslate.y);
-        log.debug('Aligned model coords to SVG page-translate', pageTranslate);
-      }
+      // Page SVG for the animation, with the model moved into its frame
+      // (connector paths sampled first). A capture failure fails the run.
+      const diagramSvg = await alignModelToPageSvg(serializedModel, activePageProxy, { bestEffort: false });
       const timestamp = new Date();
       const queuedAt = timestamp.toISOString();
       const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
