@@ -7,9 +7,9 @@ export type EntitlementSubjectType = 'user' | 'organization';
 
 /**
  * Where the active plan resolution came from, as computed by the backend's
- * EntitlementService. Mirrors `quodsi_api`'s flat REST field `plan_source`.
+ * EntitlementService (`quodsi_api`'s `plan_source`). Declared in @quodsi/shared.
  */
-export type EntitlementPlanSource = 'kinde_org' | 'kinde_user' | 'free_fallback';
+export type { EntitlementPlanSource } from '@quodsi/shared';
 
 /**
  * Plan status mirrors Kinde. `trialing` grants full entitlements like

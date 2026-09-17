@@ -1,3 +1,5 @@
+import type { ConversionCounts } from '@quodsi/shared';
+
 /**
  * Page conversion from the model panel's blank-slate card (spec 2026-09-15
  * section 1): the page's shape and line counts, and the result of a one-click
@@ -11,15 +13,9 @@ export interface PageCountsData {
   lineCount: number;
 }
 
-/** Element counts of a conversion, in the shape of quodsi_studio's shared ConversionResult. */
-export interface PageConversionCounts {
-  activities: number;
-  generators: number;
-  resources: number;
-  entities: number;
-  connectors: number;
-  skipped: number;
-}
+/** Element counts of a conversion -- @quodsi/shared's ConversionCounts (the
+ *  same type as quodsi_studio's shared ConversionResult). */
+export type PageConversionCounts = ConversionCounts;
 
 /** Host -> panel reply to AUTO_CONVERT_PAGE, sent with the request's envelope id. */
 export type AutoConvertPageResultData =
