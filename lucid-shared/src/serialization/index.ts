@@ -3,7 +3,7 @@ export { ModelSerializerFactory, SchemaVersion } from './ModelSerializerFactory'
 export { BaseModelDefinitionSerializer } from './BaseModelDefinitionSerializer';
 
 // SVG <-> layout coordinate alignment (Approach A)
-export { parsePageTranslate, offsetSerializedModelCoordinates } from './coordinateAlignment';
+export { parsePageTranslate } from './coordinateAlignment';
 export type { PageTranslate } from './coordinateAlignment';
 
 // V1 Serializer

@@ -3,7 +3,7 @@ import {
   resolveModelName,
   ModelSerializerFactory,
   parsePageTranslate,
-  offsetSerializedModelCoordinates,
+  offsetLayoutCoordinates,
   evaluateValidationGate,
 } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
@@ -92,7 +92,7 @@ export async function pushModelDefinitionSnapshot(
   // unchanged; only the layout coordinates move to share the SVG's frame.
   if (modelDiagramSvg) {
     const t = parsePageTranslate(modelDiagramSvg);
-    offsetSerializedModelCoordinates(snapshot, t.x, t.y);
+    offsetLayoutCoordinates(snapshot, t.x, t.y);
   }
   // Push the snapshot + SVG via UpsertModel ONLY -- never SyncScenarios. The
   // extension is not scenario-authoritative (scenarios live in the DB / embed),

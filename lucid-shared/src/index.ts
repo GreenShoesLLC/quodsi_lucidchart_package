@@ -129,6 +129,9 @@ export {
 } from '@quodsi/shared';
 export type { ScenarioLever } from '@quodsi/shared';
 
+// Shift layout coordinates into the page SVG's frame (after parsePageTranslate).
+export { offsetLayoutCoordinates } from '@quodsi/shared';
+
 // Page conversion: topology rule, naming policy, structured-name parsing and
 // per-pass name bookkeeping -- the same rules drawio and Visio use; the
 // extension adapts its SDK proxies to NameableShape.

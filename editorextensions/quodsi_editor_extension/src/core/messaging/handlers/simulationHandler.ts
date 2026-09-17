@@ -8,7 +8,7 @@ import {
   generateUUID,
   ENGINE_VERSION,
   parsePageTranslate,
-  offsetSerializedModelCoordinates,
+  offsetLayoutCoordinates,
   getLogger,
 } from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
@@ -344,7 +344,7 @@ export class SimulationHandler {
       // in one coordinate space; a {0,0} translate is a no-op.
       const pageTranslate = parsePageTranslate(diagramSvg);
       if (pageTranslate.x !== 0 || pageTranslate.y !== 0) {
-        offsetSerializedModelCoordinates(serializedModel, pageTranslate.x, pageTranslate.y);
+        offsetLayoutCoordinates(serializedModel, pageTranslate.x, pageTranslate.y);
         log.debug('Aligned model coords to SVG page-translate', pageTranslate);
       }
       const timestamp = new Date();
