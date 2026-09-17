@@ -1,7 +1,6 @@
-// The Lucid-provider OAuth workaround runs once per session before the first
-// data action. Concurrent data actions share one in-flight attempt (the
-// Studies open fires two at once), and a failed attempt is retried by the
-// next data action rather than remembered.
+// EXPERIMENT (exp/lucid-oauth-kinde-only): data actions no longer run the
+// oauthXhr('lucid', ...) workaround. The connector authenticates with the
+// `kinde` provider, whose token comes from sign-in.
 import { AuthHandler } from '../../src/core/messaging/handlers/authHandler';
 import { LucidDataActionUtility } from '../../src/utils/LucidDataActionUtility';
 
@@ -9,62 +8,24 @@ const params = { dataConnectorName: 'quodsi_api_data_connector', actionName: 'X'
 
 function makeClient() {
   return {
-    oauthXhr: jest.fn(),
+    oauthXhr: jest.fn(async () => ({})),
     performDataAction: jest.fn(async () => ({ status: 200, json: {} })),
   };
 }
-
-const flush = async () => {
-  for (let i = 0; i < 10; i++) await Promise.resolve();
-};
-
-beforeEach(() => {
-  LucidDataActionUtility.resetOauthTriggerStatus();
-  jest.spyOn(AuthHandler, 'getIsAuthenticated').mockReturnValue(true);
-});
 
 afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('LucidDataActionUtility OAuth workaround', () => {
-  it('concurrent data actions trigger it once, and both run only after it settles', async () => {
+describe('LucidDataActionUtility', () => {
+  it.each([true, false])('runs the data action without any lucid-provider OAuth call (signed in: %s)', async (signedIn) => {
+    jest.spyOn(AuthHandler, 'getIsAuthenticated').mockReturnValue(signedIn);
     const client = makeClient();
-    let release!: () => void;
-    client.oauthXhr.mockReturnValue(new Promise<void>((r) => { release = r; }));
 
-    const a = LucidDataActionUtility.performDataAction(client, params);
-    const b = LucidDataActionUtility.performDataAction(client, params);
-    await flush();
-    expect(client.oauthXhr).toHaveBeenCalledTimes(1);
-    expect(client.performDataAction).not.toHaveBeenCalled();
+    const result = await LucidDataActionUtility.performDataAction(client, params);
 
-    release();
-    await Promise.all([a, b]);
-    expect(client.performDataAction).toHaveBeenCalledTimes(2);
-
-    await LucidDataActionUtility.performDataAction(client, params);
-    expect(client.oauthXhr).toHaveBeenCalledTimes(1);
-  });
-
-  it('a failed attempt still runs the data action and is retried by the next one', async () => {
-    const client = makeClient();
-    client.oauthXhr.mockRejectedValueOnce(new Error('consent dialog blocked')).mockResolvedValue({});
-
-    await LucidDataActionUtility.performDataAction(client, params);
-    expect(client.performDataAction).toHaveBeenCalledTimes(1);
-
-    await LucidDataActionUtility.performDataAction(client, params);
-    expect(client.oauthXhr).toHaveBeenCalledTimes(2);
-
-    await LucidDataActionUtility.performDataAction(client, params);
-    expect(client.oauthXhr).toHaveBeenCalledTimes(2);
-  });
-
-  it('ensureLucidOauth is a no-op while signed out', async () => {
-    (AuthHandler.getIsAuthenticated as jest.Mock).mockReturnValue(false);
-    const client = makeClient();
-    await LucidDataActionUtility.ensureLucidOauth(client);
+    expect(result).toEqual({ status: 200, json: {} });
+    expect(client.performDataAction).toHaveBeenCalledWith(params);
     expect(client.oauthXhr).not.toHaveBeenCalled();
   });
 });

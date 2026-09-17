@@ -4,8 +4,22 @@ import { AuthHandler } from '../core/messaging/handlers/authHandler';
 /**
  * LucidDataActionUtility
  *
- * This utility handles the OAuth workaround needed for performDataAction calls.
- * It ensures the OAuth workaround is triggered only once during the application lifecycle.
+ * The single entry point for data-connector calls (performDataAction).
+ *
+ * The data connector authenticates with the `kinde` OAuth provider
+ * (manifest `oauthProviderName`), and Lucid attaches the signed-in user's
+ * Kinde token to each request. That token comes from sign-in
+ * (AuthHandler: getOAuthToken('kinde')).
+ *
+ * History: until 2026-04-17 the connector used a `lucid` provider, and Lucid
+ * support's "temporary workaround" was to call oauthXhr('lucid', ...) once
+ * before performDataAction so that provider had a token. Once the connector
+ * moved to `kinde` that call primed a provider nothing used, and its consent
+ * dialog collided with other dialogs (sign-in, the Studies modal). Removed
+ * 2026-09-17, with the `lucid` provider itself, on Lucid's own answer
+ * (community.lucid.co thread 14017): the workaround is obsolete, and
+ * performDataAction authorizes a custom provider by itself. Their other
+ * standing rule: never trigger an auth dialog while a modal is open.
  */
 
 const log = getLogger('LucidDataActionUtility');
@@ -24,57 +38,10 @@ export interface DataActionParams {
  * Utility class for performing data actions with the Lucid API
  */
 export class LucidDataActionUtility {
-    private static hasTriggeredOauth: boolean = false;
-    /** The in-flight OAuth workaround, shared so concurrent data actions
-     *  (e.g. the Studies open's upsert + snapshot push) trigger it once. */
-    private static oauthInFlight: Promise<void> | null = null;
-
     /**
-     * Run the Lucid-provider OAuth workaround once per session, before any
-     * data action.
-     *
-     * Lucid support (see _docs/Lucid Questions.md): oauthXhr must be called
-     * once before performDataAction works. The first call is what raises
-     * Lucid's "authorize Quodsi" consent dialog, and Lucid does not stack
-     * dialogs -- so a caller about to open a modal awaits this FIRST
-     * (SimulationRunHandler.handleOpenStudiesModal), rather than letting the
-     * consent prompt collide with its own modal.
-     *
-     * Only once Kinde auth is established, though -- before that the
-     * lucid-provider flow competes with the sign-in dialog and, for a local
-     * package, fails and makes Lucid suppress the Kinde prompt (2026-08-27).
-     * A failure is logged and not remembered, so the next call tries again.
-     */
-    public static ensureLucidOauth(client: any): Promise<void> {
-        if (this.hasTriggeredOauth || !AuthHandler.getIsAuthenticated()) {
-            return Promise.resolve();
-        }
-        if (!this.oauthInFlight) {
-            this.oauthInFlight = (async () => {
-                try {
-                    await client.oauthXhr("lucid", {
-                        url: "https://api.lucid.co/folders/search",
-                        headers: {
-                            "Lucid-Api-Version": "1",
-                            "Content-Type": "application/json",
-                        },
-                        data: "{}",
-                        method: "POST",
-                    });
-                    this.hasTriggeredOauth = true;
-                } catch (error) {
-                    log.error("Error triggering OAuth workaround:", error);
-                    // The data action still runs; the next one retries this.
-                } finally {
-                    this.oauthInFlight = null;
-                }
-            })();
-        }
-        return this.oauthInFlight;
-    }
-
-    /**
-     * Performs a data action after the OAuth workaround (see ensureLucidOauth).
+     * Performs a data action. Before Kinde sign-in there is no token for the
+     * connector to carry, so such a call is logged; callers that need a token
+     * wait for auth-ready (RightDockPanel, AnalyticsHandler).
      *
      * @param client The Lucid client instance
      * @param params Parameters for the data action
@@ -84,16 +51,9 @@ export class LucidDataActionUtility {
         client: any,
         params: DataActionParams
     ): Promise<any> {
-        await this.ensureLucidOauth(client);
+        if (!AuthHandler.getIsAuthenticated()) {
+            log.warn(`Data action ${params.actionName} before Kinde sign-in; the request carries no token`);
+        }
         return await client.performDataAction(params);
-    }
-
-    /**
-     * Resets the OAuth trigger status
-     * This can be useful for testing or if the session needs to be refreshed
-     */
-    public static resetOauthTriggerStatus(): void {
-        this.hasTriggeredOauth = false;
-        this.oauthInFlight = null;
     }
 }
