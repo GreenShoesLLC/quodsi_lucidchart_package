@@ -9,7 +9,7 @@ Quodsi is a LucidChart extension that transforms diagrams into discrete event si
 ## Architecture
 
 ### Component Structure
-1. **Shared Library** (`/lucid-shared`, `@quodsi/lucid-shared`) - Lucid-only layer: messaging protocol, Lucid serialization/validation services, platform adapters, logging. Domain models (`Activity`, `Resource`, `ModelDefinition`, ...) come from the monorepo's `@quodsi/shared` and are re-exported here, so extension and panel code imports everything from `@quodsi/lucid-shared`.
+1. **Shared Library** (`/lucid-shared`, `@quodsi/lucid-shared`) - Lucid-only layer: messaging protocol, panel/extension shared types, embed helpers. Serialization, validation and logging come from `@quodsi/shared`. Domain models (`Activity`, `Resource`, `ModelDefinition`, ...) come from the monorepo's `@quodsi/shared` and are re-exported here, so extension and panel code imports everything from `@quodsi/lucid-shared`.
 2. **Editor Extension** (`/editorextensions/quodsi_editor_extension`) - TypeScript-based LucidChart extension that manages the model lifecycle
 3. **React UI** (`/editorextensions/quodsi_editor_extension/quodsim-react`) - Embedded React app for model editing and simulation controls
 
@@ -149,8 +149,8 @@ npm run bundle
 # Run shared library tests
 cd lucid-shared && npm test
 
-# Update test snapshots
-cd lucid-shared && npm run test:update-snapshots
+# Serialization corpus (lives in the monorepo's core package)
+cd ../quodsi_shared && npx vitest run src/serialization/__tests__/modelCorpus
 
 # Run React app tests
 cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
@@ -159,7 +159,7 @@ cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
 ### Running Individual Tests
 ```bash
 # Run a specific test file
-cd lucid-shared && npm test -- ModelSerializer.snapshot.test.ts
+cd lucid-shared && npm test -- envelope.test.ts
 
 # Run tests in watch mode
 cd lucid-shared && npm test -- --watch

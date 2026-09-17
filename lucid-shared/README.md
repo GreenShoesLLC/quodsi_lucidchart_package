@@ -28,8 +28,10 @@ directly; add a re-export here only when a Lucid consumer needs it.
 npm run build        # tsc -> dist/ (consumers resolve the package from dist)
 npm run clean        # removes dist/ and tsconfig.tsbuildinfo
 npm test             # jest
-npm run test:update-snapshots   # regenerate serialization fixtures
 ```
+
+Tests of domain code (serialization, element classes, validation) live with
+that code in `quodsi_shared` (vitest); this package tests only its own layer.
 
 Build `@quodsi/shared` first, then this package. Tests that import
 `@quodsi/lucid-shared` resolve it through the workspace link to `dist/`, so
