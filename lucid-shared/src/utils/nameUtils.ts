@@ -4,4 +4,4 @@
  * Centralized in @quodsi/shared — re-exported here so existing
  * `@quodsi/lucid-shared` consumers keep working unchanged.
  */
-export { generateUniqueName, ensureUniqueName } from '@quodsi/shared';
+export { generateUniqueName } from '@quodsi/shared';

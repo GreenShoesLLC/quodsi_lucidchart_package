@@ -10,9 +10,5 @@
  * The one declaration lives in @quodsi/shared (preferences/modalSize.ts),
  * shared with drawio and the Settings screen (spec 2026-09-15 section 3).
  */
-export {
-  DEFAULT_MODAL_SIZE,
-  MODAL_SIZE_DIMENSIONS,
-  MODAL_SIZE_OPTIONS,
-} from '@quodsi/shared';
+export { DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/shared';
 export type { ModalSize } from '@quodsi/shared';
