@@ -1,23 +1,22 @@
 import { PageProxy, BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import {
-    ConversionResult,
     Model,
     SimulationObjectType,
     Connector,
     ConnectType,
     getLogger,
-    ProcessAnalysisResult,
     DiagramElementKind,
     MappingSource,
     SimulationObject,
     generateUniqueName,
-    StoredResourceRecord,
     SwimLaneQuodsiData,
     SwimLaneLaneMapping,
     generateUUID,
     planAutoResources,
-    type ActivityResourceRef
+    type ActivityResourceRef,
 } from '@quodsi/lucid-shared';
+import { ConversionResult, ProcessAnalysisResult } from './types';
+import { StoredResourceRecord } from '../../core/StoredResourceRecord';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 

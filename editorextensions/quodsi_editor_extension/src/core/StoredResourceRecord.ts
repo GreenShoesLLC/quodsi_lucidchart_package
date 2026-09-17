@@ -1,4 +1,4 @@
-import type { ScenarioLever } from '@quodsi/shared';
+import type { ScenarioLever, ResourceFinancialPropertiesJson } from '@quodsi/lucid-shared';
 
 /**
  * One entry of the page-level `q_resources` list (Lucid storage format 2).
@@ -17,11 +17,6 @@ export interface StoredResourceRecord {
      *  simply a record without the key. */
     workScheduleId?: string;
     description?: string;
-    financialProperties?: {
-        enabled: boolean;
-        costPerSeize: number;
-        costPerHourUtilized: number;
-        costPerHourIdle: number;
-    };
+    financialProperties?: ResourceFinancialPropertiesJson;
     levers?: ScenarioLever[];
 }

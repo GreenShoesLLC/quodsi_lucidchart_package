@@ -16,12 +16,12 @@
 import { PageProxy } from 'lucid-extension-sdk';
 import {
     SimulationObjectType,
-    StoredResourceRecord,
     SwimLaneQuodsiData,
     generateUniqueName,
     getLogger,
     isPlainAutoRequirement,
 } from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from './StoredResourceRecord';
 import { StorageAdapter } from './StorageAdapter';
 import { LUCID_STORAGE_FORMAT } from './storageFormat';
 

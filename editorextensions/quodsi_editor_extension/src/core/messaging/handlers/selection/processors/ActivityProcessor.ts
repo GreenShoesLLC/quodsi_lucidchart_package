@@ -4,7 +4,8 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, SwimLaneQuodsiData, ValidationResult, getLogger } from '@quodsi/lucid-shared';
+import { SwimLaneQuodsiData, ValidationResult, getLogger } from '@quodsi/lucid-shared';
+import { SelectionType } from '../types';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { StorageAdapter } from '../../../../../core/StorageAdapter';

@@ -1,9 +1,7 @@
 /**
- * Common type definitions used across the Quodsi messaging system
- * These types define JSON serializable values for messaging
+ * A plain JSON object -- the shape of an element's stored data as the panel
+ * receives it (ModelItemData.data) and sends it back.
  */
+export type JsonObject = { [key: string]: JsonValue };
 
-export type JsonPrimitive = string | number | boolean | null;
-export type JsonArray = JsonSerializable[];
-export type JsonObject = { [key: string]: JsonSerializable };
-export type JsonSerializable = JsonPrimitive | JsonObject | JsonArray;
+type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];

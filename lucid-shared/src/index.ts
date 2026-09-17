@@ -11,17 +11,10 @@
 // ---------------------------------------------------------------------------
 
 
-export * from './types/BlockAnalysis';
 export * from './types/common';
-export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
 export * from './types/ModelItemData';
 export * from './types/ModelRootProjection';
-export * from './types/PageStatus';
-export * from './types/ProcessAnalysisResult';
-export * from './types/SelectionState';
-export * from './types/SelectionType';
-export * from './types/StoredResourceRecord';
 export * from './types/devtools/DevToolsTypes';
 export {
   SwimLaneResourceData,
@@ -29,7 +22,6 @@ export {
   SwimLaneQuodsiData,
   SwimLaneContainment,
 } from './types/swimlane/SwimLaneQuodsiData';
-
 
 export { parsePageTranslate } from './serialization/coordinateAlignment';
 export type { PageTranslate } from './serialization/coordinateAlignment';
@@ -45,6 +37,7 @@ export { MODEL_SCHEMA_VERSION, ENGINE_VERSION } from '@quodsi/shared';
 export { configureLogger, getLogger, consoleSink, installDebugGlobal, resetLoggerForTests } from '@quodsi/shared';
 export type { LogLevel } from '@quodsi/shared';
 export { QUODSI_ICON_BASE64 } from '@quodsi/shared';
+export type { ResourceFinancialPropertiesJson } from '@quodsi/shared';
 
 // Platform (the version manager registers its upgrader for PlatformType.Lucid)
 export { PlatformType } from '@quodsi/shared';

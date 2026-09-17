@@ -25,7 +25,6 @@ import {
     ValidationIssue,
     ModelRootProjection,
     stripTransientResourceMarkers,
-    StoredResourceRecord,
     resourceLinkIssues,
     removeEntityReferences,
     removeStateReferences,
@@ -34,7 +33,8 @@ import {
     pickFallbackEntityId,
     isPlainAutoRequirement,
     MODEL_FIELD_KEYS,
-} from "@quodsi/lucid-shared";
+} from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from './StoredResourceRecord';
 import type { ReferenceCleanupOptions } from "@quodsi/lucid-shared";
 
 /** Stored element data a shared reference-cleanup rule runs over, keyed by Lucid item id. */

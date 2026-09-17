@@ -20,7 +20,7 @@ directly; add a re-export here only when a Lucid consumer needs it.
 |---|---|
 | `src/quodsi-messaging` | The postMessage protocol between the extension and its panels/modals: `EnvelopeBase`, `EnvelopeMessageType`, `isEnvelope`, and the few payload types both sides share. See its README. |
 | `src/serialization` | `parsePageTranslate`, the page-SVG translate Lucid's `getSvg()` applies. The wire document (`modelDefinitionToCleanDocument`, the `ISerialized*` types) is in `@quodsi/shared`. |
-| `src/types` | Lucid storage and panel view types: `ModelRootProjection`, `EditorReferenceData`, `StoredResourceRecord`, swimlane data, selection state, conversion results, devtools payloads. |
+| `src/types` | Types the extension builds and the panel reads: `EditorReferenceData`, `ModelRootProjection`, `ModelItemData` / `JsonObject`, swimlane data (`q_swimlane`), devtools scan results. Extension-only types live in the extension. |
 | `src/embed` | Helpers for the Studio embed relay (`buildRelayConnectors`). |
 
 ## Build and test

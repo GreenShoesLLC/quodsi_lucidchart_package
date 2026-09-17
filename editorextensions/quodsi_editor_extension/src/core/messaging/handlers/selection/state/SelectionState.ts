@@ -1,13 +1,12 @@
-import { 
-  ElementShape, 
-  ModelItemData, 
-  ValidationResult, 
-  EditorReferenceData, 
-  DiagramElementType, 
-  SelectionType,
-  SelectionState as SharedSelectionState,
-  getLogger
+import {
+    ElementShape,
+    ModelItemData,
+    ValidationResult,
+    EditorReferenceData,
+    DiagramElementType,
+    getLogger,
 } from '@quodsi/lucid-shared';
+import { SelectionType, SelectionSnapshot as SharedSelectionState } from '../types';
 import { SelectionStateData } from '../types';
 
 const log = getLogger('SelectionState');

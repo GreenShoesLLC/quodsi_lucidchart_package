@@ -3,7 +3,8 @@ import {
   ItemProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, SimulationObjectType, getLogger } from '@quodsi/lucid-shared';
+import { SimulationObjectType, getLogger } from '@quodsi/lucid-shared';
+import { SelectionType } from '../types';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';

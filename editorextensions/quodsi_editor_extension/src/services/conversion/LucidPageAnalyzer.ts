@@ -1,7 +1,5 @@
 import { PageProxy, BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import {
-    ProcessAnalysisResult,
-    BlockAnalysis,
     SimulationObjectType,
     getLogger,
     ConversionPreviewData,
@@ -12,8 +10,9 @@ import {
     classifyByTopology,
     ConversionNamer,
     pickName,
-    pickConnectorName
+    pickConnectorName,
 } from '@quodsi/lucid-shared';
+import { ProcessAnalysisResult, BlockAnalysis } from './types';
 import { StorageAdapter } from '../../core/StorageAdapter';
 
 import { blockToNameable, lineToNameable } from '../../types/nameableShape';

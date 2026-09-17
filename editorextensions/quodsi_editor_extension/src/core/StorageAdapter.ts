@@ -1,5 +1,6 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedWorkSchedule, ISerializedResourceRequirement, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger, StoredResourceRecord } from '@quodsi/lucid-shared';
+import { SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedWorkSchedule, ISerializedResourceRequirement, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
+import { StoredResourceRecord } from './StoredResourceRecord';
 
 const log = getLogger('StorageAdapter');
 
@@ -65,44 +66,8 @@ export class StorageAdapter {
     }
 
     /**
-     * Sets the simulation status for a page
-     */
-    public setSimulationStatus(page: ElementProxy, status: PageStatus): void {
-        try {
-            log.trace('Setting simulation status for page:', {
-                pageId: page.id,
-                status
-            });
-            const serializedStatus = JSON.stringify(status);
-            page.shapeData.set(StorageAdapter.SIMULATION_STATUS_KEY, serializedStatus);
-            log.trace('Successfully set simulation status');
-        } catch (error) {
-            log.error('Error setting simulation status:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Gets the simulation status for a page
-     */
-    public getSimulationStatus(page: ElementProxy): PageStatus | null {
-        try {
-            log.trace('Getting simulation status for page:', page.id);
-            const statusStr = page.shapeData.get(StorageAdapter.SIMULATION_STATUS_KEY);
-            if (!statusStr || typeof statusStr !== 'string') {
-                log.trace('No simulation status found');
-                return null;
-            }
-            const status = JSON.parse(statusStr) as PageStatus;
-            log.trace('Retrieved simulation status:', status);
-            return status;
-        } catch (error) {
-            log.error('Error getting simulation status:', error);
-            return null;
-        }
-    }
-    /**
-     * Clears the simulation status for a page
+     * Clears the legacy page-level simulation status (q_simulation_status).
+     * Nothing writes it any more; it is cleared so old pages tidy up.
      */
     public clearSimulationStatus(page: ElementProxy): void {
         try {

@@ -4,6 +4,7 @@ import type {
     ISerializedWorkSchedule,
     ISerializedResourceRequirement,
     ISerializedDuration,
+    ResourceFinancialPropertiesJson,
 } from '@quodsi/shared';
 import type { EditorReferenceActionSummary, EditorReferenceStateModification } from './EditorReferenceData';
 
@@ -111,12 +112,7 @@ export type ModelRootProjection = ModelRootModelFields & {
         name: string;
         capacity?: number;
         description?: string;
-        financialProperties?: {
-            enabled: boolean;
-            costPerSeize: number;
-            costPerHourUtilized: number;
-            costPerHourIdle: number;
-        };
+        financialProperties?: ResourceFinancialPropertiesJson;
         levers?: unknown[];
         // The resource half of the work-schedule link (CapacitySourcePicker,
         // workScheduleUsage). Absent means fixed capacity.

@@ -1,7 +1,7 @@
-import { 
-  EnvelopeMessageType, 
-  SelectionType
+import {
+    EnvelopeMessageType,
 } from '@quodsi/lucid-shared';
+import { SelectionType } from './types';
 import { 
   EditorClient, 
   ItemProxy, 

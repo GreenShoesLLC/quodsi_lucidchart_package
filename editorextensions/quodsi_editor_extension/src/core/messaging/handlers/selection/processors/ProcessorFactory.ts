@@ -1,4 +1,5 @@
-import { SelectionType, getLogger } from '@quodsi/lucid-shared';
+import { getLogger } from '@quodsi/lucid-shared';
+import { SelectionType } from '../types';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { NoneSelectionProcessor } from './NoneSelectionProcessor';
 import { MultipleSelectionProcessor } from './MultipleSelectionProcessor';
