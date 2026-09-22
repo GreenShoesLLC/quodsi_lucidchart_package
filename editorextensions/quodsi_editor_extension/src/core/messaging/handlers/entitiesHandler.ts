@@ -76,14 +76,9 @@ export class EntitiesHandler {
       // Update entities using ModelManager
       await modelManager.updateEntities(data.entities, currentPage);
 
-      // Validate the model after update
-      await modelManager.validateModel();
-
-      // Trigger a selection change to send updated entities back to React
-      // IMPORTANT: Force rebuild of referenceData to ensure React receives updated entities
-      await SelectionHandler.sendSelectionChangedMessage(true);
-
-      // Send success response
+      // The write is in storage: report success NOW. The refresh below can
+      // fail on its own and must not turn a persisted write into a
+      // { success: false } the panel would roll back (ClickUp 86e37z4rn).
       router.send(channel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.ENTITIES_UPDATE_RESULT,
@@ -94,8 +89,6 @@ export class EntitiesHandler {
           success: true
         }
       });
-
-      return true;
 
     } catch (error) {
       log.error('Error updating entities', error);
@@ -125,6 +118,27 @@ export class EntitiesHandler {
       }
 
       return false;
+    }
+
+    // Post-write refresh, each step independent and logged on its own so a
+    // failure in one neither changes the result already sent nor blocks
+    // the other. Validation first (it rebuilds the definition from storage),
+    // then a forced referenceData rebuild so React receives the fresh
+    // entities array.
+    await EntitiesHandler.refreshAfterWrite();
+    return true;
+  }
+
+  private static async refreshAfterWrite(): Promise<void> {
+    try {
+      await ModelManager.getInstance().validateModel();
+    } catch (err) {
+      log.error('Error validating model after entities update:', err);
+    }
+    try {
+      await SelectionHandler.sendSelectionChangedMessage(true);
+    } catch (err) {
+      log.error('Error rebuilding referenceData after entities update:', err);
     }
   }
 
