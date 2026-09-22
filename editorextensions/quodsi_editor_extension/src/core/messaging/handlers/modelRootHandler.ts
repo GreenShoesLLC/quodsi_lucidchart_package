@@ -391,8 +391,9 @@ export class ModelRootHandler {
         );
       }
 
-      await modelManager.validateModel();
-
+      // Everything is in storage: report success NOW. Validation and the
+      // refreshes below run outside this try so a failure in any of them
+      // cannot re-report a persisted write as failed (ClickUp 86e37z4rn).
       router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
@@ -429,6 +430,15 @@ export class ModelRootHandler {
       ModelRootHandler.sendSnapshot(msg.id)
         .catch(err => log.error('Error sending model-root snapshot after failed update:', err));
       return;
+    }
+
+    // Validate (rebuilds the definition from storage and broadcasts the
+    // result) before the snapshot below reads the projection. Its own try:
+    // a validation failure is logged, never re-reported as a write failure.
+    try {
+      await ModelManager.getInstance().validateModel();
+    } catch (err) {
+      log.error('Error validating model after model-root update:', err);
     }
 
     // Push the fresh projection so React's cache updates without a

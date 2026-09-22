@@ -74,15 +74,9 @@ export class StatesHandler {
       // Update states using ModelManager
       await modelManager.updateStates(data.states, currentPage);
 
-      // Validate the model after update
-      await modelManager.validateModel();
-
-      // Trigger a selection change to send updated states back to React
-      // This ensures React gets the fresh states array
-      // IMPORTANT: Force rebuild of referenceData to ensure React receives updated states
-      await SelectionHandler.sendSelectionChangedMessage(true);
-
-      // Send success response
+      // The write is in storage: report success NOW. The refresh below can
+      // fail on its own and must not turn a persisted write into a
+      // { success: false } the panel would roll back (ClickUp 86e37z4rn).
       router.send(channel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.STATES_UPDATE_RESULT,
@@ -93,8 +87,6 @@ export class StatesHandler {
           success: true
         }
       });
-
-      return true;
 
     } catch (error) {
       log.error('Error updating states', error);
@@ -124,6 +116,27 @@ export class StatesHandler {
       }
 
       return false;
+    }
+
+    // Post-write refresh, each step independent and logged on its own so a
+    // failure in one neither changes the result already sent nor blocks
+    // the other. Validation first (it rebuilds the definition from storage),
+    // then a forced referenceData rebuild so React receives the fresh
+    // states array.
+    await StatesHandler.refreshAfterWrite();
+    return true;
+  }
+
+  private static async refreshAfterWrite(): Promise<void> {
+    try {
+      await ModelManager.getInstance().validateModel();
+    } catch (err) {
+      log.error('Error validating model after states update:', err);
+    }
+    try {
+      await SelectionHandler.sendSelectionChangedMessage(true);
+    } catch (err) {
+      log.error('Error rebuilding referenceData after states update:', err);
     }
   }
 
