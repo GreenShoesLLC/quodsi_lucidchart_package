@@ -8,8 +8,6 @@ import { PanelHeader } from "../PanelHeader";
 vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
 
 const baseProps = {
-  modelName: "Clinic",
-  editorType: "Model",
   onElementTypeChange: vi.fn(),
 };
 
@@ -24,7 +22,7 @@ describe("PanelHeader — no Advisor button of its own", () => {
 
   it("element header", () => {
     const activity: any = { id: "a1", name: "Triage", metadata: { type: "Activity" }, data: { name: "Triage" } };
-    render(<PanelHeader {...baseProps} editorType="Activity" currentElement={activity} />);
+    render(<PanelHeader {...baseProps} currentElement={activity} />);
     expect(screen.queryByRole("button", { name: /advisor/i })).toBeNull();
   });
 });

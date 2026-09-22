@@ -228,21 +228,13 @@ export const ModelPanel: React.FC = () => {
   // Swimlanes have their own header; PanelHeader's "unconverted" view is irrelevant
   const isSwimLane = currentElement?.data?.className === 'AdvancedSwimLaneBlock';
 
-  // Derive editor type for accent stripe
-  const editorType = !currentElement ||
-    (currentElement.metadata?.type as SimulationObjectType) === SimulationObjectType.Model
-      ? SimulationObjectType.Model
-      : (currentElement.metadata?.type as SimulationObjectType) || SimulationObjectType.Model;
-
   // Main content render
   return (
     <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} enabled={advisorEnabled}>
       <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
         <AccountStrip />
         {!isSwimLane && <PanelHeader
-          modelName={modelName}
           currentElement={currentElement}
-          editorType={editorType}
           onRemoveModel={onRemoveModel}
           onOpenDiagramMapping={() => openDiagramMappingModal(
             selection.documentContext?.documentId ?? '',
@@ -250,7 +242,6 @@ export const ModelPanel: React.FC = () => {
           )}
           onElementTypeChange={onElementTypeChange}
           diagramElementType={diagramElementType}
-          referenceData={referenceData}
           onViewModelJson={handleViewModelJson}
           onOpenStatus={onOpenStatus}
           onOpenSettings={() => openSettingsModal()}

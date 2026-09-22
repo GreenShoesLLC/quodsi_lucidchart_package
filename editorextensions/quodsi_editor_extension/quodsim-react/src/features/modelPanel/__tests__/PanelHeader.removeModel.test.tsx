@@ -13,9 +13,7 @@ import { PanelHeader } from "../PanelHeader";
 vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
 
 const baseProps = {
-  modelName: "Test Model",
   currentElement: null,
-  editorType: "model",
   onElementTypeChange: vi.fn(),
 };
 

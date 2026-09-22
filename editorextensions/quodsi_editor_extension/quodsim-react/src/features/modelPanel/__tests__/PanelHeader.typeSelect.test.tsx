@@ -16,7 +16,7 @@ const values = () =>
     .getAllByRole("option")
     .map((o) => (o as HTMLOptionElement).value);
 
-const baseProps = { modelName: "Clinic" };
+const baseProps = {};
 
 beforeEach(() => {
   localStorage.clear();
@@ -32,7 +32,6 @@ describe("PanelHeader — shared type dropdown", () => {
     render(
       <PanelHeader
         {...baseProps}
-        editorType="Activity"
         currentElement={activity}
         diagramElementType={DiagramElementType.BLOCK}
         onElementTypeChange={onElementTypeChange}
@@ -50,7 +49,6 @@ describe("PanelHeader — shared type dropdown", () => {
     render(
       <PanelHeader
         {...baseProps}
-        editorType="Connector"
         currentElement={connector}
         diagramElementType={DiagramElementType.LINE}
         onElementTypeChange={vi.fn()}
@@ -67,7 +65,6 @@ describe("PanelHeader — shared type dropdown", () => {
     render(
       <PanelHeader
         {...baseProps}
-        editorType="None"
         currentElement={unconverted}
         diagramElementType={DiagramElementType.BLOCK}
         onElementTypeChange={onElementTypeChange}
@@ -85,7 +82,6 @@ describe("PanelHeader — shared type dropdown", () => {
     render(
       <PanelHeader
         {...baseProps}
-        editorType="Resource"
         currentElement={resource}
         diagramElementType={DiagramElementType.BLOCK}
         onElementTypeChange={vi.fn()}
