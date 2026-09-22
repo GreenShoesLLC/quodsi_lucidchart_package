@@ -13,9 +13,12 @@ Studio editors.
   instead of `ElementEditor`. Wraps its content in the shared
   `HostAdvisorProvider` (enabled while signed in), which the shared editor
   headers and the blank-slate card use for their Advisor button.
-- **`PanelHeader.tsx`** — model/element header: icon, name, accent stripe,
-  type selector, and the "..." overflow menu (Diagram Mapping, View Model
-  JSON, Developer Tools, Status, Settings, About, Remove Quodsi Model).
+- **`PanelHeader.tsx`** — host toolbar above the editor: the Studies
+  launcher (model view) or the type selector (element view), and the "..."
+  overflow menu (Diagram Mapping, View Model JSON, Developer Tools, Status,
+  Settings, About, Remove Quodsi Model). Icon, name, accent stripe and type
+  label are the shared editor's `EditorHeader`'s; only the unconverted view
+  (which mounts no editor) keeps a title and instruction.
 - **`ElementEditor.tsx`** — dispatches to the right editor for the selected
   element's type (the shared Studio Activity/Generator/Model editors via
   their `Lucid*Editor` wrappers, `ResourceBlockEditor`, `SwimLaneEditor`,
