@@ -32,11 +32,11 @@ export function useSimulationRunSender() {
   /**
    * Send an OPEN_DIAGRAM_MAPPING_MODAL message to open the Diagram Mapping
    * screen (spec 2026-09-15: opens inline, in the extension's own bundle --
-   * no longer a hosted Studio embed). documentId/pageId are no longer read
-   * by the host handler, but are harmless to keep sending.
+   * no longer a hosted Studio embed). The host reads the current page
+   * itself, so the payload is just the window-size preference.
    */
-  const openDiagramMappingModal = useCallback((documentId: string, pageId: string) => {
-    send(EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
+  const openDiagramMappingModal = useCallback(() => {
+    send(EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL, { modalSize: getModalSizePref() });
   }, [send]);
 
   /**

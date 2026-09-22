@@ -236,10 +236,7 @@ export const ModelPanel: React.FC = () => {
         {!isSwimLane && <PanelHeader
           currentElement={currentElement}
           onRemoveModel={onRemoveModel}
-          onOpenDiagramMapping={() => openDiagramMappingModal(
-            selection.documentContext?.documentId ?? '',
-            selection.documentContext?.pageId ?? '',
-          )}
+          onOpenDiagramMapping={openDiagramMappingModal}
           onElementTypeChange={onElementTypeChange}
           diagramElementType={diagramElementType}
           onViewModelJson={handleViewModelJson}

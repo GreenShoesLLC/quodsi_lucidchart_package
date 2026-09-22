@@ -134,10 +134,7 @@ export function useLucidBlankSlateAccessor(options: {
     [documentId, pageId],
   )
 
-  const reviewDiagram = useCallback(
-    () => openDiagramMappingModal(documentId, pageId),
-    [openDiagramMappingModal, documentId, pageId],
-  )
+  const reviewDiagram = openDiagramMappingModal
 
   return useMemo(
     () => ({ shapeCount: counts.shapeCount, lineCount: counts.lineCount, convertDiagram, reviewDiagram }),

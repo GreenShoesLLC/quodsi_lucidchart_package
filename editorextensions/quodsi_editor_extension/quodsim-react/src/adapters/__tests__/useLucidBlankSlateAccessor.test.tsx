@@ -82,10 +82,10 @@ describe('useLucidBlankSlateAccessor', () => {
     await expect(promise).rejects.toThrow('Conversion timed out')
   })
 
-  it('reviewDiagram opens Diagram Mapping for this document and page', () => {
+  it('reviewDiagram opens Diagram Mapping', () => {
     const { result } = renderHook(() => useLucidBlankSlateAccessor(base))
     result.current.reviewDiagram?.()
-    expect(openDiagramMappingModal).toHaveBeenCalledWith('doc-1', 'pg-1')
+    expect(openDiagramMappingModal).toHaveBeenCalledTimes(1)
   })
 
   it('two convertDiagram calls post only one AUTO_CONVERT_PAGE, and one success result resolves both', async () => {
