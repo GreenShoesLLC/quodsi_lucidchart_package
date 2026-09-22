@@ -229,9 +229,8 @@ export class SimulationRunHandler {
    * in the way, so the modal opens synchronously and immediately, guarded
    * against a double-open the same way ModelRootHandler's pattern/schedule/
    * work-schedule/settings modals are (see openDiagramMappingModal's own
-   * comment). The payload's documentId/pageId (still sent by the React
-   * sender, unused here) are not required — an absent one is not a
-   * malformed message.
+   * comment). The payload is just the window-size preference; the modal
+   * reads the current page itself.
    */
   private static handleOpenDiagramMappingModal(msg: EnvelopeBase): void {
     const data = (msg.data ?? {}) as { modalSize?: ModalSize };
