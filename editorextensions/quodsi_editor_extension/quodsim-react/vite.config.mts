@@ -1,5 +1,9 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
+// The monorepo's @quodsi/shared package (quodsi_shared/), four levels up.
+const QUODSI_SHARED = fileURLToPath(new URL('../../../../quodsi_shared/', import.meta.url))
 
 // The Lucid extension serves this app from public/quodsim-react/ inside the
 // package zip, never from a server root. `base: './'` is therefore load-bearing,
@@ -65,6 +69,23 @@ export default defineConfig({
     // to Studio's useQuery ("No QueryClient set"); recharts calls React hooks.
     // The lockfile pins react-query to Studio's version (5.99.2). recharts is
     // not a dependency of this package: it resolves up to the monorepo root.
+    // ONE @quodsi/shared (the dual-package hazard, SP3d final review "Bundle
+    // finding"). @quodsi/shared ships ESM (`dist/`, the "import" condition)
+    // and CJS (`dist-cjs/`, "require"). Studio's shared panels `import` it
+    // -> ESM; @quodsi/lucid-shared is compiled to CommonJS and `require`s it
+    // -> CJS. Rolldown bundled BOTH copies (~90 KB gzip, both loaded eagerly
+    // on every panel open), and two module instances also meant two copies of
+    // any module-level state and `instanceof` across the lucid-shared/Studio
+    // boundary silently failing. Aliasing the bare specifiers to the ESM
+    // build makes every import AND require() resolve to the same module;
+    // rolldown's CJS interop wraps the ESM namespace for lucid-shared's
+    // require. This only affects this Vite build (and Vitest): the editor
+    // extension's webpack build and every jest suite still resolve the CJS
+    // build through the package's own `exports`.
+    alias: [
+      { find: /^@quodsi\/shared$/, replacement: `${QUODSI_SHARED}dist/index.js` },
+      { find: /^@quodsi\/shared\/glossary$/, replacement: `${QUODSI_SHARED}dist/generated/index.js` },
+    ],
     dedupe: ['react', 'react-dom', 'lucide-react', '@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@tanstack/react-query', 'recharts'],
   },
   build: {
