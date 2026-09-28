@@ -45,6 +45,7 @@ import {
     generateUniqueName,
     getLogger,
     pickConnectorName,
+    splitActionPath,
 } from '@quodsi/lucid-shared';
 import { StoredResourceRecord } from './StoredResourceRecord';
 import { StorageAdapter } from './StorageAdapter';
@@ -357,7 +358,9 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
  *   - every lever gets a fresh `leverId`; a lever whose `actionId` pointed at
  *     one of the re-minted actions is repointed to that action's NEW id via
  *     the id map `remintActionIds` builds -- a lever whose `actionId` does
- *     not resolve (dangling) is left unchanged.
+ *     not resolve (dangling) is left unchanged. A path-shaped step lever
+ *     (SP3d, `actions[<stepId>].<field>`, no `actionId`) is repointed the
+ *     same way, through the step id inside its path (final review I2).
  *   - the stored `name`, when present, is deduped against every OTHER
  *     Activity's stored name on this page; only on an actual collision does
  *     the name change, and only then does the notice fire.
@@ -393,6 +396,17 @@ function normalizeActivity(item: ItemProxy, page: PageProxy, sa: StorageAdapter,
                 const next: ScenarioLever = { ...lever, leverId: generateUUID() };
                 if (lever.actionId !== undefined && idMap.has(lever.actionId)) {
                     next.actionId = idMap.get(lever.actionId)!;
+                }
+                // Final review I2: since SP3d a step lever is written
+                // path-shaped (`actions[<stepId>].<field>`, no `actionId`).
+                // Repoint the step id inside the path through the SAME id
+                // map, one place (splitActionPath), or the pasted copy's
+                // lever names a step that isn't on it.
+                if (typeof next.path === 'string') {
+                    const split = splitActionPath(next.path);
+                    if (split && idMap.has(split.actionId)) {
+                        next.path = `actions[${idMap.get(split.actionId)!}].${split.field}`;
+                    }
                 }
                 return next;
             });

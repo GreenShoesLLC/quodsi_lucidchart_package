@@ -149,6 +149,64 @@ describe('PasteNormalizer — Activity blocks (Task 5)', () => {
         expect(result.changed).toBe(true);
     });
 
+    // Final review I2: since SP3d the Levers tab writes a step lever
+    // path-shaped (`actions[<stepId>].<field>`, no `actionId`). Paste must
+    // repoint the step id inside that path too, through the same id map --
+    // one place, `splitActionPath` from `@quodsi/shared` (re-exported by
+    // `@quodsi/lucid-shared`) -- or the pasted copy's lever names a step
+    // that doesn't exist on it.
+    it("a path-shaped step lever (SP3d) is repointed to the SAME action's new id inside its path", () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const pasted = addBlock(
+            page,
+            makePastedActivityBlock(sa, 'block-new', 'block-orig', {
+                name: 'Triage',
+                actions: [
+                    { id: 'act-seize', type: ActionType.SEIZE, resourceRequirementId: 'req-1' },
+                    { id: 'act-delay-with-resource', type: ActionType.DELAY_WITH_RESOURCE, resourceRequirementId: 'req-1', duration: { value: 5, unit: 'minutes' } },
+                ],
+                levers: [
+                    { leverId: 'lever-1', path: 'actions[act-delay-with-resource].duration', op: 'scaleRate', enabled: true, label: 'Processing time' },
+                ],
+            })
+        );
+
+        const result = normalizePastedItems([pasted], sa);
+
+        const data = sa.getElementData<{ actions: any[]; levers: any[] }>(pasted)!;
+        const secondAction = data.actions[1];
+        expect(secondAction.type).toBe(ActionType.DELAY_WITH_RESOURCE); // same position as before
+        expect(secondAction.id).not.toBe('act-delay-with-resource');
+
+        expect(data.levers).toHaveLength(1);
+        expect(data.levers[0].leverId).not.toBe('lever-1');
+        expect(data.levers[0].path).toBe(`actions[${secondAction.id}].duration`); // repointed to the NEW id
+        expect(data.levers[0].label).toBe('Processing time');
+        expect(result.changed).toBe(true);
+    });
+
+    it('a path-shaped step lever whose step does not resolve to any action (dangling) keeps its path unchanged', () => {
+        const sa = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const pasted = addBlock(
+            page,
+            makePastedActivityBlock(sa, 'block-new', 'block-orig', {
+                name: 'Triage',
+                actions: [{ id: 'act-delay', type: ActionType.DELAY, duration: { value: 5, unit: 'minutes' } }],
+                levers: [
+                    { leverId: 'lever-1', path: 'actions[act-does-not-exist].priority', op: 'set', enabled: true, label: 'Stray lever' },
+                ],
+            })
+        );
+
+        normalizePastedItems([pasted], sa);
+
+        const data = sa.getElementData<{ levers: any[] }>(pasted)!;
+        expect(data.levers[0].path).toBe('actions[act-does-not-exist].priority');
+        expect(data.levers[0].leverId).not.toBe('lever-1'); // leverId still re-minted
+    });
+
     it('a lever whose actionId does not resolve to any action (dangling) is left unchanged', () => {
         const sa = new StorageAdapter();
         const page = makeFakePage('page-1');

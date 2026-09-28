@@ -121,6 +121,11 @@ export {
 } from '@quodsi/shared';
 export type { ScenarioLever } from '@quodsi/shared';
 
+// The path-shaped lever's `actions[<stepId>].<field>` splitter (final review
+// I2): PasteNormalizer uses it to repoint a step lever's path through the
+// same id map it already repoints the old-shape `actionId` through.
+export { splitActionPath } from '@quodsi/shared';
+
 // The clean wire document: Lucid serializes a live ModelDefinition with the
 // same assembly step drawio, Visio and Studio use (defToCleanDocument), and
 // types its stored page data with the same ISerialized* shapes.
