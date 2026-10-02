@@ -51,7 +51,7 @@ describe('ConnectorEditor — CONNECTOR-scoped scenario-lever authoring (seam)',
     expect(screen.getByTestId('lever-authoring')).toBeInTheDocument()
     // Flat variant: no "Scenario levers" disclosure to open first.
     expect(screen.queryByRole('button', { name: /scenario levers/i })).toBeNull()
-    expect(screen.getByLabelText(/use Share of work as a scenario lever/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/use Weight as a scenario lever/i)).toBeInTheDocument()
   })
 
   it('badges the Levers tab with the enabled-lever count when a connector already has a lever', () => {
@@ -61,7 +61,7 @@ describe('ConnectorEditor — CONNECTOR-scoped scenario-lever authoring (seam)',
     renderEditor(makeReferenceData(c1Levers))
     expect(screen.getByRole('tab', { name: 'Levers' })).toHaveTextContent('1')
     openLeversTab()
-    expect((screen.getByLabelText(/use Share of work as a scenario lever/i) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement).checked).toBe(true)
   })
 
   it('authors the SELECTED connector only: c2 shows its own (empty) levers, not c1\'s', () => {
@@ -72,14 +72,14 @@ describe('ConnectorEditor — CONNECTOR-scoped scenario-lever authoring (seam)',
     expect(screen.getByRole('tab', { name: 'Levers' })).not.toHaveTextContent('1')
     openLeversTab()
     expect(screen.getAllByTestId('lever-authoring').length).toBe(1)
-    expect((screen.getByLabelText(/use Share of work as a scenario lever/i) as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement).checked).toBe(false)
   })
 
-  it('enabling the Share of work lever dispatches updateElement(c1, Connector, { levers: [path-shaped] })', async () => {
+  it('enabling the Weight lever dispatches updateElement(c1, Connector, { levers: [path-shaped] })', async () => {
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
     renderEditor(makeReferenceData(), 'c1', updateElement)
     openLeversTab()
-    const checkbox = screen.getByLabelText(/use Share of work as a scenario lever/i) as HTMLInputElement
+    const checkbox = screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement
     expect(checkbox.checked).toBe(false)
 
     fireEvent.click(checkbox)

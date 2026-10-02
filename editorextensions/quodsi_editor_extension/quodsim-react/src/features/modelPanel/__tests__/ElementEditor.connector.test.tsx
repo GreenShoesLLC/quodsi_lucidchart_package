@@ -118,7 +118,7 @@ describe("ElementEditor — case Connector renders the shared ConnectorEditor", 
     expect(screen.queryByTestId("lever-authoring")).not.toBeInTheDocument();
   });
 
-  it("authors a Share of work lever from the Levers tab through the ELEMENT_UPDATE sender", async () => {
+  it("authors a Weight lever from the Levers tab through the ELEMENT_UPDATE sender", async () => {
     mockUpdateElement.mockClear();
     render(
       <ElementEditor
@@ -128,7 +128,7 @@ describe("ElementEditor — case Connector renders the shared ConnectorEditor", 
       />
     );
     fireEvent.click(screen.getByRole("tab", { name: "Levers" }));
-    fireEvent.click(screen.getByLabelText(/use Share of work as a scenario lever/i));
+    fireEvent.click(screen.getByLabelText(/use Weight as a scenario lever/i));
     // The adapter sends after an optimistic overlay + notify, so the call
     // lands a tick later (same waitFor the seam tests use).
     await waitFor(() => expect(mockUpdateElement).toHaveBeenCalled());
