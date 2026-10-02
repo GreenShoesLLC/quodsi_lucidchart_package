@@ -4,7 +4,7 @@ import { LucidElementFactory } from '../../src/services/LucidElementFactory';
 import { migrateResourcesToModelLevel } from '../../src/core/ResourceStorageMigration';
 import { buildLegacyResourcesPage, IDS } from '../fixtures/legacyResourcesPage';
 import { makeFakePage, makeFakeBlock, addBlock } from '../helpers/fakeProxies';
-import { SimulationObjectType } from '@quodsi/lucid-shared';
+import { SimulationObjectType, evaluateValidationGate } from '@quodsi/lucid-shared';
 
 function build(page: any) {
     const sa = new StorageAdapter();
@@ -115,5 +115,51 @@ describe('ModelDefinitionPageBuilder with q_resources', () => {
         const { def, builder } = build(page);
         expect(def.resources.size()).toBe(0);
         expect(builder.getLastResourceLinkRejections()).toEqual([]);
+    });
+
+    describe('runtime-derive lanes mark their resource autoManaged (ClickUp 86e294z0p)', () => {
+        // A runtime-derive lane gets Seize/Release injected at serialization
+        // (SwimLaneResourceInjector), so its resource IS used at runtime even
+        // though no step in the in-editor ModelDefinition names it.
+        function lanePage() {
+            const sa = new StorageAdapter();
+            const page = makeFakePage('p');
+            sa.setResources(page, [
+                { id: 'res-derive', name: 'Derived', capacity: 1 },
+                { id: 'res-explicit', name: 'Explicit', capacity: 1 },
+                { id: 'res-loose', name: 'Loose', capacity: 1 },
+            ]);
+            const swim = addBlock(page, makeFakeBlock('blk-swim', { className: 'AdvancedSwimLaneBlock', box: { x: 0, y: 0, w: 800, h: 200 }, lanes: ['Derived', 'Explicit'] }));
+            swim.shapeData.set('q_swimlane', JSON.stringify({
+                lanes: [
+                    { laneId: 'lane-d', titleSnapshot: 'Derived', assignmentMode: 'runtime-derive', resourceId: 'res-derive' },
+                    { laneId: 'lane-e', titleSnapshot: 'Explicit', assignmentMode: 'explicit', resourceId: 'res-explicit' },
+                ],
+                lastSyncedAt: '2026-01-01T00:00:00.000Z',
+            }));
+            return build(page);
+        }
+        const notUsedIds = (def: any) => evaluateValidationGate(def).result.issues
+            .filter((i: any) => i.code === 'resource_not_used')
+            .map((i: any) => i.elementId)
+            .sort();
+
+        it('flags only the runtime-derive lane resource', () => {
+            const { def } = lanePage();
+            expect((def.resources.get('res-derive') as any).autoManaged).toBe(true);
+            expect((def.resources.get('res-explicit') as any).autoManaged).toBeFalsy();
+            expect((def.resources.get('res-loose') as any).autoManaged).toBeFalsy();
+        });
+
+        it('a runtime-derive lane resource raises no resource_not_used; explicit and unclaimed ones still do', () => {
+            const { def } = lanePage();
+            expect(notUsedIds(def)).toEqual(['res-explicit', 'res-loose']);
+        });
+
+        it('never reaches the wire', () => {
+            const { def } = lanePage();
+            const wire = JSON.parse(JSON.stringify(def.resources.get('res-derive')!.toJSON()));
+            expect(wire.autoManaged).toBeUndefined();
+        });
     });
 });

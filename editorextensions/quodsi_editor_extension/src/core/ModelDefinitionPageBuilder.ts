@@ -13,6 +13,7 @@ import {
     SeasonMode,
     UnitlessSample,
     SwimLaneQuodsiData,
+    SwimLaneLaneMapping,
     ResourceFinancialProperties,
     ResourceClaim,
     ResourceLaneRef,
@@ -297,7 +298,10 @@ export class ModelDefinitionPageBuilder {
     /**
      * Stamps the TRANSIENT claimant markers (`shapeId` / `shapeLabel` /
      * `laneRef`) and the geometry onto the resources something on the canvas
-     * claims.
+     * claims. A resource won by a `runtime-derive` lane is also marked
+     * `autoManaged`: SwimLaneResourceInjector adds its Seize/Release at
+     * serialization, so validation must not call it unused (ClickUp
+     * 86e294z0p). Like the other markers it never reaches the wire.
      *
      * Claims are collected in DOCUMENT ORDER - `page.allBlocks` order, and
      * within a swimlane block, lane order - because that order is
@@ -308,7 +312,7 @@ export class ModelDefinitionPageBuilder {
      * kept on `lastResourceLinkRejections` for validation to surface.
      */
     private linkResourceClaimants(page: PageProxy, modelDefinition: ModelDefinition): void {
-        type Claimant = { claim: ResourceClaim; block: BlockProxy };
+        type Claimant = { claim: ResourceClaim; block: BlockProxy; assignmentMode?: SwimLaneLaneMapping['assignmentMode'] };
         const claimants: Claimant[] = [];
         for (const [blockId, block] of page.allBlocks) {
             const typeInfo = this.storageAdapter.getElementType(block);
@@ -327,6 +331,7 @@ export class ModelDefinitionPageBuilder {
                             if (lane?.resourceId) {
                                 claimants.push({
                                     block,
+                                    assignmentMode: lane.assignmentMode,
                                     claim: {
                                         kind: 'lane',
                                         claimantId: `${blockId}:${lane.laneId}`,
@@ -358,6 +363,8 @@ export class ModelDefinitionPageBuilder {
                 resource.shapeLabel = SimObjectLucid.blockLabel(claimant.block);
             } else {
                 resource.laneRef = claim.laneRef;
+                // Resources are minted fresh each build, so an unflagged one stays absent.
+                if (claimant.assignmentMode === 'runtime-derive') resource.autoManaged = true;
             }
         }
         this.lastResourceLinkRejections = resolution.rejected;
