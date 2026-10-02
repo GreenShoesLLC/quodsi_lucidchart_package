@@ -17,7 +17,7 @@ export class StudiesModal extends RoutingModal {
     const pairs: Array<[string, string]> = [
       ['view', 'studies'],
       ['apiBaseUrl', getApiBaseUrl() ?? ''],
-      ['title', 'Studies'],
+      ['title', 'What-if runs'],
     ];
     if (opts.modelId) pairs.push(['modelId', opts.modelId]);
     const url = `quodsim-react/index.html?${pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;

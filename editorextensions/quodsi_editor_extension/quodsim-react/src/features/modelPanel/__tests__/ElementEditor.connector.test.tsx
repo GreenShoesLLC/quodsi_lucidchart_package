@@ -1,7 +1,7 @@
 import React from "react";
 import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { ElementEditor } from "../ElementEditor";
-import { SimulationObjectType, ScenarioPropertyName } from "@quodsi/lucid-shared";
+import { SimulationObjectType } from "@quodsi/lucid-shared";
 import { setView } from "quodsi_studio/platforms/shared";
 
 // This file predates Complexity Views and exercises the shared
@@ -136,7 +136,7 @@ describe("ElementEditor — case Connector renders the shared ConnectorEditor", 
       "c1",
       expect.any(String),
       expect.objectContaining({
-        levers: [expect.objectContaining({ propertyName: ScenarioPropertyName.WEIGHT })],
+        levers: [expect.objectContaining({ path: 'weight', op: 'set' })],
       })
     );
   });

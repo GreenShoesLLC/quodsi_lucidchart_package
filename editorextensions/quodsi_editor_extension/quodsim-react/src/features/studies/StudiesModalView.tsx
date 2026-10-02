@@ -13,7 +13,7 @@ const StudiesSurface = lazy(() => import('quodsi_studio/platforms/studies').then
 export function StudiesModalView() {
   const params = useMemo(() => new URLSearchParams(window.location.search), [])
   const apiBaseUrl = params.get('apiBaseUrl')
-  const title = params.get('title') ?? 'Studies'
+  const title = params.get('title') ?? 'What-if runs'
   const cachedModelId = params.get('modelId') || null
 
   const host = useLucidModalHost()
@@ -48,7 +48,7 @@ export function StudiesModalView() {
       <ModalHeader title={title} onClose={() => host.closeModal()} />
       <div className="flex-1 min-h-0">
         {!apiBaseUrl ? (
-          <p role="alert" className="p-4 text-sm text-secondary">Studies isn&apos;t configured for this environment.</p>
+          <p role="alert" className="p-4 text-sm text-secondary">What-if runs isn&apos;t configured for this environment.</p>
         ) : signedIn === false ? (
           <p role="alert" className="p-4 text-sm text-secondary">Sign in to Quodsi in the Quodsi panel, then reopen Studies.</p>
         ) : (

@@ -111,18 +111,20 @@ export { parseSimulationObjectType } from '@quodsi/shared';
 // settings patch are both built from it (spec 2026-09-12).
 export { MODEL_FIELD_KEYS, MODEL_DATE_FIELD_KEYS } from '@quodsi/shared';
 
-// Scenario levers
+// Scenario levers. `ScenarioLever` is the two-shape union since SP3d (path
+// shape + the old property shape, translated on read -- J1); Lucid stores and
+// copies levers opaquely. `createScenarioLever` builds the OLD shape, for
+// fixtures that model levers stored before SP3d.
 export {
   createScenarioLever,
   ScenarioPropertyName,
-  toggleLever,
-  actionDurationLeverLabel,
-  leverForAction,
-  toggleActionLever,
-  patchActionLever,
-  patchActionRange,
 } from '@quodsi/shared';
 export type { ScenarioLever } from '@quodsi/shared';
+
+// The path-shaped lever's `actions[<stepId>].<field>` splitter (final review
+// I2): PasteNormalizer uses it to repoint a step lever's path through the
+// same id map it already repoints the old-shape `actionId` through.
+export { splitActionPath } from '@quodsi/shared';
 
 // The clean wire document: Lucid serializes a live ModelDefinition with the
 // same assembly step drawio, Visio and Studio use (defToCleanDocument), and

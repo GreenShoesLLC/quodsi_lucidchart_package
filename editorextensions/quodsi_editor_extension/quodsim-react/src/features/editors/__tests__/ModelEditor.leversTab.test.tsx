@@ -36,8 +36,10 @@ describe('Model editor — Levers tab (host write, final-fix brief 2026-09-13 Fi
     })
 
     expect(transport.send).toHaveBeenCalledTimes(1)
-    const payload = transport.send.mock.calls[0][0] as { levers: unknown[] }
+    const payload = transport.send.mock.calls[0][0] as { levers: Array<Record<string, unknown>> }
     expect(payload.levers).toHaveLength(1)
+    // SP3d: path-shaped, with the catalog's Replications range.
+    expect(payload.levers[0]).toMatchObject({ path: 'replications', op: 'set', range: { min: 5, max: 25, step: 5 } })
   })
 
   it('a refused model-root write shows the host message in the shared header save status', async () => {

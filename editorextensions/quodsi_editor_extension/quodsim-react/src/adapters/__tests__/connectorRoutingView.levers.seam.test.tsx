@@ -75,7 +75,7 @@ describe('ConnectorEditor — CONNECTOR-scoped scenario-lever authoring (seam)',
     expect((screen.getByLabelText(/use Weight as a scenario lever/i) as HTMLInputElement).checked).toBe(false)
   })
 
-  it('enabling the WEIGHT lever dispatches updateElement(c1, Connector, { levers: [non-empty] })', async () => {
+  it('enabling the Weight lever dispatches updateElement(c1, Connector, { levers: [path-shaped] })', async () => {
     const updateElement = vi.fn<(id: string, type: string, data: Record<string, unknown>) => Promise<void>>(async () => {})
     renderEditor(makeReferenceData(), 'c1', updateElement)
     openLeversTab()
@@ -91,7 +91,7 @@ describe('ConnectorEditor — CONNECTOR-scoped scenario-lever authoring (seam)',
     const levers = (data as { levers: ScenarioLever[] }).levers
     expect(Array.isArray(levers)).toBe(true)
     expect(levers.length).toBeGreaterThan(0)
-    expect(levers[0].propertyName).toBe(ScenarioPropertyName.WEIGHT)
-    expect(levers[0].enabled).toBe(true)
+    // SP3d: a lever ticked in the tab is written path-shaped.
+    expect(levers[0]).toMatchObject({ path: 'weight', op: 'set', enabled: true })
   })
 })
