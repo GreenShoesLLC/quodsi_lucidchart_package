@@ -83,8 +83,19 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_ADVISOR_MODAL, { ...focus, modalSize: getModalSizePref() });
   }, [send]);
 
+  /**
+   * Send an OPEN_STATUS_MODAL message to open the shared StatusPanel
+   * (?view=status) as a real Lucid modal (ClickUp 86e3f949t). Handled by
+   * simulationRunHandler.ts. No payload: the modal has a fixed size and the
+   * host puts the API base URL on its URL.
+   */
+  const openStatusModal = useCallback(() => {
+    send(EnvelopeMessageType.OPEN_STATUS_MODAL, {});
+  }, [send]);
+
   return {
     openStudiesModal,
+    openStatusModal,
     openDiagramMappingModal,
     openPatternModal,
     openScheduleModal,

@@ -120,6 +120,13 @@ export enum EnvelopeMessageType {
   // never the model.
   OPEN_SETTINGS_MODAL = "OPEN_SETTINGS_MODAL",
 
+  // Status (ClickUp 86e3f949t): the model panel's ⋯ -> Status opens
+  // quodsi_studio's shared StatusPanel in a Lucid modal (quodsim-react
+  // ?view=status, StatusModal) instead of Studio's /status in a browser tab.
+  // No payload: the view fetches the public GET /status itself, from the
+  // apiBaseUrl the extension puts on its URL. It talks to no channel.
+  OPEN_STATUS_MODAL = "OPEN_STATUS_MODAL",
+
   // Diagram Mapping (Phase 2B). ANALYZE_PAGE/APPLY_SHAPE_CHANGES originate in
   // the inline Diagram Mapping modal (spec 2026-09-15, "opens inline") and
   // are answered by DiagramMappingRelayHandler -- see DiagramMappingModal.ts

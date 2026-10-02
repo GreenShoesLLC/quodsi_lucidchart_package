@@ -9,6 +9,7 @@ import { AuthHandler } from './authHandler';
 import { StudiesModal } from '../../../panels/StudiesModal';
 import { AdvisorConsultModal } from '../../../panels/AdvisorConsultModal';
 import { DiagramMappingModal } from '../../../panels/DiagramMappingModal';
+import { StatusModal } from '../../../panels/StatusModal';
 import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
 /**
@@ -43,6 +44,10 @@ export class SimulationRunHandler {
    */
   private static openDiagramMappingModal: DiagramMappingModal | null = null;
 
+  /** The Status modal currently open, if any -- same singleton guard as
+   *  openDiagramMappingModal above (a double-click must not open two). */
+  private static openStatusModal: StatusModal | null = null;
+
   /**
    * Handle messages related to simulation run operations
    *
@@ -73,6 +78,10 @@ export class SimulationRunHandler {
 
       case EnvelopeMessageType.OPEN_ADVISOR_MODAL:
         SimulationRunHandler.handleOpenAdvisorModal(msg);
+        return true;
+
+      case EnvelopeMessageType.OPEN_STATUS_MODAL:
+        SimulationRunHandler.handleOpenStatusModal();
         return true;
 
       case EnvelopeMessageType.RUN_SCENARIO:
@@ -280,6 +289,28 @@ export class SimulationRunHandler {
       mode: data.mode,
       modalSize: data.modalSize,
     }).show();
+  }
+
+  /**
+   * Handle OPEN_STATUS_MODAL (ClickUp 86e3f949t): open the shared StatusPanel
+   * (quodsim-react ?view=status) in a StatusModal. No server round trip, no
+   * channel: the view fetches the public GET /status itself. Guarded against
+   * a double-open, released on frameClosed (identity-checked).
+   */
+  private static handleOpenStatusModal(): void {
+    if (SimulationRunHandler.openStatusModal) {
+      SimulationRunHandler.logger.debug('OPEN_STATUS_MODAL: a status modal is already open; ignoring');
+      return;
+    }
+    const modal = new StatusModal(ModelManager.getClient(), {
+      onClosed: () => {
+        if (SimulationRunHandler.openStatusModal === modal) {
+          SimulationRunHandler.openStatusModal = null;
+        }
+      },
+    });
+    SimulationRunHandler.openStatusModal = modal;
+    modal.show();
   }
 
   /**
