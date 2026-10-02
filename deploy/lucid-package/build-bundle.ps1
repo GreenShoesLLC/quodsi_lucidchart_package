@@ -102,10 +102,10 @@ switch ($TargetEnvironment) {
         exit 1
     }
 }
-# Cloud packages must NOT bake in the local-dev Studio URL override
-# (editorextensions/.../local-studio-url.txt). build-bundle.ps1 only ever builds
-# cloud envs (Dev/TST/PRD), so always tell webpack's readLocalStudioOverride() to
-# ignore that file — otherwise the "Open in Studio" (film) button points at
+# Cloud packages must NOT bake in the local-dev API URL override
+# (editorextensions/.../local-api-url.txt). build-bundle.ps1 only ever builds
+# cloud envs (Dev/TST/PRD), so always tell webpack's readLocalApiOverride() to
+# ignore that file — otherwise the compiled Studies/Advisor modals point at
 # localhost. `npm start` (local dev) leaves this unset and still uses the file.
 $env:QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE = "1"
 

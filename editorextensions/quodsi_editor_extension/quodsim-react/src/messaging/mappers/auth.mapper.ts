@@ -13,7 +13,6 @@ export function mapAuth(msg: EnvelopeBase): MessagingAction | null {
       logger.debug('AUTH_STATUS received:', {
         isAuthenticated: data.isAuthenticated,
         userId: data.user?.id,
-        studioBaseUrl: data.config?.studioBaseUrl,
       });
       return {
         type: 'AUTH_STATUS_UPDATE',

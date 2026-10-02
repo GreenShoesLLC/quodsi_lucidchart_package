@@ -3,7 +3,6 @@
 // token to carry, so events raised before auth must wait for auth-ready.
 // (Data actions used to run an oauthXhr('lucid', ...) workaround whose consent
 // dialog, before auth, suppressed the Kinde flow -- 2026-08-27.)
-(globalThis as any).__LOCAL_STUDIO_OVERRIDE__ = '';
 const sendMock = jest.fn();
 jest.mock('../../src/core/messaging/index', () => ({ router: { send: sendMock } }));
 const client = {

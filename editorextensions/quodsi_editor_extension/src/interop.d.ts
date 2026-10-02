@@ -8,14 +8,6 @@ declare namespace lucid {
 
 /**
  * Build-time constant injected by webpack's DefinePlugin from
- * `local-studio-url.txt` (gitignored). Empty string when the file is
- * absent — i.e., in CI / cloud bundles. See authHandler.ts for usage
- * and webpack.config.js for the inject logic.
- */
-declare const __LOCAL_STUDIO_OVERRIDE__: string;
-
-/**
- * Build-time constant injected by webpack's DefinePlugin from
  * `local-api-url.txt` (gitignored). Empty string when the file is absent.
  * See apiBaseUrl.ts for usage and webpack.config.js for the inject logic.
  */

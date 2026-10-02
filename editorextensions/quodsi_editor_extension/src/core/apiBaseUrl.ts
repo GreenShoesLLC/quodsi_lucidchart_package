@@ -4,8 +4,7 @@
  * (quodsim-react ?view=studies|advisor) call quodsi_api directly and receive
  * this origin on their URL.
  *
- * Package IDs are the `id` field of each manifest_*.json (see
- * authHandler.ts's STUDIO_URL_BY_PACKAGE_ID):
+ * Package IDs are the `id` field of each manifest_*.json:
  *   - 29e0d321-… = QuodsiDev  → ca-quodsim-dev-api
  *   - dcde0747-… = QuodsiTest → ca-quodsim-test-api
  * Prod is deliberately absent: no prod Azure estate exists yet, so the prod
@@ -21,7 +20,7 @@ export const API_URL_BY_PACKAGE_ID: Readonly<Record<string, string>> = {
 /**
  * Resolve the quodsi_api base URL for the current environment.
  *
- * Resolution order (mirrors `getStudioBaseUrl` in authHandler.ts):
+ * Resolution order:
  *   1. `__LOCAL_API_OVERRIDE__` — build-time inject from `local-api-url.txt`
  *      (gitignored; e.g. `http://localhost:8000`). Non-empty only in local
  *      dev builds; see webpack.config.js `readLocalApiOverride()`.

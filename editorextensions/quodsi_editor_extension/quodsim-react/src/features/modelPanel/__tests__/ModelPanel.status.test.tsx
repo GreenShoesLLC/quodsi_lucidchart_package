@@ -1,8 +1,8 @@
 // Status opens quodsi_studio's shared StatusPanel in a Lucid modal (ClickUp
 // 86e3f949t): the panel sends OPEN_STATUS_MODAL and the extension opens
-// ?view=status. It no longer opens Studio's /status in a browser tab, and no
-// longer depends on the Studio URL: with no API base URL configured the modal
-// itself shows a clear "not configured" message.
+// ?view=status. It no longer opens Studio's /status in a browser tab: with
+// no API base URL configured the modal itself shows a clear "not
+// configured" message.
 import React from "react";
 import { render } from "@testing-library/react";
 import { ModelPanel } from "../ModelPanel";
@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
     onValidate: vi.fn(),
     onRemoveModel: vi.fn(),
   },
-  auth: { isAuthenticated: true, config: undefined as undefined | { studioBaseUrl?: string } },
+  auth: { isAuthenticated: true, config: undefined as undefined | Record<string, unknown> },
   headerProps: null as any,
   openStatusModal: vi.fn(),
 }));
@@ -74,7 +74,7 @@ describe("ModelPanel — Status opens the in-app status modal", () => {
   beforeEach(() => mocks.openStatusModal.mockClear());
 
   it("sends OPEN_STATUS_MODAL (via openStatusModal) and opens no browser tab", () => {
-    mocks.auth.config = { studioBaseUrl: "https://dev-studio.quodsi.com" };
+    mocks.auth.config = { salesEmail: "sales@quodsi.com" };
     render(<ModelPanel />);
     expect(typeof mocks.headerProps.onOpenStatus).toBe("function");
     mocks.headerProps.onOpenStatus();
@@ -82,7 +82,7 @@ describe("ModelPanel — Status opens the in-app status modal", () => {
     expect(openSpy).not.toHaveBeenCalled();
   });
 
-  it("still offers Status when the extension reported no Studio URL", () => {
+  it("still offers Status when the extension reported no config", () => {
     render(<ModelPanel />);
     expect(typeof mocks.headerProps.onOpenStatus).toBe("function");
     mocks.headerProps.onOpenStatus();
