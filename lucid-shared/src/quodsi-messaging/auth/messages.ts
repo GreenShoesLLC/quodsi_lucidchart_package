@@ -28,21 +28,12 @@ export interface QuodsiUserInfo {
  * authHandler looks them up at runtime from `lucid.getPackageId()`.
  */
 export interface ExtensionConfig {
-  /** Origin of the Studio web app for this Lucid package (e.g.,
-   *  `https://dev-studio.quodsi.com`). Used by the AccountStrip's
-   *  "Create New User" menu item to open Studio's /welcome page in a new
-   *  tab for new-user signup (Studio handles the Kinde signup with
-   *  isCreateOrg + planInterest atomically, which the Lucid extension's
-   *  platform-mediated OAuth flow can't). No trailing slash. */
-  studioBaseUrl?: string;
-
   /** Sales contact address for PlanDetails's "Contact us" block (behind
    *  AuthStatusIndicator's "Plan details" disclosure; mailto link + visible
-   *  copy-to-clipboard address). Optional and
-   *  environment-overridable for the same reason as `studioBaseUrl` — kept
-   *  out of the React bundle so one build can run against any Lucid app.
-   *  Absent on older hosts (or if the host never chooses to set it); the
-   *  panel falls back to a hardcoded `sales@quodsi.com` default in that
+   *  copy-to-clipboard address). Optional and environment-overridable —
+   *  kept out of the React bundle so one build can run against any Lucid
+   *  app. Absent on older hosts (or if the host never chooses to set it);
+   *  the panel falls back to a hardcoded `sales@quodsi.com` default in that
    *  case. Deliberately NOT a CRA build var (`REACT_APP_*`), which would
    *  bake a single hardcoded value into the compiled bundle. */
   salesEmail?: string;

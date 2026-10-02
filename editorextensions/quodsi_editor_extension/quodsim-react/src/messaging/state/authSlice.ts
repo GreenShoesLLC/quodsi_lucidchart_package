@@ -35,7 +35,6 @@ export function authReducer(
         isAuthenticated: action.isAuthenticated,
         userId: action.user?.id,
         email: action.user?.email,
-        studioBaseUrl: action.config?.studioBaseUrl,
       });
       return {
         ...state,

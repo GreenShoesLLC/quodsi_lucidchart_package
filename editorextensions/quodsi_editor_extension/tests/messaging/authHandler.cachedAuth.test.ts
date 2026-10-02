@@ -4,9 +4,6 @@
 // token → no refetch; concurrent runs → one token round-trip; new token → refetch.
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 
-// Build-time DefinePlugin constant read by getExtensionConfig(); absent under jest.
-(globalThis as any).__LOCAL_STUDIO_OVERRIDE__ = '';
-
 const sendMock = jest.fn();
 jest.mock('../../src/core/messaging/index', () => ({ router: { send: sendMock } }));
 

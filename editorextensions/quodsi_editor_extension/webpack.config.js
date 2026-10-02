@@ -9,41 +9,12 @@ const { rewriteDevHtml, stripToRelative } = require("./scripts/devHtmlRewrite");
 
 const reactTargets = [{ name: "quodsim-react", port: 3000 }];
 
-// Local-dev override for the Studio URL used by AccountStrip's "Create New
-// User" menu. Reads from `local-studio-url.txt` (gitignored) if present —
-// the developer creates that file once with a single line like
-// `https://localhost:3030` to route the button at their local Studio dev
-// server during iteration. Cloud bundles ignore it: a true CI build won't have
-// the file, and build-bundle.ps1 (local builds of cloud packages) sets
-// QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1 — either way the extension falls back to
-// the per-package-ID mapping in authHandler.ts (production behavior).
-function readLocalStudioOverride() {
-  // Cloud packages (build-bundle.ps1 for Dev/TST/PRD) set this so a LOCAL build
-  // of a cloud package ignores local-studio-url.txt — otherwise `localhost`
-  // gets baked into __LOCAL_STUDIO_OVERRIDE__ and overrides the per-package-ID
-  // Studio URL. `npm start` (local dev) leaves it unset.
-  if (process.env.QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE === "1") {
-    console.log("[webpack] __LOCAL_STUDIO_OVERRIDE__ skipped (QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1)");
-    return "";
-  }
-  const overrideFile = path.resolve(__dirname, "local-studio-url.txt");
-  try {
-    const value = fs.readFileSync(overrideFile, "utf8").trim();
-    if (value) {
-      console.log(`[webpack] __LOCAL_STUDIO_OVERRIDE__ = ${value} (from ${overrideFile})`);
-      return value;
-    }
-  } catch {
-    // file doesn't exist — fine, no override
-  }
-  return "";
-}
-
 // Local-dev override for the quodsi_api URL the compiled Studies and Advisor
-// modals call (see src/core/apiBaseUrl.ts). Same rules as
-// readLocalStudioOverride(): read from `local-api-url.txt` (gitignored, one
-// line such as `http://localhost:8000`), skipped for cloud packages via
-// QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1.
+// modals call (see src/core/apiBaseUrl.ts). Reads from `local-api-url.txt`
+// (gitignored, one line such as `http://localhost:8000`), skipped for cloud
+// packages via QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1 (build-bundle.ps1 sets
+// this for every cloud env so a local build of a cloud package never bakes
+// in `localhost`; `npm start` leaves it unset).
 function readLocalApiOverride() {
   if (process.env.QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE === "1") {
     console.log("[webpack] __LOCAL_API_OVERRIDE__ skipped (QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1)");
@@ -94,7 +65,6 @@ module.exports = (env, argv) => {
   },
   plugins: [
     new webpack.DefinePlugin({
-      __LOCAL_STUDIO_OVERRIDE__: JSON.stringify(readLocalStudioOverride()),
       __LOCAL_API_OVERRIDE__: JSON.stringify(readLocalApiOverride()),
       __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
     }),

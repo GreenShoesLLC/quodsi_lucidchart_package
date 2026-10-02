@@ -5,66 +5,8 @@ import { getLogger } from '@quodsi/lucid-shared';
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-/**
- * Map from Lucid package ID (from `lucid.getPackageId()`) to the Studio web
- * app's origin for that environment. Used to populate ExtensionConfig in
- * AUTH_STATUS broadcasts so the React panel can open Studio's /welcome page
- * for the "Create New User" flow without hardcoding URLs in React.
- *
- * Lucid package IDs come from the `id` field of each manifest_*.json:
- *   - 29e0d321-… = QuodsiDev (manifest.json default + manifest_dev.json + manifest_local.json)
- *   - dcde0747-… = QuodsiTest (manifest_test.json)
- *   - d38c7ced-… = Quodsi prod (manifest_prod.json)
- */
-const STUDIO_URL_BY_PACKAGE_ID: Record<string, string> = {
-  '29e0d321-5cb2-4ae0-a1b6-dabd512c098c': 'https://dev-studio.quodsi.com',
-  'dcde0747-95a4-4bf8-9e17-b4cf41afa1c7': 'https://test-studio.quodsi.com',
-  'd38c7ced-35e8-4962-a622-1d3fa480ab58': 'https://studio.quodsi.com',
-};
-
-/**
- * Build-time local-dev override for the Studio URL. Injected by webpack's
- * DefinePlugin from `local-studio-url.txt` (gitignored). The developer
- * creates that file once with a single line like `https://localhost:3030`
- * and the override is baked into every local build automatically.
- *
- * In CI / cloud bundles the file doesn't exist → __LOCAL_STUDIO_OVERRIDE__
- * is the empty string → no override → falls back to per-package-ID lookup
- * (production behavior).
- *
- * No source-code editing per build, no remembering to revert. See
- * webpack.config.js `readLocalStudioOverride()` for the inject logic.
- */
-
-/**
- * Resolve the Studio web app's base URL for the current environment.
- *
- * Resolution order:
- *   1. `__LOCAL_STUDIO_OVERRIDE__` — build-time inject from `local-studio-url.txt`
- *      (e.g. `https://localhost:3030`). Non-empty only in local dev builds.
- *   2. `STUDIO_URL_BY_PACKAGE_ID[lucid.getPackageId()]` — package-ID lookup for
- *      dev / test / prod deployments.
- *   3. `undefined` — if the packageId is unknown or the Lucid global is not
- *      available (e.g. unit-test context).
- *
- * Exported so other extension modules (e.g. the compiled Studies/Advisor
- * modals) can resolve the correct origin without duplicating this logic.
- */
-export function getStudioBaseUrl(): string | undefined {
-  if (__LOCAL_STUDIO_OVERRIDE__) {
-    return __LOCAL_STUDIO_OVERRIDE__;
-  }
-  try {
-    const packageId = lucid.getPackageId();
-    return STUDIO_URL_BY_PACKAGE_ID[packageId];
-  } catch {
-    // lucid global isn't available in some test contexts; leave undefined.
-    return undefined;
-  }
-}
-
 function getExtensionConfig(): ExtensionConfig {
-  return { studioBaseUrl: getStudioBaseUrl() };
+  return {};
 }
 
 /**

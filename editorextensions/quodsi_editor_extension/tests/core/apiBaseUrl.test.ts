@@ -1,10 +1,9 @@
 // tests/core/apiBaseUrl.test.ts
 //
 // getApiBaseUrl() resolves the quodsi_api origin the compiled Studies and
-// Advisor modals call. Same resolution order as authHandler.getStudioBaseUrl:
-// the webpack-injected __LOCAL_API_OVERRIDE__ (local-api-url.txt) first, then
-// the per-package-id map, else undefined. Both globals are read at call time,
-// so each test sets the ones it needs.
+// Advisor modals call: the webpack-injected __LOCAL_API_OVERRIDE__
+// (local-api-url.txt) first, then the per-package-id map, else undefined.
+// The global is read at call time, so each test sets what it needs.
 
 import { getApiBaseUrl } from '../../src/core/apiBaseUrl';
 
