@@ -10,6 +10,9 @@ import { DiagramMappingView } from "./features/diagramMapping/DiagramMappingView
 
 // Lazy: the compiled Studio surfaces stay out of the panel's entry chunk.
 const StudiesModalView = React.lazy(() => import("./features/studies/StudiesModalView").then((m) => ({ default: m.StudiesModalView })));
+// Status: the shared StatusPanel; it fetches the public GET /status itself
+// and talks to no host channel (StatusModal is a plain SDK Modal).
+const StatusModalView = React.lazy(() => import("./features/status/StatusModalView").then((m) => ({ default: m.StatusModalView })));
 const AdvisorModalView = React.lazy(() => import("./features/studies/AdvisorModalView").then((m) => ({ default: m.AdvisorModalView })));
 
 export const App: React.FC = () => {
@@ -62,6 +65,14 @@ export const App: React.FC = () => {
           <DiagramMappingView />
         </div>
       </MessageProvider>
+    );
+  }
+
+  if (urlParams.get("view") === "status") {
+    return (
+      <div className="h-full w-full">
+        <React.Suspense fallback={null}><StatusModalView /></React.Suspense>
+      </div>
     );
   }
 

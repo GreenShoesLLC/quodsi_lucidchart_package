@@ -40,8 +40,8 @@ interface PanelHeaderProps {
   ) => void;
   diagramElementType?: DiagramElementType;
   onViewModelJson?: () => void;
-  /** Opens Studio's /status in a tab. The Status item is hidden when absent
-   *  (the extension reported no Studio URL). */
+  /** Opens the in-app Status modal (shared StatusPanel). The Status item is
+   *  hidden when absent. */
   onOpenStatus?: () => void;
   /**
    * Complexity Views (Task 11b) -- the DELIBERATE entry point to Settings,

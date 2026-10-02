@@ -1,8 +1,8 @@
-// Status opens Studio's public /status page in a new browser tab (spec
-// 2026-09-16, Lucid shared Studies surface): there is no Status modal and no
-// OPEN_STATUS_MODAL any more. The Studio origin comes from the extension's
-// AUTH_STATUS config; with no Studio URL the menu item is hidden (PanelHeader
-// only renders Status when a handler is supplied).
+// Status opens quodsi_studio's shared StatusPanel in a Lucid modal (ClickUp
+// 86e3f949t): the panel sends OPEN_STATUS_MODAL and the extension opens
+// ?view=status. It no longer opens Studio's /status in a browser tab, and no
+// longer depends on the Studio URL: with no API base URL configured the modal
+// itself shows a clear "not configured" message.
 import React from "react";
 import { render } from "@testing-library/react";
 import { ModelPanel } from "../ModelPanel";
@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   },
   auth: { isAuthenticated: true, config: undefined as undefined | { studioBaseUrl?: string } },
   headerProps: null as any,
+  openStatusModal: vi.fn(),
 }));
 
 vi.mock("../../../messaging/hooks/useModelPanel", () => ({
@@ -42,6 +43,7 @@ vi.mock("../../../messaging/senders/simulationRunSender", () => ({
     openDiagramMappingModal: vi.fn(),
     openSettingsModal: vi.fn(),
     openAdvisorModal: vi.fn(),
+    openStatusModal: mocks.openStatusModal,
   }),
 }));
 vi.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
@@ -68,18 +70,23 @@ afterEach(() => {
   openSpy.mockRestore();
 });
 
-describe("ModelPanel — Status opens a browser tab", () => {
-  it("opens <studioBaseUrl>/status in a new tab", () => {
+describe("ModelPanel — Status opens the in-app status modal", () => {
+  beforeEach(() => mocks.openStatusModal.mockClear());
+
+  it("sends OPEN_STATUS_MODAL (via openStatusModal) and opens no browser tab", () => {
     mocks.auth.config = { studioBaseUrl: "https://dev-studio.quodsi.com" };
     render(<ModelPanel />);
     expect(typeof mocks.headerProps.onOpenStatus).toBe("function");
     mocks.headerProps.onOpenStatus();
-    expect(openSpy).toHaveBeenCalledWith("https://dev-studio.quodsi.com/status", "_blank", "noopener");
+    expect(mocks.openStatusModal).toHaveBeenCalledTimes(1);
+    expect(openSpy).not.toHaveBeenCalled();
   });
 
-  it("offers no Status action when the extension reported no Studio URL", () => {
+  it("still offers Status when the extension reported no Studio URL", () => {
     render(<ModelPanel />);
-    expect(mocks.headerProps.onOpenStatus).toBeUndefined();
+    expect(typeof mocks.headerProps.onOpenStatus).toBe("function");
+    mocks.headerProps.onOpenStatus();
+    expect(mocks.openStatusModal).toHaveBeenCalledTimes(1);
     expect(openSpy).not.toHaveBeenCalled();
   });
 });

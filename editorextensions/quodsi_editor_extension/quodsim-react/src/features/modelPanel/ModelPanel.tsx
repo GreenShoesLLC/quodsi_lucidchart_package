@@ -46,15 +46,12 @@ export const ModelPanel: React.FC = () => {
   const { selection, auth } = useMessaging();
 
   // Simulation run senders (diagram mapping, settings and Advisor modals)
-  const { openDiagramMappingModal, openSettingsModal, openAdvisorModal } = useSimulationRunSender();
+  const { openDiagramMappingModal, openSettingsModal, openAdvisorModal, openStatusModal } = useSimulationRunSender();
 
-  // Status opens Studio's public /status page in a browser tab (no modal).
-  // The Studio origin comes from the extension's AUTH_STATUS config; without
-  // one there is nowhere to go, so PanelHeader hides the Status item.
-  const studioBaseUrl = auth?.config?.studioBaseUrl;
-  const onOpenStatus = studioBaseUrl
-    ? () => { window.open(`${studioBaseUrl}/status`, '_blank', 'noopener'); }
-    : undefined;
+  // Status opens the shared StatusPanel in a Lucid modal (?view=status,
+  // ClickUp 86e3f949t), not Studio's /status in a tab. Always offered: with no
+  // API base URL for this package the modal shows a clear "not configured".
+  const onOpenStatus = openStatusModal;
 
   // The Model editor's tab, held here so it survives ElementEditor's
   // page-keyed remount (spec 2026-09-13).
