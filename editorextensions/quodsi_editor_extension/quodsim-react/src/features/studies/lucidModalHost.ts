@@ -148,7 +148,7 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
     requestModelSync: (onResult) => {
       const stop = () => { off(); window.clearTimeout(timer) }
       const off = on((env) => {
-        if (env.type !== EnvelopeMessageType.STUDIO_EMBED_PATH) return
+        if (env.type !== EnvelopeMessageType.STUDIES_MODEL_SYNC) return
         const d = (env.data ?? {}) as { modelId?: string; synced?: boolean; error?: string }
         stop()
         onResult({ modelId: d.modelId, synced: !!d.synced, error: d.error })
@@ -157,7 +157,7 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
       const timer = window.setTimeout(() => {
         onResult({ synced: false, error: 'The extension did not answer.' })
       }, MODEL_SYNC_TIMEOUT_MS)
-      ports.send(EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH)
+      ports.send(EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC)
       return stop
     },
   }

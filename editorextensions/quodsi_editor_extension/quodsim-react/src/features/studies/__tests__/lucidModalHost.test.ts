@@ -66,17 +66,17 @@ describe('createLucidModalHost', () => {
     await expect(second).resolves.toBeUndefined()
   })
 
-  it('reports model sync from STUDIO_EMBED_PATH, then stops listening', () => {
+  it('reports model sync from STUDIES_MODEL_SYNC, then stops listening', () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)
     host.connect()
     const onResult = vi.fn()
     host.requestModelSync(onResult)
-    expect(ports.sent.at(-1)).toEqual([EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH, undefined])
-    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm1', synced: true })
+    expect(ports.sent.at(-1)).toEqual([EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC, undefined])
+    reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { modelId: 'm1', synced: true })
     expect(onResult).toHaveBeenCalledTimes(1)
     expect(onResult).toHaveBeenCalledWith({ modelId: 'm1', synced: true, error: undefined })
-    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm9', synced: true })
+    reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { modelId: 'm9', synced: true })
     expect(onResult).toHaveBeenCalledTimes(1)
   })
 
@@ -92,7 +92,7 @@ describe('createLucidModalHost', () => {
     expect(onResult).toHaveBeenCalledTimes(1)
     expect(onResult).toHaveBeenLastCalledWith({ synced: false, error: 'The extension did not answer.' })
 
-    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm1', synced: true })
+    reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { modelId: 'm1', synced: true })
     expect(onResult).toHaveBeenCalledTimes(2)
     expect(onResult).toHaveBeenLastCalledWith({ modelId: 'm1', synced: true, error: undefined })
   })
@@ -105,7 +105,7 @@ describe('createLucidModalHost', () => {
     const off = host.requestModelSync(onResult)
     off()
     await vi.advanceTimersByTimeAsync(120_000)
-    reply(EnvelopeMessageType.STUDIO_EMBED_PATH, { modelId: 'm1', synced: true })
+    reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { modelId: 'm1', synced: true })
     expect(onResult).not.toHaveBeenCalled()
   })
 
