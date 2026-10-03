@@ -91,7 +91,7 @@ export type ModelRootProjection = ModelRootModelFields & {
     arrivalSchedules?: ISerializedArrivalSchedule[];
     // Entities carry `description` for the shared EntitiesEditor;
     // ScheduleTable/SchedulePasteImport read only id + name.
-    entities?: Array<{ id: string; name: string; description?: string }>;
+    entities?: Array<{ id: string; name: string; description?: string; role?: 'flow' | 'helper' }>;
     // Full rows (ISerializedState without the class tag): the Model editor's
     // States tab lists and edits them. ScheduleTable reads only id + name.
     states?: Array<{

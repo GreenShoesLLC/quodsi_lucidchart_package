@@ -12,7 +12,7 @@
 // methods (setCurrentPage, markModelDirty) doing the actual work.
 
 describe('ModelManager.buildModelRootProjection', () => {
-  function harness() {
+  function harness(opts?: { entities?: unknown[] }) {
     const changeTracker = {
       modelDefinitionDirty: false,
       validationDirty: false,
@@ -92,7 +92,7 @@ describe('ModelManager.buildModelRootProjection', () => {
             { id: 'act-xray', name: 'X-ray' },
           ],
         },
-        entities: { getAll: () => [{ id: 'ent-a', name: 'Patient', description: 'noise' }] },
+        entities: { getAll: () => opts?.entities ?? [{ id: 'ent-a', name: 'Patient', description: 'noise' }] },
         states: {
           getAll: () => [
             { id: 'st-a', name: 'Priority', componentType: 'model', dataType: 'NUMBER', initialValue: 0, description: 'triage', collectStatistics: true, type: 'None' },
@@ -400,6 +400,22 @@ describe('ModelManager.buildModelRootProjection', () => {
     // Full rows since 2026-09-12: the Model editor's States tab edits them.
     expect(projection.states).toEqual([
       { id: 'st-a', name: 'Priority', componentType: 'model', dataType: 'NUMBER', initialValue: 0, description: 'triage', collectStatistics: true },
+    ]);
+  });
+
+  it('projects a helper entity with its role and leaves a flow entity unchanged', async () => {
+    const { mm } = harness({
+      entities: [
+        { id: 'ent-a', name: 'Patient', description: 'noise', role: 'flow' },
+        { id: 'ent-cart', name: 'Cart', role: 'helper' },
+      ],
+    });
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.entities).toEqual([
+      { id: 'ent-a', name: 'Patient', description: 'noise' },
+      { id: 'ent-cart', name: 'Cart', role: 'helper' },
     ]);
   });
 
