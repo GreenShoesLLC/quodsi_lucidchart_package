@@ -56,17 +56,20 @@ afterEach(() => {
 })
 
 describe('LucidModelEditor', () => {
-  it("renders the shared editor's header with the model name, and its text tabs", () => {
+  it("renders the shared editor's header with the model name, its text tabs and the validation chip", () => {
     mount()
 
     expect(screen.getByRole('heading', { level: 2, name: 'My Model' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Basic' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Validation' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Validation' })).toBeNull()
   })
 
-  it("shows the extension's blocker count in the header, and no badge before the first result", () => {
-    const first = mount({ validationState: null })
+  it("shows the extension's blocker count in the header, and a Validate chip that asks for one before the first result", () => {
+    const onTabChange = vi.fn()
+    const first = mount({ validationState: null, onTabChange })
     expect(screen.queryByRole('button', { name: /^Validation: / })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Validate model' }))
+    expect(onTabChange).toHaveBeenCalledWith('Validation')
     first.unmount()
 
     mount({ validationState: result([{ code: 'no_outgoing_connectors', elementId: 'act-1' }]) })
@@ -115,7 +118,8 @@ describe('LucidModelEditor', () => {
 
   it('hands work-schedule editing to the Lucid modal', () => {
     setView('advanced')
-    mount({ activeTab: 'Schedules' })
+    mount({ activeTab: 'Resources' })
+    fireEvent.click(screen.getByRole('radio', { name: 'Schedules' }))
 
     fireEvent.click(screen.getByRole('button', { name: /new schedule/i }))
 

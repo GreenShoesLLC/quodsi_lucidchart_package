@@ -1,8 +1,9 @@
 // quodsim-react/src/features/modelPanel/useModelEditorTab.ts
 //
 // The Model editor's active tab, held by ModelPanel so it survives
-// ElementEditor's page-keyed remount (spec 2026-09-13 §1). Selecting the
-// Validation tab asks the extension for a fresh result; a "Go to Model
+// ElementEditor's page-keyed remount (spec 2026-09-13 §1). Selecting
+// Validation (the editor header's chip since 2026-10-02 -- it is no longer in
+// the tab strip) asks the extension for a fresh result; a "Go to Model
 // Editor" link's stored tab is applied when the Model shows.
 
 import { useCallback, useEffect, useRef, useState } from 'react'

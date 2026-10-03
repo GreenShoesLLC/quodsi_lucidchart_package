@@ -48,7 +48,7 @@ describe('StudiesLaunchButton (Lucid host)', () => {
     render(<StudiesLaunchButton />);
     const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('title', "Fix 2 validation errors before opening What-if runs — see the Model's Validation tab");
+    expect(btn).toHaveAttribute('title', "Fix 2 validation errors before opening What-if runs — see the ⚠ in the Model editor's header");
   });
 
   it('renders the full-width variant and opens Studies for this document and page', () => {

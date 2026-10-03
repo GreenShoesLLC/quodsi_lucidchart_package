@@ -3,7 +3,7 @@
 // 2026-09-12). The delete dialog counts levers because the snapshot's activity
 // summaries now carry them.
 import React from "react";
-import { screen, waitFor, cleanup } from "@testing-library/react";
+import { screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { setView } from "quodsi_studio/platforms/shared";
 import { definition, mountModelEditor } from "./modelEditorSeam";
@@ -41,7 +41,8 @@ describe("Model editor — Requirements tab uses the shared editor", () => {
 
   it("lists custom first with usage, then the resource row with the Resource pill", async () => {
     const user = userEvent.setup();
-    mountModelEditor(requirementsDefinition(), { props: { activeTab: "Requirements" } });
+    mountModelEditor(requirementsDefinition(), { props: { activeTab: "Resources" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Requirements" }));
 
     expect(screen.getByRole("button", { name: "Add New" })).toBeInTheDocument();
     const rows = screen.getAllByRole("heading", { level: 4 }).map((h) => h.textContent);
@@ -55,7 +56,8 @@ describe("Model editor — Requirements tab uses the shared editor", () => {
 
   it("the delete dialog counts the steps and their levers, and sends the choice to the host", async () => {
     const user = userEvent.setup();
-    const { transport } = mountModelEditor(requirementsDefinition(), { props: { activeTab: "Requirements" } });
+    const { transport } = mountModelEditor(requirementsDefinition(), { props: { activeTab: "Resources" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Requirements" }));
 
     await user.click(screen.getByTitle("Delete requirement"));
     expect(screen.getByText('Delete Requirement: "Triage team"?')).toBeInTheDocument();
