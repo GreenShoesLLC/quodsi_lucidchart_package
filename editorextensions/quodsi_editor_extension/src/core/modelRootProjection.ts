@@ -179,12 +179,14 @@ export function projectModelRoot(def: ModelDefinition | null | undefined): Model
             } as NonNullable<ModelRootProjection['activities']>[number];
         }),
         connectors: def.connectors.getAll().map(c => summarizeConnector(c)),
-        // Entities carry `description` for the shared EntitiesEditor. Omitted
-        // when empty, matching Entity.toJSON's sparse description.
+        // Entities carry `description` for the shared EntitiesEditor, and
+        // `role` so the editor shows a Helper as one (spec 2026-09-27). Both
+        // omitted at their defaults, matching Entity.toJSON's sparse fields.
         entities: def.entities.getAll().map(e => ({
             id: e.id,
             name: e.name,
             ...(e.description ? { description: e.description } : {}),
+            ...(e.role === 'helper' ? { role: 'helper' as const } : {}),
         })),
         states: def.states.getAll().map(s => summarizeState(s)),
         // Lucid global resources (Plan 2b). shapeId/shapeLabel/laneRef are

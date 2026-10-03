@@ -451,13 +451,7 @@ export class ModelDefinitionPageBuilder {
         // Deserialize and add each entity to the model definition
         for (const serializedEntity of serializedEntities) {
             try {
-                const entity = new Entity(
-                    serializedEntity.id,
-                    serializedEntity.name,
-                    serializedEntity.x ?? 0,
-                    serializedEntity.y ?? 0
-                );
-                entity.description = serializedEntity.description ?? '';
+                const entity = Entity.fromSerialized(serializedEntity as unknown as Record<string, unknown>);
                 modelDefinition.entities.add(entity);
                 log.trace(`Added entity: ${entity.name}`);
             } catch (error) {

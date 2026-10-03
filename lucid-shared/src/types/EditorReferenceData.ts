@@ -67,7 +67,7 @@ export interface EditorReferenceData {
      * guard). Panel writes based on it echo it back as basedOnPageId.
      */
     pageId?: string;
-    entities?: Array<{ id: string, name: string, description?: string }>;
+    entities?: Array<{ id: string, name: string, description?: string, role?: 'flow' | 'helper' }>;
     resources?: Array<{ id: string, name: string }>;
     activities?: Array<{
         id: string,

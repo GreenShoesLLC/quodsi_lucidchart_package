@@ -45,7 +45,8 @@ export const referenceDataBuilder = {
         referenceData.entities = modelDef.entities.getAll().map(e => ({
           id: e.id,
           name: e.name,
-          description: e.description
+          description: e.description,
+          ...(e.role === 'helper' ? { role: 'helper' as const } : {}),
         }));
 
         referenceData.resourceRequirements = modelDef.resourceRequirements.getAll();
