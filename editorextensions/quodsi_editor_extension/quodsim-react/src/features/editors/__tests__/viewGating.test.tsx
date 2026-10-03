@@ -111,25 +111,29 @@ describe("ModelEditor — view gates the model-level FIELDS", () => {
   });
 });
 
-describe("ModelEditor — view gates the Schedules tab", () => {
+// Work schedules are a section of the Resources tab since 2026-10-02.
+describe("ModelEditor — view gates the work-schedules section", () => {
   beforeEach(() => localStorage.clear());
 
-  it("hides Schedules in Basic", () => {
-    setView("basic");
+  it("offers no Schedules segment in Intermediate", () => {
+    setView("intermediate");
     mountModelEditor();
-    expect(screen.queryByRole("tab", { name: "Schedules" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Resources" }));
+    expect(screen.queryByRole("radio", { name: "Schedules" })).not.toBeInTheDocument();
   });
 
-  it("shows Schedules in Advanced", () => {
+  it("offers work schedules in Advanced", () => {
     setView("advanced");
     mountModelEditor();
-    expect(screen.getByRole("tab", { name: "Schedules" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Resources" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Schedules" }));
+    expect(screen.getByRole("button", { name: /new schedule/i })).toBeInTheDocument();
   });
 
-  it("never gates the diagnostics-only Validation tab", () => {
+  it("never gates diagnostics: the header's validation chip shows in Basic", () => {
     setView("basic");
     mountModelEditor();
-    expect(screen.getByRole("tab", { name: "Validation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Validate model" })).toBeInTheDocument();
   });
 
   // Daniel's Lucid smoke, 2026-09-04: Basic showed an "Advanced Settings"
