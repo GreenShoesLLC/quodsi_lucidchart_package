@@ -8,8 +8,8 @@ import { getApiBaseUrl } from '../core/apiBaseUrl';
  * view draws its own header and Close. Uses the 'studio-embed' channel.
  *
  * `modelId` is the cached server model id when the host already knows it;
- * either way the view pulls the sync outcome with REQUEST_STUDIO_EMBED_PATH
- * (see SimulationRunHandler.handleRequestStudioEmbedPath). The query string is
+ * either way the view pulls the sync outcome with REQUEST_STUDIES_MODEL_SYNC
+ * (see SimulationRunHandler.handleRequestStudiesModelSync). The query string is
  * hand-encoded: the Lucid extension sandbox has no URLSearchParams.
  */
 export class StudiesModal extends RoutingModal {

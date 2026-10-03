@@ -3,7 +3,7 @@
 // OPEN_STUDIES_MODAL opens the compiled Studies surface (quodsim-react
 // ?view=studies) at once and syncs the model in the background: UpsertModel
 // (server id) AND the model-definition snapshot push. The modal pulls the
-// outcome with REQUEST_STUDIO_EMBED_PATH, answered STUDIO_EMBED_PATH
+// outcome with REQUEST_STUDIES_MODEL_SYNC, answered STUDIES_MODEL_SYNC
 // { modelId?, synced, error? } only once both are done. Mocks mirror
 // simulationRunHandler.openAdvisorModal.test.ts.
 
@@ -82,7 +82,7 @@ function openMessage(): any {
 function pathRequest(): any {
   return {
     id: `req-${Math.random()}`,
-    type: EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH,
+    type: EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC,
     source: 'studio-embed-iframe',
     target: 'host',
     version: '1.0',
@@ -96,10 +96,10 @@ function params(modal: StudiesModal): Record<string, string> {
   return Object.fromEntries(q.entries());
 }
 
-/** The STUDIO_EMBED_PATH replies sent so far. */
+/** The STUDIES_MODEL_SYNC replies sent so far. */
 function replies(): Array<{ channel: string; msg: any }> {
   return sendMock.mock.calls
-    .filter(([, m]) => m.type === EnvelopeMessageType.STUDIO_EMBED_PATH)
+    .filter(([, m]) => m.type === EnvelopeMessageType.STUDIES_MODEL_SYNC)
     .map(([channel, msg]) => ({ channel, msg }));
 }
 
@@ -208,7 +208,7 @@ describe('OPEN_STUDIES_MODAL', () => {
     expect(data.modelId).toBeUndefined();
   });
 
-  it('REQUEST_STUDIO_EMBED_PATH with no Studies open: replies no pending Studies open', async () => {
+  it('REQUEST_STUDIES_MODEL_SYNC with no Studies open: replies no pending Studies open', async () => {
     SimulationRunHandler.handleMessage(pathRequest());
     await flush();
     const data = replies()[0].msg.data;

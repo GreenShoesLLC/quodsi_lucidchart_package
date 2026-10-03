@@ -78,9 +78,10 @@ export enum EnvelopeMessageType {
   // upsert and snapshot push finish); the view PULLS the outcome
   // (REQUEST → reply, data { modelId?, synced, error? }) once its channel is
   // registered — pull, not push, to avoid the channel-registration race that
-  // drops pushed messages. The names are kept from the Studio-embed era.
-  REQUEST_STUDIO_EMBED_PATH = "REQUEST_STUDIO_EMBED_PATH",
-  STUDIO_EMBED_PATH = "STUDIO_EMBED_PATH",
+  // drops pushed messages. (Named REQUEST_STUDIO_EMBED_PATH / STUDIO_EMBED_PATH
+  // until 2026-10-02.)
+  REQUEST_STUDIES_MODEL_SYNC = "REQUEST_STUDIES_MODEL_SYNC",
+  STUDIES_MODEL_SYNC = "STUDIES_MODEL_SYNC",
 
   // Embedded Studio surfaces
   OPEN_STUDIES_MODAL = "OPEN_STUDIES_MODAL",

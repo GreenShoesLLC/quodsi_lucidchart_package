@@ -27,7 +27,7 @@ export class SimulationRunHandler {
 
   /** The most recent Studies open: resolves to the server model id once the
    *  upsert AND the snapshot push are done; rejects with the failure. The
-   *  Studies view pulls the outcome via REQUEST_STUDIO_EMBED_PATH. One
+   *  Studies view pulls the outcome via REQUEST_STUDIES_MODEL_SYNC. One
    *  studio-embed modal is open at a time, so a single slot suffices. */
   private static studiesSync: { promise: Promise<string>; cachedModelId?: string } | null = null;
 
@@ -108,9 +108,9 @@ export class SimulationRunHandler {
         );
         return true;
 
-      case EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH:
-        SimulationRunHandler.handleRequestStudioEmbedPath(msg).catch((e) =>
-          SimulationRunHandler.logger.error('handleRequestStudioEmbedPath failed', e),
+      case EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC:
+        SimulationRunHandler.handleRequestStudiesModelSync(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleRequestStudiesModelSync failed', e),
         );
         return true;
 
@@ -137,7 +137,7 @@ export class SimulationRunHandler {
    * (quodsim-react ?view=studies, StudiesModal) at once, and sync the model in
    * the background: UpsertModel (ensures the quodsi_api row exists and
    * resolves its server id) AND the model-definition snapshot push. The view
-   * pulls the outcome via REQUEST_STUDIO_EMBED_PATH.
+   * pulls the outcome via REQUEST_STUDIES_MODEL_SYNC.
    *
    * The modal opens before any network wait -- only canonicalModelName
    * precedes it. A cached server id (earlier open of the same page) rides on
@@ -194,20 +194,20 @@ export class SimulationRunHandler {
       return resolved;
     });
     // Never let it become an unhandled rejection; the view receives the error
-    // through REQUEST_STUDIO_EMBED_PATH.
+    // through REQUEST_STUDIES_MODEL_SYNC.
     promise.catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: sync failed', e));
     SimulationRunHandler.studiesSync = { promise, cachedModelId: cached };
   }
 
   /**
-   * Handle REQUEST_STUDIO_EMBED_PATH: the Studies view pulls the outcome of
+   * Handle REQUEST_STUDIES_MODEL_SYNC: the Studies view pulls the outcome of
    * the most recent open's sync once its channel has registered. Replies
-   * STUDIO_EMBED_PATH { modelId?, synced, error? } after both the upsert and
+   * STUDIES_MODEL_SYNC { modelId?, synced, error? } after both the upsert and
    * the snapshot push settle. On failure the cached id (if any) still rides
    * along. Pull (not push) sidesteps the channel-registration race that drops
    * messages sent before the view is ready.
    */
-  private static async handleRequestStudioEmbedPath(msg: EnvelopeBase): Promise<void> {
+  private static async handleRequestStudiesModelSync(msg: EnvelopeBase): Promise<void> {
     const channel = SimulationRunHandler.getResponseChannel(msg);
     const sync = SimulationRunHandler.studiesSync;
     let data: { modelId?: string; synced: boolean; error?: string };
@@ -222,7 +222,7 @@ export class SimulationRunHandler {
     }
     router.send(channel, {
       id: `msg-${Date.now()}`,
-      type: EnvelopeMessageType.STUDIO_EMBED_PATH,
+      type: EnvelopeMessageType.STUDIES_MODEL_SYNC,
       source: 'host',
       target: `${channel}-iframe`,
       version: '1.0',
