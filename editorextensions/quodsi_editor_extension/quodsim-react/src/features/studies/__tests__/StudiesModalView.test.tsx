@@ -65,16 +65,16 @@ describe('StudiesModalView', () => {
     h.hosts.length = 0
   })
 
-  it('defaults its window title to "What-if runs" when the host passes none', () => {
+  it('defaults its window title to "What-if Analysis" when the host passes none', () => {
     setSearch('view=studies')
     render(<StudiesModalView />)
-    expect(screen.getByText('What-if runs')).toBeInTheDocument()
+    expect(screen.getByText('What-if Analysis')).toBeInTheDocument()
   })
 
   it('without apiBaseUrl shows a configuration alert and no surface', () => {
     setSearch('view=studies&title=Studies')
     render(<StudiesModalView />)
-    expect(screen.getByRole('alert')).toHaveTextContent("What-if runs isn't configured for this environment.")
+    expect(screen.getByRole('alert')).toHaveTextContent("What-if Analysis isn't configured for this environment.")
     expect(screen.queryByTestId('surface')).toBeNull()
   })
 

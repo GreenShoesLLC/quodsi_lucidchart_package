@@ -11,7 +11,7 @@ import { render, screen } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
 
 vi.mock("../StudiesLaunchButton", () => ({
-  StudiesLaunchButton: () => <button type="button">What-if runs</button>,
+  StudiesLaunchButton: () => <button type="button">What-if Analysis</button>,
 }));
 
 const baseProps = {
@@ -35,7 +35,7 @@ describe("PanelHeader — slim toolbar", () => {
   it("the model view shows only the Studies launcher and the menu: no name, icon or stats", () => {
     const { container } = render(<PanelHeader {...baseProps} currentElement={null} />);
 
-    expect(screen.getByRole("button", { name: "What-if runs" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "What-if Analysis" })).toBeInTheDocument();
     expect(screen.getByTitle("More options")).toBeInTheDocument();
     expect(screen.queryByText("Clinic")).toBeNull();
     expect(screen.queryByText(/Activities/)).toBeNull();

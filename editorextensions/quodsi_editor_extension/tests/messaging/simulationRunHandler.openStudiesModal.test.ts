@@ -133,7 +133,7 @@ describe('OPEN_STUDIES_MODAL', () => {
     expect(shown).toHaveLength(1);
     const p = params(shown[0]);
     expect(p.view).toBe('studies');
-    expect(p.title).toBe('What-if runs');
+    expect(p.title).toBe('What-if Analysis');
     expect('apiBaseUrl' in p).toBe(true);
     expect('modelId' in p).toBe(false);
     expect((shown[0] as any).config.chromeless).toBe(true);

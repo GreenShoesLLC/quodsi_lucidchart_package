@@ -37,7 +37,7 @@ describe('StudiesLaunchButton (Lucid host)', () => {
     render(<StudiesLaunchButton />);
     const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('title', 'Sign in to use What-if runs');
+    expect(btn).toHaveAttribute('title', 'Sign in to use What-if Analysis');
     fireEvent.click(btn);
     expect(mockOpenStudiesModal).not.toHaveBeenCalled();
   });
@@ -48,7 +48,7 @@ describe('StudiesLaunchButton (Lucid host)', () => {
     render(<StudiesLaunchButton />);
     const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toBeDisabled();
-    expect(btn).toHaveAttribute('title', "Fix 2 validation errors before opening What-if runs — see the ⚠ in the Model editor's header");
+    expect(btn).toHaveAttribute('title', "Fix 2 validation errors before opening What-if Analysis — see the ⚠ in the Model editor's header");
   });
 
   it('renders the full-width variant and opens Studies for this document and page', () => {
