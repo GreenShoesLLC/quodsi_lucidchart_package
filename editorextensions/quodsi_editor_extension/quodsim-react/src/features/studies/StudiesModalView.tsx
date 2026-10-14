@@ -54,7 +54,7 @@ export function StudiesModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading Studies…</p>}>
-              <StudiesSurface initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} />
+              <StudiesSurface initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
             </Suspense>
           </QueryClientProvider>
         )}
