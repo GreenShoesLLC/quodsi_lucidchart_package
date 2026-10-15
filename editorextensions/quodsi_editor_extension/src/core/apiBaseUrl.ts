@@ -7,14 +7,14 @@
  * Package IDs are the `id` field of each manifest_*.json:
  *   - 29e0d321-… = QuodsiDev  → ca-quodsim-dev-api
  *   - dcde0747-… = QuodsiTest → ca-quodsim-test-api
- * Prod is deliberately absent: no prod Azure estate exists yet, so the prod
- * package resolves `undefined` and the modal shows "not configured".
+ *   - d38c7ced-… = QuodsiProd → ca-quodsim-prd-api (live since 2026-10-04)
  */
 // Exported for tests/core/apiBaseUrl.manifests.test.ts, which pins each entry
 // to its environment manifest's data-connector callbackBaseUrl.
 export const API_URL_BY_PACKAGE_ID: Readonly<Record<string, string>> = {
   '29e0d321-5cb2-4ae0-a1b6-dabd512c098c': 'https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io',
   'dcde0747-95a4-4bf8-9e17-b4cf41afa1c7': 'https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io',
+  'd38c7ced-35e8-4962-a622-1d3fa480ab58': 'https://ca-quodsim-prd-api.calmpebble-41fc51e0.westus.azurecontainerapps.io',
 };
 
 /**

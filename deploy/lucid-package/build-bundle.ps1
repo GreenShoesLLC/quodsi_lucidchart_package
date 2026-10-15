@@ -94,7 +94,7 @@ switch ($TargetEnvironment) {
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
     'PRD' {
-        $env:VITE_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://ca-quodsim-prd-api.calmpebble-41fc51e0.westus.azurecontainerapps.io/lucid/"
         Write-Host "PRD environment variables set for this session." -ForegroundColor Green
     }
     default {
@@ -384,10 +384,10 @@ if ($ManifestSource) {
         $expectedUrlPattern = switch ($TargetEnvironment) {
             # Dev cut over to FastAPI Container App on 2026-05-13.
             # Test cut over to FastAPI Container App on 2026-05-29.
-            # Prod remains on legacy Azure Functions until its cutover.
+            # Prod went live on its FastAPI Container App on 2026-10-04.
             'Dev' { "https://ca-quodsim-dev-api" }
             'TST' { "https://ca-quodsim-test-api" }
-            'PRD' { "https://prd-quodsi-func-v1.azurewebsites.net" }
+            'PRD' { "https://ca-quodsim-prd-api" }
         }
 
         if ($callbackUrl -like "$expectedUrlPattern*") {

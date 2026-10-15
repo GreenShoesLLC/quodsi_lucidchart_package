@@ -35,8 +35,13 @@ describe('getApiBaseUrl', () => {
     expect(getApiBaseUrl()).toBe('https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io');
   });
 
-  it('returns undefined for an unmapped package id (prod has no estate yet)', () => {
+  it('maps the prod package id to the prod API', () => {
     g.lucid = { getPackageId: () => 'd38c7ced-35e8-4962-a622-1d3fa480ab58' };
+    expect(getApiBaseUrl()).toBe('https://ca-quodsim-prd-api.calmpebble-41fc51e0.westus.azurecontainerapps.io');
+  });
+
+  it('returns undefined for an unmapped package id', () => {
+    g.lucid = { getPackageId: () => '00000000-0000-0000-0000-000000000000' };
     expect(getApiBaseUrl()).toBeUndefined();
   });
 
