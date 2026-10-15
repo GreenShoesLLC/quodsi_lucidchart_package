@@ -1,6 +1,6 @@
 {
   "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
-  "version": "2026.09.19",
+  "version": "2026.10.15",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -37,7 +37,7 @@
     {
       "name": "quodsi_api_data_connector",
       "oauthProviderName": "kinde",
-      "callbackBaseUrl": "http://localhost:8000/lucid/",
+      "callbackBaseUrl": "https://ca-quodsim-prd-api.calmpebble-41fc51e0.westus.azurecontainerapps.io/lucid/",
       "dataActions": {
         "SyncUser": "SyncUser",
         "UpsertModel": "UpsertModel",
