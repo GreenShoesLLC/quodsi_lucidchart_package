@@ -123,3 +123,27 @@ describe('OPEN_ADVISOR_MODAL', () => {
     expect(q.get('mode')).toBe('definition');
   });
 });
+
+// The Advisor Workspace (spec 2026-10-16 advisor-workspace): a Project open needs a model
+// id. With none cached yet, Studies opens on its Project tab instead -- it syncs the
+// model, creates the id, and its Project tab is the same Workspace.
+describe('OPEN_ADVISOR_MODAL at project focus', () => {
+  const cache = (SimulationRunHandler as any).scenarioModelIdCache as Map<string, string>;
+  afterEach(() => cache.delete('d1:p1'));
+
+  it('with a cached model id, opens the Advisor at project focus', () => {
+    cache.set('d1:p1', 'm-1');
+    SimulationRunHandler.handleMessage(openMessage({ focusId: '', focusType: 'Project', mode: 'project', documentId: 'd1', pageId: 'p1' }));
+    expect(shown).toHaveLength(1);
+    expect(queryOf(shown[0]).get('focusType')).toBe('Project');
+    expect(queryOf(shown[0]).get('modelId')).toBe('m-1');
+  });
+
+  it('with no cached model id, opens Studies on its Project tab instead', () => {
+    const studies = jest.spyOn(SimulationRunHandler as any, 'handleOpenStudiesModal').mockResolvedValue(undefined);
+    SimulationRunHandler.handleMessage(openMessage({ focusId: '', focusType: 'Project', mode: 'project', documentId: 'd1', pageId: 'p1' }));
+    expect(shown).toHaveLength(0);
+    expect(studies).toHaveBeenCalledTimes(1);
+    expect((studies.mock.calls[0][0] as any).data).toMatchObject({ documentId: 'd1', pageId: 'p1', tab: 'project' });
+  });
+});

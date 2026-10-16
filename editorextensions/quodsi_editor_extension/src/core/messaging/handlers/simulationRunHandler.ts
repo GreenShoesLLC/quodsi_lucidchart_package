@@ -295,6 +295,16 @@ export class SimulationRunHandler {
     const modelId = data.documentId && data.pageId
       ? SimulationRunHandler.scenarioModelIdCache.get(`${data.documentId}:${data.pageId}`)
       : undefined;
+    // The Advisor Workspace at project focus (spec 2026-10-16) needs the model id. With
+    // none cached, Studies opens on its Project tab instead: it syncs the model, creates
+    // the id, and its Project tab is the same Workspace.
+    if (data.focusType === 'Project' && !modelId) {
+      SimulationRunHandler.handleOpenStudiesModal({
+        ...msg,
+        data: { documentId: data.documentId, pageId: data.pageId, modalSize: data.modalSize, tab: 'project' },
+      }).catch((e) => SimulationRunHandler.logger.error('handleOpenStudiesModal failed', e));
+      return;
+    }
     new AdvisorConsultModal(ModelManager.getClient(), {
       focusType: data.focusType,
       focusId: data.focusId,

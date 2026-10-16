@@ -20,7 +20,7 @@ vi.mock('quodsi_studio/lib/api', () => ({
   registerAuthRefresher: vi.fn(),
 }))
 vi.mock('quodsi_studio/platforms/studies', () => ({
-  focusFromParams: (p: URLSearchParams) => ({ parsedFrom: p.toString() }),
+  workspaceFocusFromParams: (p: URLSearchParams) => ({ parsedFrom: p.toString() }),
   AdvisorConsultSurface: (props: Record<string, any>) => {
     h.order.push('consult')
     h.consultProps.push(props)
@@ -117,22 +117,26 @@ describe('AdvisorModalView', () => {
     expect(laterSend).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
   })
 
-  it('passes the cached model id; Open opens Studies on the Project tab, then closes (spec 2026-10-16)', async () => {
+  it('passes the cached model id; the Workspace widens in place, so nothing opens Studies (spec 2026-10-16 advisor-workspace)', async () => {
     setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Generator&focusId=g1&modelId=m-1&documentId=d1&pageId=p1')
     render(<AdvisorModalView />)
     await screen.findByTestId('consult')
     expect(last().modelId).toBe('m-1')
-    act(() => { last().onOpenProject() })
-    expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.OPEN_STUDIES_MODAL,
-      expect.objectContaining({ documentId: 'd1', pageId: 'p1', tab: 'project' }))
-    expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+    expect(last().onOpenProject).toBeUndefined()
+    expect(h.sendMessage).not.toHaveBeenCalledWith(EnvelopeMessageType.OPEN_STUDIES_MODAL, expect.anything())
   })
 
-  it('without the document ids there is no model id and no Open', async () => {
+  it('focusType=Project reaches the surface as a project focus', async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Project&modelId=m-1&documentId=d1&pageId=p1')
+    render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    expect(last().focus).toEqual({ parsedFrom: new URLSearchParams('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Project&modelId=m-1&documentId=d1&pageId=p1').toString() })
+  })
+
+  it('without the document ids there is no model id', async () => {
     setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Model')
     render(<AdvisorModalView />)
     await screen.findByTestId('consult')
     expect(last().modelId).toBeUndefined()
-    expect(last().onOpenProject).toBeUndefined()
   })
 })

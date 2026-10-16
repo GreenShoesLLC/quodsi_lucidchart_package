@@ -5,17 +5,13 @@ import type { LucidModalHost } from './lucidModalHost'
 import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
 import { ModalHeader } from './ModalHeader'
-import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 
 // One lazy module: the consult and the focus parser both come from the heavy
 // studies export, so neither lands in the panel's entry chunk.
 const Consult = lazy(() =>
   import('quodsi_studio/platforms/studies').then((m) => ({
-    default: ({ params, host, modelId, onOpenProject }: {
-      params: URLSearchParams; host: LucidModalHost; modelId?: string; onOpenProject?: () => void
-    }) => (
-      <m.AdvisorConsultSurface focus={m.focusFromParams(params)} host={host}
-        modelId={modelId} onOpenProject={onOpenProject} />
+    default: ({ params, host, modelId }: { params: URLSearchParams; host: LucidModalHost; modelId?: string }) => (
+      <m.AdvisorConsultSurface focus={m.workspaceFocusFromParams(params)} host={host} modelId={modelId} />
     ),
   })),
 )
@@ -30,20 +26,10 @@ export function AdvisorModalView() {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const getToken = useStudioApiSetup(apiBaseUrl, host)
-  const { openStudiesModal } = useSimulationRunSender()
-
-  // The model's Simulation Project (spec 2026-10-16): the host puts the cached model
-  // id and the page ids on the URL. Open opens Studies on its Project tab and closes
-  // this modal.
+  // The model's Simulation Project (spec 2026-10-16): the host puts the cached model id on
+  // the URL. The Advisor Workspace widens to the whole project in place (spec 2026-10-16
+  // advisor-workspace), so this modal never opens Studies itself.
   const modelId = params.get('modelId') || undefined
-  const documentId = params.get('documentId')
-  const pageId = params.get('pageId')
-  const onOpenProject = useMemo(
-    () => (documentId && pageId
-      ? () => { openStudiesModal(documentId, pageId, 'project'); host.closeModal() }
-      : undefined),
-    [documentId, pageId, openStudiesModal, host],
-  )
 
   useEffect(() => {
     host.connect()
@@ -64,7 +50,7 @@ export function AdvisorModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading the Advisor…</p>}>
-              <Consult params={params} host={host} modelId={modelId} onOpenProject={onOpenProject} />
+              <Consult params={params} host={host} modelId={modelId} />
             </Suspense>
           </QueryClientProvider>
         )}

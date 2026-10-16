@@ -1,12 +1,20 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { queryClientDefaultOptions } from 'quodsi_studio/lib/queryClientDefaults'
-import type { EmbedSyncStatus, SurfaceScreen } from 'quodsi_studio/platforms/studies'
+import type { EmbedSyncStatus, StudiesSurfaceProps, SurfaceScreen } from 'quodsi_studio/platforms/studies'
+import type { LucidModalHost } from './lucidModalHost'
 import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
 import { ModalHeader } from './ModalHeader'
 
-const StudiesSurface = lazy(() => import('quodsi_studio/platforms/studies').then((m) => ({ default: m.StudiesSurface })))
+// The surface with the Advisor Workspace's model and writer (spec 2026-10-16
+// advisor-workspace): the hook lives in the same lazy chunk, so it is called here.
+const StudiesSurface = lazy(() => import('quodsi_studio/platforms/studies').then((m) => ({
+  default: (props: StudiesSurfaceProps & { host: LucidModalHost }) => {
+    const { parts } = m.useLucidWorkspaceHost(props.host)
+    return <m.StudiesSurface {...props} workspaceHost={parts ?? undefined} />
+  },
+})))
 
 /** The Studies modal: Studio's compiled Studies surface, fed by the extension
  *  (token, model sync, scenarios) over this modal's messaging. */
@@ -18,7 +26,8 @@ export function StudiesModalView() {
   // The Advisor's project strip opens Studies on its Project tab (spec 2026-10-16).
   const tab = params.get('tab') === 'project' ? 'project' : 'studies'
 
-  const host = useLucidModalHost()
+  // A writer, so the Workspace's model proposals can Apply from Studies too.
+  const host = useLucidModalHost({ withWriter: true })
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const getToken = useStudioApiSetup(apiBaseUrl, host)
 
@@ -56,7 +65,7 @@ export function StudiesModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading Studies…</p>}>
-              <StudiesSurface initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
+              <StudiesSurface host={host} initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
             </Suspense>
           </QueryClientProvider>
         )}
