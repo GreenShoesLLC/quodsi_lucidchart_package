@@ -58,10 +58,11 @@ vi.mock("../ElementEditor", async () => {
   // error for this bare package specifier from inside a hoisted vi.mock
   // factory (harness quirk, unrelated to the behavior under test) — this is
   // the smallest adjustment that keeps two real EditorHeaders in the DOM.
-  const { EditorHeader } = await import("quodsi_studio/platforms/shared");
+  const { EditorHeader, ProjectLaunchButton } = await import("quodsi_studio/platforms/shared");
   return {
     ElementEditor: () => (
       <>
+        <ProjectLaunchButton />
         <EditorHeader type="Model" name="Clinic" />
         <EditorHeader type="Activity" name="Triage" focusId="a1" />
       </>
@@ -134,6 +135,14 @@ describe("ModelPanel — the Advisor for everyone signed in", () => {
   beforeEach(() => {
     mocks.panel.needsInitialization = false;
     mocks.panel.currentElement = { id: "a1", metadata: { type: "Activity" }, data: { name: "Triage" } };
+  });
+
+  it("the Project button opens the Advisor at project focus (Advisor Workspace)", () => {
+    render(<ModelPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Open the Simulation Project" }));
+    expect(mocks.openAdvisorModal).toHaveBeenLastCalledWith({
+      focusId: "", focusType: "Project", mode: "project", documentId: "doc-1", pageId: "pg-1",
+    });
   });
 
   it("with developer mode off, each shared editor header's Advisor button opens that element's consult", () => {

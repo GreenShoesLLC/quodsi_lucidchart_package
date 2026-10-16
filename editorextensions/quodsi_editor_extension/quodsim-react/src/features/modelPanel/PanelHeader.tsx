@@ -15,6 +15,7 @@ import {
   type ShapeTypeOption,
 } from "quodsi_studio/platforms/shared";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
+import { ProjectLaunchButton } from "quodsi_studio/platforms/shared";
 
 const log = getLogger("PanelHeader");
 
@@ -224,6 +225,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <div className="flex-1 min-w-0">
         <StudiesLaunchButton />
       </div>
+      <ProjectLaunchButton />
       <MenuButton />
     </div>
   );

@@ -81,6 +81,13 @@ export const ModelPanel: React.FC = () => {
       }),
     [openAdvisorModal, documentId, pageId],
   );
+  // The Project button (spec 2026-10-16 advisor-workspace): the host opens the Advisor at
+  // project focus, or Studies on its Project tab when it has no model id yet.
+  const onOpenProject = useCallback(
+    () => openAdvisorModal({ focusId: '', focusType: 'Project', mode: 'project', documentId, pageId }),
+    [openAdvisorModal, documentId, pageId],
+  );
+  const openProject = documentId && pageId ? onOpenProject : undefined;
   // Signed out, the provider supplies no context, so no Advisor button shows:
   // the consult modal cannot sign the user in. The provider itself always
   // renders, so signing in does not remount the editors below it.
@@ -173,7 +180,7 @@ export const ModelPanel: React.FC = () => {
   // Unconverted page: the shared blank-slate card (spec 2026-09-15 §1)
   if (needsInitialization) {
     return (
-      <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} enabled={advisorEnabled}>
+      <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} onOpenProject={openProject} enabled={advisorEnabled}>
         <div className="flex flex-col h-full bg-gray-50">
           <AccountStrip />
           <div className="flex-1 min-h-0 overflow-auto p-4">
@@ -233,7 +240,7 @@ export const ModelPanel: React.FC = () => {
 
   // Main content render
   return (
-    <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} enabled={advisorEnabled}>
+    <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} onOpenProject={openProject} enabled={advisorEnabled}>
       <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
         <AccountStrip />
         {!isSwimLane && <PanelHeader

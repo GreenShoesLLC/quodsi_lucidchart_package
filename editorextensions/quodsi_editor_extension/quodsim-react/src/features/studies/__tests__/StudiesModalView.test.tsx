@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   order: [] as string[],
   surfaceProps: [] as Array<Record<string, any>>,
   hosts: [] as Array<{ host: unknown; opts: unknown }>,
+  apply: vi.fn(),
 }))
 
 vi.mock('../../../messaging/MessageProvider', () => ({
@@ -22,6 +23,7 @@ vi.mock('quodsi_studio/lib/api', () => ({
   registerAuthRefresher: vi.fn(),
 }))
 vi.mock('quodsi_studio/platforms/studies', () => ({
+  useLucidWorkspaceHost: (host: unknown) => ({ parts: { model: null, apply: h.apply, host }, state: 'ready' }),
   StudiesSurface: (props: Record<string, any>) => {
     h.order.push('surface')
     h.surfaceProps.push(props)
@@ -54,6 +56,29 @@ async function renderView() {
   await screen.findByTestId('surface')
   return utils
 }
+
+describe('StudiesModalView and the Advisor Workspace (spec 2026-10-16)', () => {
+  it('connects a writer and hands the surface the Workspace host, so its Advisor can Apply', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    expect(h.hosts[h.hosts.length - 1].opts).toMatchObject({ withWriter: true })
+    expect(lastProps().workspaceHost).toMatchObject({ apply: h.apply, host: host() })
+  })
+
+  it('its syncModel asks the extension for a fresh sync and resolves on the reply (final review I1)', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const before = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls.length
+    let done = false
+    const p = (lastProps().workspaceHost.syncModel as () => Promise<void>)().then(() => { done = true })
+    const call = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls[before]
+    expect(call[1]).toEqual({})
+    expect(done).toBe(false)
+    await act(async () => { host().sync.emit({ modelId: 'm1', synced: true }) })
+    await p
+    expect(done).toBe(true)
+  })
+})
 
 describe('StudiesModalView', () => {
   beforeEach(() => {

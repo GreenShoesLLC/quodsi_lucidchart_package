@@ -11,9 +11,10 @@ import { getModalSizePref } from '../../lib/modalSizePref';
 export interface AdvisorLaunchFocus {
   /** Shape id of the focused element; '' for the model as a whole. */
   focusId: string;
-  focusType: 'Model' | 'Activity' | 'Resource' | 'Generator' | 'Entity' | 'Connector';
+  /** 'Project' opens the Advisor Workspace at project focus (spec 2026-10-16). */
+  focusType: 'Model' | 'Activity' | 'Resource' | 'Generator' | 'Entity' | 'Connector' | 'Project';
   focusName?: string;
-  mode: 'definition';
+  mode: 'definition' | 'project';
   /** The page the Advisor opens from: the host looks up its cached model id so the
    *  consult can read the Simulation Project (spec 2026-10-16). */
   documentId?: string;
