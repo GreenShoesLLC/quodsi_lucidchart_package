@@ -35,8 +35,11 @@ export interface LucidModalHost extends LucidHost {
   requestToken(): Promise<string | undefined>
   /** Ask the extension to sync the model. `onResult` gets the reply; if none
    *  arrives within MODEL_SYNC_TIMEOUT_MS it first gets a `{synced:false}`
-   *  timeout result, then still gets a late reply. Returns an unsubscribe. */
-  requestModelSync(onResult: (result: ModelSyncResult) => void): () => void
+   *  timeout result, then still gets a late reply. Returns an unsubscribe.
+   *  `resync` asks for a fresh upsert + snapshot push first (the page named, or the last
+   *  Studies open's), rather than the outcome of the last open (spec 2026-10-16). */
+  requestModelSync(onResult: (result: ModelSyncResult) => void,
+    resync?: { documentId?: string; pageId?: string }): () => void
   connect(): void
   disconnect(): void
 }
@@ -145,7 +148,7 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
       const deadline = window.setTimeout(() => finish(undefined), TOKEN_TIMEOUT_MS)
       ports.send(EnvelopeMessageType.REQUEST_STUDIO_TOKEN)
     }),
-    requestModelSync: (onResult) => {
+    requestModelSync: (onResult, resync) => {
       const stop = () => { off(); window.clearTimeout(timer) }
       const off = on((env) => {
         if (env.type !== EnvelopeMessageType.STUDIES_MODEL_SYNC) return
@@ -157,7 +160,8 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
       const timer = window.setTimeout(() => {
         onResult({ synced: false, error: 'The extension did not answer.' })
       }, MODEL_SYNC_TIMEOUT_MS)
-      ports.send(EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC)
+      if (resync) ports.send(EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC, { resync: true, ...resync })
+      else ports.send(EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC)
       return stop
     },
   }

@@ -64,6 +64,20 @@ describe('StudiesModalView and the Advisor Workspace (spec 2026-10-16)', () => {
     expect(h.hosts[h.hosts.length - 1].opts).toMatchObject({ withWriter: true })
     expect(lastProps().workspaceHost).toMatchObject({ apply: h.apply, host: host() })
   })
+
+  it('its syncModel asks the extension for a fresh sync and resolves on the reply (final review I1)', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const before = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls.length
+    let done = false
+    const p = (lastProps().workspaceHost.syncModel as () => Promise<void>)().then(() => { done = true })
+    const call = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls[before]
+    expect(call[1]).toEqual({})
+    expect(done).toBe(false)
+    await act(async () => { host().sync.emit({ modelId: 'm1', synced: true }) })
+    await p
+    expect(done).toBe(true)
+  })
 })
 
 describe('StudiesModalView', () => {

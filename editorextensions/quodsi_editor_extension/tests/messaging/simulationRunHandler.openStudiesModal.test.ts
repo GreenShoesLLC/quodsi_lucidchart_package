@@ -217,3 +217,31 @@ describe('OPEN_STUDIES_MODAL', () => {
     expect(data.modelId).toBeUndefined();
   });
 });
+
+// The Advisor Workspace (spec 2026-10-16; final review I1): after an Apply, or before
+// Check, the panel asks for a fresh sync so the server's copy follows the diagram.
+describe('REQUEST_STUDIES_MODEL_SYNC with resync', () => {
+  const resync = (data: Record<string, unknown>): any => ({ ...pathRequest(), data: { resync: true, ...data } });
+
+  it('runs a fresh upsert and snapshot push for the page it names, then replies', async () => {
+    upsertModelMock.mockResolvedValue({ serverModelId: 'srv-9' });
+    pushSnapshotMock.mockResolvedValue(undefined);
+    SimulationRunHandler.handleMessage(resync({ documentId: 'doc-1', pageId: 'pg-1' }));
+    await flush();
+    expect(upsertModelMock).toHaveBeenCalledTimes(1);
+    expect(pushSnapshotMock).toHaveBeenCalledTimes(1);
+    expect(replies()[0].msg.data).toEqual({ modelId: 'srv-9', synced: true });
+    expect((SimulationRunHandler as any).scenarioModelIdCache.get('doc-1:pg-1')).toBe('srv-9');
+  });
+
+  it('with no page named, resyncs the page of the last Studies open', async () => {
+    upsertModelMock.mockResolvedValue({ serverModelId: 'srv-1' });
+    pushSnapshotMock.mockResolvedValue(undefined);
+    SimulationRunHandler.handleMessage(openMessage());
+    await flush();
+    SimulationRunHandler.handleMessage(resync({}));
+    await flush();
+    expect(upsertModelMock).toHaveBeenCalledTimes(2);
+    expect(upsertModelMock.mock.calls[1][1]).toMatchObject({ documentId: 'doc-1', pageId: 'pg-1' });
+  });
+});

@@ -126,6 +126,19 @@ describe('AdvisorModalView', () => {
     expect(h.sendMessage).not.toHaveBeenCalledWith(EnvelopeMessageType.OPEN_STUDIES_MODAL, expect.anything())
   })
 
+  it('passes a resync for its page and, without a model id, a way into Studies on the Project tab (final review)', async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Generator&focusId=g1&documentId=d1&pageId=p1')
+    render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    const host = hostEntry().host as FakeHost
+    void last().syncModel()
+    expect((host.requestModelSync as ReturnType<typeof vi.fn>).mock.calls.at(-1)![1]).toEqual({ documentId: 'd1', pageId: 'p1' })
+    act(() => { last().openProjectFallback() })
+    expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.OPEN_STUDIES_MODAL,
+      expect.objectContaining({ documentId: 'd1', pageId: 'p1', tab: 'project' }))
+    expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+  })
+
   it('focusType=Project reaches the surface as a project focus', async () => {
     setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Project&modelId=m-1&documentId=d1&pageId=p1')
     render(<AdvisorModalView />)

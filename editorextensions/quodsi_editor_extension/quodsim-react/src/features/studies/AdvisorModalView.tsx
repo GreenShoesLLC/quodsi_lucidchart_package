@@ -5,13 +5,19 @@ import type { LucidModalHost } from './lucidModalHost'
 import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
 import { ModalHeader } from './ModalHeader'
+import { syncModelOnce } from './modelSync'
+import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 
 // One lazy module: the consult and the focus parser both come from the heavy
 // studies export, so neither lands in the panel's entry chunk.
 const Consult = lazy(() =>
   import('quodsi_studio/platforms/studies').then((m) => ({
-    default: ({ params, host, modelId }: { params: URLSearchParams; host: LucidModalHost; modelId?: string }) => (
-      <m.AdvisorConsultSurface focus={m.workspaceFocusFromParams(params)} host={host} modelId={modelId} />
+    default: ({ params, host, modelId, syncModel, openProjectFallback }: {
+      params: URLSearchParams; host: LucidModalHost; modelId?: string
+      syncModel?: () => Promise<void>; openProjectFallback?: () => void
+    }) => (
+      <m.AdvisorConsultSurface focus={m.workspaceFocusFromParams(params)} host={host} modelId={modelId}
+        syncModel={syncModel} openProjectFallback={openProjectFallback} />
     ),
   })),
 )
@@ -30,6 +36,21 @@ export function AdvisorModalView() {
   // the URL. The Advisor Workspace widens to the whole project in place (spec 2026-10-16
   // advisor-workspace), so this modal never opens Studies itself.
   const modelId = params.get('modelId') || undefined
+  const documentId = params.get('documentId')
+  const pageId = params.get('pageId')
+  const { openStudiesModal } = useSimulationRunSender()
+  // The server's copy follows the diagram after an Apply and before Check (final review I1).
+  const syncModel = useMemo(
+    () => (documentId && pageId ? () => syncModelOnce(host, { documentId, pageId }) : undefined),
+    [documentId, pageId, host],
+  )
+  // No model id yet: Studies on its Project tab syncs the model and creates one.
+  const openProjectFallback = useMemo(
+    () => (documentId && pageId
+      ? () => { openStudiesModal(documentId, pageId, 'project'); host.closeModal() }
+      : undefined),
+    [documentId, pageId, openStudiesModal, host],
+  )
 
   useEffect(() => {
     host.connect()
@@ -50,7 +71,7 @@ export function AdvisorModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading the Advisor…</p>}>
-              <Consult params={params} host={host} modelId={modelId} />
+              <Consult params={params} host={host} modelId={modelId} syncModel={syncModel} openProjectFallback={openProjectFallback} />
             </Suspense>
           </QueryClientProvider>
         )}

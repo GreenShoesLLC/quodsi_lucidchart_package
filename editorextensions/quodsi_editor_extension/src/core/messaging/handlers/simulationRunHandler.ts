@@ -29,7 +29,9 @@ export class SimulationRunHandler {
    *  upsert AND the snapshot push are done; rejects with the failure. The
    *  Studies view pulls the outcome via REQUEST_STUDIES_MODEL_SYNC. One
    *  studio-embed modal is open at a time, so a single slot suffices. */
-  private static studiesSync: { promise: Promise<string>; cachedModelId?: string } | null = null;
+  private static studiesSync: {
+    promise: Promise<string>; cachedModelId?: string; documentId: string; pageId: string;
+  } | null = null;
 
   /**
    * The diagram-mapping modal currently open, if any. SINGLETON GUARD, same
@@ -163,36 +165,34 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: missing page/documentId/pageId');
       return;
     }
-    const cacheKey = `${data.documentId}:${data.pageId}`;
-    const modelName = await canonicalModelName(ModelManager.getInstance());
-
-    // Upsert that keeps the DB row current and refreshes the id cache.
-    const refreshUpsert = (): Promise<string | null | undefined> =>
-      upsertModel(client, {
-        documentId: data.documentId!,
-        pageId: data.pageId!,
-        modelName,
-      }).then(({ serverModelId }) => {
-        if (serverModelId) SimulationRunHandler.scenarioModelIdCache.set(cacheKey, serverModelId);
-        return serverModelId;
-      });
-
-    const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
+    const cached = SimulationRunHandler.scenarioModelIdCache.get(`${data.documentId}:${data.pageId}`);
     new StudiesModal(client, {
       modelId: cached,
       // The Advisor's project strip asks for the Project tab (spec 2026-10-16).
       tab: data.tab === 'project' ? 'project' : undefined,
       modalSize: data.modalSize,
     }).show();
-    const idPromise = refreshUpsert();
-    // Push the live model definition snapshot (envelope-level
-    // modelDefinitionSnapshot -> models.model_definition_snapshot) AFTER the
-    // modal opens -- never block the Studies button on the serialize+sync.
-    const snapshotPromise = pushModelDefinitionSnapshot(client, {
-      documentId: data.documentId!,
-      pageId: data.pageId!,
-      modelName,
+    await SimulationRunHandler.startStudiesSync(data.documentId, data.pageId);
+  }
+
+  /**
+   * Upsert the page's model (keeps the DB row current and refreshes the id cache) and
+   * push the live model definition snapshot, as the slot the Studies view pulls through
+   * REQUEST_STUDIES_MODEL_SYNC. A Studies open starts one; so does a resync request from
+   * the Advisor Workspace after an Apply or before Check (spec 2026-10-16; final review I1).
+   */
+  private static async startStudiesSync(documentId: string, pageId: string): Promise<void> {
+    const client = ModelManager.getClient();
+    const cacheKey = `${documentId}:${pageId}`;
+    const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
+    const modelName = await canonicalModelName(ModelManager.getInstance());
+    const idPromise = upsertModel(client, { documentId, pageId, modelName }).then(({ serverModelId }) => {
+      if (serverModelId) SimulationRunHandler.scenarioModelIdCache.set(cacheKey, serverModelId);
+      return serverModelId;
     });
+    // Push the live model definition snapshot (envelope-level
+    // modelDefinitionSnapshot -> models.model_definition_snapshot).
+    const snapshotPromise = pushModelDefinitionSnapshot(client, { documentId, pageId, modelName });
     const promise = Promise.all([idPromise, snapshotPromise]).then(([id]) => {
       const resolved = id ?? cached;
       if (!resolved) throw new Error('model id unresolved');
@@ -200,8 +200,8 @@ export class SimulationRunHandler {
     });
     // Never let it become an unhandled rejection; the view receives the error
     // through REQUEST_STUDIES_MODEL_SYNC.
-    promise.catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: sync failed', e));
-    SimulationRunHandler.studiesSync = { promise, cachedModelId: cached };
+    promise.catch((e) => SimulationRunHandler.logger.error('Studies model sync failed', e));
+    SimulationRunHandler.studiesSync = { promise, cachedModelId: cached, documentId, pageId };
   }
 
   /**
@@ -214,6 +214,14 @@ export class SimulationRunHandler {
    */
   private static async handleRequestStudiesModelSync(msg: EnvelopeBase): Promise<void> {
     const channel = SimulationRunHandler.getResponseChannel(msg);
+    // resync: start a fresh sync first, for the page named or the last Studies open's.
+    const req = (msg.data ?? {}) as { resync?: boolean; documentId?: string; pageId?: string };
+    if (req.resync) {
+      const last = SimulationRunHandler.studiesSync;
+      const documentId = req.documentId ?? last?.documentId;
+      const pageId = req.pageId ?? last?.pageId;
+      if (documentId && pageId) await SimulationRunHandler.startStudiesSync(documentId, pageId);
+    }
     const sync = SimulationRunHandler.studiesSync;
     let data: { modelId?: string; synced: boolean; error?: string };
     if (!sync) {
