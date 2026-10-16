@@ -116,4 +116,23 @@ describe('AdvisorModalView', () => {
     fireEvent.click(screen.getByTitle('Close and return to your diagram'))
     expect(laterSend).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
   })
+
+  it('passes the cached model id; Open opens Studies on the Project tab, then closes (spec 2026-10-16)', async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Generator&focusId=g1&modelId=m-1&documentId=d1&pageId=p1')
+    render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    expect(last().modelId).toBe('m-1')
+    act(() => { last().onOpenProject() })
+    expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.OPEN_STUDIES_MODAL,
+      expect.objectContaining({ documentId: 'd1', pageId: 'p1', tab: 'project' }))
+    expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
+  })
+
+  it('without the document ids there is no model id and no Open', async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Model')
+    render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    expect(last().modelId).toBeUndefined()
+    expect(last().onOpenProject).toBeUndefined()
+  })
 })

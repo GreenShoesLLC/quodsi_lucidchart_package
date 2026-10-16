@@ -124,6 +124,8 @@ describe("ModelPanel — unconverted page shows the shared blank-slate card", ()
       focusType: "Model",
       focusName: undefined,
       mode: "definition",
+      documentId: "doc-1",
+      pageId: "pg-1",
     });
   });
 });
@@ -143,6 +145,8 @@ describe("ModelPanel — the Advisor for everyone signed in", () => {
       focusType: "Model",
       focusName: "Clinic",
       mode: "definition",
+      documentId: "doc-1",
+      pageId: "pg-1",
     });
     fireEvent.click(activityButton);
     expect(mocks.openAdvisorModal).toHaveBeenLastCalledWith({
@@ -150,6 +154,8 @@ describe("ModelPanel — the Advisor for everyone signed in", () => {
       focusType: "Activity",
       focusName: "Triage",
       mode: "definition",
+      documentId: "doc-1",
+      pageId: "pg-1",
     });
   });
 

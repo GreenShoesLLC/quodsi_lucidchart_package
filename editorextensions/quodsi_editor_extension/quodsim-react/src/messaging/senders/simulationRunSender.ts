@@ -14,6 +14,10 @@ export interface AdvisorLaunchFocus {
   focusType: 'Model' | 'Activity' | 'Resource' | 'Generator' | 'Entity' | 'Connector';
   focusName?: string;
   mode: 'definition';
+  /** The page the Advisor opens from: the host looks up its cached model id so the
+   *  consult can read the Simulation Project (spec 2026-10-16). */
+  documentId?: string;
+  pageId?: string;
 }
 
 /**
@@ -24,9 +28,12 @@ export interface AdvisorLaunchFocus {
 export function useSimulationRunSender() {
   const send = useSender();
 
-  /** Send an OPEN_STUDIES_MODAL message to open the embedded-Studio Studies surface. */
-  const openStudiesModal = useCallback((documentId: string, pageId: string) => {
-    send(EnvelopeMessageType.OPEN_STUDIES_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
+  /** Send an OPEN_STUDIES_MODAL message to open the embedded-Studio Studies surface.
+   *  `tab: 'project'` starts it on the Project tab (the Advisor's project strip). */
+  const openStudiesModal = useCallback((documentId: string, pageId: string, tab?: 'project') => {
+    send(EnvelopeMessageType.OPEN_STUDIES_MODAL, {
+      documentId, pageId, modalSize: getModalSizePref(), ...(tab ? { tab } : {}),
+    });
   }, [send]);
 
   /**

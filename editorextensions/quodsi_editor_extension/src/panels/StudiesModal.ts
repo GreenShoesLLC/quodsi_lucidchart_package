@@ -2,6 +2,7 @@ import { EditorClient } from 'lucid-extension-sdk';
 import { ModalSize, DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/lucid-shared';
 import { RoutingModal } from './RoutingModal';
 import { getApiBaseUrl } from '../core/apiBaseUrl';
+import { studiesModalUrl } from './modalUrls';
 
 /**
  * Compiled Studies surface (quodsim-react ?view=studies). Chromeless: the
@@ -9,18 +10,11 @@ import { getApiBaseUrl } from '../core/apiBaseUrl';
  *
  * `modelId` is the cached server model id when the host already knows it;
  * either way the view pulls the sync outcome with REQUEST_STUDIES_MODEL_SYNC
- * (see SimulationRunHandler.handleRequestStudiesModelSync). The query string is
- * hand-encoded: the Lucid extension sandbox has no URLSearchParams.
+ * (see SimulationRunHandler.handleRequestStudiesModelSync).
  */
 export class StudiesModal extends RoutingModal {
-  constructor(client: EditorClient, opts: { modelId?: string; modalSize?: ModalSize }) {
-    const pairs: Array<[string, string]> = [
-      ['view', 'studies'],
-      ['apiBaseUrl', getApiBaseUrl() ?? ''],
-      ['title', 'What-if Analysis'],
-    ];
-    if (opts.modelId) pairs.push(['modelId', opts.modelId]);
-    const url = `quodsim-react/index.html?${pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
+  constructor(client: EditorClient, opts: { modelId?: string; tab?: 'project'; modalSize?: ModalSize }) {
+    const url = studiesModalUrl({ modelId: opts.modelId, tab: opts.tab, apiBaseUrl: getApiBaseUrl() ?? '' });
     const size = opts.modalSize ?? DEFAULT_MODAL_SIZE;
     const sizeOpts = size === 'fullscreen' ? { fullScreen: true as const } : MODAL_SIZE_DIMENSIONS[size];
     super(client, { url, chromeless: true, ...sizeOpts }, 'studio-embed');

@@ -15,12 +15,14 @@ export function StudiesModalView() {
   const apiBaseUrl = params.get('apiBaseUrl')
   const title = params.get('title') ?? 'What-if Analysis'
   const cachedModelId = params.get('modelId') || null
+  // The Advisor's project strip opens Studies on its Project tab (spec 2026-10-16).
+  const tab = params.get('tab') === 'project' ? 'project' : 'studies'
 
   const host = useLucidModalHost()
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const getToken = useStudioApiSetup(apiBaseUrl, host)
 
-  const [screen, setScreen] = useState<SurfaceScreen | null>(cachedModelId ? { kind: 'studies', modelId: cachedModelId } : null)
+  const [screen, setScreen] = useState<SurfaceScreen | null>(cachedModelId ? { kind: tab, modelId: cachedModelId } : null)
   const [resetKey, setResetKey] = useState(0)
   const [syncStatus, setSyncStatus] = useState<EmbedSyncStatus>('pending')
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
@@ -35,13 +37,13 @@ export function StudiesModalView() {
     const stopSync = host.requestModelSync((r) => {
       if (cancelled) return
       if (r.modelId && r.modelId !== cachedModelId) {
-        setScreen({ kind: 'studies', modelId: r.modelId })
+        setScreen({ kind: tab, modelId: r.modelId })
         setResetKey((k) => k + 1)
       }
       setSyncStatus(r.synced ? 'done' : 'failed')
     })
     return () => { cancelled = true; stopSync(); host.disconnect() }
-  }, [host, getToken, cachedModelId])
+  }, [host, getToken, cachedModelId, tab])
 
   return (
     <div className="h-full w-full flex flex-col bg-surface">
