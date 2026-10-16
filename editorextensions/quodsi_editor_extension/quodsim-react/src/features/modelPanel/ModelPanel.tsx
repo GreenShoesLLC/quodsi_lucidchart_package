@@ -69,11 +69,17 @@ export const ModelPanel: React.FC = () => {
 
   // Every Advisor button in the panel -- the shared editor headers and the
   // blank-slate card -- opens the embedded consult in a Lucid host modal (spec
-  // 2026-09-15 §2). Editors only open definition consults.
+  // 2026-09-15 §2). Editors only open definition consults. The page ids let the host
+  // find the model's cached id, so the consult can read its Simulation Project
+  // (spec 2026-10-16).
+  const documentId = selection.documentContext?.documentId
+  const pageId = selection.documentContext?.pageId
   const onOpenAdvisor = useCallback(
     (focus: AdvisorFocus) =>
-      openAdvisorModal({ focusId: focus.id, focusType: focus.type, focusName: focus.name, mode: 'definition' }),
-    [openAdvisorModal],
+      openAdvisorModal({
+        focusId: focus.id, focusType: focus.type, focusName: focus.name, mode: 'definition', documentId, pageId,
+      }),
+    [openAdvisorModal, documentId, pageId],
   );
   // Signed out, the provider supplies no context, so no Advisor button shows:
   // the consult modal cannot sign the user in. The provider itself always

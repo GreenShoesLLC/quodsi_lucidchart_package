@@ -155,7 +155,7 @@ export class SimulationRunHandler {
    * (UpsertModel only).
    */
   private static async handleOpenStudiesModal(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
+    const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize; tab?: string };
     const client = ModelManager.getClient();
     const viewport = new Viewport(client);
     const page = viewport.getCurrentPage();
@@ -178,7 +178,12 @@ export class SimulationRunHandler {
       });
 
     const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
-    new StudiesModal(client, { modelId: cached, modalSize: data.modalSize }).show();
+    new StudiesModal(client, {
+      modelId: cached,
+      // The Advisor's project strip asks for the Project tab (spec 2026-10-16).
+      tab: data.tab === 'project' ? 'project' : undefined,
+      modalSize: data.modalSize,
+    }).show();
     const idPromise = refreshUpsert();
     // Push the live model definition snapshot (envelope-level
     // modelDefinitionSnapshot -> models.model_definition_snapshot) AFTER the
@@ -281,12 +286,23 @@ export class SimulationRunHandler {
       focusName?: string;
       mode?: string;
       modalSize?: ModalSize;
+      documentId?: string;
+      pageId?: string;
     };
+    // The page's cached server model id, when Studies has resolved it before: the
+    // consult then reads the model's Simulation Project (spec 2026-10-16). No
+    // UpsertModel here -- a page never opened in Studies has no project yet.
+    const modelId = data.documentId && data.pageId
+      ? SimulationRunHandler.scenarioModelIdCache.get(`${data.documentId}:${data.pageId}`)
+      : undefined;
     new AdvisorConsultModal(ModelManager.getClient(), {
       focusType: data.focusType,
       focusId: data.focusId,
       focusName: data.focusName,
       mode: data.mode,
+      modelId,
+      documentId: data.documentId,
+      pageId: data.pageId,
       modalSize: data.modalSize,
     }).show();
   }

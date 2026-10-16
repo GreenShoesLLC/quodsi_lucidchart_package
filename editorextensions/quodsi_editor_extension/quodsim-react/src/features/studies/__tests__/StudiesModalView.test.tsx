@@ -220,4 +220,12 @@ describe('StudiesModalView', () => {
     await expect(h.getter!()).resolves.toBe('tok')
     expect(host().requestToken).toHaveBeenCalledTimes(1)
   })
+
+  it('tab=project starts on the Project tab, and the sync keeps it there (spec 2026-10-16)', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1&tab=project')
+    await renderView()
+    expect(lastProps().initialScreen).toEqual({ kind: 'project', modelId: 'm1' })
+    await act(async () => { host().sync.emit({ modelId: 'm2', synced: true }) })
+    expect(lastProps().initialScreen).toEqual({ kind: 'project', modelId: 'm2' })
+  })
 })
