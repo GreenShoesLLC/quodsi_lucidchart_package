@@ -20,15 +20,20 @@ type Posted = { id: string; type: string; data: any; source: string; target: str
 const USER = 'ann@example.com'
 const TOUR = lucidCapacityTradeoff.id
 
-type Props = { isConverted: boolean; currentPageId: string | undefined }
+type Props = {
+  isConverted: boolean
+  currentPageId: string | undefined
+  userKey?: string
+  authStatus?: 'loading' | 'signed-in' | 'signed-out'
+}
 
 /** The host plus the panel's anchored elements the walked steps point at. */
-function Harness({ isConverted, currentPageId }: Props) {
+function Harness({ isConverted, currentPageId, userKey = USER, authStatus = 'signed-in' }: Props) {
   return (
     <div {...anchorProps('panel.root')}>
       <PanelTourHost
-        userKey={USER}
-        authStatus="signed-in"
+        userKey={userKey}
+        authStatus={authStatus}
         isConverted={isConverted}
         currentPageId={currentPageId}
         documentId="doc-1"
@@ -179,6 +184,38 @@ describe('PanelTourHost', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open What-if Analysis' }))
     expect(openStudiesModal).toHaveBeenCalledWith('doc-1', 'ex-1')
     expect(cursor()).toBe('run-baseline')
+  })
+
+  it('a dormant cursor off the example page shows the pause card, not the handoff (C2)', async () => {
+    seed('run-baseline')
+    const { rerender } = render(<Harness isConverted currentPageId="ex-1" />)
+    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
+    await waitFor(() => expect(screen.getByText('The tour continues in What-if Analysis.')).toBeInTheDocument())
+
+    rerender(<Harness isConverted currentPageId="mine" />)
+    await waitFor(() => expect(screen.getByText('Go back to the example page to continue the tour.')).toBeInTheDocument())
+    expect(screen.queryByText('The tour continues in What-if Analysis.')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Open What-if Analysis' })).toBeNull()
+    expect(openStudiesModal).not.toHaveBeenCalled()
+    expect(cursor()).toBe('run-baseline')
+
+    rerender(<Harness isConverted currentPageId="ex-1" />)
+    await waitFor(() => expect(screen.getByText('The tour continues in What-if Analysis.')).toBeInTheDocument())
+    expect(screen.queryByText('Go back to the example page to continue the tour.')).toBeNull()
+  })
+
+  it('TOUR_START before auth resolves is buffered and honoured once signed in (reset kept)', async () => {
+    writeTourState(USER, TOUR, { state: 'completed' })
+    const { rerender } = render(<Harness isConverted={false} currentPageId="pg-1" userKey="" authStatus="loading" />)
+    expect(screen.queryByRole('button', { name: 'Start tour' })).toBeNull()
+    await hostSends({ id: '', type: EnvelopeMessageType.TOUR_START, source: 'host', target: 'model-iframe', version: '1.0', data: { reset: true } })
+    await flush()
+    expect(dock().textContent).toBe('')
+    expect(readTourState(USER, TOUR).state).toBe('completed')
+
+    rerender(<Harness isConverted={false} currentPageId="pg-1" />)
+    await waitFor(() => expect(dock().textContent).toContain("Let's test a business change"))
+    expect(cursor()).toBe('welcome')
   })
 
   it('resume with example page missing returns to load-example', async () => {

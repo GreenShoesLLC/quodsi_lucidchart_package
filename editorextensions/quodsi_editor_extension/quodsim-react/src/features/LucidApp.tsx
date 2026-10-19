@@ -30,18 +30,25 @@ export const LucidApp: React.FC = () => {
 
   // The onboarding tour (spec 2026-10-16): its docked card pins above the
   // panel and the editor shifts down. Outside ModelPanel's documentKey remount
-  // so Convert (which flips isQuodsiModel) does not tear the tour down. Tour
-  // state is per user, so nothing runs until the user is known.
+  // so Convert (which flips isQuodsiModel) does not tear the tour down.
+  // Mounted ALWAYS, even before auth resolves: on a cold panel open the
+  // extension flushes the queued TOUR_START ("Take the Quodsi tour") on
+  // REACT_APP_READY, before its AUTH_STATUS broadcast, so the host must be
+  // listening already and buffer the start until the user is known. The auth
+  // slice cannot tell "not yet known" from "signed out", so anything short of
+  // a signed-in user with an email is 'loading' (a buffered start is then
+  // honoured whenever sign-in arrives).
   const userKey = auth?.user?.email ?? "";
-  const tourHost = userKey ? (
+  const tourAuthStatus = auth?.isAuthenticated && userKey ? "signed-in" : "loading";
+  const tourHost = (
     <PanelTourHost
       userKey={userKey}
-      authStatus={auth.isAuthenticated ? "signed-in" : "signed-out"}
+      authStatus={tourAuthStatus}
       isConverted={selection.documentContext?.isQuodsiModel === true}
       currentPageId={selection.documentContext?.pageId}
       documentId={selection.documentContext?.documentId}
     />
-  ) : null;
+  );
 
   // Model panel content
   return (

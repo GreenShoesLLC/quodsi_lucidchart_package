@@ -48,7 +48,9 @@ const CARD = 'm-2 p-3 rounded border border-border bg-surface text-sm space-y-2'
 const PRIMARY_BUTTON = 'px-3 py-1 rounded bg-accent text-surface font-medium'
 
 export type PanelTourHostProps = {
-  /** The signed-in user's email: tour state and the example page are per user. */
+  /** The signed-in user's email: tour state and the example page are per user.
+   *  '' until auth resolves: nothing starts and storage is not read, but a
+   *  TOUR_START is still heard and buffered. */
   userKey: string
   authStatus: 'loading' | 'signed-in' | 'signed-out'
   /** The current page is a Quodsi model (the panel's model context). */
@@ -189,8 +191,16 @@ export function PanelTourHost({ userKey, authStatus, isConverted, currentPageId,
   const owned = cursor !== undefined && ownsPanel(cursor)
   const dormant = running && cursor !== undefined && !owned
   const examplePageId = userKey ? readExamplePageId(userKey) : null
-  const offExamplePage = running && owned && isPastLoadExample(cursor) &&
+  // C2: the user is on another page than the tour's example.
+  const offPage = running && isPastLoadExample(cursor) &&
     examplePageId !== null && currentPageId !== undefined && currentPageId !== examplePageId
+  // Only an owned step has a machine to suspend; a dormant one runs nothing.
+  const offExamplePage = owned && offPage
+  // Off the example page the pause card replaces the handoff card too: its
+  // Open What-if would launch Studies for the page the user is on, and the
+  // modal would walk run-baseline on the wrong model.
+  const showPause = offPage
+  const showHandoff = dormant && !offPage
 
   // C2: off the example page the session is suspended (no card, no timers,
   // cursor kept) and resumed once the example page is current again.
@@ -232,13 +242,13 @@ export function PanelTourHost({ userKey, authStatus, isConverted, currentPageId,
   return (
     <div data-testid="panel-tour-host" className="flex-none">
       <div ref={dockRef} data-testid="tour-dock" />
-      {!running && !starting && (
+      {userKey && !running && !starting && (
         <div className="m-2">
           <InvitationCard tour={TOUR} userKey={userKey} authStatus={authStatus}
                           onStart={(o) => { void start(o) }} />
         </div>
       )}
-      {dormant && (
+      {showHandoff && (
         <div className={CARD} data-testid="tour-handoff">
           <p className="m-0">The tour continues in What-if Analysis.</p>
           <button type="button" className={PRIMARY_BUTTON}
@@ -247,7 +257,7 @@ export function PanelTourHost({ userKey, authStatus, isConverted, currentPageId,
           </button>
         </div>
       )}
-      {offExamplePage && (
+      {showPause && (
         <div className={CARD} data-testid="tour-page-pause">
           <p className="m-0">Go back to the example page to continue the tour.</p>
           <button type="button" className={PRIMARY_BUTTON} onClick={() => { void goToExamplePage() }}>
