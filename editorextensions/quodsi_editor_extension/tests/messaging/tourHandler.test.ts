@@ -155,6 +155,19 @@ describe('TOUR_LOAD_EXAMPLE', () => {
     expect((storage.takePendingModel(page) as any).replications).toBe(10);
   });
 
+  it("replies 'loaded' only after the page-context refresh has gone out (no pause-card flash)", async () => {
+    let finishRefresh!: () => void;
+    refreshPageContextMock.mockImplementationOnce(() => new Promise<void>((r) => { finishRefresh = r; }));
+    TourHandler.handleMessage(msg(EnvelopeMessageType.TOUR_LOAD_EXAMPLE, { replace: false }));
+    await flush();
+    expect(refreshPageContextMock).toHaveBeenCalledTimes(1);
+    expect(replies(EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT)).toHaveLength(0);
+
+    finishRefresh();
+    await flush();
+    expect(replies(EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT)[0][1].data).toMatchObject({ outcome: 'loaded' });
+  });
+
   it('existing example page + replace:false -> occupied, nothing created', async () => {
     const existing = titledPage('page-old-example', EXAMPLE_PAGE_TITLE);
     documentPagesForTests.push(existing);

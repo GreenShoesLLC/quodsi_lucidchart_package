@@ -37,6 +37,17 @@ describe('buildAutoMappings (auto-convert helper)', () => {
     expect(map.size).toBe(2);
   });
 
+  it('a stored type wins over the proposal (L6)', () => {
+    const map = buildAutoMappings({ mappings: [
+      { elementId: 'a1', currentType: SimulationObjectType.Activity, proposedType: SimulationObjectType.Generator },
+      { elementId: 'a2', currentType: SimulationObjectType.Activity, proposedType: null },
+      { elementId: 'b1', currentType: null, proposedType: SimulationObjectType.Activity },
+    ] });
+    expect(map.get('a1')).toBe(SimulationObjectType.Activity);
+    expect(map.get('a2')).toBe(SimulationObjectType.Activity);
+    expect(map.get('b1')).toBe(SimulationObjectType.Activity);
+  });
+
   it('returns empty map when all entries are null or Entity', () => {
     const map = buildAutoMappings({ mappings: [
       { elementId: 'x1', proposedType: null },

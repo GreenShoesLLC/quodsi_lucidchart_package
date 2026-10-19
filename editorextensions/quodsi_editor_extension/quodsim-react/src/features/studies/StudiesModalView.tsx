@@ -31,6 +31,9 @@ export function StudiesModalView() {
   const cachedModelId = params.get('modelId') || null
   // The Advisor's project strip opens Studies on its Project tab (spec 2026-10-16).
   const tab = params.get('tab') === 'project' ? 'project' : 'studies'
+  // The document the modal opened over: the tour host runs only in the one
+  // that owns the tour (final review ruling 7).
+  const documentId = params.get('documentId') ?? undefined
 
   // A writer, so the Workspace's model proposals can Apply from Studies too.
   const host = useLucidModalHost({ withWriter: true })
@@ -81,7 +84,7 @@ export function StudiesModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             {/* Inside the provider: the tour's run observer watches this modal's queries. */}
-            <ModalTourHost userKey={tourUserKey} />
+            <ModalTourHost userKey={tourUserKey} documentId={documentId} />
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading Studies…</p>}>
               <StudiesSurface host={host} syncModel={syncModel} initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
             </Suspense>

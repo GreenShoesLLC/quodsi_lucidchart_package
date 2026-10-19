@@ -1,12 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import {
+  TOUR_STORAGE_KEY,
   anchorProps,
   lucidCapacityTradeoff,
   readTourState,
   writeTourState,
 } from 'quodsi_studio/platforms/shared'
-import { readExamplePageId, writeExamplePageId } from '../examplePageStore'
+import { EXAMPLE_PAGE_STORAGE_KEY, readExamplePageId, readTourOwner, writeExamplePage } from '../examplePageStore'
 
 const openStudiesModal = vi.fn()
 vi.mock('../../../messaging/senders/simulationRunSender', () => ({
@@ -25,10 +26,11 @@ type Props = {
   currentPageId: string | undefined
   userKey?: string
   authStatus?: 'loading' | 'signed-in' | 'signed-out'
+  documentId?: string
 }
 
 /** The host plus the panel's anchored elements the walked steps point at. */
-function Harness({ isConverted, currentPageId, userKey = USER, authStatus = 'signed-in' }: Props) {
+function Harness({ isConverted, currentPageId, userKey = USER, authStatus = 'signed-in', documentId = 'doc-1' }: Props) {
   return (
     <div {...anchorProps('panel.root')}>
       <PanelTourHost
@@ -36,7 +38,7 @@ function Harness({ isConverted, currentPageId, userKey = USER, authStatus = 'sig
         authStatus={authStatus}
         isConverted={isConverted}
         currentPageId={currentPageId}
-        documentId="doc-1"
+        documentId={documentId}
       />
       <button {...anchorProps('panel.convert')}>Convert</button>
       <button {...anchorProps('panel.studies')}>What-if Analysis</button>
@@ -68,9 +70,10 @@ describe('PanelTourHost', () => {
   }
   const dock = () => screen.getByTestId('tour-dock')
   const cursor = () => readTourState(USER, TOUR).currentStepId
+  /** A live cursor in the tour's owning document, doc-1, whose example page is ex-1. */
   const seed = (stepId: string, examplePage = 'ex-1') => {
     writeTourState(USER, TOUR, { state: 'started', currentStepId: stepId })
-    writeExamplePageId(USER, examplePage)
+    writeExamplePage(USER, 'doc-1', examplePage)
   }
   const flush = () => act(async () => { await Promise.resolve() })
 
@@ -113,12 +116,12 @@ describe('PanelTourHost', () => {
     await reply(EnvelopeMessageType.TOUR_LOAD_EXAMPLE, EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT, { outcome: 'loaded', pageId: 'ex-9' }, 1)
     await waitFor(() => expect(cursor()).toBe('panel'))
     expect(readExamplePageId(USER)).toBe('ex-9')
+    expect(readTourOwner(USER)).toEqual({ documentId: 'doc-1', pageId: 'ex-9' })
   })
 
   it('converted flag flip on the example page advances convert', async () => {
     seed('convert')
     const { rerender } = render(<Harness isConverted={false} currentPageId="ex-1" />)
-    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
     await waitFor(() => expect(dock().textContent).toContain('Turn the diagram into a model'))
 
     rerender(<Harness isConverted currentPageId="ex-1" />)
@@ -128,7 +131,6 @@ describe('PanelTourHost', () => {
   it('a converted flag flip on another page does not advance convert', async () => {
     seed('convert')
     const { rerender } = render(<Harness isConverted={false} currentPageId="ex-1" />)
-    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
     await waitFor(() => expect(dock().textContent).toContain('Turn the diagram into a model'))
     rerender(<Harness isConverted={false} currentPageId="other" />)
     rerender(<Harness isConverted currentPageId="other" />)
@@ -139,7 +141,6 @@ describe('PanelTourHost', () => {
   it('switching page mid-tour shows the pause card and suspends; returning resumes', async () => {
     seed('panel')
     const { rerender } = render(<Harness isConverted={false} currentPageId="ex-1" />)
-    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
     await waitFor(() => expect(dock().textContent).toContain('This is the Quodsi Panel'))
 
     rerender(<Harness isConverted={false} currentPageId="other" />)
@@ -163,13 +164,12 @@ describe('PanelTourHost', () => {
     // Live: the panel is on open-studies when the modal writes run-baseline.
     seed('open-studies')
     const first = render(<Harness isConverted currentPageId="ex-1" />)
-    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
     await waitFor(() => expect(dock().textContent).toContain('Open What-if Analysis'))
     expect(screen.queryByText('The tour continues in What-if Analysis.')).toBeNull()
 
     writeTourState(USER, TOUR, { state: 'started', currentStepId: 'run-baseline' })
     await act(async () => {
-      window.dispatchEvent(new StorageEvent('storage', { key: 'quodsi.onboarding.v1' }))
+      window.dispatchEvent(new StorageEvent('storage', { key: TOUR_STORAGE_KEY }))
     })
     await waitFor(() => expect(screen.getByText('The tour continues in What-if Analysis.')).toBeInTheDocument())
     expect(dock().textContent).toBe('')
@@ -179,7 +179,6 @@ describe('PanelTourHost', () => {
     // Fresh mount with the cursor already in the modal's hands.
     posted = []
     render(<Harness isConverted currentPageId="ex-1" />)
-    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
     await waitFor(() => expect(screen.getByText('The tour continues in What-if Analysis.')).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: 'Open What-if Analysis' }))
     expect(openStudiesModal).toHaveBeenCalledWith('doc-1', 'ex-1')
@@ -189,7 +188,6 @@ describe('PanelTourHost', () => {
   it('a dormant cursor off the example page shows the pause card, not the handoff (C2)', async () => {
     seed('run-baseline')
     const { rerender } = render(<Harness isConverted currentPageId="ex-1" />)
-    await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'shown', pageId: 'ex-1' })
     await waitFor(() => expect(screen.getByText('The tour continues in What-if Analysis.')).toBeInTheDocument())
 
     rerender(<Harness isConverted currentPageId="mine" />)
@@ -218,13 +216,108 @@ describe('PanelTourHost', () => {
     expect(cursor()).toBe('welcome')
   })
 
-  it('resume with example page missing returns to load-example', async () => {
+  // Ruling 7: the tour belongs to one Lucid document, and only a click moves
+  // it -- a mount never switches pages or builds the example.
+  it('remount in another document with a live cursor posts nothing and shows the invitation', async () => {
+    seed('model')
+    render(<Harness isConverted currentPageId="pg-1" documentId="doc-2" />)
+    await flush()
+    expect(postedOf(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE)).toHaveLength(0)
+    expect(postedOf(EnvelopeMessageType.TOUR_LOAD_EXAMPLE)).toHaveLength(0)
+    expect(dock().textContent).toBe('')
+    expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument()
+    expect(cursor()).toBe('model')
+  })
+
+  it('remount in the owning document posts nothing and shows the right card', async () => {
+    seed('panel')
+    const first = render(<Harness isConverted={false} currentPageId="ex-1" />)
+    await waitFor(() => expect(dock().textContent).toContain('This is the Quodsi Panel'))
+    first.unmount()
+
     seed('model')
     render(<Harness isConverted currentPageId="pg-1" />)
+    await waitFor(() => expect(screen.getByText('Go back to the example page to continue the tour.')).toBeInTheDocument())
+    expect(postedOf(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE)).toHaveLength(0)
+    expect(postedOf(EnvelopeMessageType.TOUR_LOAD_EXAMPLE)).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: 'Resume tour' })).toBeNull()
+  })
+
+  it('no owning document stored: a live cursor is offered, not resumed', async () => {
+    writeTourState(USER, TOUR, { state: 'started', currentStepId: 'panel' })
+    render(<Harness isConverted={false} currentPageId="pg-1" />)
+    await flush()
+    expect(dock().textContent).toBe('')
+    expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument()
+  })
+
+  it('a cursor at load-example is not resumed on mount, even in the owning document (it would build)', async () => {
+    seed('load-example')
+    render(<Harness isConverted={false} currentPageId="ex-1" />)
+    await flush()
+    expect(postedOf(EnvelopeMessageType.TOUR_LOAD_EXAMPLE)).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument()
+  })
+
+  it('Resume in another document adopts it: example missing there, so back to load-example, built here', async () => {
+    seed('model')
+    render(<Harness isConverted currentPageId="pg-1" documentId="doc-2" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Resume tour' }))
+    expect(readTourOwner(USER)).toEqual({ documentId: 'doc-2', pageId: null })
     await reply(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE, EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE_RESULT, { outcome: 'missing' })
     await waitFor(() => expect(cursor()).toBe('load-example'))
     await waitFor(() => expect(postedOf(EnvelopeMessageType.TOUR_LOAD_EXAMPLE)).toHaveLength(1))
     expect(postedOf(EnvelopeMessageType.TOUR_LOAD_EXAMPLE)[0].data).toEqual({ replace: false })
+    await reply(EnvelopeMessageType.TOUR_LOAD_EXAMPLE, EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT, { outcome: 'loaded', pageId: 'ex-2' })
+    await waitFor(() => expect(readTourOwner(USER)).toEqual({ documentId: 'doc-2', pageId: 'ex-2' }))
+  })
+
+  it('another tab adopting the tour stops the session here and offers the invitation', async () => {
+    seed('panel')
+    render(<Harness isConverted={false} currentPageId="ex-1" />)
+    await waitFor(() => expect(dock().textContent).toContain('This is the Quodsi Panel'))
+
+    await act(async () => {
+      writeExamplePage(USER, 'doc-2', 'ex-2')
+      window.dispatchEvent(new StorageEvent('storage', { key: EXAMPLE_PAGE_STORAGE_KEY }))
+    })
+    await waitFor(() => expect(dock().textContent).toBe(''))
+    expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument()
+
+    // Nor does it follow the other tab's cursor any more.
+    await act(async () => {
+      writeTourState(USER, TOUR, { state: 'started', currentStepId: 'load-example' })
+      window.dispatchEvent(new StorageEvent('storage', { key: TOUR_STORAGE_KEY }))
+    })
+    await flush()
+    expect(postedOf(EnvelopeMessageType.TOUR_LOAD_EXAMPLE)).toHaveLength(0)
+    expect(dock().textContent).toBe('')
+  })
+
+  it('a cursor change from the other frame re-checks the owner (onCursor)', async () => {
+    seed('panel')
+    render(<Harness isConverted={false} currentPageId="ex-1" />)
+    await waitFor(() => expect(dock().textContent).toContain('This is the Quodsi Panel'))
+    // The owner moved without this tab hearing the owner key's own event.
+    writeExamplePage(USER, 'doc-2', 'ex-2')
+    await act(async () => {
+      writeTourState(USER, TOUR, { state: 'started', currentStepId: 'convert' })
+      window.dispatchEvent(new StorageEvent('storage', { key: TOUR_STORAGE_KEY }))
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument())
+    expect(dock().textContent).toBe('')
+  })
+
+  it('a start overtaken mid-preflight (auth flips away) does not leave the invitation hidden', async () => {
+    // Paused, so the re-sign-in below does not resume it on its own.
+    writeTourState(USER, TOUR, { state: 'started', currentStepId: 'model', paused: true })
+    const { rerender } = render(<Harness isConverted currentPageId="pg-1" documentId="doc-2" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Resume tour' }))
+    expect(postedOf(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE)).toHaveLength(1) // reply never comes
+    rerender(<Harness isConverted currentPageId="pg-1" documentId="doc-2" authStatus="loading" />)
+    rerender(<Harness isConverted currentPageId="pg-1" documentId="doc-2" />)
+    await flush()
+    expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument()
   })
 
   it('does not auto-start a paused (×) cursor; the invitation offers Resume', async () => {

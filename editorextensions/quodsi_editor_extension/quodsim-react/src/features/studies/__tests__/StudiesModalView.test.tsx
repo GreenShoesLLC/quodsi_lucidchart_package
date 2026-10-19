@@ -14,7 +14,7 @@ const h = vi.hoisted(() => ({
   hosts: [] as Array<{ host: unknown; opts: unknown }>,
   apply: vi.fn(),
   auth: undefined as undefined | { isAuthenticated: boolean; user?: { email?: string } },
-  tourHosts: [] as Array<{ userKey: string; client: unknown }>,
+  tourHosts: [] as Array<{ userKey: string; documentId?: string; client: unknown }>,
   surfaceClients: [] as unknown[],
 }))
 
@@ -48,8 +48,8 @@ vi.mock('../lucidModalHost', async () => {
 })
 
 vi.mock('../../onboarding/ModalTourHost', () => ({
-  ModalTourHost: ({ userKey }: { userKey: string }) => {
-    h.tourHosts.push({ userKey, client: useQueryClient() })
+  ModalTourHost: ({ userKey, documentId }: { userKey: string; documentId?: string }) => {
+    h.tourHosts.push({ userKey, documentId, client: useQueryClient() })
     return null
   },
 }))
@@ -113,6 +113,12 @@ describe('StudiesModalView', () => {
     expect(last.userKey).toBe('ann@example.com')
     // The same client the surface's queries live in: the run observer must see them.
     expect(last.client).toBe(h.surfaceClients[h.surfaceClients.length - 1])
+  })
+
+  it("the tour host gets the URL's documentId: the tour runs only in its owning document", async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1&documentId=doc%201')
+    await renderView()
+    expect(h.tourHosts[h.tourHosts.length - 1].documentId).toBe('doc 1')
   })
 
   it('the tour host gets no user until auth names one', async () => {

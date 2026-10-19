@@ -1,6 +1,6 @@
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { createLucidPanelPlatform, requestFromHost, HOST_REPLY_TIMEOUT_MS } from '../lucidTourPlatform'
-import { readExamplePageId, writeExamplePageId } from '../examplePageStore'
+import { clearExamplePageId, readExamplePageId, readTourOwner, writeExamplePage } from '../examplePageStore'
 
 const USER = 'ann@example.com'
 
@@ -12,6 +12,7 @@ function deps() {
     container: document.createElement('div'),
     getIsConverted: () => state.converted,
     getCurrentPageId: () => state.page,
+    getDocumentId: () => 'doc-1' as string | undefined,
     userKey: USER,
   }
   return { d, state }
@@ -29,12 +30,15 @@ describe('createLucidPanelPlatform', () => {
       EnvelopeMessageType.TOUR_LOAD_EXAMPLE, { replace: false }, EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT,
     )
     expect(readExamplePageId(USER)).toBe('ex-7')
+    // The document the example loaded in owns the tour (ruling 7).
+    expect(readTourOwner(USER)).toEqual({ documentId: 'doc-1', pageId: 'ex-7' })
 
     d.request.mockResolvedValueOnce({ outcome: 'occupied' })
     await expect(p.loadExample({ replace: false })).resolves.toBe('occupied')
     d.request.mockResolvedValueOnce({ outcome: 'failed', error: 'x' })
     await expect(p.loadExample({ replace: true })).resolves.toBe('failed')
     expect(readExamplePageId(USER)).toBeNull()
+    expect(readTourOwner(USER)?.documentId).toBe('doc-1')
     d.request.mockRejectedValueOnce(new Error('timed out'))
     await expect(p.loadExample({ replace: false })).resolves.toBe('failed')
   })
@@ -51,7 +55,7 @@ describe('createLucidPanelPlatform', () => {
   })
 
   it('observeDiagram emits model.converted only on a false→true flip on the example page', () => {
-    writeExamplePageId(USER, 'ex-1')
+    writeExamplePage(USER, 'doc-1', 'ex-1')
     const { d, state } = deps()
     const p = createLucidPanelPlatform(d)
     const emit = vi.fn()
@@ -70,6 +74,18 @@ describe('createLucidPanelPlatform', () => {
     off()
     state.converted = false; p.sync(); state.converted = true; p.sync()
     expect(emit).toHaveBeenCalledTimes(1)
+  })
+
+  it('with no example page stored (example-unavailable), a flip on any page is the Convert', () => {
+    writeExamplePage(USER, 'doc-1', 'ex-1')
+    clearExamplePageId(USER)
+    const { d, state } = deps()
+    state.page = 'mine'
+    const p = createLucidPanelPlatform(d)
+    const emit = vi.fn()
+    p.observeDiagram!(emit)
+    state.converted = true; p.sync()
+    expect(emit).toHaveBeenCalledWith('model.converted')
   })
 })
 

@@ -126,7 +126,10 @@ export class TourHandler {
 
       existing?.delete();
 
-      refreshPageContext(client, page.id, modelManager, { isQuodsiModel: false });
+      // The panel hears the new page context BEFORE `loaded`: the reply
+      // advances the tour, and a host still holding the old page would show
+      // its off-example-page pause card for a moment.
+      await refreshPageContext(client, page.id, modelManager, { isQuodsiModel: false });
       reply({ outcome: 'loaded', pageId: page.id });
     } catch (error) {
       log.error('Error loading the example page', error);

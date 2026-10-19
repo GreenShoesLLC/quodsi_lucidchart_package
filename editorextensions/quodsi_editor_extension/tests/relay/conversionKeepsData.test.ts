@@ -16,7 +16,9 @@ import { LucidElementFactory } from '../../src/services/LucidElementFactory';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelManager } from '../../src/core/ModelManager';
 import { SimulationObjectType, PeriodUnit } from '@quodsi/lucid-shared';
-import { makeFakeBlock, makeFakePage, addBlock } from '../helpers/fakeProxies';
+import { makeFakeBlock, makeFakeLine, makeFakePage, addBlock, addLine } from '../helpers/fakeProxies';
+import { LucidPageAnalyzer } from '../../src/services/conversion/LucidPageAnalyzer';
+import { buildAutoMappings } from '../../src/core/messaging/handlers/diagramMappingRelayHandler';
 
 let currentPage: any = null;
 (Viewport.prototype as any).getCurrentPage = function (): any {
@@ -192,6 +194,29 @@ describe('Convert keeps Quodsi data already on the page (L6)', () => {
     expect(stored.capacity).toBeUndefined();
     const def = await manager.getModelDefinition();
     expect(def?.activities.get('act-1')).toBeUndefined();
+  });
+
+  it('auto Convert keeps a pasted Activity with no inbound connector as an Activity, with its data', async () => {
+    // Nothing flows into it, so the topology alone proposes Generator; the
+    // stored q_data type is the user's earlier decision and wins (L6).
+    const { storage, manager, service } = makeHarness();
+    const { page, act } = tunedPage();
+    addBlock(page, makeFakeBlock('next-1', { text: 'Exit' }));
+    addLine(page, makeFakeLine('l-1', {
+      endpoint1: { connection: { id: 'act-1' } },
+      endpoint2: { connection: { id: 'next-1' } },
+    }));
+    const preview = new LucidPageAnalyzer().analyzePageForPreview(page, storage);
+    expect(preview.mappings.find(m => m.elementId === 'act-1')?.proposedType).toBe(SimulationObjectType.Generator);
+
+    await service.convertPageWithMappings(page, buildAutoMappings(preview));
+
+    const stored = storage.getElementData<any>(act);
+    expect(stored.type).toBe(SimulationObjectType.Activity);
+    expect(stored.capacity).toBe(3);
+    expect(stored.inboundCapacity).toBe(5);
+    const def = await manager.getModelDefinition();
+    expect(def?.activities.get('act-1')?.capacity).toBe(3);
   });
 
   it('clearAllModelData also clears q_pending_model', () => {

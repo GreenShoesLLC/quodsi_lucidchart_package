@@ -40,20 +40,33 @@ export function buildFinalMappings(
   return map;
 }
 
+type AutoMappingRow = { currentType?: SimulationObjectType | null; proposedType: SimulationObjectType | null };
+
 /**
- * Build the auto-convert mapping from page analysis preview data.
- * Skips entries where proposedType is null (unproposed/no-op) and
- * skips Entity (entities are de-shaped and handled at model level).
- * All remaining proposed types are accepted as-is (no user overrides).
+ * The type an automatic conversion gives one analyzed element: its stored
+ * q_data type when it has one (the user's earlier decision, kept by L6 --
+ * a pasted Activity with nothing flowing into it must not become the
+ * Generator its topology suggests), else the analyzer's proposal. null, or
+ * Entity (entities are de-shaped and handled at model level), leaves the
+ * element out of the conversion.
+ */
+function autoType(m: AutoMappingRow): SimulationObjectType | null {
+  const type = m.currentType ?? m.proposedType;
+  return type === SimulationObjectType.Entity ? null : type;
+}
+
+/**
+ * Build the auto-convert mapping from page analysis preview data: each
+ * element at its autoType, skipping the ones it leaves out. No user
+ * overrides are involved.
  */
 export function buildAutoMappings(
-  previewData: { mappings: { elementId: string; proposedType: SimulationObjectType | null }[] },
+  previewData: { mappings: ({ elementId: string } & AutoMappingRow)[] },
 ): Map<string, SimulationObjectType | null> {
   const map = new Map<string, SimulationObjectType | null>();
   for (const m of previewData.mappings) {
-    if (m.proposedType == null) continue;                          // skip unproposed
-    if (m.proposedType === SimulationObjectType.Entity) continue;  // entities de-shaped
-    map.set(m.elementId, m.proposedType);
+    const type = autoType(m);
+    if (type != null) map.set(m.elementId, type);
   }
   return map;
 }
@@ -63,15 +76,13 @@ export function buildAutoMappings(
  * 2026-09-15 section 1): the conversion service's element counts,
  * `entities: 0` (LucidChart never creates entities from shapes), and
  * `skipped` = analyzed page items the automatic mapping left unclassified --
- * no proposed type, or Entity, the two cases buildAutoMappings drops.
+ * the ones autoType leaves out, exactly what buildAutoMappings drops.
  */
 export function toPageConversionCounts(
   elementCount: { activities: number; generators: number; resources: number; connectors: number },
-  previewData: { mappings: { proposedType: SimulationObjectType | null }[] },
+  previewData: { mappings: AutoMappingRow[] },
 ): PageConversionCounts {
-  const skipped = previewData.mappings.filter(
-    (m) => m.proposedType == null || m.proposedType === SimulationObjectType.Entity,
-  ).length;
+  const skipped = previewData.mappings.filter((m) => autoType(m) == null).length;
   return {
     activities: elementCount.activities,
     generators: elementCount.generators,
@@ -274,8 +285,8 @@ export class DiagramMappingRelayHandler {
   }
 
   /**
-   * Handle AUTO_CONVERT_PAGE: analyze the current page, apply proposed types
-   * (skipping null and Entity), convert, reply AUTO_CONVERT_PAGE_RESULT with
+   * Handle AUTO_CONVERT_PAGE: analyze the current page, apply each element's
+   * stored-else-proposed type (buildAutoMappings), convert, reply AUTO_CONVERT_PAGE_RESULT with
    * the counts, then run the post-convert refresh so the model panel moves
    * from the blank-slate card to the model editor and the model row is
    * registered/snapshotted in quodsi_api. A failure replies with the error
@@ -304,7 +315,7 @@ export class DiagramMappingRelayHandler {
       // Analyze the page to get proposed mappings
       const previewData = pageAnalyzer.analyzePageForPreview(page, storageAdapter);
 
-      // Build final mappings from proposed types (skip null + Entity)
+      // Stored type wins, else the proposal (skip null + Entity)
       const finalMappings = buildAutoMappings(previewData);
       // All auto-proposed — no user overrides
       const userOverrideIds = new Set<string>();
@@ -359,6 +370,6 @@ export class DiagramMappingRelayHandler {
     pageId: string,
     modelManager: ModelManager,
   ): void {
-    refreshPageContext(client, pageId, modelManager, { isQuodsiModel: true });
+    void refreshPageContext(client, pageId, modelManager, { isQuodsiModel: true });
   }
 }

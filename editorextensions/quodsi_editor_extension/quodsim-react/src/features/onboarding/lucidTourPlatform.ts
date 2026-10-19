@@ -12,7 +12,7 @@ import {
 } from '@quodsi/lucid-shared'
 import type { AppEventName, ExampleLoadOutcome, TourPlatform } from 'quodsi_studio/platforms/shared'
 import { createDockedRenderer } from './dockedRenderer'
-import { clearExamplePageId, readExamplePageId, writeExamplePageId } from './examplePageStore'
+import { clearExamplePageId, readExamplePageId, readTourOwner, writeExamplePage } from './examplePageStore'
 import { ownsPanel } from './stepFrames'
 
 /** How long a tour request waits for the extension's reply. */
@@ -62,6 +62,8 @@ export type LucidPanelPlatformDeps = {
   /** The current page's converted flag, as the panel's model context has it. */
   getIsConverted(): boolean
   getCurrentPageId(): string | undefined
+  /** The panel's document: where a loaded example puts the tour (ruling 7). */
+  getDocumentId(): string | undefined
   userKey: string
 }
 
@@ -84,7 +86,10 @@ export function createLucidPanelPlatform(deps: LucidPanelPlatformDeps): LucidPan
           EnvelopeMessageType.TOUR_LOAD_EXAMPLE, { replace }, EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT,
         )) as TourLoadExampleResultData | undefined
         if (reply?.outcome === 'loaded') {
-          writeExamplePageId(deps.userKey, reply.pageId)
+          // The start click already claimed this document; the context may
+          // not have named it yet, so fall back to that claim.
+          const documentId = deps.getDocumentId() ?? readTourOwner(deps.userKey)?.documentId
+          if (documentId) writeExamplePage(deps.userKey, documentId, reply.pageId)
           return 'loaded'
         }
         if (reply?.outcome === 'occupied') return 'occupied'
@@ -102,7 +107,9 @@ export function createLucidPanelPlatform(deps: LucidPanelPlatformDeps): LucidPan
     },
 
     // Convert, as the panel sees it: the model context's converted flag going
-    // false -> true while the example page is current.
+    // false -> true while the example page is current -- or on any page when
+    // there is no example page (example-unavailable: the user converts a
+    // diagram of their own).
     observeDiagram(emit) {
       emitters.add(emit)
       return () => { emitters.delete(emit) }
@@ -113,8 +120,8 @@ export function createLucidPanelPlatform(deps: LucidPanelPlatformDeps): LucidPan
       const flipped = !wasConverted && converted
       wasConverted = converted
       if (!flipped) return
-      const page = deps.getCurrentPageId()
-      if (page === undefined || page !== readExamplePageId(deps.userKey)) return
+      const example = readExamplePageId(deps.userKey)
+      if (example !== null && deps.getCurrentPageId() !== example) return
       for (const emit of [...emitters]) emit('model.converted')
     },
   }

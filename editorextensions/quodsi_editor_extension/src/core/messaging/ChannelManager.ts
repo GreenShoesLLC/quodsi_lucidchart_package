@@ -74,7 +74,8 @@ export class ChannelManager {
   
   /**
    * Mark a channel as not ready (its iframe is gone). Keeps the panel and the
-   * queue: messages sent while closed wait for the next REACT_APP_READY.
+   * queue: messages sent while closed wait for the next REACT_APP_READY,
+   * coalesced by type (enqueueOrSend).
    */
   public markChannelNotReady(role: PanelRole): void {
     this.debug.debug(`Marking channel ${role} as NOT ready`);
@@ -161,7 +162,14 @@ export class ChannelManager {
         this.logFn(`Relay failed, queued message for ${role}: ${msg.type}`);
       }
     } else {
-      ch.queue.push(msg);
+      // Not ready -- a modal before its REACT_APP_READY, or the side panel
+      // while closed (it keeps its channel, T7). Coalesce by type so a long
+      // close does not pile up every selection/model-context broadcast and
+      // replay them all on reopen: a new message replaces a queued one of the
+      // same type in place (first-insertion order, last payload wins).
+      const same = ch.queue.findIndex((m) => m.type === msg.type);
+      if (same >= 0) ch.queue[same] = msg;
+      else ch.queue.push(msg);
       this.logFn(`Queued message for ${role}: ${msg.type}`);
     }
   }

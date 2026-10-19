@@ -12,6 +12,12 @@
 // A completed or skipped tour drops the session so a later start from the
 // panel is picked up again.
 //
+// Only in the document that owns the tour (final review ruling 7,
+// examplePageStore.ts): the cursor is shared by every document the user
+// opens, so a modal over any other document (or with no owner recorded yet)
+// neither starts nor follows it, and a running session stops as soon as
+// another document adopts the tour.
+//
 // Mount it inside the modal's QueryClientProvider: the session's run observer
 // must watch the modal's own queries (C3 — re-entry at wait-baseline with the
 // run already finished advances on the first terminal read).
@@ -21,6 +27,7 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  TOUR_STORAGE_KEY,
   createZagRenderer,
   lucidCapacityTradeoff,
   readTourState,
@@ -28,11 +35,10 @@ import {
   type TourPlatform,
   type TourSession,
 } from 'quodsi_studio/platforms/shared'
+import { EXAMPLE_PAGE_STORAGE_KEY, readTourOwner } from './examplePageStore'
 import { ownsModal } from './stepFrames'
 
 const TOUR = lucidCapacityTradeoff
-/** storage.ts's key; the storage event names the key that changed. */
-const STORAGE_KEY = 'quodsi.onboarding.v1'
 
 const platform: TourPlatform = {
   createRenderer: () => createZagRenderer(),
@@ -47,13 +53,16 @@ export type ModalTourHostProps = {
   /** The signed-in user's email, identical to the panel's: the two frames
    *  share one stored cursor only under the same key. '' = not known yet. */
   userKey: string
+  /** The document the modal opened over (its URL's documentId). Absent:
+   *  the tour is never picked up here. */
+  documentId?: string
 }
 
-export function ModalTourHost({ userKey }: ModalTourHostProps) {
+export function ModalTourHost({ userKey, documentId }: ModalTourHostProps) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    if (!userKey) return
+    if (!userKey || !documentId) return
     let session: TourSession | null = null
     let disposed = false
 
@@ -62,8 +71,10 @@ export function ModalTourHost({ userKey }: ModalTourHostProps) {
       session = null
     }
 
+    const owned = (): boolean => readTourOwner(userKey)?.documentId === documentId
+
     const startIfLive = (): void => {
-      if (disposed || session) return
+      if (disposed || session || !owned()) return
       const saved = readTourState(userKey, TOUR.id)
       if (saved.state !== 'started' || saved.paused) return
       const mine: TourSession = startTourSession({
@@ -74,10 +85,11 @@ export function ModalTourHost({ userKey }: ModalTourHostProps) {
         fromBeginning: false,
         syncAcrossFrames: true,
         onCursor: (s) => {
-          // Finished (here, or synced from the panel): let go, so a new run
-          // of the tour is picked up by the listener below. Deferred: this
-          // can run inside the machine's own render.
-          if (s.state === 'completed' || s.state === 'skipped') {
+          // Finished (here, or synced from the panel), or adopted by another
+          // document: let go, so a new run of the tour here is picked up by
+          // the listener below. Deferred: this can run inside the machine's
+          // own render.
+          if (s.state === 'completed' || s.state === 'skipped' || !owned()) {
             queueMicrotask(() => { if (session === mine) drop() })
           }
         },
@@ -86,8 +98,9 @@ export function ModalTourHost({ userKey }: ModalTourHostProps) {
     }
 
     const onStorage = (e: StorageEvent): void => {
-      if (e.key !== STORAGE_KEY && e.key !== null) return
-      startIfLive()
+      if (e.key !== TOUR_STORAGE_KEY && e.key !== EXAMPLE_PAGE_STORAGE_KEY && e.key !== null) return
+      if (session && !owned()) drop()
+      else startIfLive()
     }
 
     window.addEventListener('storage', onStorage)
@@ -97,7 +110,7 @@ export function ModalTourHost({ userKey }: ModalTourHostProps) {
       window.removeEventListener('storage', onStorage)
       drop()
     }
-  }, [userKey, queryClient])
+  }, [userKey, documentId, queryClient])
 
   return null
 }

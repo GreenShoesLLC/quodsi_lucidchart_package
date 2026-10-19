@@ -25,17 +25,20 @@ const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(
  * and seeds the model-definition snapshot for the Studies catalog; an
  * unconverted page (the onboarding example before its Convert step) has no
  * model to register, so that half is skipped.
- * Best-effort and fire-and-forget; never throws into the caller.
+ * Best-effort; never throws or rejects into the caller. The returned promise
+ * settles once MODEL_CONTEXT and the selection refresh have been sent (the
+ * model-row registration after that stays fire-and-forget): TourHandler
+ * awaits it so the panel learns the page changed before the tour does.
  */
 export function refreshPageContext(
   client: EditorClient,
   pageId: string,
   modelManager: ModelManager,
   opts: { isQuodsiModel: boolean },
-): void {
+): Promise<void> {
   const document = new DocumentProxy(client);
   const { isQuodsiModel } = opts;
-  Promise.resolve().then(async () => {
+  return Promise.resolve().then(async () => {
     const documentId = document.id;
     const title = document.getTitle() || 'Untitled Document';
 
