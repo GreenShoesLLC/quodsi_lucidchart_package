@@ -191,6 +191,16 @@ export class RightDockPanel extends Panel implements RoutablePanel {
 
         // Mark iframe as not ready
         this.isReady = false;
+
+        // The router's 'model' channel must stop relaying too, otherwise a
+        // message sent after the panel closed (e.g. the tour menu's TOUR_START)
+        // goes to an iframe that is gone instead of queuing until the next
+        // REACT_APP_READY. The queue is deliberately kept.
+        try {
+            router.getChannelManager().markChannelNotReady('model');
+        } catch (err) {
+            this.debug.error('Error marking channel not ready:', err);
+        }
     }
 
     /**

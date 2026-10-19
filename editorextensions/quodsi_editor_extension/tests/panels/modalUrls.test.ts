@@ -17,4 +17,8 @@ describe('modal URLs', () => {
     expect(studiesModalUrl({ modelId: 'm-1', tab: 'project', apiBaseUrl: '' })).toContain('tab=project');
     expect(studiesModalUrl({ apiBaseUrl: '' })).not.toContain('tab=');
   });
+  it('the Studies URL carries the document id (the tour runs in its owning document only)', () => {
+    expect(studiesModalUrl({ documentId: 'd 1', apiBaseUrl: '' })).toContain('documentId=d%201');
+    expect(studiesModalUrl({ apiBaseUrl: '' })).not.toContain('documentId=');
+  });
 });

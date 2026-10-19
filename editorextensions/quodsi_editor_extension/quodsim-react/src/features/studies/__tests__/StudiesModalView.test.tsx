@@ -1,5 +1,6 @@
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import { EnvelopeMessageType } from '@quodsi/lucid-shared'
+import { useQueryClient } from '@tanstack/react-query'
 import type { FakeHost } from './fakeModalHost'
 
 const h = vi.hoisted(() => ({
@@ -12,10 +13,13 @@ const h = vi.hoisted(() => ({
   surfaceProps: [] as Array<Record<string, any>>,
   hosts: [] as Array<{ host: unknown; opts: unknown }>,
   apply: vi.fn(),
+  auth: undefined as undefined | { isAuthenticated: boolean; user?: { email?: string } },
+  tourHosts: [] as Array<{ userKey: string; documentId?: string; client: unknown }>,
+  surfaceClients: [] as unknown[],
 }))
 
 vi.mock('../../../messaging/MessageProvider', () => ({
-  useMessaging: () => ({ sendMessage: h.currentSend ?? h.sendMessage }),
+  useMessaging: () => ({ sendMessage: h.currentSend ?? h.sendMessage, auth: h.auth }),
 }))
 vi.mock('quodsi_studio/lib/api', () => ({
   configureApi: vi.fn((opts: { baseUrl: string }) => { h.order.push(`configureApi:${opts.baseUrl}`) }),
@@ -25,6 +29,7 @@ vi.mock('quodsi_studio/lib/api', () => ({
 vi.mock('quodsi_studio/platforms/studies', () => ({
   useLucidWorkspaceHost: (host: unknown) => ({ parts: { model: null, apply: h.apply, host }, state: 'ready' }),
   StudiesSurface: (props: Record<string, any>) => {
+    h.surfaceClients.push(useQueryClient())
     h.order.push('surface')
     h.surfaceProps.push(props)
     return <div data-testid="surface" />
@@ -41,6 +46,13 @@ vi.mock('../lucidModalHost', async () => {
     },
   }
 })
+
+vi.mock('../../onboarding/ModalTourHost', () => ({
+  ModalTourHost: ({ userKey, documentId }: { userKey: string; documentId?: string }) => {
+    h.tourHosts.push({ userKey, documentId, client: useQueryClient() })
+    return null
+  },
+}))
 
 // eslint-disable-next-line import/first
 import { StudiesModalView } from '../StudiesModalView'
@@ -88,6 +100,31 @@ describe('StudiesModalView', () => {
     h.order.length = 0
     h.surfaceProps.length = 0
     h.hosts.length = 0
+    h.auth = undefined
+    h.tourHosts.length = 0
+    h.surfaceClients.length = 0
+  })
+
+  it('mounts the tour host inside the modal QueryClientProvider, keyed by the signed-in email (Task 9)', async () => {
+    h.auth = { isAuthenticated: true, user: { email: 'ann@example.com' } }
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const last = h.tourHosts[h.tourHosts.length - 1]
+    expect(last.userKey).toBe('ann@example.com')
+    // The same client the surface's queries live in: the run observer must see them.
+    expect(last.client).toBe(h.surfaceClients[h.surfaceClients.length - 1])
+  })
+
+  it("the tour host gets the URL's documentId: the tour runs only in its owning document", async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1&documentId=doc%201')
+    await renderView()
+    expect(h.tourHosts[h.tourHosts.length - 1].documentId).toBe('doc 1')
+  })
+
+  it('the tour host gets no user until auth names one', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    expect(h.tourHosts[h.tourHosts.length - 1].userKey).toBe('')
   })
 
   it('defaults its window title to "What-if Analysis" when the host passes none', () => {

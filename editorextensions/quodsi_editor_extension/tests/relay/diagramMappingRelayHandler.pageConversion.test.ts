@@ -215,3 +215,27 @@ describe('toPageConversionCounts', () => {
     ).toEqual({ activities: 3, generators: 1, resources: 2, entities: 0, connectors: 4, skipped: 2 });
   });
 });
+
+describe('APPLY_SHAPE_CHANGES resetExisting', () => {
+  const apply = (data: Record<string, unknown>) =>
+    (DiagramMappingRelayHandler as any).handleApply({
+      id: 'req-a',
+      type: EnvelopeMessageType.APPLY_SHAPE_CHANGES,
+      source: 'diagram-mapping-iframe',
+      target: 'host',
+      version: '1.0',
+      data: { requestId: 1, changes: [{ elementId: 'b1', targetType: SimulationObjectType.Activity }], ...data },
+    });
+
+  it('resetExisting true passes {resetExisting:true} to convertPageWithMappings', async () => {
+    convertMock.mockResolvedValue({ success: true });
+    await apply({ resetExisting: true });
+    expect(convertMock.mock.calls[0][3]).toEqual({ resetExisting: true });
+  });
+
+  it('an absent resetExisting passes resetExisting:false', async () => {
+    convertMock.mockResolvedValue({ success: true });
+    await apply({});
+    expect(convertMock.mock.calls[0][3]).toEqual({ resetExisting: false });
+  });
+});

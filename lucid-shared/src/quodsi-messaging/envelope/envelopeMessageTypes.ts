@@ -161,6 +161,20 @@ export enum EnvelopeMessageType {
   // Canvas navigation — locate/select a diagram element from the embedded Studio iframe
   LOCATE_ELEMENT = "LOCATE_ELEMENT",
 
+  // Onboarding tour (spec 2026-10-16, Lucid onboarding tour). The panel asks
+  // the extension to build the "Airport Security (example)" page
+  // (TOUR_LOAD_EXAMPLE -> TOUR_LOAD_EXAMPLE_RESULT), select a shape by its
+  // Quodsi name (TOUR_SELECT_SHAPE, no reply), and switch back to the example
+  // page (TOUR_SHOW_EXAMPLE_PAGE -> TOUR_SHOW_EXAMPLE_PAGE_RESULT).
+  // TOUR_START starts (or restarts) the tour from the extension menu.
+  // Payloads: ../onboarding/messages.ts.
+  TOUR_LOAD_EXAMPLE = "TOUR_LOAD_EXAMPLE",
+  TOUR_LOAD_EXAMPLE_RESULT = "TOUR_LOAD_EXAMPLE_RESULT",
+  TOUR_SELECT_SHAPE = "TOUR_SELECT_SHAPE",
+  TOUR_SHOW_EXAMPLE_PAGE = "TOUR_SHOW_EXAMPLE_PAGE",
+  TOUR_SHOW_EXAMPLE_PAGE_RESULT = "TOUR_SHOW_EXAMPLE_PAGE_RESULT",
+  TOUR_START = "TOUR_START",
+
   // DevTools
   DEVTOOLS_SWIMLANE_SCAN_REQUEST = "DEVTOOLS_SWIMLANE_SCAN_REQUEST",
   DEVTOOLS_SWIMLANE_SCAN_RESULT = "DEVTOOLS_SWIMLANE_SCAN_RESULT",

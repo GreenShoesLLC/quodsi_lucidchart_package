@@ -20,6 +20,12 @@ import { StoredResourceRecord } from '../../core/StoredResourceRecord';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 
+/** Run settings a parked Model record hands to the model Convert creates. */
+const PENDING_MODEL_KEYS = [
+    'name', 'description', 'replications', 'seed', 'timeUnit', 'timeMode',
+    'runTime', 'warmupTime', 'startDateTime',
+] as const;
+
 import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
@@ -85,6 +91,7 @@ export class LucidPageConversionService {
 
             // Get the model object from the platform object
             const model = modelLucid.getSimulationObject();
+            this.applyPendingModel(page, model);
 
             // Initialize in the model manager
             await this.modelManager.initializeModel(model, page);
@@ -131,11 +138,16 @@ export class LucidPageConversionService {
      * @param page The page to convert
      * @param mappings Map of element ID to target simulation type (null means skip)
      * @param userOverrideIds Set of element IDs that were explicitly set by the user
+     * @param opts.resetExisting Wipe Quodsi data already on the mapped shapes and
+     *   convert them from defaults (the Diagram Mapping modal's "Reset existing
+     *   Quodsi settings" checkbox, spec 2026-10-16 C1). Off by default: Convert
+     *   keeps a shape's data when its stored type equals its mapped type (L6).
      */
     public async convertPageWithMappings(
         page: PageProxy,
         mappings: Map<string, SimulationObjectType | null>,
-        userOverrideIds: Set<string> = new Set()
+        userOverrideIds: Set<string> = new Set(),
+        opts: { resetExisting?: boolean } = {}
     ): Promise<ConversionResult> {
         log.trace('Starting page conversion with explicit mappings');
 
@@ -143,19 +155,26 @@ export class LucidPageConversionService {
             // Check if this is a re-conversion (page already has model data)
             const isReconversion = this.storageAdapter.isQuodsiModel(page);
 
+            const resetExisting = opts.resetExisting === true;
+
             if (isReconversion) {
                 log.trace('Re-conversion: removing changed elements before re-adding');
-                for (const [blockId] of page.allBlocks) {
-                    if (mappings.has(blockId)) {
-                        // removeElement clears q_data AND removes from every collection
-                        // (Activity/Resource/etc.) with cascade cleanup — so a type change
-                        // can't leave the old element behind. (Bug 2)
-                        await this.modelManager.removeElement(blockId);
-                    }
-                }
-                for (const [lineId] of page.allLines) {
-                    if (mappings.has(lineId)) {
-                        await this.modelManager.removeElement(lineId);
+                // removeElement clears q_data AND removes from every collection
+                // (Activity/Resource/etc.) with cascade cleanup — so a type change
+                // can't leave the old element behind. (Bug 2)
+                //
+                // Without resetExisting only a CHANGED element is removed: one now
+                // skipped (null), or whose stored type differs from its mapped
+                // type. An element mapped to the type it already has keeps its
+                // data (L6) and is re-registered below from what is stored.
+                const items: Array<[string, BlockProxy | LineProxy]> = [...page.allBlocks, ...page.allLines];
+                for (const [id, item] of items) {
+                    if (!mappings.has(id)) continue;
+                    const target = mappings.get(id);
+                    if (resetExisting
+                        || target === null
+                        || this.storageAdapter.getElementType(item)?.type !== target) {
+                        await this.modelManager.removeElement(id);
                     }
                 }
             } else {
@@ -167,6 +186,7 @@ export class LucidPageConversionService {
                 );
 
                 const model = modelLucid.getSimulationObject();
+                this.applyPendingModel(page, model);
                 await this.modelManager.initializeModel(model, page);
 
                 if (!this.storageAdapter.isQuodsiModel(page)) {
@@ -175,7 +195,7 @@ export class LucidPageConversionService {
             }
 
             // Convert elements using explicit mappings
-            const counts = await this.convertElementsWithMappings(page, mappings, userOverrideIds);
+            const counts = await this.convertElementsWithMappings(page, mappings, userOverrideIds, !resetExisting);
 
             // Validate the converted model
             const validationResult = await this.modelManager.validateModel();
@@ -203,7 +223,8 @@ export class LucidPageConversionService {
     private async convertElementsWithMappings(
         page: PageProxy,
         mappings: Map<string, SimulationObjectType | null>,
-        userOverrideIds: Set<string> = new Set()
+        userOverrideIds: Set<string> = new Set(),
+        keepExisting: boolean = true
     ): Promise<{ activities: number; generators: number; resources: number; connectors: number }> {
         let activities = 0;
         let generators = 0;
@@ -219,6 +240,9 @@ export class LucidPageConversionService {
         // which doesn't include elements we've added in-memory during this conversion
         const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
         this.seedResourceNames(page, usedNamesByType);
+        // Blocks converted from defaults in this pass -- the only ones whose
+        // parsed "resource: X" may still mint an auto-resource.
+        const freshBlockIds = new Set<string>();
 
         // Process blocks
         for (const [blockId, block] of page.allBlocks) {
@@ -250,10 +274,13 @@ export class LucidPageConversionService {
                 // Lucid's opaque block id. Mirrors drawio (targetList.length + 1).
                 const nameSequence = (usedNamesByType.get(targetType)?.size ?? 0) + 1;
 
+                const keep = keepExisting && this.keepsStoredData(page, block, targetType);
+                if (!keep) freshBlockIds.add(blockId);
+
                 const platformObject = this.elementFactory.createPlatformObject(
                     block,
                     targetType,
-                    true, // isConversion
+                    !keep, // isConversion: false reads the data already stored (L6)
                     mappingSource,
                     nameSequence
                 );
@@ -323,10 +350,11 @@ export class LucidPageConversionService {
 
                 const sourceId = endpoint1.connection.id;
 
+                const keep = keepExisting && this.keepsStoredData(page, line, SimulationObjectType.Connector);
                 const platformObject = this.elementFactory.createPlatformObject(
                     line,
                     SimulationObjectType.Connector,
-                    true, // isConversion
+                    !keep, // isConversion: false reads the data already stored (L6)
                     mappingSource
                 );
 
@@ -363,7 +391,7 @@ export class LucidPageConversionService {
         log.trace(`Saved ${Object.keys(skippedElements).length} skipped elements to page`);
 
         // Process auto-created resources from Activity resourceName fields
-        const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
+        const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType, freshBlockIds);
         resources += autoResourceCount;
 
         // Auto-convert swimlane lanes to Resources (same as quick convert)
@@ -392,6 +420,7 @@ export class LucidPageConversionService {
         // which doesn't include elements we've added in-memory during this conversion
         const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
         this.seedResourceNames(page, usedNamesByType);
+        const freshBlockIds = new Set<string>();
 
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
@@ -406,11 +435,14 @@ export class LucidPageConversionService {
                     blockClass: block.getClassName()
                 });
 
-                // Create platform object using factory with conversion flag
+                // Keep data already stored under the same type (L6); otherwise
+                // convert from defaults.
+                const keep = this.keepsStoredData(page, block, blockAnalysis.elementType);
+                if (!keep) freshBlockIds.add(blockId);
                 const platformObject = this.elementFactory.createPlatformObject(
                     block,
                     blockAnalysis.elementType,
-                    true // isConversion
+                    !keep // isConversion
                 );
 
                 // Get the simulation object
@@ -453,7 +485,7 @@ export class LucidPageConversionService {
         }
 
         // Process auto-created resources from Activity resourceName fields
-        const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
+        const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType, freshBlockIds);
         resources += autoResourceCount;
 
         // Auto-convert swimlane lanes to Resources
@@ -520,11 +552,11 @@ export class LucidPageConversionService {
 
                 const sourceId = endpoint1.connection.id;
 
-                // Create platform object using factory with conversion flag
+                const keep = this.keepsStoredData(page, line, SimulationObjectType.Connector);
                 const platformObject = this.elementFactory.createPlatformObject(
                     line,
                     SimulationObjectType.Connector,
-                    true // isConversion
+                    !keep // isConversion: false reads the data already stored (L6)
                 );
 
                 // Get the simulation object and set connection-specific properties
@@ -557,6 +589,47 @@ export class LucidPageConversionService {
 
         log.trace(`Converted ${connectorCount} connections`);
         return connectorCount;
+    }
+
+    /**
+     * Whether conversion keeps the Quodsi data already stored on `item` (spec
+     * 2026-10-16 L6) instead of converting it from defaults: its stored q_data
+     * type must equal the type it is being converted to. A Resource block
+     * additionally needs its pointer to resolve in q_resources -- a dangling
+     * or format-1 pointer converts fresh, which re-mints a live record.
+     */
+    private keepsStoredData(
+        page: PageProxy,
+        item: BlockProxy | LineProxy,
+        targetType: SimulationObjectType
+    ): boolean {
+        if (this.storageAdapter.getElementType(item)?.type !== targetType) return false;
+        if (targetType !== SimulationObjectType.Resource) return true;
+        const resourceId = this.storageAdapter.getElementData<{ resourceId?: string }>(item)?.resourceId;
+        if (resourceId === undefined || resourceId === null) return false;
+        return this.storageAdapter.getResources(page).some(r => String(r.id) === String(resourceId));
+    }
+
+    /**
+     * Overlays a parked Model record (page key `q_pending_model`, spec
+     * 2026-10-16 amendment 3) onto the model a first-time conversion is about
+     * to initialize, then clears the key. Only the run settings carry over.
+     */
+    private applyPendingModel(page: PageProxy, model: Model): void {
+        const pending = this.storageAdapter.takePendingModel(page);
+        if (!pending) return;
+        const target = model as unknown as Record<string, unknown>;
+        for (const key of PENDING_MODEL_KEYS) {
+            const value = pending[key];
+            if (value === undefined || value === null) continue;
+            if (key === 'startDateTime') {
+                const date = value instanceof Date ? value : new Date(String(value));
+                if (!Number.isNaN(date.getTime())) target[key] = date;
+                continue;
+            }
+            target[key] = value;
+        }
+        log.trace('Applied pending model run settings', Object.keys(pending));
     }
 
     /**
@@ -605,14 +678,18 @@ export class LucidPageConversionService {
         typeNames: Set<string>
     ): void {
         if (type === SimulationObjectType.Resource) {
-            const record = this.storageAdapter.getResources(page).find(r => String(r.id) === block.id);
+            // The pointer names the record: block.id for a fresh conversion,
+            // possibly another id for a block whose data was kept (L6).
+            const pointer = this.storageAdapter.getElementData<{ resourceId?: string }>(block)?.resourceId ?? block.id;
+            const record = this.storageAdapter.getResources(page).find(r => String(r.id) === String(pointer));
             typeNames.add(record?.name ?? element.name);
             return;
         }
 
         if (typeNames.has(element.name)) {
             element.name = generateUniqueName(element.name, (n) => typeNames.has(n));
-            // Update storage with the unique name (createFromConversion already wrote the original)
+            // Update storage with the unique name (createFromConversion, or the
+            // kept q_data, already holds the original)
             this.storageAdapter.updateElementData(block, element);
         }
         typeNames.add(element.name);
@@ -631,7 +708,8 @@ export class LucidPageConversionService {
      */
     private async processAutoCreatedResources(
         page: PageProxy,
-        usedNamesByType: Map<SimulationObjectType, Set<string>>
+        usedNamesByType: Map<SimulationObjectType, Set<string>>,
+        freshBlockIds: ReadonlySet<string>
     ): Promise<number> {
         log.trace('Processing auto-created resources from Activity resourceName fields');
 
@@ -648,6 +726,11 @@ export class LucidPageConversionService {
         // Only the page.addBlock call below is Lucid-specific.
         const refs: ActivityResourceRef[] = [];
         for (const [blockId, block] of page.allBlocks) {
+            // Only blocks converted from defaults in THIS pass. `resourceName`
+            // stays on an Activity's q_data after its first conversion, so a
+            // kept Activity (L6) would otherwise re-mint its resource on every
+            // re-convert.
+            if (!freshBlockIds.has(blockId)) continue;
             const storedData = this.storageAdapter.getElementData<StoredActivityData>(block);
             if (storedData?.resourceName) {
                 refs.push({ elementId: blockId, resourceName: storedData.resourceName });

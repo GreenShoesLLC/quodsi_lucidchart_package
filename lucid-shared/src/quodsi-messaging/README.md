@@ -31,7 +31,8 @@ pairs.
 `msg.data as {...}`). This package holds only the payload pieces both sides
 share: `QuodsiUserInfo`, `ExtensionConfig`, `ElementShape`, `SimulationStatus`,
 the entitlement types (including the whole `ENTITLEMENTS_STATUS` payload,
-`EntitlementsStatusData`) and the page-conversion payloads. A type only one
+`EntitlementsStatusData`), the page-conversion payloads and the onboarding
+tour payloads (`onboarding/messages.ts`: the `TOUR_*` group). A type only one
 side uses lives on that side. A full typed payload map was removed on
 2026-09-17 because nothing used it and it had drifted from the real messages;
 typing payloads end to end is ClickUp 86e39r8e9.

@@ -849,7 +849,17 @@ export class ModelManager {
                 this.storageAdapter.clearElementData(line);
             }
         }
+        this.resetState();
+    }
 
+    /**
+     * Forgets every in-memory model state (definition, current page,
+     * validation, version gate, change tracking) WITHOUT touching storage --
+     * unlike clear(), which also wipes the current page's per-shape data.
+     * Used when a page's model status changes underneath the manager, e.g. the
+     * onboarding example page being un-converted after it was built.
+     */
+    public resetState(): void {
         this.modelDefinition = null;
         this.modelDefinitionPageId = null;
         this.currentPage = null;

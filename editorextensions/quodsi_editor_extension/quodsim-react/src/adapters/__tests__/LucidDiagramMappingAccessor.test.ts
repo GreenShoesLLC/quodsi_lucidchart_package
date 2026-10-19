@@ -115,6 +115,16 @@ describe('LucidDiagramMappingAccessor', () => {
     await expect(promise).resolves.toBeUndefined()
   })
 
+  it('carries resetExisting into the APPLY_SHAPE_CHANGES envelope', () => {
+    const { posted, ports } = makePorts()
+    const accessor = new LucidDiagramMappingAccessor(ports)
+    accessor.connect()
+    void accessor.applyChanges([], true)
+    expect(posted[0].data.resetExisting).toBe(true)
+    void accessor.applyChanges([])
+    expect(posted[1].data.resetExisting).toBe(false)
+  })
+
   it('rejects applyChanges on failure, with a default error message when none is given', async () => {
     const { posted, ports, dispatch } = makePorts()
     const accessor = new LucidDiagramMappingAccessor(ports)

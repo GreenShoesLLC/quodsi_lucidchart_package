@@ -170,6 +170,7 @@ export class SimulationRunHandler {
       modelId: cached,
       // The Advisor's project strip asks for the Project tab (spec 2026-10-16).
       tab: data.tab === 'project' ? 'project' : undefined,
+      documentId: data.documentId,
       modalSize: data.modalSize,
     }).show();
     await SimulationRunHandler.startStudiesSync(data.documentId, data.pageId);

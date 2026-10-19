@@ -1,4 +1,4 @@
-import { Viewport, DocumentProxy, EditorClient } from 'lucid-extension-sdk';
+import { Viewport, EditorClient } from 'lucid-extension-sdk';
 import {
   EnvelopeBase,
   EnvelopeMessageType,
@@ -17,12 +17,7 @@ import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
 import { getLogger } from '@quodsi/lucid-shared';
-import { SelectionHandler } from './selection';
-import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
-import { canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
-
-// Simple ID generator for extension context
-const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+import { refreshPageContext } from './pageContextRefresh';
 
 interface MappingChangeLike {
   elementId: string;
@@ -45,20 +40,33 @@ export function buildFinalMappings(
   return map;
 }
 
+type AutoMappingRow = { currentType?: SimulationObjectType | null; proposedType: SimulationObjectType | null };
+
 /**
- * Build the auto-convert mapping from page analysis preview data.
- * Skips entries where proposedType is null (unproposed/no-op) and
- * skips Entity (entities are de-shaped and handled at model level).
- * All remaining proposed types are accepted as-is (no user overrides).
+ * The type an automatic conversion gives one analyzed element: its stored
+ * q_data type when it has one (the user's earlier decision, kept by L6 --
+ * a pasted Activity with nothing flowing into it must not become the
+ * Generator its topology suggests), else the analyzer's proposal. null, or
+ * Entity (entities are de-shaped and handled at model level), leaves the
+ * element out of the conversion.
+ */
+function autoType(m: AutoMappingRow): SimulationObjectType | null {
+  const type = m.currentType ?? m.proposedType;
+  return type === SimulationObjectType.Entity ? null : type;
+}
+
+/**
+ * Build the auto-convert mapping from page analysis preview data: each
+ * element at its autoType, skipping the ones it leaves out. No user
+ * overrides are involved.
  */
 export function buildAutoMappings(
-  previewData: { mappings: { elementId: string; proposedType: SimulationObjectType | null }[] },
+  previewData: { mappings: ({ elementId: string } & AutoMappingRow)[] },
 ): Map<string, SimulationObjectType | null> {
   const map = new Map<string, SimulationObjectType | null>();
   for (const m of previewData.mappings) {
-    if (m.proposedType == null) continue;                          // skip unproposed
-    if (m.proposedType === SimulationObjectType.Entity) continue;  // entities de-shaped
-    map.set(m.elementId, m.proposedType);
+    const type = autoType(m);
+    if (type != null) map.set(m.elementId, type);
   }
   return map;
 }
@@ -68,15 +76,13 @@ export function buildAutoMappings(
  * 2026-09-15 section 1): the conversion service's element counts,
  * `entities: 0` (LucidChart never creates entities from shapes), and
  * `skipped` = analyzed page items the automatic mapping left unclassified --
- * no proposed type, or Entity, the two cases buildAutoMappings drops.
+ * the ones autoType leaves out, exactly what buildAutoMappings drops.
  */
 export function toPageConversionCounts(
   elementCount: { activities: number; generators: number; resources: number; connectors: number },
-  previewData: { mappings: { proposedType: SimulationObjectType | null }[] },
+  previewData: { mappings: AutoMappingRow[] },
 ): PageConversionCounts {
-  const skipped = previewData.mappings.filter(
-    (m) => m.proposedType == null || m.proposedType === SimulationObjectType.Entity,
-  ).length;
+  const skipped = previewData.mappings.filter((m) => autoType(m) == null).length;
   return {
     activities: elementCount.activities,
     generators: elementCount.generators,
@@ -195,7 +201,7 @@ export class DiagramMappingRelayHandler {
   }
 
   private static async handleApply(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { requestId?: number; changes?: MappingChangeLike[] };
+    const data = msg.data as { requestId?: number; changes?: MappingChangeLike[]; resetExisting?: boolean };
     const requestId = data?.requestId;
     const channel = DiagramMappingRelayHandler.getResponseChannel(msg);
     try {
@@ -218,7 +224,9 @@ export class DiagramMappingRelayHandler {
       // All relayed changes are explicit user decisions — mark every entry as an override.
       const userOverrideIds = new Set(finalMappings.keys());
 
-      const result = await service.convertPageWithMappings(page, finalMappings, userOverrideIds);
+      const result = await service.convertPageWithMappings(page, finalMappings, userOverrideIds, {
+        resetExisting: data?.resetExisting === true,
+      });
 
       DiagramMappingRelayHandler.logger.debug('APPLY_SHAPE_CHANGES complete', { requestId, result });
 
@@ -277,8 +285,8 @@ export class DiagramMappingRelayHandler {
   }
 
   /**
-   * Handle AUTO_CONVERT_PAGE: analyze the current page, apply proposed types
-   * (skipping null and Entity), convert, reply AUTO_CONVERT_PAGE_RESULT with
+   * Handle AUTO_CONVERT_PAGE: analyze the current page, apply each element's
+   * stored-else-proposed type (buildAutoMappings), convert, reply AUTO_CONVERT_PAGE_RESULT with
    * the counts, then run the post-convert refresh so the model panel moves
    * from the blank-slate card to the model editor and the model row is
    * registered/snapshotted in quodsi_api. A failure replies with the error
@@ -307,7 +315,7 @@ export class DiagramMappingRelayHandler {
       // Analyze the page to get proposed mappings
       const previewData = pageAnalyzer.analyzePageForPreview(page, storageAdapter);
 
-      // Build final mappings from proposed types (skip null + Entity)
+      // Stored type wins, else the proposal (skip null + Entity)
       const finalMappings = buildAutoMappings(previewData);
       // All auto-proposed — no user overrides
       const userOverrideIds = new Set<string>();
@@ -353,12 +361,8 @@ export class DiagramMappingRelayHandler {
   /**
    * Post-convert UI + DB refresh, shared by the inline Diagram Mapping
    * modal's apply (handleApply) and the one-click auto-convert
-   * (handleAutoConvert). Recovered from the deleted
-   * ConversionPreviewHandler.handleApplyConversion (git ce884d4): broadcasts
-   * MODEL_CONTEXT and re-runs SelectionHandler context (sends a fresh
-   * SELECTION_CHANGED so the editor panel — including a shape that's still
-   * selected behind the modal — reflects the new mapping), registers the model
-   * row, and seeds the model-definition snapshot for the Studies catalog.
+   * (handleAutoConvert): refreshPageContext (pageContextRefresh.ts, also used
+   * by TourHandler) for a page that is now a model.
    * Best-effort and fire-and-forget; never throws into the caller.
    */
   private static postConvertRefresh(
@@ -366,52 +370,6 @@ export class DiagramMappingRelayHandler {
     pageId: string,
     modelManager: ModelManager,
   ): void {
-    const document = new DocumentProxy(client);
-    Promise.resolve().then(async () => {
-      const documentId = document.id;
-      const title = document.getTitle() || 'Untitled Document';
-
-      router.send('model', {
-        id: generateId(),
-        type: EnvelopeMessageType.MODEL_CONTEXT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: { documentId, title, pageId, isQuodsiModel: true, hasValidModel: true },
-      });
-
-      // Document-level context (transitions a freshly-converted page to "is a model").
-      SelectionHandler.setDocumentContext(documentId, pageId, title, true);
-
-      // Re-process the current selection so a shape that's still selected behind the
-      // modal refreshes its element editor to the new mapping. setDocumentContext
-      // alone does NOT re-broadcast the selected element's data — this mirrors
-      // elementOpsHandler's post-save SELECTION refresh.
-      try {
-        const selectedItems = new Viewport(client).getSelectedItems();
-        await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
-      } catch (e) {
-        DiagramMappingRelayHandler.logger.error('postConvertRefresh: selection refresh failed', e);
-      }
-
-      DiagramMappingRelayHandler.logger.debug('postConvertRefresh: sent context refresh messages');
-
-      const modelName = await canonicalModelName(modelManager);
-      LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'UpsertModel',
-        actionData: { documentId, pageId, modelName },
-        asynchronous: false,
-      }).then(() => {
-        DiagramMappingRelayHandler.logger.debug('postConvertRefresh: model registered in database');
-        void pushModelDefinitionSnapshot(client, { documentId, pageId, modelName }).catch(err => {
-          DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to seed model snapshot:', err);
-        });
-      }).catch(err => {
-        DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to register model in database:', err);
-      });
-    }).catch(error => {
-      DiagramMappingRelayHandler.logger.error('postConvertRefresh: error in refresh:', error);
-    });
+    void refreshPageContext(client, pageId, modelManager, { isQuodsiModel: true });
   }
 }

@@ -28,7 +28,7 @@ export function DiagramMappingView() {
 
   return (
     <div className="h-full w-full bg-surface">
-      <DiagramMappingPanel accessor={accessor} />
+      <DiagramMappingPanel accessor={accessor} showResetExisting />
     </div>
   )
 }

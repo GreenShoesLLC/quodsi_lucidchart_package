@@ -17,6 +17,7 @@ import { PortalHandler } from './portalHandler';
 import { SwimLaneHandler } from './swimlaneHandler';
 import { AnalyticsHandler } from './analyticsHandler';
 import { UpgradeInterestHandler } from './upgradeInterestHandler';
+import { TourHandler } from './tourHandler';
 
 const log = getLogger('MessageHandlers');
 
@@ -116,6 +117,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Onboarding tour (example page, shape selection, show example page)
+    if (TourHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Message wasn't handled by any handler
     log.warn(`Unhandled message type: ${msg.type}`);
     return false;
@@ -140,5 +146,6 @@ export {
   PortalHandler,
   SwimLaneHandler,
   AnalyticsHandler,
-  UpgradeInterestHandler
+  UpgradeInterestHandler,
+  TourHandler
 };

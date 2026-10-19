@@ -41,6 +41,7 @@ import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
 import { AnalyticsHandler } from './core/messaging/handlers/analyticsHandler';
 import { onItemsCreated } from './core/pasteHookWiring';
+import { registerTourMenu } from './core/tourMenu';
 
 const log = getLogger('extension');
 
@@ -79,3 +80,6 @@ viewport.hookSelection((items) => {
 new DocumentProxy(client).hookCreateItems((items) => {
     void onItemsCreated(items, { storageAdapter, modelManager, client });
 });
+
+// Extension menu: restart the onboarding tour on demand.
+registerTourMenu(client, rightDockPanel);
