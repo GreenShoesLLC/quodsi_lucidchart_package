@@ -29,6 +29,31 @@ import { refreshPageContext } from './pageContextRefresh';
 
 const log = getLogger('TourHandler');
 
+/** Example blocks' text size: Lucid's ProcessBlock default overflows the
+ *  example's 80px and 120px blocks (Daniel's smoke, 2026-10-19). */
+export const EXAMPLE_TEXT_SIZE = 10;
+
+/** drawio's example layout is sized for drawio's smaller label text; in Lucid
+ *  the names overflowed it even at EXAMPLE_TEXT_SIZE (smoke 2, 2026-10-19). */
+export const EXAMPLE_LAYOUT_SCALE = 1.5;
+
+/** A copy of `doc` with every block's x/y/width/height multiplied by `k`, so
+ *  centres stay aligned and lines stay straight. Never mutates `doc`. */
+export function scaleLayout(doc: Record<string, any>, k: number): Record<string, any> {
+  const scaleBlock = (b: Record<string, any>) => {
+    const out = { ...b };
+    for (const key of ['x', 'y', 'width', 'height']) {
+      if (typeof out[key] === 'number') out[key] = out[key] * k;
+    }
+    return out;
+  };
+  const out = { ...doc };
+  for (const key of ['generators', 'activities', 'resources']) {
+    if (Array.isArray(doc[key])) out[key] = doc[key].map(scaleBlock);
+  }
+  return out;
+}
+
 export class TourHandler {
   /**
    * Handle onboarding tour messages.
@@ -110,7 +135,7 @@ export class TourHandler {
     const originalPage = viewport.getCurrentPage();
     let built: PageProxy | undefined;
     try {
-      ({ page: built } = await buildModelPage(AIRPORT_SECURITY_EXAMPLE, { title: EXAMPLE_PAGE_TITLE }));
+      ({ page: built } = await buildModelPage(scaleLayout(AIRPORT_SECURITY_EXAMPLE, EXAMPLE_LAYOUT_SCALE), { title: EXAMPLE_PAGE_TITLE, textSize: EXAMPLE_TEXT_SIZE }));
       const page = built;
 
       const storage = modelManager.getStorageAdapter();

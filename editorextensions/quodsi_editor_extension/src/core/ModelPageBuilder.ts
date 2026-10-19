@@ -215,7 +215,7 @@ export async function createLineRecord(
  */
 export async function buildModelPage(
   document: Record<string, any>,
-  opts: { title: string }
+  opts: { title: string; textSize?: number }
 ): Promise<{ page: PageProxy; idMap: Record<string, string> }> {
   const client = ModelManager.getClient();
   const modelManager = ModelManager.getInstance();
@@ -280,12 +280,18 @@ export async function buildModelPage(
     // Loaded ONCE for the whole page -- not per block.
     await client.loadBlockClasses(['ProcessBlock']);
 
+    // A document that carries a block's size (the onboarding example, from
+    // drawio's geometry) is drawn at it; mixing sizes otherwise misaligns
+    // centres and bends the connecting lines. Advisor documents carry none.
     const blockBox = (record: Record<string, any>) => ({
       x: Number(record.x) || 0,
       y: Number(record.y) || 0,
-      w: 80,
-      h: 80,
+      w: Number(record.width) || 80,
+      h: Number(record.height) || 80,
     });
+    const styleText = async (block: any) => {
+      if (opts.textSize !== undefined) await block.textStyles.set('Text', { size: opts.textSize });
+    };
 
     // Each createBlockRecord/createLineRecord call below runs
     // registerElement, which -- while the ModelDefinition is dirty --
@@ -296,6 +302,7 @@ export async function buildModelPage(
     for (const record of generators) {
       currentStep = String(record.id);
       const created = await createBlockRecord(page, modelManager, factory, 'Generator', blockBox(record), stripGeometry(record));
+      await styleText(created.block);
       idMap[String(record.id)] = created.id;
     }
 
@@ -303,6 +310,7 @@ export async function buildModelPage(
     for (const record of activities) {
       currentStep = String(record.id);
       const created = await createBlockRecord(page, modelManager, factory, 'Activity', blockBox(record), stripGeometry(record));
+      await styleText(created.block);
       idMap[String(record.id)] = created.id;
     }
 
@@ -310,6 +318,7 @@ export async function buildModelPage(
     for (const record of resources) {
       currentStep = String(record.id);
       const created = await createResourceBlockRecord(page, modelManager, blockBox(record), stripGeometry(record));
+      await styleText(created.block);
       idMap[String(record.id)] = created.id;
     }
 

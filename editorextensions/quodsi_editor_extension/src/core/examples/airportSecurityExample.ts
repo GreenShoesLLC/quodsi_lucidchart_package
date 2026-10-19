@@ -43,7 +43,9 @@ export const AIRPORT_SECURITY_EXAMPLE: ExampleModelDocument = {
       },
       "batchSize": 1,
       "x": 90,
-      "y": 330
+      "y": 330,
+      "width": 80,
+      "height": 80
     }
   ],
   "activities": [
@@ -85,7 +87,9 @@ export const AIRPORT_SECURITY_EXAMPLE: ExampleModelDocument = {
         "repairResourceRequirementId": ""
       },
       "x": 230,
-      "y": 340
+      "y": 340,
+      "width": 120,
+      "height": 60
     },
     {
       "id": "FLAiJxHVR5Hvmv668gY8-3",
@@ -140,7 +144,9 @@ export const AIRPORT_SECURITY_EXAMPLE: ExampleModelDocument = {
         }
       ],
       "x": 400,
-      "y": 340
+      "y": 340,
+      "width": 120,
+      "height": 60
     },
     {
       "id": "FLAiJxHVR5Hvmv668gY8-4",
@@ -178,7 +184,9 @@ export const AIRPORT_SECURITY_EXAMPLE: ExampleModelDocument = {
         "repairResourceRequirementId": ""
       },
       "x": 570,
-      "y": 340
+      "y": 340,
+      "width": 120,
+      "height": 60
     }
   ],
   "connectors": [

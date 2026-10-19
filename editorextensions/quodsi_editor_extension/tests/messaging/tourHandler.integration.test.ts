@@ -23,6 +23,7 @@ let currentPage: any = null;
 };
 
 let pageCounter = 0;
+const builtBoxes = new Map<string, { x: number; y: number; w: number; h: number }>();
 (DocumentProxy.prototype as any).addPage = function ({ title }: { title: string }): any {
   pageCounter += 1;
   const page = makeFakePage(`page-${pageCounter}`);
@@ -32,8 +33,12 @@ let pageCounter = 0;
     if (i >= 0) documentPagesForTests.splice(i, 1);
   };
   let itemCounter = 0;
-  page.addBlock = ({ boundingBox }: any) =>
-    addBlock(page, makeFakeBlock(`${page.id}-b${++itemCounter}`, { box: boundingBox }));
+  page.addBlock = ({ boundingBox }: any) => {
+    const block = addBlock(page, makeFakeBlock(`${page.id}-b${++itemCounter}`, { box: boundingBox }));
+    block.textStyles = { set: jest.fn(async () => undefined) };
+    builtBoxes.set(block.id, boundingBox);
+    return block;
+  };
   page.addLine = ({ endpoint1, endpoint2 }: any) =>
     addLine(page, makeFakeLine(`${page.id}-l${++itemCounter}`, {
       endpoint1: { connection: endpoint1.connection },
@@ -58,7 +63,7 @@ import { LucidElementFactory } from '../../src/services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../src/services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../src/services/conversion/LucidPageConversionService';
 import { buildAutoMappings } from '../../src/core/messaging/handlers/diagramMappingRelayHandler';
-import { TourHandler } from '../../src/core/messaging/handlers/tourHandler';
+import { TourHandler, EXAMPLE_TEXT_SIZE } from '../../src/core/messaging/handlers/tourHandler';
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r));
@@ -139,4 +144,31 @@ it('load example -> auto Convert: every element keeps its stored type and tuned 
   expect(model.seed).toBe(12345);
   expect(model.runTime).toEqual({ unit: 'hours', value: 8 });
   expect(storage.takePendingModel(page)).toBeNull();
+});
+
+// Daniel's smoke, 2026-10-19: every block came out 80x80 with Lucid's
+// default text, so the 120x60 activities sat 10px lower than the 80x80
+// generator (the generator's line bent) and the names overflowed.
+it('builds the example at drawio sizes, centres aligned, with small text', async () => {
+  TourHandler.handleMessage({
+    id: 'req-load', type: EnvelopeMessageType.TOUR_LOAD_EXAMPLE, source: 'model-iframe',
+    target: 'host', version: '1.0', data: { replace: false },
+  } as any);
+  await flush();
+
+  const result = sendMock.mock.calls.find((c) => c[1]?.type === EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT);
+  const page = documentPagesForTests.find((p) => p.id === result![1].data.pageId);
+  const box = (name: string) => builtBoxes.get(blockNamed(page, name).id)!;
+
+  // drawio's 80x80 / 120x60 layout, scaled by EXAMPLE_LAYOUT_SCALE (1.5) so
+  // the names fit their blocks in Lucid (smoke 2, 2026-10-19).
+  expect(box('Passengers Arrive')).toMatchObject({ x: 135, y: 495, w: 120, h: 120 });
+  expect(box('ID Check')).toMatchObject({ w: 180, h: 90 });
+  const centreY = (b: { y: number; h: number }) => b.y + b.h / 2;
+  for (const name of ['ID Check', 'Security Screening', 'Pickup belongings & Exit']) {
+    expect(centreY(box(name))).toBe(centreY(box('Passengers Arrive')));
+  }
+  for (const [, block] of page.allBlocks) {
+    expect(block.textStyles.set).toHaveBeenCalledWith('Text', { size: EXAMPLE_TEXT_SIZE });
+  }
 });

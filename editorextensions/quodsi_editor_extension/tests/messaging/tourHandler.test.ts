@@ -59,7 +59,7 @@ jest.mock('../../src/core/messaging/handlers/pageContextRefresh', () => ({
 }));
 
 import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared';
-import { TourHandler } from '../../src/core/messaging/handlers/tourHandler';
+import { TourHandler, EXAMPLE_TEXT_SIZE, EXAMPLE_LAYOUT_SCALE, scaleLayout } from '../../src/core/messaging/handlers/tourHandler';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import {
   AIRPORT_SECURITY_EXAMPLE,
@@ -133,7 +133,7 @@ describe('TOUR_LOAD_EXAMPLE', () => {
     expect(TourHandler.handleMessage(msg(EnvelopeMessageType.TOUR_LOAD_EXAMPLE, { replace: false }))).toBe(true);
     await flush();
 
-    expect(buildModelPageMock).toHaveBeenCalledWith(AIRPORT_SECURITY_EXAMPLE, { title: EXAMPLE_PAGE_TITLE });
+    expect(buildModelPageMock).toHaveBeenCalledWith(scaleLayout(AIRPORT_SECURITY_EXAMPLE, EXAMPLE_LAYOUT_SCALE), { title: EXAMPLE_PAGE_TITLE, textSize: EXAMPLE_TEXT_SIZE });
     const page = documentPagesForTests.find((p) => p.id === 'page-new');
     expect(page.getTitle()).toBe('Airport Security (example)');
 
