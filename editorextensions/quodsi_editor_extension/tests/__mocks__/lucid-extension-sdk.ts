@@ -72,7 +72,11 @@ export class Modal {
   protected frameLoaded(): void {}
   protected frameClosed(): void {}
 }
-export class Panel {}
+export class Panel {
+  protected frameLoaded(): void {}
+  protected frameClosed(): void {}
+  public show(): void {}
+}
 export class EditorClient {}
 export const MenuLocation = { Extension: 'extension' } as const;
 /** Records dropdown items so tests can assert on the registered menu. */

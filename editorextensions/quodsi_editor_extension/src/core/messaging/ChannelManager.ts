@@ -73,6 +73,15 @@ export class ChannelManager {
   }
   
   /**
+   * Mark a channel as not ready (its iframe is gone). Keeps the panel and the
+   * queue: messages sent while closed wait for the next REACT_APP_READY.
+   */
+  public markChannelNotReady(role: PanelRole): void {
+    this.debug.debug(`Marking channel ${role} as NOT ready`);
+    this.channels[role].ready = false;
+  }
+
+  /**
    * Check if a channel is ready
    */
   public isChannelReady(role: PanelRole): boolean {
