@@ -7,6 +7,8 @@ import { syncModelOnce } from './modelSync'
 import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
 import { ModalHeader } from './ModalHeader'
+import { useMessaging } from '../../messaging/MessageProvider'
+import { ModalTourHost } from '../onboarding/ModalTourHost'
 
 // The surface with the Advisor Workspace's model and writer (spec 2026-10-16
 // advisor-workspace): the hook lives in the same lazy chunk, so it is called here.
@@ -34,6 +36,11 @@ export function StudiesModalView() {
   const host = useLucidModalHost({ withWriter: true })
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const getToken = useStudioApiSetup(apiBaseUrl, host)
+  // The onboarding tour's key: the same signed-in email the side panel uses
+  // (AUTH_STATUS reaches this modal too, after its REACT_APP_READY), or the
+  // two frames would not share one cursor.
+  const { auth } = useMessaging()
+  const tourUserKey = auth?.isAuthenticated ? auth.user?.email ?? '' : ''
 
   const [screen, setScreen] = useState<SurfaceScreen | null>(cachedModelId ? { kind: tab, modelId: cachedModelId } : null)
   const [resetKey, setResetKey] = useState(0)
@@ -73,6 +80,8 @@ export function StudiesModalView() {
           <p role="alert" className="p-4 text-sm text-secondary">Sign in to Quodsi in the Quodsi panel, then reopen Studies.</p>
         ) : (
           <QueryClientProvider client={queryClient}>
+            {/* Inside the provider: the tour's run observer watches this modal's queries. */}
+            <ModalTourHost userKey={tourUserKey} />
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading Studies…</p>}>
               <StudiesSurface host={host} syncModel={syncModel} initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
             </Suspense>
