@@ -195,7 +195,7 @@ export class DiagramMappingRelayHandler {
   }
 
   private static async handleApply(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { requestId?: number; changes?: MappingChangeLike[] };
+    const data = msg.data as { requestId?: number; changes?: MappingChangeLike[]; resetExisting?: boolean };
     const requestId = data?.requestId;
     const channel = DiagramMappingRelayHandler.getResponseChannel(msg);
     try {
@@ -218,7 +218,9 @@ export class DiagramMappingRelayHandler {
       // All relayed changes are explicit user decisions — mark every entry as an override.
       const userOverrideIds = new Set(finalMappings.keys());
 
-      const result = await service.convertPageWithMappings(page, finalMappings, userOverrideIds);
+      const result = await service.convertPageWithMappings(page, finalMappings, userOverrideIds, {
+        resetExisting: data?.resetExisting === true,
+      });
 
       DiagramMappingRelayHandler.logger.debug('APPLY_SHAPE_CHANGES complete', { requestId, result });
 

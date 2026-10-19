@@ -156,4 +156,22 @@ describe('DiagramMappingView', () => {
       target: 'host',
     })
   })
+  it('renders the reset checkbox unchecked with the exact label', async () => {
+    const posted: any[] = []
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((e: any) => { posted.push(e) })
+    render(<DiagramMappingView />)
+    await waitFor(() => expect(posted).toHaveLength(1))
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: {
+        id: posted[0].id, type: EnvelopeMessageType.PAGE_ANALYSIS_RESULT, source: 'host',
+        target: 'diagram-mapping-iframe', version: '1.0',
+        data: { requestId: posted[0].data.requestId, data: { pageId: 'p1', isAlreadyConverted: true, mappings: [{
+          elementId: 'b1', elementName: 'Intake', elementKind: DiagramElementKind.BLOCK,
+          currentType: SimulationObjectType.Activity, proposedType: SimulationObjectType.Activity,
+          incomingCount: 1, outgoingCount: 1, isIsolated: false }] } },
+      } }))
+    })
+    const box = (await screen.findByLabelText('Reset existing Quodsi settings to defaults')) as HTMLInputElement
+    expect(box.checked).toBe(false)
+  })
 })

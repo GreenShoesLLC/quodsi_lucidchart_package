@@ -119,7 +119,7 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
     })
   }
 
-  applyChanges(changes: MappingChange[]): Promise<void> {
+  applyChanges(changes: MappingChange[], resetExisting = false): Promise<void> {
     const requestId = this.nextId++
     const id = uuid()
     return new Promise<void>((resolve, reject) => {
@@ -134,7 +134,7 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
         source: 'diagram-mapping-iframe',
         target: 'host',
         version: '1.0',
-        data: { requestId, changes },
+        data: { requestId, changes, resetExisting },
       })
     })
   }
