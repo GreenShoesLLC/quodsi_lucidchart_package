@@ -1,4 +1,4 @@
-import { Viewport, DocumentProxy, EditorClient } from 'lucid-extension-sdk';
+import { Viewport, EditorClient } from 'lucid-extension-sdk';
 import {
   EnvelopeBase,
   EnvelopeMessageType,
@@ -17,12 +17,7 @@ import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
 import { getLogger } from '@quodsi/lucid-shared';
-import { SelectionHandler } from './selection';
-import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
-import { canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
-
-// Simple ID generator for extension context
-const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+import { refreshPageContext } from './pageContextRefresh';
 
 interface MappingChangeLike {
   elementId: string;
@@ -355,12 +350,8 @@ export class DiagramMappingRelayHandler {
   /**
    * Post-convert UI + DB refresh, shared by the inline Diagram Mapping
    * modal's apply (handleApply) and the one-click auto-convert
-   * (handleAutoConvert). Recovered from the deleted
-   * ConversionPreviewHandler.handleApplyConversion (git ce884d4): broadcasts
-   * MODEL_CONTEXT and re-runs SelectionHandler context (sends a fresh
-   * SELECTION_CHANGED so the editor panel — including a shape that's still
-   * selected behind the modal — reflects the new mapping), registers the model
-   * row, and seeds the model-definition snapshot for the Studies catalog.
+   * (handleAutoConvert): refreshPageContext (pageContextRefresh.ts, also used
+   * by TourHandler) for a page that is now a model.
    * Best-effort and fire-and-forget; never throws into the caller.
    */
   private static postConvertRefresh(
@@ -368,52 +359,6 @@ export class DiagramMappingRelayHandler {
     pageId: string,
     modelManager: ModelManager,
   ): void {
-    const document = new DocumentProxy(client);
-    Promise.resolve().then(async () => {
-      const documentId = document.id;
-      const title = document.getTitle() || 'Untitled Document';
-
-      router.send('model', {
-        id: generateId(),
-        type: EnvelopeMessageType.MODEL_CONTEXT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: { documentId, title, pageId, isQuodsiModel: true, hasValidModel: true },
-      });
-
-      // Document-level context (transitions a freshly-converted page to "is a model").
-      SelectionHandler.setDocumentContext(documentId, pageId, title, true);
-
-      // Re-process the current selection so a shape that's still selected behind the
-      // modal refreshes its element editor to the new mapping. setDocumentContext
-      // alone does NOT re-broadcast the selected element's data — this mirrors
-      // elementOpsHandler's post-save SELECTION refresh.
-      try {
-        const selectedItems = new Viewport(client).getSelectedItems();
-        await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
-      } catch (e) {
-        DiagramMappingRelayHandler.logger.error('postConvertRefresh: selection refresh failed', e);
-      }
-
-      DiagramMappingRelayHandler.logger.debug('postConvertRefresh: sent context refresh messages');
-
-      const modelName = await canonicalModelName(modelManager);
-      LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'UpsertModel',
-        actionData: { documentId, pageId, modelName },
-        asynchronous: false,
-      }).then(() => {
-        DiagramMappingRelayHandler.logger.debug('postConvertRefresh: model registered in database');
-        void pushModelDefinitionSnapshot(client, { documentId, pageId, modelName }).catch(err => {
-          DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to seed model snapshot:', err);
-        });
-      }).catch(err => {
-        DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to register model in database:', err);
-      });
-    }).catch(error => {
-      DiagramMappingRelayHandler.logger.error('postConvertRefresh: error in refresh:', error);
-    });
+    refreshPageContext(client, pageId, modelManager, { isQuodsiModel: true });
   }
 }

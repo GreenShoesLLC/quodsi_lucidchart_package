@@ -34,3 +34,12 @@ export type {
   PageConversionCounts,
   AutoConvertPageResultData,
 } from './pageConversion/messages';
+
+// Onboarding tour message payloads
+export type {
+  TourLoadExampleData,
+  TourLoadExampleResultData,
+  TourSelectShapeData,
+  TourShowExamplePageResultData,
+  TourStartData,
+} from './onboarding/messages';
