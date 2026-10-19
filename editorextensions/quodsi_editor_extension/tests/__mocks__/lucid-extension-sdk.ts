@@ -74,3 +74,12 @@ export class Modal {
 }
 export class Panel {}
 export class EditorClient {}
+export const MenuLocation = { Extension: 'extension' } as const;
+/** Records dropdown items so tests can assert on the registered menu. */
+export const menuItemsForTests: any[] = [];
+export class Menu {
+  constructor(_client: unknown) {}
+  public addDropdownMenuItem(item: any): void {
+    menuItemsForTests.push(item);
+  }
+}
