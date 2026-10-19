@@ -25,6 +25,10 @@ export class StorageAdapter {
     private static readonly SWIMLANE_DATA_KEY = 'q_swimlane';
     private static readonly RESOURCES_KEY = 'q_resources';
     private static readonly STORAGE_FORMAT_KEY = 'q_lucid_format';
+    // A page's Model record PARKED so the page reads as unconverted (spec
+    // 2026-10-16 amendment 3): Convert takes it back (takePendingModel) and
+    // overlays its run settings onto the model it creates.
+    private static readonly PENDING_MODEL_KEY = 'q_pending_model';
 
     constructor() {
         log.trace('StorageAdapter initialized');
@@ -221,6 +225,32 @@ export class StorageAdapter {
 
     public setStorageFormat(page: ElementProxy, format: number): void {
         page.shapeData.set(StorageAdapter.STORAGE_FORMAT_KEY, String(format));
+    }
+
+    /** Parks a Model record on the page under `q_pending_model`. */
+    public setPendingModel(page: ElementProxy, record: Record<string, unknown>): void {
+        page.shapeData.set(StorageAdapter.PENDING_MODEL_KEY, JSON.stringify(record));
+    }
+
+    /**
+     * Reads the parked Model record and clears the key, so it is applied at
+     * most once. An envelope is flattened; a missing, empty or unparseable
+     * value reads as null (and is still cleared).
+     */
+    public takePendingModel(page: ElementProxy): Record<string, unknown> | null {
+        const str = page.shapeData.get(StorageAdapter.PENDING_MODEL_KEY);
+        if (str === undefined) return null;
+        this.clearShapeDataKey(page, StorageAdapter.PENDING_MODEL_KEY);
+        if (!str || typeof str !== 'string') return null;
+        try {
+            const parsed = flattenEnvelope(JSON.parse(str));
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+                ? (parsed as Record<string, unknown>)
+                : null;
+        } catch (error) {
+            log.error('Error reading pending model:', error);
+            return null;
+        }
     }
 
     /**
@@ -759,6 +789,7 @@ export class StorageAdapter {
             this.clearSkippedElements(page);
             this.clearResources(page);
             this.clearShapeDataKey(page, StorageAdapter.STORAGE_FORMAT_KEY);
+            this.clearShapeDataKey(page, StorageAdapter.PENDING_MODEL_KEY);
 
             // Clear data from all blocks (q_data and q_swimlane)
             for (const [, block] of page.allBlocks) {
