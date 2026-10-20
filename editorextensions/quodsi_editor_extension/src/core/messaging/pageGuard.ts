@@ -11,7 +11,8 @@
 //
 // Writes from the compiled Studies/Advisor modal are exempt for now: that
 // realm gets its data from quodsi_api, not an extension snapshot (ClickUp
-// 86e381h8g).
+// 86e381h8g). The one exception is its model settings write, which names its
+// page and is checked by assertEmbedModelWritePage (ClickUp 86e34wxhm).
 
 export const PAGE_GUARD_EXEMPT_SOURCE = 'studio-embed-iframe';
 
@@ -20,6 +21,9 @@ export const PAGE_GUARD_MISSING_MESSAGE =
 
 export const PAGE_GUARD_MISMATCH_MESSAGE =
     'The model page changed before this edit was saved; the view has been refreshed. Please make the change again.';
+
+export const PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE =
+    'The model page changed since this was proposed, so the run settings were not saved. Go back to that page and apply again.';
 
 export type PageGuardReason = 'missing' | 'mismatch';
 
@@ -62,6 +66,26 @@ export function assertWritePage(
 ): void {
     const result = checkWritePage(source, basedOnPageId, currentPageId);
     if (!result.ok) throw new PageGuardError(result.reason, result.message);
+}
+
+/**
+ * The embedded frame is exempt from assertWritePage (no snapshot page id),
+ * but its model settings write names its page: the relayed catalog's model id
+ * IS the Lucid page id (ModelLucid builds Model from platformElementId). Refuse
+ * it when that page is no longer current, so run settings proposed on page A
+ * never land on page B (ClickUp 86e34wxhm). Panel model writes are NOT checked
+ * here: their elementId is the stored model id, which can differ from the live
+ * page id (a duplicated page), and basedOnPageId already guards them.
+ */
+export function assertEmbedModelWritePage(
+    source: string | undefined,
+    elementId: string | undefined,
+    currentPageId: string
+): void {
+    if (source !== PAGE_GUARD_EXEMPT_SOURCE || !elementId) return;
+    if (elementId !== currentPageId) {
+        throw new PageGuardError('mismatch', PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE);
+    }
 }
 
 /** True for a refused write whose page id named a different page. */

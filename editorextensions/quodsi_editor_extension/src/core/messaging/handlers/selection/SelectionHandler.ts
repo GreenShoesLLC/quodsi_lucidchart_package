@@ -34,6 +34,12 @@ export class SelectionHandler {
   private static documentContext = new DocumentContext();
   private static modelManager: ModelManager | null = null;
   private static isHandlingSelectionChange = false;
+  /** The latest event that arrived while another was being processed. */
+  private static pendingSelection: {
+    client: EditorClient;
+    items: ItemProxy[];
+    modelManager?: ModelManager;
+  } | null = null;
 
   /**
    * Set the model manager reference
@@ -67,8 +73,12 @@ export class SelectionHandler {
     // Use the provided model manager or the stored one
     const manager = modelManager || SelectionHandler.getModelManager();
     
-    // Prevent concurrent processing of selection changes
+    // Process one selection change at a time. An event that arrives
+    // mid-processing is kept (only the latest -- it supersedes any earlier
+    // one) and run when the current one finishes. Dropping it left the panel
+    // on the previous page's data after a page switch (ClickUp 86e37z4q3).
     if (SelectionHandler.isHandlingSelectionChange) {
+      SelectionHandler.pendingSelection = { client, items, modelManager };
       return;
     }
 
@@ -141,6 +151,13 @@ export class SelectionHandler {
       SelectionHandler.handleError(error instanceof Error ? error.message : String(error));
     } finally {
       SelectionHandler.isHandlingSelectionChange = false;
+      // In `finally`, not after it: the try block returns early on some paths
+      // (no current page), and a queued event must still run then.
+      const pending = SelectionHandler.pendingSelection;
+      if (pending) {
+        SelectionHandler.pendingSelection = null;
+        await SelectionHandler.handleLucidSelectionEvent(pending.client, pending.items, pending.modelManager);
+      }
     }
   }
   
@@ -316,5 +333,6 @@ export class SelectionHandler {
   public static reset(): void {
     SelectionHandler.selectionState.reset();
     SelectionHandler.isHandlingSelectionChange = false;
+    SelectionHandler.pendingSelection = null;
   }
 }

@@ -118,3 +118,56 @@ describe('SelectionHandler.handleLucidSelectionEvent follows the Lucid page', ()
     expect(setCurrentPageSpy).not.toHaveBeenCalled();
   });
 });
+
+// ClickUp 86e37z4nq's sibling, 86e37z4q3: an event that arrives while another
+// is being processed used to be dropped. When the dropped one was a page
+// switch, the panel stayed on the previous page's data. The latest event that
+// arrives mid-processing now runs once the current one finishes.
+describe('SelectionHandler.handleLucidSelectionEvent does not drop a mid-processing event', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    currentPage = null;
+  });
+
+  it('processes a page switch that arrives while the previous event is still running', async () => {
+    const pageA = page('page-A');
+    const pageB = page('page-B');
+    currentPage = pageA;
+    const mm = makeModelManager(pageA);
+    SelectionHandler.setModelManager(mm);
+
+    const first = SelectionHandler.handleLucidSelectionEvent({} as any, [], mm);
+    // The user switches pages before the first event has finished.
+    currentPage = pageB;
+    const second = SelectionHandler.handleLucidSelectionEvent({} as any, [], mm);
+    await Promise.all([first, second]);
+    await flush();
+
+    expect(mm.getCurrentPageId()).toBe('page-B');
+    expect(SelectionHandler.getDocumentContext().pageId).toBe('page-B');
+    const data = sendMock.mock.calls.at(-1)?.[1]?.data;
+    expect(data?.documentContext?.pageId).toBe('page-B');
+  });
+
+  it('runs only the latest of several events that arrive mid-processing', async () => {
+    const pageA = page('page-A');
+    currentPage = pageA;
+    const mm = makeModelManager(pageA);
+    const setCurrentPageSpy = jest.spyOn(mm, 'setCurrentPage');
+    SelectionHandler.setModelManager(mm);
+
+    const first = SelectionHandler.handleLucidSelectionEvent({} as any, [], mm);
+    currentPage = page('page-B');
+    const second = SelectionHandler.handleLucidSelectionEvent({} as any, [], mm);
+    currentPage = page('page-C');
+    const third = SelectionHandler.handleLucidSelectionEvent({} as any, [], mm);
+    await Promise.all([first, second, third]);
+    await flush();
+
+    // page-B's event was superseded before it ran: one follow-up, not two.
+    // Each processed event sends exactly one SELECTION_CHANGED.
+    expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(setCurrentPageSpy.mock.calls.map((c: any[]) => c[0].id)).toEqual(['page-C']);
+    expect(SelectionHandler.getDocumentContext().pageId).toBe('page-C');
+  });
+});
