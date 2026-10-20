@@ -84,8 +84,8 @@ export class ModelOpsHandler {
     try {
       const modelManager = ModelManager.getInstance();
 
-      // Call real validation service through ModelManager
-      const validationResult = await modelManager.validateModel();
+      // Explicit Validate: run now, not in the coalesced window.
+      const validationResult = await modelManager.validateModelNow();
 
       if (!validationResult) {
         ModelOpsHandler.logger.warn('Validation returned null result');

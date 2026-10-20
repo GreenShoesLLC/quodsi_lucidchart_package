@@ -638,10 +638,59 @@ export class ModelManager {
         return await this.validateModel();
     }
 
+    /** Coalescing window for validateModel() (ClickUp 86e359a0c). */
+    public static readonly VALIDATION_COALESCE_MS = 150;
+    /** The not-yet-started run every validateModel() call in the window shares. */
+    private scheduledValidation: Promise<ValidationResult> | null = null;
+    /** The run currently rebuilding; the next run starts only after it. */
+    private validationRun: Promise<ValidationResult> | null = null;
+
     /**
-     * Forces a model validation
+     * Validate the model soon, coalesced. Every selection event and every
+     * write calls this, and each run rebuilds the model from shape storage and
+     * broadcasts MODEL_VALIDATION_RESULT -- uncoalesced, an idle canvas under a
+     * Lucid-side event storm ran dozens per second and tripped Lucid's
+     * telemetry rate limit (2026-09-06). Calls inside one window share one
+     * run; a call made after a run has started gets a fresh run once it ends,
+     * so a write is never validated against the pre-write model.
      */
-    public async validateModel(): Promise<ValidationResult> {
+    public validateModel(): Promise<ValidationResult> {
+        if (this.scheduledValidation) return this.scheduledValidation;
+        const scheduled = new Promise<ValidationResult>((resolve, reject) => {
+            setTimeout(() => {
+                // Calls from here on open a new window: this run may already
+                // have read storage that a later write changes.
+                this.scheduledValidation = null;
+                this.startValidationRun().then(resolve, reject);
+            }, ModelManager.VALIDATION_COALESCE_MS);
+        });
+        this.scheduledValidation = scheduled;
+        return scheduled;
+    }
+
+    /**
+     * Validate immediately, for an explicit user action that reads the result
+     * (the panel's Validate button). Still waits for a run in progress, so
+     * two rebuilds never overlap.
+     */
+    public validateModelNow(): Promise<ValidationResult> {
+        return this.startValidationRun();
+    }
+
+    private startValidationRun(): Promise<ValidationResult> {
+        const previous = this.validationRun;
+        const run = (previous ? previous.then(() => undefined, () => undefined) : Promise.resolve())
+            .then(() => this.runValidation());
+        this.validationRun = run;
+        const clear = () => { if (this.validationRun === run) this.validationRun = null; };
+        run.then(clear, clear);
+        return run;
+    }
+
+    /**
+     * One validation run: rebuild from storage, evaluate, broadcast.
+     */
+    private async runValidation(): Promise<ValidationResult> {
         // Force rebuild from storage to pick up any deleted elements
         this.changeTracker.modelDefinitionDirty = true;
         const modelDef = await this.ensureModelDefinition();
