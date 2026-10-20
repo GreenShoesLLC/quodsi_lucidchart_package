@@ -40,7 +40,9 @@ import { StatesHandler } from '../../src/core/messaging/handlers/statesHandler';
 import { EntitiesHandler } from '../../src/core/messaging/handlers/entitiesHandler';
 import { ResourceRequirementsHandler } from '../../src/core/messaging/handlers/resourceRequirementsHandler';
 import { ElementOpsHandler } from '../../src/core/messaging/handlers/elementOpsHandler';
-import { PAGE_GUARD_MISMATCH_MESSAGE, PAGE_GUARD_MISSING_MESSAGE } from '../../src/core/messaging/pageGuard';
+import {
+  PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE, PAGE_GUARD_MISMATCH_MESSAGE, PAGE_GUARD_MISSING_MESSAGE,
+} from '../../src/core/messaging/pageGuard';
 
 const flush = () => new Promise((r) => setImmediate(r));
 
@@ -241,6 +243,29 @@ describe('ELEMENT_UPDATE', () => {
 
   it('trusts basedOnPageId, not the element id, for a model settings write', async () => {
     await update('model-iframe', { elementId: 'page-A', type: 'Model', data: { name: 'M' }, basedOnPageId: 'page-B' });
+    await flush();
+
+    expect(modelManagerStub.saveElementData).toHaveBeenCalled();
+  });
+
+  // ClickUp 86e34wxhm: the embedded Studio frame is exempt from the
+  // basedOnPageId guard, but its model write names its page (the relayed
+  // model id IS the page id). A page switch between opening the Advisor and
+  // Apply must not write those run settings onto the page now showing.
+  it('refuses an embedded-frame model write that names another page', async () => {
+    await update('studio-embed-iframe', { elementId: 'page-A', type: 'Model', data: { runTime: 8 } });
+    await flush();
+
+    expect(modelManagerStub.saveElementData).not.toHaveBeenCalled();
+    expect(resultData(EnvelopeMessageType.ELEMENT_UPDATE_RESULT)).toEqual({
+      success: false,
+      elementId: 'page-A',
+      errorMessage: PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE,
+    });
+  });
+
+  it('lets an embedded-frame model write for the current page through', async () => {
+    await update('studio-embed-iframe', { elementId: 'page-B', type: 'Model', data: { runTime: 8 } });
     await flush();
 
     expect(modelManagerStub.saveElementData).toHaveBeenCalled();

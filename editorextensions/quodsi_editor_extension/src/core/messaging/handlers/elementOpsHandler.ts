@@ -4,7 +4,7 @@ import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension
 import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
-import { assertWritePage, isPageMismatch } from '../pageGuard';
+import { assertEmbedModelWritePage, assertWritePage, isPageMismatch } from '../pageGuard';
 
 const log = getLogger('ElementOpsHandler');
 
@@ -180,6 +180,7 @@ export class ElementOpsHandler {
         // panel sends basedOnPageId explicitly, taken from the draft's own
         // page id (see useModelPanel.ts's Model branch).
         assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
+        assertEmbedModelWritePage(msg.source, data.elementId, currentPage.id);
         // Model is the Page itself, not a block or line
         element = currentPage;
       } else {
