@@ -42,7 +42,7 @@ export function advisorModalUrl(opts: AdvisorModalOpts & { apiBaseUrl: string })
  * review ruling 7). Hand-encoded: the Lucid extension sandbox has no
  * URLSearchParams.
  */
-export function studiesModalUrl(opts: { modelId?: string; tab?: 'project'; documentId?: string; apiBaseUrl: string }): string {
+export function studiesModalUrl(opts: { modelId?: string; tab?: 'project'; documentId?: string; pageId?: string; apiBaseUrl: string }): string {
   const pairs: Array<[string, string]> = [
     ['view', 'studies'],
     ['apiBaseUrl', opts.apiBaseUrl],
@@ -51,5 +51,7 @@ export function studiesModalUrl(opts: { modelId?: string; tab?: 'project'; docum
   if (opts.modelId) pairs.push(['modelId', opts.modelId]);
   if (opts.tab === 'project') pairs.push(['tab', 'project']);
   if (opts.documentId) pairs.push(['documentId', opts.documentId]);
+  // Every write the modal sends carries this page (ClickUp 86e381h8g).
+  if (opts.pageId) pairs.push(['pageId', opts.pageId]);
   return `quodsim-react/index.html?${pairs.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')}`;
 }

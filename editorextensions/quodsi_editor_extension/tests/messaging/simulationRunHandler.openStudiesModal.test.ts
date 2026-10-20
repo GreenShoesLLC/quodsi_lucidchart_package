@@ -138,6 +138,8 @@ describe('OPEN_STUDIES_MODAL', () => {
     expect('modelId' in p).toBe(false);
     // The tour host in the modal runs only in the tour's owning document.
     expect(p.documentId).toBe('doc-1');
+    // The modal's writes carry the page it was launched for (ClickUp 86e381h8g).
+    expect(p.pageId).toBe('pg-1');
     expect((shown[0] as any).config.chromeless).toBe(true);
     expect((shown[0] as any).config.url.startsWith('quodsim-react/index.html?')).toBe(true);
 

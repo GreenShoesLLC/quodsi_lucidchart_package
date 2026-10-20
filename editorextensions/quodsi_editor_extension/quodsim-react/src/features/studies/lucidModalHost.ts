@@ -59,7 +59,12 @@ export function windowPorts(send: ModalHostPorts['send']): ModalHostPorts {
   }
 }
 
-export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?: boolean } = {}): LucidModalHost {
+/** `pageId`: the page the modal was launched for (its URL param). Every write
+ *  carries it so the host can refuse one that would land on another page
+ *  (ClickUp 86e381h8g). */
+export function createLucidModalHost(
+  ports: ModalHostPorts, opts: { withWriter?: boolean; pageId?: string } = {},
+): LucidModalHost {
   const subscribers = new Set<(e: EnvelopeBase) => void>()
   let unlisten: (() => void) | null = null
   const on = (cb: (e: EnvelopeBase) => void) => { subscribers.add(cb); return () => { subscribers.delete(cb) } }
@@ -74,7 +79,7 @@ export function createLucidModalHost(ports: ModalHostPorts, opts: { withWriter?:
     ? createEmbedWriter({
         postMessage: (msg) => {
           const { requestId, kind, payload } = msg as EmbedWriteMessage
-          const envelope = buildWriteEnvelope(kind as EmbedWriteKind, payload, uuid())
+          const envelope = buildWriteEnvelope(kind as EmbedWriteKind, payload, uuid(), opts.pageId)
           if (!envelope) {
             // Fail fast instead of leaving the writer to time out (mirrors the
             // deleted EmbeddedStudioFrame's same fast-fail on an unknown kind).

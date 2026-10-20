@@ -22,6 +22,7 @@ import {
   getLogger,
 } from '@quodsi/lucid-shared';
 import { router } from '../index';
+import { assertWritePage } from '../pageGuard';
 import { BlockProxy, Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import {
@@ -130,6 +131,7 @@ export class ShapeOpsHandler {
       shapeType: ShapeType;
       element: JsonObject;
       near?: { elementId: string; side: ShapeSide };
+      basedOnPageId?: string;
     };
 
     const channel = ShapeOpsHandler.getResponseChannel(msg);
@@ -143,6 +145,9 @@ export class ShapeOpsHandler {
       if (!page) {
         throw new Error('Current page not available');
       }
+      // Shape ops come only from the compiled Studies/Advisor modal, which
+      // stamps the page it was launched for (ClickUp 86e381h8g).
+      assertWritePage(msg.source, data.basedOnPageId, page.id);
 
       // Strip x/y/width/height before this ever reaches a merge -- see
       // stripGeometry's doc comment.
@@ -263,7 +268,7 @@ export class ShapeOpsHandler {
    * way.
    */
   private static async handleShapeDelete(msg: EnvelopeBase): Promise<boolean> {
-    const data = msg.data as { shapeType: ShapeType; elementId: string };
+    const data = msg.data as { shapeType: ShapeType; elementId: string; basedOnPageId?: string };
     const channel = ShapeOpsHandler.getResponseChannel(msg);
     log.debug('Shape delete requested', { shapeType: data.shapeType, elementId: data.elementId });
 
@@ -275,6 +280,9 @@ export class ShapeOpsHandler {
       if (!page) {
         throw new Error('Current page not available');
       }
+      // Shape ops come only from the compiled Studies/Advisor modal, which
+      // stamps the page it was launched for (ClickUp 86e381h8g).
+      assertWritePage(msg.source, data.basedOnPageId, page.id);
 
       const deletedIds: string[] = [];
 
@@ -350,7 +358,7 @@ export class ShapeOpsHandler {
    * Handle SHAPE_MOVE: repositions a block, keeping its current size.
    */
   private static async handleShapeMove(msg: EnvelopeBase): Promise<boolean> {
-    const data = msg.data as { elementId: string; x: number; y: number };
+    const data = msg.data as { elementId: string; x: number; y: number; basedOnPageId?: string };
     const channel = ShapeOpsHandler.getResponseChannel(msg);
     log.debug('Shape move requested', { elementId: data.elementId, x: data.x, y: data.y });
 
@@ -362,6 +370,9 @@ export class ShapeOpsHandler {
       if (!page) {
         throw new Error('Current page not available');
       }
+      // Shape ops come only from the compiled Studies/Advisor modal, which
+      // stamps the page it was launched for (ClickUp 86e381h8g).
+      assertWritePage(msg.source, data.basedOnPageId, page.id);
 
       // See resolveBlock's doc comment: the Advisor may name a Resource by
       // its q_resources record id rather than the pointer block's own id.

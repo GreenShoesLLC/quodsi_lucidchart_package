@@ -36,7 +36,8 @@ export function StudiesModalView() {
   const documentId = params.get('documentId') ?? undefined
 
   // A writer, so the Workspace's model proposals can Apply from Studies too.
-  const host = useLucidModalHost({ withWriter: true })
+  // Writes carry the page this modal was launched for (ClickUp 86e381h8g).
+  const host = useLucidModalHost({ withWriter: true, pageId: params.get('pageId') ?? undefined })
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const getToken = useStudioApiSetup(apiBaseUrl, host)
   // The onboarding tour's key: the same signed-in email the side panel uses

@@ -41,7 +41,7 @@ import { EntitiesHandler } from '../../src/core/messaging/handlers/entitiesHandl
 import { ResourceRequirementsHandler } from '../../src/core/messaging/handlers/resourceRequirementsHandler';
 import { ElementOpsHandler } from '../../src/core/messaging/handlers/elementOpsHandler';
 import {
-  PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE, PAGE_GUARD_MISMATCH_MESSAGE, PAGE_GUARD_MISSING_MESSAGE,
+  PAGE_GUARD_EMBED_MISMATCH_MESSAGE, PAGE_GUARD_MISMATCH_MESSAGE, PAGE_GUARD_MISSING_MESSAGE,
 } from '../../src/core/messaging/pageGuard';
 
 const flush = () => new Promise((r) => setImmediate(r));
@@ -121,8 +121,31 @@ describe('MODEL_ROOT_UPDATE', () => {
     expect(resultData(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT)).toEqual({ success: true });
   });
 
-  it('lets the embedded Studio frame write without a page id', async () => {
+  // ClickUp 86e381h8g: the embedded Studio frame is guarded too.
+  it('refuses an embedded-frame write with no page id', async () => {
     await update('studio-embed-iframe', { patch: { resources: [] } });
+    await flush();
+
+    expect(modelManagerStub.updateModelRoot).not.toHaveBeenCalled();
+    expect(resultData(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT)).toEqual({
+      success: false,
+      errorMessage: PAGE_GUARD_MISSING_MESSAGE,
+    });
+  });
+
+  it('refuses an embedded-frame write launched on another page, in the embedded wording', async () => {
+    await update('studio-embed-iframe', { patch: { resources: [] }, basedOnPageId: 'page-A' });
+    await flush();
+
+    expect(modelManagerStub.updateModelRoot).not.toHaveBeenCalled();
+    expect(resultData(EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT)).toEqual({
+      success: false,
+      errorMessage: PAGE_GUARD_EMBED_MISMATCH_MESSAGE,
+    });
+  });
+
+  it('lets an embedded-frame write launched on the current page through', async () => {
+    await update('studio-embed-iframe', { patch: { resources: [] }, basedOnPageId: 'page-B' });
     await flush();
 
     expect(modelManagerStub.updateModelRoot).toHaveBeenCalled();
@@ -195,16 +218,28 @@ describe.each([
 });
 
 describe('STATES_UPDATE / ENTITIES_UPDATE from the embedded Studio frame', () => {
-  it('writes states without a page id', async () => {
-    StatesHandler.handleMessage(msg(EnvelopeMessageType.STATES_UPDATE, 'studio-embed-iframe', { states: [] }));
+  it('writes states launched on the current page', async () => {
+    StatesHandler.handleMessage(msg(EnvelopeMessageType.STATES_UPDATE, 'studio-embed-iframe', { states: [], basedOnPageId: 'page-B' }));
     await flush();
     expect(modelManagerStub.updateStates).toHaveBeenCalled();
   });
 
-  it('writes entities without a page id', async () => {
-    EntitiesHandler.handleMessage(msg(EnvelopeMessageType.ENTITIES_UPDATE, 'studio-embed-iframe', { entities: [] }));
+  it('refuses states launched on another page', async () => {
+    StatesHandler.handleMessage(msg(EnvelopeMessageType.STATES_UPDATE, 'studio-embed-iframe', { states: [], basedOnPageId: 'page-A' }));
+    await flush();
+    expect(modelManagerStub.updateStates).not.toHaveBeenCalled();
+  });
+
+  it('writes entities launched on the current page', async () => {
+    EntitiesHandler.handleMessage(msg(EnvelopeMessageType.ENTITIES_UPDATE, 'studio-embed-iframe', { entities: [], basedOnPageId: 'page-B' }));
     await flush();
     expect(modelManagerStub.updateEntities).toHaveBeenCalled();
+  });
+
+  it('refuses entities with no page id', async () => {
+    EntitiesHandler.handleMessage(msg(EnvelopeMessageType.ENTITIES_UPDATE, 'studio-embed-iframe', { entities: [] }));
+    await flush();
+    expect(modelManagerStub.updateEntities).not.toHaveBeenCalled();
   });
 });
 
@@ -248,30 +283,46 @@ describe('ELEMENT_UPDATE', () => {
     expect(modelManagerStub.saveElementData).toHaveBeenCalled();
   });
 
-  // ClickUp 86e34wxhm: the embedded Studio frame is exempt from the
-  // basedOnPageId guard, but its model write names its page (the relayed
-  // model id IS the page id). A page switch between opening the Advisor and
-  // Apply must not write those run settings onto the page now showing.
-  it('refuses an embedded-frame model write that names another page', async () => {
-    await update('studio-embed-iframe', { elementId: 'page-A', type: 'Model', data: { runTime: 8 } });
+  // ClickUp 86e34wxhm / 86e381h8g: run settings an Advisor proposed on page A
+  // must not land on page B after a page switch.
+  it('refuses an embedded-frame model write launched on another page', async () => {
+    await update('studio-embed-iframe', { elementId: 'page-A', type: 'Model', data: { runTime: 8 }, basedOnPageId: 'page-A' });
     await flush();
 
     expect(modelManagerStub.saveElementData).not.toHaveBeenCalled();
     expect(resultData(EnvelopeMessageType.ELEMENT_UPDATE_RESULT)).toEqual({
       success: false,
       elementId: 'page-A',
-      errorMessage: PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE,
+      errorMessage: PAGE_GUARD_EMBED_MISMATCH_MESSAGE,
     });
   });
 
-  it('lets an embedded-frame model write for the current page through', async () => {
-    await update('studio-embed-iframe', { elementId: 'page-B', type: 'Model', data: { runTime: 8 } });
+  it('lets an embedded-frame model write launched on the current page through', async () => {
+    await update('studio-embed-iframe', { elementId: 'page-B', type: 'Model', data: { runTime: 8 }, basedOnPageId: 'page-B' });
     await flush();
 
     expect(modelManagerStub.saveElementData).toHaveBeenCalled();
   });
 
-  it('leaves shape writes unguarded', async () => {
+  it('refuses an embedded-frame shape write launched on another page', async () => {
+    await update('studio-embed-iframe', { elementId: 'a1', type: 'Activity', data: { capacity: 2 }, basedOnPageId: 'page-A' });
+    await flush();
+
+    expect(modelManagerStub.saveElementData).not.toHaveBeenCalled();
+    expect(resultData(EnvelopeMessageType.ELEMENT_UPDATE_RESULT)).toMatchObject({
+      success: false,
+      errorMessage: PAGE_GUARD_EMBED_MISMATCH_MESSAGE,
+    });
+  });
+
+  it('lets an embedded-frame shape write launched on the current page through', async () => {
+    await update('studio-embed-iframe', { elementId: 'a1', type: 'Activity', data: { capacity: 2 }, basedOnPageId: 'page-B' });
+    await flush();
+
+    expect(modelManagerStub.saveElementData).toHaveBeenCalled();
+  });
+
+  it('leaves panel shape writes unguarded', async () => {
     await update('model-iframe', { elementId: 'a1', type: 'Activity', data: { capacity: 2 } });
     await flush();
 

@@ -28,7 +28,8 @@ export function AdvisorModalView() {
   const params = useMemo(() => new URLSearchParams(window.location.search), [])
   const apiBaseUrl = params.get('apiBaseUrl')
   const title = params.get('title') ?? 'Ask the Advisor'
-  const host = useLucidModalHost({ withWriter: true })
+  // Writes carry the page this modal was launched for (ClickUp 86e381h8g).
+  const host = useLucidModalHost({ withWriter: true, pageId: params.get('pageId') ?? undefined })
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const getToken = useStudioApiSetup(apiBaseUrl, host)

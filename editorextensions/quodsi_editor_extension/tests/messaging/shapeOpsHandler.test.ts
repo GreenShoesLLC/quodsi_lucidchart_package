@@ -68,9 +68,17 @@ jest.mock('../../src/services/LucidElementFactory', () => ({
 
 import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared';
 import { ShapeOpsHandler } from '../../src/core/messaging/handlers/shapeOpsHandler';
+import { PAGE_GUARD_EMBED_MISMATCH_MESSAGE } from '../../src/core/messaging/pageGuard';
 
+const SHAPE_OPS = new Set([EnvelopeMessageType.SHAPE_CREATE, EnvelopeMessageType.SHAPE_DELETE, EnvelopeMessageType.SHAPE_MOVE]);
+
+/** Shape ops carry the page the embedded modal was launched for (ClickUp
+ *  86e381h8g); default it to the fake current page unless a test sets one. */
 function msg(type: EnvelopeMessageType, data: unknown, source = 'studio-embed-iframe', id = `req-${type}`): any {
-  return { id, type, source, target: 'host', version: '1.0', data };
+  const stamped = SHAPE_OPS.has(type) && data && typeof data === 'object' && !('basedOnPageId' in (data as object))
+    ? { ...(data as object), basedOnPageId: 'page-1' }
+    : data;
+  return { id, type, source, target: 'host', version: '1.0', data: stamped };
 }
 
 function resultCalls(type: EnvelopeMessageType) {
@@ -534,6 +542,26 @@ describe('SHAPE_MOVE', () => {
     const calls = resultCalls(EnvelopeMessageType.SHAPE_MOVE_RESULT);
     expect(calls[0][1].data.success).toBe(false);
     expect(calls[0][1].data.errorMessage).toEqual(expect.stringContaining('nope'));
+  });
+});
+
+describe('shape ops are tied to the page the embedded modal was launched for', () => {
+  it.each([
+    ['SHAPE_CREATE', EnvelopeMessageType.SHAPE_CREATE, EnvelopeMessageType.SHAPE_CREATE_RESULT, 'handleShapeCreate',
+      { shapeType: 'Activity', element: { name: 'X' } }],
+    ['SHAPE_DELETE', EnvelopeMessageType.SHAPE_DELETE, EnvelopeMessageType.SHAPE_DELETE_RESULT, 'handleShapeDelete',
+      { shapeType: 'Activity', elementId: 'a1' }],
+    ['SHAPE_MOVE', EnvelopeMessageType.SHAPE_MOVE, EnvelopeMessageType.SHAPE_MOVE_RESULT, 'handleShapeMove',
+      { elementId: 'a1', x: 50, y: 60 }],
+  ])('refuses %s launched on another page', async (_label, type, resultType, method, data) => {
+    const handled = await (ShapeOpsHandler as any)[method](msg(type, { ...data, basedOnPageId: 'page-OTHER' }));
+
+    expect(handled).toBe(false);
+    expect(createPlatformObjectMock).not.toHaveBeenCalled();
+    expect(modelManagerStub.removeElement).not.toHaveBeenCalled();
+    const calls = resultCalls(resultType);
+    expect(calls[0][1].data.success).toBe(false);
+    expect(calls[0][1].data.errorMessage).toBe(PAGE_GUARD_EMBED_MISMATCH_MESSAGE);
   });
 });
 
