@@ -69,6 +69,18 @@ const flush = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r));
 };
 
+/** Wait for the TOUR_LOAD_EXAMPLE_RESULT envelope. The load path awaits
+ *  ModelManager.validateModel(), which coalesces over a short timer window
+ *  (ClickUp 86e359a0c), so a fixed number of event-loop turns is not enough. */
+const untilLoadResult = async () => {
+  const deadline = Date.now() + 5_000;
+  while (!sendMock.mock.calls.some((c) => c[1]?.type === EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT)) {
+    if (Date.now() > deadline) throw new Error('no TOUR_LOAD_EXAMPLE_RESULT within 5 s');
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  await flush();
+};
+
 let storage: StorageAdapter;
 let manager: ModelManager;
 
@@ -95,7 +107,7 @@ it('load example -> auto Convert: every element keeps its stored type and tuned 
     id: 'req-load', type: EnvelopeMessageType.TOUR_LOAD_EXAMPLE, source: 'model-iframe',
     target: 'host', version: '1.0', data: { replace: false },
   } as any);
-  await flush();
+  await untilLoadResult();
 
   const result = sendMock.mock.calls.find((c) => c[1]?.type === EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT);
   expect(result?.[1].data).toMatchObject({ outcome: 'loaded' });
@@ -154,7 +166,7 @@ it('builds the example at drawio sizes, centres aligned, with small text', async
     id: 'req-load', type: EnvelopeMessageType.TOUR_LOAD_EXAMPLE, source: 'model-iframe',
     target: 'host', version: '1.0', data: { replace: false },
   } as any);
-  await flush();
+  await untilLoadResult();
 
   const result = sendMock.mock.calls.find((c) => c[1]?.type === EnvelopeMessageType.TOUR_LOAD_EXAMPLE_RESULT);
   const page = documentPagesForTests.find((p) => p.id === result![1].data.pageId);
