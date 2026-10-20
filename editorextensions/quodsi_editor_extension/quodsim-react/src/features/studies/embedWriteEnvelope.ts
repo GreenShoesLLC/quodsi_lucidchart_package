@@ -28,7 +28,21 @@ export function writeTtlMs(kind: EmbedWriteKind): number {
   return kind === 'createModel' ? 65_000 : WRITE_ID_TTL_MS;
 }
 
-export function buildWriteEnvelope(kind: EmbedWriteKind, payload: any, id: string): EnvelopeBase | null {
+/**
+ * `basedOnPageId` is the page this modal was launched for (its `pageId` URL
+ * param). The host's page guard refuses a write whose page is no longer the
+ * current one (ClickUp 86e381h8g), so an Advisor proposal made on page A can
+ * never land on page B. `createModel` builds a NEW page and carries none.
+ */
+export function buildWriteEnvelope(
+  kind: EmbedWriteKind, payload: any, id: string, basedOnPageId?: string,
+): EnvelopeBase | null {
+  const envelope = buildEnvelope(kind, payload, id)
+  if (!envelope || !basedOnPageId || kind === 'createModel') return envelope
+  return { ...envelope, data: { ...(envelope.data as object), basedOnPageId } }
+}
+
+function buildEnvelope(kind: EmbedWriteKind, payload: any, id: string): EnvelopeBase | null {
   const base = { id, source: 'studio-embed-iframe' as const, target: 'host' as const, version: '1.0' };
   switch (kind) {
     case 'element': {

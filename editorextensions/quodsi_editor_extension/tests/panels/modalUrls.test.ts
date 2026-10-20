@@ -21,4 +21,10 @@ describe('modal URLs', () => {
     expect(studiesModalUrl({ documentId: 'd 1', apiBaseUrl: '' })).toContain('documentId=d%201');
     expect(studiesModalUrl({ apiBaseUrl: '' })).not.toContain('documentId=');
   });
+  // ClickUp 86e381h8g: the modal's writes carry the page it was launched for,
+  // which the host's page guard checks.
+  it('the Studies URL carries the page id', () => {
+    expect(studiesModalUrl({ pageId: 'p 1', apiBaseUrl: '' })).toContain('pageId=p%201');
+    expect(studiesModalUrl({ apiBaseUrl: '' })).not.toContain('pageId=');
+  });
 });

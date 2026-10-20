@@ -9,7 +9,7 @@ import { createLucidModalHost, windowPorts, type LucidModalHost, type ModalHostP
  *  that: Studio's token getter captured it once (useStudioApiSetup), so a new
  *  host would leave the getter calling a disconnected one. Sends go through a
  *  ref to whichever `sendMessage` is current instead. */
-export function useLucidModalHost(opts: { withWriter?: boolean } = {}): LucidModalHost {
+export function useLucidModalHost(opts: { withWriter?: boolean; pageId?: string } = {}): LucidModalHost {
   const { sendMessage } = useMessaging()
   const sendRef = useRef(sendMessage)
   useLayoutEffect(() => {

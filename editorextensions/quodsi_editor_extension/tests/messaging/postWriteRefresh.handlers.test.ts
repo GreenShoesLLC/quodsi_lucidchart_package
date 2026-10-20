@@ -46,8 +46,14 @@ import { EntitiesHandler } from '../../src/core/messaging/handlers/entitiesHandl
 
 const flush = () => new Promise((r) => setImmediate(r));
 
+/** The embedded modal stamps the page it was launched for on every write
+ *  (ClickUp 86e381h8g); mirror that unless a test sets its own. */
+function stampEmbedPage(source: string, data: unknown, pageId: string): unknown {
+  if (source !== 'studio-embed-iframe' || !data || typeof data !== 'object' || 'basedOnPageId' in (data as object)) return data;
+  return { ...(data as object), basedOnPageId: pageId };
+}
 function msg(type: EnvelopeMessageType, data: unknown): any {
-  return { id: `req-${type}`, type, source: 'studio-embed-iframe', target: 'host', version: '1.0', data };
+  return { id: `req-${type}`, type, source: 'studio-embed-iframe', target: 'host', version: '1.0', data: stampEmbedPage('studio-embed-iframe', data, 'page-B') };
 }
 function results(type: EnvelopeMessageType): any[] {
   return sendMock.mock.calls.filter((c) => c[1]?.type === type).map((c) => c[1].data);

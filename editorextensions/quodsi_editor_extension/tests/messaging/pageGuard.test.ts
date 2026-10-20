@@ -5,15 +5,30 @@ import {
   PageGuardError,
   PAGE_GUARD_MISSING_MESSAGE,
   PAGE_GUARD_MISMATCH_MESSAGE,
+  PAGE_GUARD_EMBED_MISMATCH_MESSAGE,
 } from '../../src/core/messaging/pageGuard';
 
 describe('checkWritePage', () => {
-  it('lets the embedded Studio frame write without a page id (exempt for now)', () => {
-    expect(checkWritePage('studio-embed-iframe', undefined, 'page-B')).toEqual({ ok: true });
+  // ClickUp 86e381h8g: the embedded Studio frame (Studies / Advisor) is no
+  // longer exempt. Its writes carry the page it was launched for.
+  it('rejects an embedded-frame write based on another page, in the embedded wording', () => {
+    expect(checkWritePage('studio-embed-iframe', 'page-A', 'page-B')).toEqual({
+      ok: false,
+      reason: 'mismatch',
+      message: PAGE_GUARD_EMBED_MISMATCH_MESSAGE,
+    });
   });
 
-  it('lets the embedded Studio frame write even with a different page id', () => {
-    expect(checkWritePage('studio-embed-iframe', 'page-A', 'page-B')).toEqual({ ok: true });
+  it('rejects an embedded-frame write with no page id as missing', () => {
+    expect(checkWritePage('studio-embed-iframe', undefined, 'page-B')).toEqual({
+      ok: false,
+      reason: 'missing',
+      message: PAGE_GUARD_MISSING_MESSAGE,
+    });
+  });
+
+  it('accepts an embedded-frame write based on the current page', () => {
+    expect(checkWritePage('studio-embed-iframe', 'page-B', 'page-B')).toEqual({ ok: true });
   });
 
   it.each([undefined, ''])('rejects a panel write with page id %p as missing', (pageId) => {

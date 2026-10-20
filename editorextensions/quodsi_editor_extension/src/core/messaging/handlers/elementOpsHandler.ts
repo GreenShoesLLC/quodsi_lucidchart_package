@@ -4,7 +4,7 @@ import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension
 import { ModelManager } from '../../ModelManager';
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
-import { assertEmbedModelWritePage, assertWritePage, isPageMismatch } from '../pageGuard';
+import { assertWritePage, isPageMismatch, STUDIO_EMBED_SOURCE } from '../pageGuard';
 
 const log = getLogger('ElementOpsHandler');
 
@@ -180,10 +180,15 @@ export class ElementOpsHandler {
         // panel sends basedOnPageId explicitly, taken from the draft's own
         // page id (see useModelPanel.ts's Model branch).
         assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
-        assertEmbedModelWritePage(msg.source, data.elementId, currentPage.id);
         // Model is the Page itself, not a block or line
         element = currentPage;
       } else {
+        // A shape write from the compiled Studies/Advisor modal carries the
+        // page that modal was launched for (ClickUp 86e381h8g). Panel shape
+        // writes carry none and stay unguarded here.
+        if (msg.source === STUDIO_EMBED_SOURCE) {
+          assertWritePage(msg.source, data.basedOnPageId, currentPage.id);
+        }
         // Find the element by ID, using diagram element type as hint if available
         const foundElement = ElementOpsHandler.findElementById(
           viewport,

@@ -32,8 +32,14 @@ import { ModelRootHandler } from '../../src/core/messaging/handlers/modelRootHan
 import { StatesHandler } from '../../src/core/messaging/handlers/statesHandler';
 import { EntitiesHandler } from '../../src/core/messaging/handlers/entitiesHandler';
 
+/** The embedded modal stamps the page it was launched for on every write
+ *  (ClickUp 86e381h8g); mirror that unless a test sets its own. */
+function stampEmbedPage(source: string, data: unknown, pageId: string): unknown {
+  if (source !== 'studio-embed-iframe' || !data || typeof data !== 'object' || 'basedOnPageId' in (data as object)) return data;
+  return { ...(data as object), basedOnPageId: pageId };
+}
 function msg(type: EnvelopeMessageType, source: string, data: unknown): any {
-  return { id: `req-${type}-${source}`, type, source, target: 'host', version: '1.0', data };
+  return { id: `req-${type}-${source}`, type, source, target: 'host', version: '1.0', data: stampEmbedPage(source, data, 'page-1') };
 }
 function resultFor(type: EnvelopeMessageType) {
   return sendMock.mock.calls.find((c) => c[1]?.type === type);

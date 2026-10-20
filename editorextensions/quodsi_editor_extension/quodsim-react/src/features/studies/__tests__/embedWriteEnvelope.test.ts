@@ -84,6 +84,34 @@ describe('buildWriteEnvelope', () => {
   })
 })
 
+// ClickUp 86e381h8g: the host's page guard ties every write to the page the
+// modal was launched for. createModel builds a NEW page, so it carries none.
+describe('buildWriteEnvelope with the launch page id', () => {
+  const payloads: Array<[string, unknown]> = [
+    ['element', { elementId: 'a1', type: 'Activity', patch: { capacity: 2 } }],
+    ['modelRoot', { patch: { resources: [] } }],
+    ['states', { states: [] }],
+    ['entities', { entities: [] }],
+    ['model', { elementId: 'page-1', patch: { replications: 5 } }],
+    ['createShape', { type: 'Activity', element: { name: 'X' } }],
+    ['deleteShape', { type: 'Activity', elementId: 'a1' }],
+    ['moveShape', { elementId: 'a1', x: 1, y: 2 }],
+  ]
+
+  it.each(payloads)('%s carries basedOnPageId', (kind, payload) => {
+    expect(buildWriteEnvelope(kind as any, payload, 'id', 'page-1')?.data).toMatchObject({ basedOnPageId: 'page-1' })
+  })
+
+  it('createModel carries no basedOnPageId', () => {
+    const data = buildWriteEnvelope('createModel', { document: {} }, 'id', 'page-1')?.data as Record<string, unknown>
+    expect(data).not.toHaveProperty('basedOnPageId')
+  })
+
+  it('without a page id the envelope is unchanged', () => {
+    expect(buildWriteEnvelope('states', { states: [] }, 'id')?.data).toEqual({ states: [] })
+  })
+})
+
 describe('WRITE_RESULT_TYPES', () => {
   it('includes the four shape-op results', () => {
     expect(WRITE_RESULT_TYPES.has(EnvelopeMessageType.SHAPE_CREATE_RESULT)).toBe(true)

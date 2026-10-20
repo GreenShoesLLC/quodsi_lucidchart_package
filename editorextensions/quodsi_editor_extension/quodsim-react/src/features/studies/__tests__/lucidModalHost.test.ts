@@ -122,6 +122,20 @@ describe('createLucidModalHost', () => {
     await expect(done).resolves.toEqual({})
   })
 
+  // ClickUp 86e381h8g: the host's page guard needs the page the modal was
+  // launched for on every write.
+  it('stamps the launch page on every write it sends', async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports, { withWriter: true, pageId: 'page-1' })
+    host.connect()
+    host.writer!.connect()
+    const done = host.writer!.write('states', { states: [] })
+    const env = ports.posted[0]
+    expect(env.data).toMatchObject({ states: [], basedOnPageId: 'page-1' })
+    reply(EnvelopeMessageType.STATES_UPDATE_RESULT, { success: true }, env.id)
+    await expect(done).resolves.toEqual({})
+  })
+
   it('an unknown write kind fails fast with no send, instead of waiting out the writer\'s own timeout', async () => {
     const { ports } = harness()
     const host = createLucidModalHost(ports, { withWriter: true })

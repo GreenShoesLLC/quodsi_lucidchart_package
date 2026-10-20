@@ -9,12 +9,14 @@
 // (model-root snapshots, referenceData), panel writes echo it back as
 // basedOnPageId, and handlers call assertWritePage before writing.
 //
-// Writes from the compiled Studies/Advisor modal are exempt for now: that
-// realm gets its data from quodsi_api, not an extension snapshot (ClickUp
-// 86e381h8g). The one exception is its model settings write, which names its
-// page and is checked by assertEmbedModelWritePage (ClickUp 86e34wxhm).
+// Writes from the compiled Studies/Advisor modal carry the page that modal
+// was launched for (its `pageId` URL param, stamped by buildWriteEnvelope),
+// so they are guarded the same way (ClickUp 86e381h8g). Only the refusal
+// wording differs: that modal has no snapshot to refresh, so it tells the user
+// to go back to the page instead.
 
-export const PAGE_GUARD_EXEMPT_SOURCE = 'studio-embed-iframe';
+/** The compiled Studies/Advisor modal's envelope source. */
+export const STUDIO_EMBED_SOURCE = 'studio-embed-iframe';
 
 export const PAGE_GUARD_MISSING_MESSAGE =
     'This edit was not tied to a loaded page, so it was not saved.';
@@ -22,8 +24,8 @@ export const PAGE_GUARD_MISSING_MESSAGE =
 export const PAGE_GUARD_MISMATCH_MESSAGE =
     'The model page changed before this edit was saved; the view has been refreshed. Please make the change again.';
 
-export const PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE =
-    'The model page changed since this was proposed, so the run settings were not saved. Go back to that page and apply again.';
+export const PAGE_GUARD_EMBED_MISMATCH_MESSAGE =
+    'The model page changed since this window was opened, so this change was not saved. Go back to that page and apply it again.';
 
 export type PageGuardReason = 'missing' | 'mismatch';
 
@@ -36,12 +38,14 @@ export function checkWritePage(
     basedOnPageId: string | undefined,
     currentPageId: string
 ): PageGuardResult {
-    if (source === PAGE_GUARD_EXEMPT_SOURCE) return { ok: true };
     if (!basedOnPageId) {
         return { ok: false, reason: 'missing', message: PAGE_GUARD_MISSING_MESSAGE };
     }
     if (basedOnPageId !== currentPageId) {
-        return { ok: false, reason: 'mismatch', message: PAGE_GUARD_MISMATCH_MESSAGE };
+        const message = source === STUDIO_EMBED_SOURCE
+            ? PAGE_GUARD_EMBED_MISMATCH_MESSAGE
+            : PAGE_GUARD_MISMATCH_MESSAGE;
+        return { ok: false, reason: 'mismatch', message };
     }
     return { ok: true };
 }
@@ -66,26 +70,6 @@ export function assertWritePage(
 ): void {
     const result = checkWritePage(source, basedOnPageId, currentPageId);
     if (!result.ok) throw new PageGuardError(result.reason, result.message);
-}
-
-/**
- * The embedded frame is exempt from assertWritePage (no snapshot page id),
- * but its model settings write names its page: the relayed catalog's model id
- * IS the Lucid page id (ModelLucid builds Model from platformElementId). Refuse
- * it when that page is no longer current, so run settings proposed on page A
- * never land on page B (ClickUp 86e34wxhm). Panel model writes are NOT checked
- * here: their elementId is the stored model id, which can differ from the live
- * page id (a duplicated page), and basedOnPageId already guards them.
- */
-export function assertEmbedModelWritePage(
-    source: string | undefined,
-    elementId: string | undefined,
-    currentPageId: string
-): void {
-    if (source !== PAGE_GUARD_EXEMPT_SOURCE || !elementId) return;
-    if (elementId !== currentPageId) {
-        throw new PageGuardError('mismatch', PAGE_GUARD_EMBED_MODEL_MISMATCH_MESSAGE);
-    }
 }
 
 /** True for a refused write whose page id named a different page. */

@@ -14,9 +14,10 @@ import { studiesModalUrl } from './modalUrls';
  * (see SimulationRunHandler.handleRequestStudiesModelSync).
  */
 export class StudiesModal extends RoutingModal {
-  constructor(client: EditorClient, opts: { modelId?: string; tab?: 'project'; documentId?: string; modalSize?: ModalSize }) {
+  constructor(client: EditorClient, opts: { modelId?: string; tab?: 'project'; documentId?: string; pageId?: string; modalSize?: ModalSize }) {
     const url = studiesModalUrl({
-      modelId: opts.modelId, tab: opts.tab, documentId: opts.documentId, apiBaseUrl: getApiBaseUrl() ?? '',
+      modelId: opts.modelId, tab: opts.tab, documentId: opts.documentId, pageId: opts.pageId,
+      apiBaseUrl: getApiBaseUrl() ?? '',
     });
     const size = opts.modalSize ?? DEFAULT_MODAL_SIZE;
     const sizeOpts = size === 'fullscreen' ? { fullScreen: true as const } : MODAL_SIZE_DIMENSIONS[size];
