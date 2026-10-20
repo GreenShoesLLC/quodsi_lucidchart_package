@@ -208,6 +208,13 @@ export class SelectionHandler {
         referenceData = await referenceDataBuilder.buildAllReferenceData(
           SelectionHandler.modelManager
         );
+        // Cache what we just built. A forced rebuild follows a write (e.g. a
+        // state delete); without this the next non-forced send -- panel
+        // reopen via setSelectionState -- re-sends the pre-write copy and the
+        // deleted item reappears (ClickUp 86e37z4nq).
+        if (referenceData) {
+          SelectionHandler.selectionState.update({ referenceData });
+        }
       } catch (error) {
         log.error('Error building referenceData:', error);
       }
