@@ -150,6 +150,14 @@ $ReleaseSha = (git -C $VersionMonorepoRoot rev-parse "origin/$ReleaseBranch").Tr
 $QuodsiCommit = (git -C $VersionMonorepoRoot rev-parse --short HEAD).Trim()
 $OnRelease = ($HeadSha -eq $ReleaseSha)
 if ($TargetEnvironment -eq 'PRD') {
+    # The package is compiled from the monorepo's working tree, so an edit to a
+    # tracked file would ship under the release's number. Untracked files (local
+    # notes) are not built and are allowed.
+    $Dirty = git -C $VersionMonorepoRoot status --porcelain --untracked-files=no
+    if ($Dirty) {
+        Write-Error "Production Lucid packages are built from a clean release/prd checkout, but the monorepo ($VersionMonorepoRoot) has uncommitted changes to tracked files:`n$($Dirty -join "`n")`nCommit or discard them and re-run."
+        exit 1
+    }
     if (-not $OnRelease) {
         Write-Error "Production Lucid packages are built from release/prd. Check out origin/release/prd in the monorepo ($VersionMonorepoRoot) and re-run."
         exit 1
