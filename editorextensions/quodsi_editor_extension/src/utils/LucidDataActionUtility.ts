@@ -24,6 +24,21 @@ import { AuthHandler } from '../core/messaging/handlers/authHandler';
 
 const log = getLogger('LucidDataActionUtility');
 
+/** What an outdated package tells the user (spec 2026-10-21 quodsi-version, Part C). */
+export const CLIENT_OUTDATED_ALERT = 'Quodsi has been updated. Reload LucidChart to get the latest version.';
+
+/** This package's Quodsi release, from the build (build-bundle.ps1 Step 1.2). */
+function quodsiVersion(): string {
+    return (typeof __QUODSI_VERSION__ === 'string' && __QUODSI_VERSION__) || 'development';
+}
+
+let alertedOutdated = false;
+
+/** @internal Tests only: forget that this session already alerted. */
+export function __resetClientOutdatedForTests(): void {
+    alertedOutdated = false;
+}
+
 /**
  * Interface for data action parameters
  */
@@ -54,6 +69,22 @@ export class LucidDataActionUtility {
         if (!AuthHandler.getIsAuthenticated()) {
             log.warn(`Data action ${params.actionName} before Kinde sign-in; the request carries no token`);
         }
-        return await client.performDataAction(params);
+        // Every action names this package's Quodsi release; Lucid's proxy drops
+        // custom headers, so it rides in the action's data (spec 2026-10-21, Part C).
+        const result = await client.performDataAction({
+            ...params,
+            actionData: { ...(params.actionData ?? {}), quodsiVersion: quodsiVersion() },
+        });
+        // The API no longer supports this package: say so once per session.
+        if (result?.status === 426 && result?.json?.detail?.code === 'client_outdated' && !alertedOutdated) {
+            alertedOutdated = true;
+            log.warn(`Data action ${params.actionName} refused: this package is out of date`);
+            try {
+                client.alert?.(CLIENT_OUTDATED_ALERT);
+            } catch (e) {
+                log.warn('Could not show the out-of-date alert', e);
+            }
+        }
+        return result;
     }
 }

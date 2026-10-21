@@ -44,7 +44,8 @@ describe('UpgradeInterestHandler', () => {
     expect(performDataActionMock).toHaveBeenCalledWith({
       dataConnectorName: 'quodsi_api_data_connector',
       actionName: 'UpgradeInterest',
-      actionData: { feature: 'tradeoff_analysis' },
+      // Part C: every action names the package's Quodsi version.
+      actionData: { feature: 'tradeoff_analysis', quodsiVersion: 'development' },
       asynchronous: false,
     });
 

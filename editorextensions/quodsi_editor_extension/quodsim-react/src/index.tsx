@@ -45,6 +45,10 @@ import "./index_new.css";
 // does not publish theme.css as a subpath.
 import '../../../../../quodsi_studio/src/platforms/shared/theme.css';
 import { applyViewUrlOverride } from 'quodsi_studio/platforms/shared';
+import { applyLucidClientOutdatedWording } from './features/shared/clientOutdatedWording';
+
+// Every out-of-date notice in this app says to reload LucidChart (Part C).
+applyLucidClientOutdatedWording();
 import { migrateLegacyDevFlag } from './utils/migrateLegacyDevFlag';
 
 const log = getLogger('index');
