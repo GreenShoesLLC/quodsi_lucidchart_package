@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { MODEL_SCHEMA_VERSION, ENGINE_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/lucid-shared";
 import { detectEnvironment } from "../../utils/environmentDetection";
-import { setDevMode } from "quodsi_studio/platforms/shared";
+import { setDevMode, QUODSI_VERSION_TEXT } from "quodsi_studio/platforms/shared";
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -79,16 +79,20 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             Discrete Event Simulation
           </div>
           <div
+            data-testid="about-quodsi-version"
             className="text-xs text-gray-500 mt-3 cursor-default select-none"
             onClick={handleVersionClick}
           >
-            App: {MODEL_SCHEMA_VERSION}
+            Quodsi {QUODSI_VERSION_TEXT}
           </div>
           {devModeMessage && (
             <div className="text-xs text-green-600 mt-1 font-medium">
               Developer mode enabled
             </div>
           )}
+          <div className="text-xs text-gray-500 mt-1">
+            Model schema: {MODEL_SCHEMA_VERSION}
+          </div>
           <div className="text-xs text-gray-500 mt-1">
             Simulation Engine: {ENGINE_VERSION}
           </div>
