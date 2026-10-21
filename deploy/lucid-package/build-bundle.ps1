@@ -114,6 +114,80 @@ $env:QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE = "1"
 # Write-Host " VITE_DATA_CONNECTOR_API_URL = $($env:VITE_DATA_CONNECTOR_API_URL)"
 
 
+# --- Step 1.2: The Quodsi version (spec 2026-10-21 quodsi-version) ---
+# The package carries the Quodsi release it was built from: the React app shows
+# it (Settings, Status, About) and the manifest gets its three-number form
+# (the lucid-package CLI accepts only <major>.<minor>.<patch>). The number comes
+# from the monorepo's .github/scripts/quodsi_version.sh, the same script the
+# deploy workflows run. Production packages are built ONLY from the tip of
+# origin/release/prd, with -RunReactBuild. Dev and TST get their branch's
+# version when the monorepo is at that branch's tip, else the development form.
+Write-Host "--------------------------------------------------"
+Write-Host "Step 1.2: Computing the Quodsi version..."
+Write-Host "--------------------------------------------------"
+$VersionMonorepoRoot = Split-Path $LucidPackageDir -Parent
+$VersionScript = Join-Path $VersionMonorepoRoot ".github\scripts\quodsi_version.sh"
+switch ($TargetEnvironment) {
+    'PRD' { $ReleaseBranch = 'release/prd';  $QuodsiChannel = 'prd' }
+    'TST' { $ReleaseBranch = 'release/test'; $QuodsiChannel = 'test' }
+    'Dev' { $ReleaseBranch = 'release/dev';  $QuodsiChannel = 'dev' }
+}
+# Git Bash, found beside git.exe: a bare `bash` on Windows is often WSL's, which
+# cannot run this script against a Windows checkout.
+$GitExe = (Get-Command git -ErrorAction Stop).Source
+$GitBash = Join-Path (Split-Path (Split-Path $GitExe -Parent) -Parent) "bin\bash.exe"
+if (-not (Test-Path $GitBash)) {
+    Write-Error "Git Bash not found at '$GitBash' (looked beside $GitExe). Aborting bundle."
+    exit 1
+}
+git -C $VersionMonorepoRoot fetch --quiet origin $ReleaseBranch
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Could not fetch origin/$ReleaseBranch in $VersionMonorepoRoot. Aborting bundle."
+    exit 1
+}
+$HeadSha = (git -C $VersionMonorepoRoot rev-parse HEAD).Trim()
+$ReleaseSha = (git -C $VersionMonorepoRoot rev-parse "origin/$ReleaseBranch").Trim()
+$QuodsiCommit = (git -C $VersionMonorepoRoot rev-parse --short HEAD).Trim()
+$OnRelease = ($HeadSha -eq $ReleaseSha)
+if ($TargetEnvironment -eq 'PRD') {
+    if (-not $OnRelease) {
+        Write-Error "Production Lucid packages are built from release/prd. Check out origin/release/prd in the monorepo ($VersionMonorepoRoot) and re-run."
+        exit 1
+    }
+    if (-not $RunReactBuild) {
+        Write-Error "Production Lucid packages need -RunReactBuild, so the React app carries this release's number. Re-run with -RunReactBuild."
+        exit 1
+    }
+}
+Push-Location $VersionMonorepoRoot
+try {
+    $ManifestVersion = (& $GitBash $VersionScript --manifest HEAD | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $ManifestVersion) { throw "quodsi_version.sh --manifest failed" }
+    if ($OnRelease) {
+        $QuodsiVersion = (& $GitBash $VersionScript HEAD | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or -not $QuodsiVersion) { throw "quodsi_version.sh failed" }
+    } else {
+        $QuodsiVersion = ''
+    }
+} catch {
+    Pop-Location
+    Write-Error "Could not compute the Quodsi version: $($_.Exception.Message). Aborting bundle."
+    exit 1
+}
+Pop-Location
+# Read by quodsi_studio/src/platforms/shared/version/quodsiVersion.ts at the React build.
+# A development build leaves VITE_QUODSI_VERSION blank, so the app says so.
+$env:VITE_QUODSI_VERSION = $QuodsiVersion
+$env:VITE_QUODSI_CHANNEL = $(if ($OnRelease) { $QuodsiChannel } else { '' })
+$env:VITE_QUODSI_COMMIT = $QuodsiCommit
+if ($OnRelease) {
+    Write-Host "[OK] Quodsi version $QuodsiVersion ($QuodsiChannel, $QuodsiCommit); manifest version $ManifestVersion" -ForegroundColor Green
+} else {
+    Write-Host "Monorepo is not at origin/${ReleaseBranch}: development build ($QuodsiCommit); manifest version $ManifestVersion" -ForegroundColor Yellow
+    Write-Host " VITE_QUODSI_VERSION = (blank, development build)"
+}
+
+
 # --- Step 1.4: Enforce react-hooks/rules-of-hooks (fail fast) ---
 # Runs before any build so a hook-order violation aborts the bundle
 # instead of shipping a "Rendered fewer hooks than expected" crash
@@ -376,6 +450,28 @@ if ($ManifestSource) {
         exit 1
     }
 
+    # Stamp the Quodsi version's manifest form (Step 1.2) over the hand-kept
+    # value. Only the top-level "version" (the first one in the file) changes,
+    # so the rest of the manifest keeps its formatting. Step 6 restores the
+    # original manifest.json afterwards.
+    # `lucid-package bundle` adds 1 to the last number on every build
+    # (lucid-package src/package.js: "Increment the patch number automatically
+    # on each build"), so write one less: the package ships as $ManifestVersion.
+    try {
+        $mvParts = $ManifestVersion.Split('.')
+        $mvParts[2] = [string]([int]$mvParts[2] - 1)
+        $PreBundleVersion = $mvParts -join '.'
+        $manifestText = Get-Content "manifest.json" -Raw
+        $versionPattern = [regex]'"version"\s*:\s*"[^"]*"'
+        if (-not $versionPattern.IsMatch($manifestText)) { throw "no top-level version field" }
+        $manifestText = $versionPattern.Replace($manifestText, "`"version`": `"$PreBundleVersion`"", 1)
+        [System.IO.File]::WriteAllText((Join-Path (Get-Location) "manifest.json"), $manifestText)
+        Write-Host "[OK] Manifest version set to $PreBundleVersion; the bundle step raises it to $ManifestVersion" -ForegroundColor Green
+    } catch {
+        Write-Error "Failed to set the manifest version: $($_.Exception.Message)"
+        exit 1
+    }
+
     # Validate the manifest URL matches expected environment
     try {
         $manifestContent = Get-Content "manifest.json" -Raw | ConvertFrom-Json
@@ -461,26 +557,14 @@ if (-not (Test-Path $PackageZipPath)) {
     exit 1
 }
 
-# Extract MODEL_SCHEMA_VERSION from version.ts.
-# Renamed from QUODSI_VERSION in the monorepo (quodsi_shared, 2026-08-06) when the
-# version constants were split into MODEL_SCHEMA_VERSION (document schema) and
-# ENGINE_VERSION (Batch engine build). This script greps a file in the OTHER repo,
-# so the rename did not reach it and the bundle broke here. The package/tag series
-# has always tracked the document-schema version, so MODEL_SCHEMA_VERSION is the
-# direct successor: lucid/v2026.07.27 -> lucid/v2026.08.25.
-$VersionFilePath = Join-Path $LucidPackageDir "..\quodsi_shared\src\constants\version.ts"
-$VersionFileContent = Get-Content $VersionFilePath -Raw
-if ($VersionFileContent -match 'MODEL_SCHEMA_VERSION\s*=\s*"([^"]+)"') {
-    $QuodsiVersion = $Matches[1]
-    Write-Host "Detected MODEL_SCHEMA_VERSION: $QuodsiVersion" -ForegroundColor Cyan
-} else {
-    Write-Error "Could not extract MODEL_SCHEMA_VERSION from '$VersionFilePath'. If the constant was renamed again, update this script to match."
-    exit 1
-}
+# The package and its tag are named for the Quodsi version (Step 1.2), not the
+# model schema as before 2026-10-21: lucid/v2026.10.21/PRD. A development build
+# is named for its commit (package_dev-<commit>.zip) and is not tagged.
+$PackageLabel = $(if ($QuodsiVersion) { $QuodsiVersion } else { "dev-$QuodsiCommit" })
 
 # Copy package.zip and versioned copy to parent directory
 $OutputDir = Split-Path $LucidPackageDir -Parent
-$VersionedPackagePath = Join-Path $OutputDir "package_v${QuodsiVersion}.zip"
+$VersionedPackagePath = Join-Path $OutputDir "package_v${PackageLabel}.zip"
 $OutputPackagePath = Join-Path $OutputDir "package.zip"
 try {
     Copy-Item -Path $PackageZipPath -Destination $VersionedPackagePath -Force -ErrorAction Stop
@@ -519,23 +603,26 @@ Write-Host "--------------------------------------------------"
 Write-Host "Step 7: Checking version deploy tag..."
 Write-Host "--------------------------------------------------"
 
-$TagName = "lucid/v${QuodsiVersion}/${TargetEnvironment}"
+if (-not $QuodsiVersion) {
+    Write-Host "Development build: no deploy tag." -ForegroundColor Gray
+} else {
+    $TagName = "lucid/v${QuodsiVersion}/${TargetEnvironment}"
 
-# Check if this version was already bundled for this environment
-$existingTag = git tag -l $TagName 2>$null
-if ($existingTag) {
-    Write-Host ""
-    Write-Host "WARNING: Version $QuodsiVersion was already bundled for $TargetEnvironment." -ForegroundColor Yellow
-    Write-Host "Tag '$TagName' already exists. Did you forget to bump MODEL_SCHEMA_VERSION?" -ForegroundColor Yellow
-    Write-Host ""
-}
+    # Check if this version was already bundled for this environment
+    $existingTag = git tag -l $TagName 2>$null
+    if ($existingTag) {
+        Write-Host ""
+        Write-Host "Quodsi $QuodsiVersion was already bundled for $TargetEnvironment (tag '$TagName'); moving the tag to this build." -ForegroundColor Yellow
+        Write-Host ""
+    }
 
-# Create/update the tag on current HEAD
-try {
-    git tag -f $TagName 2>$null | Out-Null
-    Write-Host "Created git tag: $TagName" -ForegroundColor Green
-} catch {
-    Write-Warning "Could not create git tag '$TagName': $($_.Exception.Message)"
+    # Create/update the tag on current HEAD
+    try {
+        git tag -f $TagName 2>$null | Out-Null
+        Write-Host "Created git tag: $TagName" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not create git tag '$TagName': $($_.Exception.Message)"
+    }
 }
 
 Write-Host ""
