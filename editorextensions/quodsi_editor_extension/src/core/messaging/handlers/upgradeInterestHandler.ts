@@ -1,3 +1,4 @@
+import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
@@ -47,7 +48,7 @@ export class UpgradeInterestHandler {
 
     try {
       const client = ModelManager.getClient();
-      const result = (await client.performDataAction({
+      const result = (await LucidDataActionUtility.performDataAction(client, {
         dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'UpgradeInterest',
         actionData: { feature },

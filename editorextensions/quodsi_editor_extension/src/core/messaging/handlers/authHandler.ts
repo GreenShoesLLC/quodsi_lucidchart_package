@@ -1,3 +1,4 @@
+import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { EnvelopeBase, EnvelopeMessageType, EntitlementsStatusData, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
@@ -285,7 +286,7 @@ export class AuthHandler {
       const client = ModelManager.getClient();
       // performDataAction returns { status, json } where `json` is the actual
       // response body. We care about the body.
-      const result = await client.performDataAction({
+      const result = await LucidDataActionUtility.performDataAction(client, {
         dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'GetMyEntitlements',
         actionData: {},
@@ -333,7 +334,7 @@ export class AuthHandler {
       const client = ModelManager.getClient();
       AuthHandler.logger.debug('Syncing user to quodsi_api database...');
 
-      const result = await client.performDataAction({
+      const result = await LucidDataActionUtility.performDataAction(client, {
         dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'SyncUser',
         actionData: {

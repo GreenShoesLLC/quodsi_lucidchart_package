@@ -67,6 +67,8 @@ module.exports = (env, argv) => {
     new webpack.DefinePlugin({
       __LOCAL_API_OVERRIDE__: JSON.stringify(readLocalApiOverride()),
       __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
+      // The Quodsi version build-bundle.ps1 computed (spec 2026-10-21 quodsi-version).
+      __QUODSI_VERSION__: JSON.stringify(process.env.VITE_QUODSI_VERSION || ""),
     }),
     new WebpackShellPluginNext({
       // Run during execution of `npx lucid-package@latest test-editor-extension`.

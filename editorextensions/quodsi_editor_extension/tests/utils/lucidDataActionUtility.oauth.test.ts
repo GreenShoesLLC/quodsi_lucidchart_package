@@ -25,7 +25,8 @@ describe('LucidDataActionUtility', () => {
     const result = await LucidDataActionUtility.performDataAction(client, params);
 
     expect(result).toEqual({ status: 200, json: {} });
-    expect(client.performDataAction).toHaveBeenCalledWith(params);
+    // Part C adds the package's Quodsi version to the action data.
+    expect(client.performDataAction).toHaveBeenCalledWith({ ...params, actionData: { quodsiVersion: 'development' } });
     expect(client.oauthXhr).not.toHaveBeenCalled();
   });
 });

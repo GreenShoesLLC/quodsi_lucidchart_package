@@ -18,6 +18,7 @@ const config: Config.InitialOptions = {
   // override, the same as a cloud bundle.
   globals: {
     __LOCAL_API_OVERRIDE__: '',
+    __QUODSI_VERSION__: '',
   },
   moduleDirectories: ['node_modules', '<rootDir>'],
 };

@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useMessaging } from "../messaging";
 import { ModelPanel } from "./modelPanel";
 import { PanelTourHost } from "./onboarding/PanelTourHost";
-import { anchorProps } from "quodsi_studio/platforms/shared";
+import { anchorProps, ClientOutdatedNotice } from "quodsi_studio/platforms/shared";
 
 // Create component-specific logger using the shared logger
 import { getLogger } from "@quodsi/lucid-shared";
@@ -57,6 +57,8 @@ export const LucidApp: React.FC = () => {
       <div className="flex-1 min-h-0">
         <ModelPanel key={documentKey} />
       </div>
+      {/* Spec 2026-10-21 quodsi-version, Part C: the API refused this package. */}
+      <ClientOutdatedNotice />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { queryClientDefaultOptions } from 'quodsi_studio/lib/queryClientDefaults'
+import { ClientOutdatedNotice } from 'quodsi_studio/platforms/shared/version/ClientOutdatedNotice'
 import type { LucidModalHost } from './lucidModalHost'
 import { useLucidModalHost } from './useLucidModalHost'
 import { useStudioApiSetup } from './useStudioApiSetup'
@@ -77,6 +78,8 @@ export function AdvisorModalView() {
           </QueryClientProvider>
         )}
       </div>
+      {/* Spec 2026-10-21 quodsi-version, Part C: the API refused this package. */}
+      <ClientOutdatedNotice />
     </div>
   )
 }
