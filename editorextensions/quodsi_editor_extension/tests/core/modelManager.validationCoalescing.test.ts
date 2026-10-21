@@ -58,14 +58,31 @@ describe('ModelManager validation coalescing', () => {
         });
 
         const first = manager.validateModel();
-        // Past the coalescing window: the first run has started and is blocked.
-        await new Promise(r => setTimeout(r, ModelManager.VALIDATION_COALESCE_MS + 50));
+        // Let the queued run start; it is now blocked on the gate.
+        while (runs === 0) await new Promise(r => setImmediate(r));
         const late = [manager.validateModel(), manager.validateModel()];
         release();
         await Promise.all([first, ...late]);
 
         expect(buildSpy).toHaveBeenCalledTimes(2);
         expect(broadcasts()).toBe(2);
+    });
+
+    // Lucid's extension sandbox (QuickJS) has no setTimeout: the timer-based
+    // window threw "'setTimeout' is not defined" on every selection event and
+    // broke the onboarding tour's example page (dev package 2026.10.21).
+    it('coalesces without a timer, as in the Lucid sandbox', async () => {
+        const { manager, buildSpy, broadcasts } = setup();
+        const realSetTimeout = globalThis.setTimeout;
+        (globalThis as any).setTimeout = undefined;
+        try {
+            const results = await Promise.all([1, 2, 3].map(() => manager.validateModel()));
+            expect(buildSpy).toHaveBeenCalledTimes(1);
+            expect(broadcasts()).toBe(1);
+            expect(new Set(results).size).toBe(1);
+        } finally {
+            globalThis.setTimeout = realSetTimeout;
+        }
     });
 
     it('validateModelNow runs immediately on every call', async () => {

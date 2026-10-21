@@ -638,9 +638,7 @@ export class ModelManager {
         return await this.validateModel();
     }
 
-    /** Coalescing window for validateModel() (ClickUp 86e359a0c). */
-    public static readonly VALIDATION_COALESCE_MS = 150;
-    /** The not-yet-started run every validateModel() call in the window shares. */
+    /** The queued, not-yet-started run every validateModel() call shares (ClickUp 86e359a0c). */
     private scheduledValidation: Promise<ValidationResult> | null = null;
     /** The run currently rebuilding; the next run starts only after it. */
     private validationRun: Promise<ValidationResult> | null = null;
@@ -650,19 +648,24 @@ export class ModelManager {
      * write calls this, and each run rebuilds the model from shape storage and
      * broadcasts MODEL_VALIDATION_RESULT -- uncoalesced, an idle canvas under a
      * Lucid-side event storm ran dozens per second and tripped Lucid's
-     * telemetry rate limit (2026-09-06). Calls inside one window share one
-     * run; a call made after a run has started gets a fresh run once it ends,
-     * so a write is never validated against the pre-write model.
+     * telemetry rate limit (2026-09-06).
+     *
+     * No timer: Lucid's extension sandbox has no setTimeout (a 150 ms window
+     * threw "'setTimeout' is not defined" on every selection, 2026-10-21).
+     * Instead every call shares one queued run, which starts once the run in
+     * progress ends (or right away when none is). A storm therefore costs at
+     * most one run in progress plus one queued. A call made after the queued
+     * run has started gets a fresh run once it ends, so a write is never
+     * validated against the pre-write model.
      */
     public validateModel(): Promise<ValidationResult> {
         if (this.scheduledValidation) return this.scheduledValidation;
-        const scheduled = new Promise<ValidationResult>((resolve, reject) => {
-            setTimeout(() => {
-                // Calls from here on open a new window: this run may already
-                // have read storage that a later write changes.
-                this.scheduledValidation = null;
-                this.startValidationRun().then(resolve, reject);
-            }, ModelManager.VALIDATION_COALESCE_MS);
+        const previous = this.validationRun ?? Promise.resolve(null);
+        const scheduled = previous.then(() => undefined, () => undefined).then(() => {
+            // Calls from here on queue a new run: this one is about to read
+            // storage that a later write may change.
+            this.scheduledValidation = null;
+            return this.startValidationRun();
         });
         this.scheduledValidation = scheduled;
         return scheduled;
