@@ -139,7 +139,7 @@ describe("ModelPanel — the Advisor for everyone signed in", () => {
 
   it("the Project button opens the Advisor at project focus (Advisor Workspace)", () => {
     render(<ModelPanel />);
-    fireEvent.click(screen.getByRole("button", { name: "Open the Simulation Project" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open the Advisor" }));
     expect(mocks.openAdvisorModal).toHaveBeenLastCalledWith({
       focusId: "", focusType: "Project", mode: "project", documentId: "doc-1", pageId: "pg-1",
     });
