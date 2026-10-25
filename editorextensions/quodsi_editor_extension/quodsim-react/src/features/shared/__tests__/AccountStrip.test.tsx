@@ -352,6 +352,24 @@ describe("AccountStrip / PlanDetails — contact-to-upgrade affordance (free pla
     expect(mockWriteText).toHaveBeenCalledWith("sales@quodsi.com");
   });
 
+  // Inside Lucid's iframe navigator.clipboard is blocked; the copy must go
+  // through the textarea + execCommand path (Studio's copyTextToClipboard).
+  it("Copy works when navigator.clipboard is blocked, as in Lucid's iframe", async () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
+    mockWriteText.mockRejectedValue(new Error("clipboard blocked"));
+    const execCommand = vi.fn(() => true);
+    Object.assign(document, { execCommand });
+    try {
+      render(<AccountStrip />);
+      openPlanDetails();
+      fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
+      await screen.findByRole("button", { name: /copied/i });
+      expect(execCommand).toHaveBeenCalledWith("copy");
+    } finally {
+      delete (document as any).execCommand;
+    }
+  });
+
   it("Copy does not claim success when the clipboard write fails", async () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     mockWriteText.mockRejectedValue(new Error("clipboard blocked"));
@@ -419,7 +437,7 @@ describe("AccountStrip / PlanBadge — tone", () => {
       studiesPerOrgLimit: 10,
     };
     render(<AccountStrip />);
-    const chip = screen.getByText("Employee");
+    const chip = screen.getByText("Quodsi Employee");
     expect(chip.className).toContain("bg-gray-50");
   });
 });

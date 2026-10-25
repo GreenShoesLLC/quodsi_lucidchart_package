@@ -76,18 +76,26 @@ test('initial state has null defaults for the new fields', () => {
 });
 
 describe('planDisplayLabel', () => {
+  // The names come from @quodsi/shared's formatPlanName, the same ones Studio
+  // and drawio show (Lucid had its own list until 2026-10-25).
+  const label = (planKey: string) => planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey });
+
   test('maps legacy plan codes', () => {
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_free_user' })).toBe('Free plan');
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_pro_user' })).toBe('Pro plan');
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_pro_team' })).toBe('Team plan');
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_enterprise_team' })).toBe('Enterprise');
+    expect(label('quodsi_free_user')).toBe('Free');
+    expect(label('quodsi_pro_user')).toBe('Pro');
+    expect(label('quodsi_pro_team')).toBe('Pro Team');
+    expect(label('quodsi_enterprise_team')).toBe('Enterprise');
   });
 
   test('maps the new plan codes', () => {
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_free' })).toBe('Free plan');
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_pro' })).toBe('Professional');
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_early_adopter' })).toBe('Early Adopter');
-    expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_employee' })).toBe('Employee');
+    expect(label('quodsi_free')).toBe('Free');
+    expect(label('quodsi_pro')).toBe('Professional');
+    expect(label('quodsi_early_adopter')).toBe('Early Adopter');
+    expect(label('quodsi_employee')).toBe('Quodsi Employee');
+  });
+
+  test('before entitlements load, or with no plan, it is the free plan', () => {
+    expect(planDisplayLabel(initialEntitlementsState)).toBe('Free');
   });
 });
 
