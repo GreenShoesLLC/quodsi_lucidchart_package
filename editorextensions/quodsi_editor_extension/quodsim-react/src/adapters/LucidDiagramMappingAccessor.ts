@@ -14,7 +14,7 @@
 // so no orphan listeners, and disconnect() preserves pending requests so a
 // StrictMode disconnect->reconnect does not drop a result), and injectable
 // ports for tests.
-import { v4 as uuid } from 'uuid'
+import { generateUUID } from '@quodsi/lucid-shared'
 import { EnvelopeMessageType, type EnvelopeBase } from '@quodsi/lucid-shared'
 import type { ConversionPreviewData, MappingChange } from '@quodsi/shared'
 import type { DiagramMappingAccessor } from 'quodsi_studio/platforms/shared'
@@ -101,7 +101,7 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
     // reads it for logging and echoes it back -- but correlation on this end
     // is keyed on the envelope id below, not on this modal-local counter.
     const requestId = this.nextId++
-    const id = uuid()
+    const id = generateUUID()
     return new Promise<ConversionPreviewData>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.pending.delete(id)
@@ -121,7 +121,7 @@ export class LucidDiagramMappingAccessor implements DiagramMappingAccessor {
 
   applyChanges(changes: MappingChange[], resetExisting = false): Promise<void> {
     const requestId = this.nextId++
-    const id = uuid()
+    const id = generateUUID()
     return new Promise<void>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         this.pending.delete(id)

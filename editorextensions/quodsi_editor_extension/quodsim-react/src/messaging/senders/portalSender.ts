@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { v4 as uuid } from 'uuid';
+import { generateUUID } from '@quodsi/lucid-shared';
 import { EnvelopeBase, EnvelopeMessageType, MessageSource } from '@quodsi/lucid-shared';
 import { useMessaging } from '../MessageProvider';
 
@@ -34,7 +34,7 @@ export function usePortalSender() {
           return;
         }
 
-        const correlationId = uuid();
+        const correlationId = generateUUID();
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
         const handler = (event: MessageEvent) => {

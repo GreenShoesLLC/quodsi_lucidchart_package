@@ -4,7 +4,7 @@
 // example, selecting a shape and watching the diagram mean in Lucid. The work
 // itself is the extension's (tourHandler.ts); this side only sends the tour
 // messages and reads their replies.
-import { v4 as uuid } from 'uuid'
+import { generateUUID } from '@quodsi/lucid-shared'
 import {
   EnvelopeMessageType,
   type EnvelopeBase,
@@ -19,7 +19,7 @@ import { ownsPanel } from './stepFrames'
 export const HOST_REPLY_TIMEOUT_MS = 60_000
 
 /** Send one envelope to the extension (the useLucidBlankSlateAccessor idiom). */
-export function postToHost(type: EnvelopeMessageType, data: unknown, id: string = uuid()): void {
+export function postToHost(type: EnvelopeMessageType, data: unknown, id: string = generateUUID()): void {
   const envelope: EnvelopeBase = { id, type, source: 'model-iframe', target: 'host', version: '1.0', data: data as never }
   window.parent.postMessage(envelope, '*')
 }
@@ -33,7 +33,7 @@ export function requestFromHost(
   data: unknown,
   replyType: EnvelopeMessageType,
 ): Promise<unknown> {
-  const id = uuid()
+  const id = generateUUID()
   return new Promise((resolve, reject) => {
     const onMessage = (event: MessageEvent) => {
       const msg = event.data as EnvelopeBase | undefined

@@ -36,7 +36,7 @@
 //      listener here is never torn down until the hook unmounts.
 
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import { v4 as uuid } from 'uuid'
+import { generateUUID } from '@quodsi/lucid-shared'
 import {
   EnvelopeBase,
   EnvelopeMessageType,
@@ -337,7 +337,7 @@ export function createModelRootSource(transport: ModelRootTransport, sourceOptio
     options: ReferenceCleanupOptions | undefined,
     shapes: Map<string, PendingShape> = new Map(),
   ): Batch {
-    const id = uuid()
+    const id = generateUUID()
     return {
       id,
       order: ++batchOrder,
@@ -758,7 +758,7 @@ export function useModelRootSource(): {
       request() {
         if (!window.parent) return
         const envelope: EnvelopeBase = {
-          id: uuid(),
+          id: generateUUID(),
           type: EnvelopeMessageType.MODEL_ROOT_REQUEST,
           source,
           target: 'host',
@@ -800,7 +800,7 @@ export function useModelRootSource(): {
             return
           }
 
-          const correlationId = uuid()
+          const correlationId = generateUUID()
           let timeoutId: ReturnType<typeof setTimeout> | undefined
 
           const handler = (event: MessageEvent) => {

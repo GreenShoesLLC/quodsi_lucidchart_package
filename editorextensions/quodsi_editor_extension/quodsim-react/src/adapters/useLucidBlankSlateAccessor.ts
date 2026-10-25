@@ -13,7 +13,7 @@
 //   - reviewDiagram: the Diagram Mapping modal, as the old card's link did.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { v4 as uuid } from 'uuid'
+import { generateUUID } from '@quodsi/lucid-shared'
 import {
   EnvelopeMessageType,
   type AutoConvertPageResultData,
@@ -26,7 +26,7 @@ import { useSimulationRunSender } from '../messaging/senders/simulationRunSender
 /** How long convertDiagram waits for AUTO_CONVERT_PAGE_RESULT. */
 export const AUTO_CONVERT_TIMEOUT_MS = 60_000
 
-function postToHost(type: EnvelopeMessageType, data: unknown, id: string = uuid()): void {
+function postToHost(type: EnvelopeMessageType, data: unknown, id: string = generateUUID()): void {
   const envelope: EnvelopeBase = { id, type, source: 'model-iframe', target: 'host', version: '1.0', data }
   window.parent.postMessage(envelope, '*')
 }
@@ -126,7 +126,7 @@ export function useLucidBlankSlateAccessor(options: {
           return
         }
 
-        const inFlight: InFlightConversion = { id: uuid(), waiters: [] }
+        const inFlight: InFlightConversion = { id: generateUUID(), waiters: [] }
         inFlightRef.current = inFlight
         attach(inFlight)
         postToHost(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId }, inFlight.id)

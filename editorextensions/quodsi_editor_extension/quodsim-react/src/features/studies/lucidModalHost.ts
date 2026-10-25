@@ -3,7 +3,7 @@
 // LucidHost for the compiled Studies/Advisor modals (StudiesModal /
 // AdvisorConsultModal): requests are sent straight to the extension over
 // this modal's messaging (channel role 'studio-embed').
-import { v4 as uuid } from 'uuid'
+import { generateUUID } from '@quodsi/lucid-shared'
 import { EnvelopeMessageType, isEnvelope, type EnvelopeBase } from '@quodsi/lucid-shared'
 import {
   createEmbedWriter,
@@ -86,7 +86,7 @@ export function createLucidModalHost(
     ? createEmbedWriter({
         postMessage: (msg) => {
           const { requestId, kind, payload } = msg as EmbedWriteMessage
-          const envelope = buildWriteEnvelope(kind as EmbedWriteKind, payload, uuid(), opts.pageId)
+          const envelope = buildWriteEnvelope(kind as EmbedWriteKind, payload, generateUUID(), opts.pageId)
           if (!envelope) {
             // Fail fast instead of leaving the writer to time out (mirrors the
             // deleted EmbeddedStudioFrame's same fast-fail on an unknown kind).
