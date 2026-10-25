@@ -22,6 +22,13 @@ export class AuthHandler {
   private static authReadyListeners: Array<() => void> = [];
   /** In-flight checkCachedAuth, shared by concurrent callers (single-flight). */
   private static cachedAuthInFlight: Promise<void> | null = null;
+  /**
+   * A check or Sign In came back with no token (cancelled, failed), or the
+   * user signed out. getOAuthToken has no silent mode, so while this is set
+   * ensureAuthChecked answers "signed out" instead of reopening Lucid's
+   * sign-in dialog. Only Sign In (AUTH_REQUIRED) asks Lucid again.
+   */
+  private static knownSignedOut = false;
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
@@ -68,8 +75,25 @@ export class AuthHandler {
   }
 
   /**
-   * Non-blocking check for cached Kinde token.
-   * Called after REACT_APP_READY to set initial auth state.
+   * Start sign-in the moment the panel opens. Called from the panel's boot
+   * message (its HTML has arrived, the app has not loaded), frameLoaded, and
+   * every REACT_APP_READY, so whichever comes first asks Lucid and the rest
+   * join that call. Before 2026-10-25 the first ask waited for
+   * REACT_APP_READY, i.e. for the whole React app to download and mount:
+   * the "Sign in does nothing for up to a minute" report. Once we know there
+   * is no token it re-sends "signed out" rather than prompting again.
+   */
+  public static ensureAuthChecked(): Promise<void> {
+    if (AuthHandler.knownSignedOut && !AuthHandler.cachedAuthInFlight) {
+      AuthHandler.broadcastAuthStatus(false);
+      return Promise.resolve();
+    }
+    return AuthHandler.checkCachedAuth();
+  }
+
+  /**
+   * Non-blocking check for cached Kinde token. May open Lucid's sign-in
+   * dialog when there is none; triggers go through ensureAuthChecked.
    */
   public static async checkCachedAuth(): Promise<void> {
     // Runs on EVERY panel/iframe REACT_APP_READY (dock panel, each Studies /
@@ -88,10 +112,12 @@ export class AuthHandler {
           await AuthHandler.processToken(token);
         } else {
           AuthHandler.logger.debug('No cached Kinde token');
+          AuthHandler.knownSignedOut = true;
           AuthHandler.broadcastAuthStatus(false);
         }
       } catch (error) {
         AuthHandler.logger.error('Error checking cached auth:', error);
+        AuthHandler.knownSignedOut = true;
         AuthHandler.broadcastAuthStatus(false);
       } finally {
         AuthHandler.cachedAuthInFlight = null;
@@ -115,6 +141,7 @@ export class AuthHandler {
         await AuthHandler.processToken(token);
       } else {
         AuthHandler.logger.debug('No token returned (user may have cancelled)');
+        AuthHandler.knownSignedOut = true;
         AuthHandler.broadcastAuthStatus(false);
       }
     } catch (error) {
@@ -152,6 +179,7 @@ export class AuthHandler {
       AuthHandler.isAuthenticated = false;
       AuthHandler.currentUser = undefined;
       AuthHandler.currentToken = undefined;
+      AuthHandler.knownSignedOut = true;
       AuthHandler.broadcastAuthStatus(false);
 
       const client = ModelManager.getClient();
@@ -203,6 +231,7 @@ export class AuthHandler {
     if (token === AuthHandler.currentToken && AuthHandler.currentUser) {
       AuthHandler.logger.debug('Token unchanged; re-broadcasting cached user');
       AuthHandler.isAuthenticated = true;
+      AuthHandler.knownSignedOut = false;
       AuthHandler.broadcastAuthStatus(true, AuthHandler.currentUser);
       AuthHandler.notifyAuthReady();
       return;
@@ -252,6 +281,7 @@ export class AuthHandler {
     };
 
     AuthHandler.isAuthenticated = true;
+    AuthHandler.knownSignedOut = false;
     AuthHandler.currentUser = user;
     AuthHandler.currentToken = token;
 
@@ -514,5 +544,6 @@ export class AuthHandler {
     AuthHandler.currentToken = undefined;
     AuthHandler.authReadyListeners = [];
     AuthHandler.cachedAuthInFlight = null;
+    AuthHandler.knownSignedOut = false;
   }
 }

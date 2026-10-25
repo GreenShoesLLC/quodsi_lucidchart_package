@@ -9,10 +9,31 @@
     <link rel="apple-touch-icon" href="./logo192.png" />
     <link rel="manifest" href="./manifest.json" />
     <title>Quodsi</title>
+    <script>
+      // Start Kinde sign-in now, not once the React app has loaded (it can
+      // take a while to download). The dock panel answers by calling
+      // getOAuthToken; see PANEL_BOOT_MESSAGE in src/panels/RightDockPanel.ts.
+      // Modals share this page and check sign-in at their own REACT_APP_READY.
+      try {
+        if (new URLSearchParams(location.search).get('panel') === 'model') {
+          window.parent.postMessage({ type: 'QUODSI_PANEL_BOOT' }, '*');
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      /* Shown until React mounts into #root and replaces it. */
+      .boot-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px;
+        padding-top: 48px; font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif; color: #6b7280; }
+      .boot-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #d1d5db;
+        border-top-color: #6b7280; animation: boot-spin 0.9s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-placeholder"><div class="boot-spinner"></div>Loading Quodsi…</div>
+    </div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

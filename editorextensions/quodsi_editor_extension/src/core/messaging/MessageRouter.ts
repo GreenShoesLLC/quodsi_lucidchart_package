@@ -285,8 +285,9 @@ export class MessageRouter {
     this.debug.debug(`About to request MODEL_CONTEXT for ${role}`);
     this.requestModelContext(role);
 
-    // Non-blocking auth check — broadcasts AUTH_STATUS to React
-    AuthHandler.checkCachedAuth();
+    // Non-blocking auth check — broadcasts AUTH_STATUS to React. Usually
+    // joins (or follows) the check the dock panel started at boot.
+    AuthHandler.ensureAuthChecked();
   }
 
   /**
