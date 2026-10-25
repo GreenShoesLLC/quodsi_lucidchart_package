@@ -80,6 +80,16 @@ describe('createLucidModalHost', () => {
     expect(onResult).toHaveBeenCalledTimes(1)
   })
 
+  it("carries a failed sync's userMessage when the extension sends one", () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const onResult = vi.fn()
+    host.requestModelSync(onResult)
+    reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { synced: false, error: 'other page', userMessage: 'Go back.' })
+    expect(onResult).toHaveBeenCalledWith({ modelId: undefined, synced: false, error: 'other page', userMessage: 'Go back.' })
+  })
+
   it('reports a timeout after 120 s (not before), then still delivers a late reply', async () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)

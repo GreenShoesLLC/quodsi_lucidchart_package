@@ -94,13 +94,13 @@ describe('StudiesModalView and the Advisor Workspace (spec 2026-10-16)', () => {
     expect(done).toBe(true)
   })
 
-  it('its syncModel rejects when the sync did not save, and marks sync failed (spec 2026-10-25)', async () => {
+  it("its syncModel rejects with the extension's line for her when the sync did not save, and marks sync failed (spec 2026-10-25)", async () => {
     setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
     await renderView()
     const p = (lastProps().workspaceHost.syncModel as () => Promise<void>)()
     const caught = p.catch((e: unknown) => e)
-    await act(async () => { host().sync.emit({ synced: false, error: 'Signed out.' }) })
-    expect(((await caught) as Error).message).toBe('Signed out.')
+    await act(async () => { host().sync.emit({ synced: false, error: 'other page', userMessage: 'Go back to Page 1.' }) })
+    expect(((await caught) as Error).message).toBe('Go back to Page 1.')
     expect(lastProps().syncStatus).toBe('failed')
   })
 })

@@ -1,5 +1,5 @@
 import { ModelSyncError } from 'quodsi_studio/platforms/lucid-host'
-import { syncModelOnce, MODEL_SYNC_FAILED } from '../modelSync'
+import { syncModelOnce } from '../modelSync'
 import { makeFakeHost } from './fakeModalHost'
 import type { LucidModalHost } from '../lucidModalHost'
 
@@ -20,28 +20,37 @@ describe('syncModelOnce', () => {
     expect(host.sync.unsubscribe).toHaveBeenCalled()
   })
 
-  it("rejects with a ModelSyncError carrying the extension's reason", async () => {
+  it('with a userMessage, rejects with a ModelSyncError carrying it (a line meant for her)', async () => {
     const { host, p } = setup()
-    host.sync.emit({ synced: false, error: 'x' })
+    host.sync.emit({ synced: false, error: 'other page', userMessage: 'Go back to Page 1.' })
     const e = await p.catch((err: unknown) => err)
     expect(e).toBeInstanceOf(ModelSyncError)
-    expect((e as Error).message).toBe('x')
+    expect((e as Error).message).toBe('Go back to Page 1.')
   })
 
-  it('rejects on the timeout, and still delivers a late reply', async () => {
+  it("with only an error, rejects with a plain Error (the task shows its own line)", async () => {
+    const { host, p } = setup()
+    host.sync.emit({ synced: false, error: 'no pending Studies open' })
+    const e = await p.catch((err: unknown) => err)
+    expect(e).toBeInstanceOf(Error)
+    expect(e).not.toBeInstanceOf(ModelSyncError)
+    expect((e as Error).message).toBe('no pending Studies open')
+  })
+
+  it('rejects on the timeout with a plain Error, and still delivers a late reply', async () => {
     const { host, onResult, p } = setup()
     host.sync.emit({ synced: false, error: 'The extension did not answer.' })
     const e = await p.catch((err: unknown) => err)
-    expect(e).toBeInstanceOf(ModelSyncError)
-    expect((e as Error).message).toBe('The extension did not answer.')
+    expect(e).toBeInstanceOf(Error)
+    expect(e).not.toBeInstanceOf(ModelSyncError)
     expect(host.sync.unsubscribe).not.toHaveBeenCalled()
     host.sync.emit({ modelId: 'm1', synced: true })
     expect(onResult).toHaveBeenLastCalledWith({ modelId: 'm1', synced: true })
   })
 
-  it('with no reason, rejects with the generic line', async () => {
+  it('with no reason at all, still rejects', async () => {
     const { host, p } = setup()
     host.sync.emit({ synced: false })
-    await expect(p).rejects.toThrow(MODEL_SYNC_FAILED)
+    await expect(p).rejects.toThrow('sync failed')
   })
 })

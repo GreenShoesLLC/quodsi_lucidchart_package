@@ -29,7 +29,14 @@ export interface ModalHostPorts {
   listen(cb: (envelope: EnvelopeBase) => void): () => void
 }
 
-export interface ModelSyncResult { modelId?: string; synced: boolean; error?: string }
+export interface ModelSyncResult {
+  modelId?: string
+  synced: boolean
+  /** Why it failed, for logs; not shown to her. */
+  error?: string
+  /** A failure line meant for her (e.g. the page to go back to), when the extension has one. */
+  userMessage?: string
+}
 
 export interface LucidModalHost extends LucidHost {
   requestToken(): Promise<string | undefined>
@@ -157,9 +164,10 @@ export function createLucidModalHost(
       const stop = () => { off(); window.clearTimeout(timer) }
       const off = on((env) => {
         if (env.type !== EnvelopeMessageType.STUDIES_MODEL_SYNC) return
-        const d = (env.data ?? {}) as { modelId?: string; synced?: boolean; error?: string }
+        const d = (env.data ?? {}) as { modelId?: string; synced?: boolean; error?: string; userMessage?: string }
         stop()
-        onResult({ modelId: d.modelId, synced: !!d.synced, error: d.error })
+        onResult({ modelId: d.modelId, synced: !!d.synced, error: d.error,
+          ...(d.userMessage ? { userMessage: d.userMessage } : {}) })
       })
       // Report the timeout but keep listening: a late reply is still delivered.
       const timer = window.setTimeout(() => {
