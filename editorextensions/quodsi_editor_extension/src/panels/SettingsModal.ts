@@ -1,6 +1,12 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ModalSize, DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/lucid-shared';
 import { RoutingModal } from './RoutingModal';
+
+/**
+ * Fixed, compact size, like StatusModal: Settings is a short list, and at the
+ * Window size preference (up to 1600x1000) it sat in a mostly empty, scrolling
+ * window.
+ */
+const SETTINGS_MODAL_SIZE = { width: 560, height: 640 } as const;
 
 /**
  * Modal that hosts the shared Settings screen (quodsi_studio's
@@ -11,9 +17,10 @@ import { RoutingModal } from './RoutingModal';
  *
  * UNLIKE those two, Settings is GLOBAL -- it has no shapeId and no element
  * context at all. SettingsPanel reads and writes the viewer's own view
- * preference directly (localStorage), so this modal's payload carries only
- * an optional modalSize; there is nothing to validate as "missing" the way
- * PatternEditorModal/ScheduleEditorModal validate shapeId.
+ * preference directly (localStorage), so this modal takes no payload; there
+ * is nothing to validate as "missing" the way PatternEditorModal/
+ * ScheduleEditorModal validate shapeId. Its one message to the host is
+ * TOUR_START ("Take the tour"), handled by TourHandler.
  *
  * TITLED -- same as PatternEditorModal/ScheduleEditorModal, and for the same
  * reason: Lucid's own chrome gives this modal a native title bar whose X
@@ -26,10 +33,7 @@ import { RoutingModal } from './RoutingModal';
  * is simply omitting `onClose`: SettingsPanel's own X only renders when
  * `onClose` is supplied (`{onClose && (...)}`), so leaving it undefined
  * removes the second X and the native title bar becomes the only way out.
- * SettingsPanel's "Settings" `<h2>` heading itself is unconditional (it has
- * no `hideHeader`-equivalent to suppress it), so the title text still
- * appears twice -- a smaller, purely cosmetic residual this modal accepts,
- * versus the doubled INTERACTIVE close affordance the previous version had.
+ * The view also passes `showTitle={false}`, so the title appears once.
  */
 export class SettingsModal extends RoutingModal {
   /**
@@ -41,14 +45,9 @@ export class SettingsModal extends RoutingModal {
    */
   private readonly onClosed?: () => void;
 
-  constructor(client: EditorClient, opts: { modalSize?: ModalSize; onClosed?: () => void }) {
+  constructor(client: EditorClient, opts: { onClosed?: () => void } = {}) {
     const url = `quodsim-react/index.html?view=settings`;
-    const size = opts.modalSize ?? DEFAULT_MODAL_SIZE;
-    const sizeOpts =
-      size === 'fullscreen'
-        ? { fullScreen: true as const }
-        : MODAL_SIZE_DIMENSIONS[size];
-    super(client, { url, title: 'Settings', ...sizeOpts }, 'settings');
+    super(client, { url, title: 'Settings', ...SETTINGS_MODAL_SIZE }, 'settings');
     this.onClosed = opts.onClosed;
   }
 

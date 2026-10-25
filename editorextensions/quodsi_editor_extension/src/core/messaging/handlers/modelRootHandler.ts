@@ -78,7 +78,7 @@ export class ModelRootHandler {
         return true;
 
       case EnvelopeMessageType.OPEN_SETTINGS_MODAL:
-        ModelRootHandler.handleOpenSettingsModal(msg);
+        ModelRootHandler.handleOpenSettingsModal();
         return true;
 
       default:
@@ -216,12 +216,10 @@ export class ModelRootHandler {
    *
    * UNLIKE the pattern/schedule/work-schedule modals, Settings is GLOBAL: it
    * has no shapeId and no element context, so there is no "missing id"
-   * case to log-and-return on -- an absent `data` (or an absent
-   * `modalSize` within it) is not a malformed message, just the default.
+   * case to log-and-return on. Its size is fixed (SettingsModal), so the
+   * message carries nothing it needs.
    */
-  private static handleOpenSettingsModal(msg: EnvelopeBase): void {
-    const data = (msg.data ?? {}) as { modalSize?: ModalSize };
-
+  private static handleOpenSettingsModal(): void {
     // SINGLETON GUARD -- see handleOpenPatternModal's comment for the full
     // rationale (same hazard, same fix: hold the open modal, refuse a
     // second open, release on frameClosed, identity-checked).
@@ -231,7 +229,6 @@ export class ModelRootHandler {
     }
 
     const modal = new SettingsModal(ModelManager.getClient(), {
-      modalSize: data.modalSize,
       onClosed: () => {
         if (ModelRootHandler.openSettingsModal === modal) {
           ModelRootHandler.openSettingsModal = null;

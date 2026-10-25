@@ -18,11 +18,9 @@
 // affordance for no reason: unlike ScheduleModal/ScheduleEditorView, which
 // take a `hideHeader` prop specifically to collapse this redundancy,
 // SettingsPanel has no such prop -- so the correct equivalent here is
-// simply omitting `onClose`, not wiring a second exit. (SettingsPanel's
-// "Settings" `<h2>` heading itself still renders unconditionally alongside
-// Lucid's own title bar text -- a smaller, purely cosmetic text repeat this
-// view accepts, distinct from the doubled INTERACTIVE close button the
-// previous version had.)
+// simply omitting `onClose`, not wiring a second exit. `showTitle={false}`
+// likewise drops SettingsPanel's own "Settings" heading, which repeated the
+// title bar's.
 //
 // `extraSections` is deliberately omitted -- that slot is Studio's theme
 // control, and Lucid has no theme-preference machinery to hand it (see
@@ -31,12 +29,23 @@
 // `showWindowSize` is on: Lucid opens its Studio surfaces in sized host
 // modals, and the Window size section is where the user picks that size
 // (it replaced Lucid's Preferences dialog, spec 2026-09-15 section 3).
+//
+// `onTakeTour` asks the extension to start the tour (TOUR_START, handled by
+// TourHandler, which shows the panel the tour runs in), then closes this
+// modal so the tour isn't behind it.
+import { EnvelopeMessageType } from '@quodsi/lucid-shared'
 import { SettingsPanel } from 'quodsi_studio/platforms/shared'
+import { useMessaging } from '../../messaging/MessageProvider'
 
 export function SettingsEditorView() {
+  const { sendMessage } = useMessaging()
+  const takeTour = () => {
+    sendMessage(EnvelopeMessageType.TOUR_START)
+    sendMessage(EnvelopeMessageType.CLOSE_MODAL)
+  }
   return (
     <div className="h-full w-full bg-surface">
-      <SettingsPanel showWindowSize />
+      <SettingsPanel showTitle={false} showWindowSize onTakeTour={takeTour} />
     </div>
   )
 }

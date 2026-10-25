@@ -17,8 +17,7 @@ const mocks = vi.hoisted(() => ({
     referenceData: {} as any,
     onElementUpdate: vi.fn(),
     onElementTypeChange: vi.fn(),
-    onValidate: vi.fn(),
-    onRemoveModel: vi.fn(),
+    onValidate: vi.fn(),
   },
   auth: { isAuthenticated: true },
   openDiagramMappingModal: vi.fn(),
@@ -29,7 +28,7 @@ vi.mock("../../../messaging/hooks/useModelPanel", () => ({
   useModelPanel: () => mocks.panel,
 }));
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
-  useModelOpsSender: () => ({ requestModelJson: vi.fn() }),
+  useModelOpsSender: () => ({}),
 }));
 vi.mock("../../../messaging/MessageProvider", () => ({
   useMessaging: () => ({
@@ -46,7 +45,6 @@ vi.mock("../../../messaging/senders/simulationRunSender", () => ({
 }));
 vi.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
 vi.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));
-vi.mock("../ModelDefinitionViewer", () => ({ ModelDefinitionViewer: () => <div /> }));
 vi.mock("../../../utils/pendingNavigation", () => ({
   consumePendingModelEditorTab: () => null,
 }));

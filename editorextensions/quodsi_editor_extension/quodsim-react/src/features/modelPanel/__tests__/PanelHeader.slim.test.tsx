@@ -2,10 +2,11 @@
 // Every converted element and the model render a Studio shared editor
 // directly beneath it, and that editor's EditorHeader already shows the
 // icon, name, accent stripe and type. So for those views PanelHeader carries
-// only what EditorHeader has no home for: the "..." menu, the Studies
-// launcher (model) and the type dropdown (element). The unconverted view is
-// the exception: ModelPanel mounts no editor beneath it, so it keeps its
-// title and instruction.
+// only what EditorHeader has no home for: the Studies launcher (model), the
+// type dropdown (element) and, in developer mode, the Developer Tools button.
+// The old "..." menu is gone: its items live in the extension's Quodsi menu.
+// The unconverted view is the exception: ModelPanel mounts no editor beneath
+// it, so it keeps its title and instruction.
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
@@ -22,21 +23,21 @@ const activity: any = { id: "a1", name: "Triage", metadata: { type: "Activity" }
 const unconverted: any = { id: "b1", name: "", isUnconverted: true, metadata: { type: "None" }, data: {} };
 
 describe("PanelHeader — slim toolbar", () => {
-  it("a converted element shows only the type dropdown and the menu: no icon, name or context line", () => {
+  it("a converted element shows only the type dropdown: no icon, name or context line", () => {
     const { container } = render(<PanelHeader {...baseProps} currentElement={activity} />);
 
     expect(screen.getByRole("combobox", { name: "Element type" })).toBeInTheDocument();
-    expect(screen.getByTitle("More options")).toBeInTheDocument();
+    expect(screen.queryByTitle("More options")).toBeNull();
     expect(screen.queryByText("Triage")).toBeNull();
     expect(screen.queryByText(/in "Clinic"/)).toBeNull();
     expect(container.querySelector("svg.lucide-wrench")).toBeNull();
   });
 
-  it("the model view shows only the Studies launcher and the menu: no name, icon or stats", () => {
+  it("the model view shows only the Studies launcher: no name, icon or stats", () => {
     const { container } = render(<PanelHeader {...baseProps} currentElement={null} />);
 
     expect(screen.getByRole("button", { name: "What-if Analysis" })).toBeInTheDocument();
-    expect(screen.getByTitle("More options")).toBeInTheDocument();
+    expect(screen.queryByTitle("More options")).toBeNull();
     expect(screen.queryByText("Clinic")).toBeNull();
     expect(screen.queryByText(/Activities/)).toBeNull();
     expect(container.querySelector("svg.lucide-network")).toBeNull();
@@ -49,6 +50,18 @@ describe("PanelHeader — slim toolbar", () => {
     expect(screen.getByText("Unconverted Element")).toBeInTheDocument();
     expect(screen.getByText("Select element type to begin:")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Element type" })).toBeInTheDocument();
-    expect(screen.getByTitle("More options")).toBeInTheDocument();
+    expect(screen.queryByTitle("More options")).toBeNull();
+  });
+
+  it("shows the Developer Tools button only in developer mode", () => {
+    const { unmount } = render(<PanelHeader {...baseProps} currentElement={null} />);
+    expect(screen.queryByRole("button", { name: "Developer Tools" })).toBeNull();
+    unmount();
+
+    localStorage.setItem("quodsi_devmode", "true");
+    render(<PanelHeader {...baseProps} currentElement={null} />);
+    expect(screen.getByRole("button", { name: "Developer Tools" })).toBeInTheDocument();
   });
 });
+
+afterEach(() => localStorage.removeItem("quodsi_devmode"));

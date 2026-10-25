@@ -28,8 +28,6 @@ export enum EnvelopeMessageType {
 
   MODEL_REMOVE = "MODEL_REMOVE",
   MODEL_REMOVE_RESULT = "MODEL_REMOVE_RESULT",
-  MODEL_JSON_REQUEST = "MODEL_JSON_REQUEST",
-  MODEL_JSON_RESPONSE = "MODEL_JSON_RESPONSE",
 
   // Element Operations
   ELEMENT_SELECT = "ELEMENT_SELECT",
@@ -166,7 +164,8 @@ export enum EnvelopeMessageType {
   // (TOUR_LOAD_EXAMPLE -> TOUR_LOAD_EXAMPLE_RESULT), select a shape by its
   // Quodsi name (TOUR_SELECT_SHAPE, no reply), and switch back to the example
   // page (TOUR_SHOW_EXAMPLE_PAGE -> TOUR_SHOW_EXAMPLE_PAGE_RESULT).
-  // TOUR_START starts (or restarts) the tour from the extension menu.
+  // TOUR_START starts (or restarts) the tour: host -> panel from the extension
+  // menu, and Settings modal -> host from its "Take the tour".
   // Payloads: ../onboarding/messages.ts.
   TOUR_LOAD_EXAMPLE = "TOUR_LOAD_EXAMPLE",
   TOUR_LOAD_EXAMPLE_RESULT = "TOUR_LOAD_EXAMPLE_RESULT",
@@ -174,6 +173,10 @@ export enum EnvelopeMessageType {
   TOUR_SHOW_EXAMPLE_PAGE = "TOUR_SHOW_EXAMPLE_PAGE",
   TOUR_SHOW_EXAMPLE_PAGE_RESULT = "TOUR_SHOW_EXAMPLE_PAGE_RESULT",
   TOUR_START = "TOUR_START",
+
+  // The extension's "Quodsi" menu asks the model panel to carry out an item
+  // that needs the panel (Remove, Diagram Mapping). Payload: ../menu/messages.ts.
+  MENU_COMMAND = "MENU_COMMAND",
 
   // DevTools
   DEVTOOLS_SWIMLANE_SCAN_REQUEST = "DEVTOOLS_SWIMLANE_SCAN_REQUEST",

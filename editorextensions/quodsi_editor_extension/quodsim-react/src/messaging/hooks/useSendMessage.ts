@@ -17,7 +17,6 @@ const logger = getLogger('useSendMessage');
 export const FLUSH_BEFORE_SEND: ReadonlySet<EnvelopeMessageType> = new Set([
   EnvelopeMessageType.MODEL_RUN_REQUEST,
   EnvelopeMessageType.MODEL_VALIDATE,
-  EnvelopeMessageType.MODEL_JSON_REQUEST,
   EnvelopeMessageType.RUN_SCENARIO,
   EnvelopeMessageType.OPEN_STUDIES_MODAL,
   EnvelopeMessageType.OPEN_ADVISOR_MODAL,

@@ -211,11 +211,6 @@ export function useModelPanel() {
     modelOpsSender.validateModel(documentContext.documentId);
   }, [documentContext.documentId, modelOpsSender]);
   
-  const onRemoveModel = () => {
-    logger.debug('Removing model');
-    modelOpsSender.removeModel(documentContext.documentId);
-  };
-
   // Use reference data from selection state or provide empty default
   const referenceData: EditorReferenceData = selection.referenceData || EMPTY_REFERENCE_DATA;
   
@@ -303,6 +298,5 @@ export function useModelPanel() {
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onRemoveModel
   };
 }

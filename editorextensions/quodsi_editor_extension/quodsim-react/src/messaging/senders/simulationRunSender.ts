@@ -74,10 +74,10 @@ export function useSimulationRunSender() {
    * as a real Lucid modal over the whole application. Handled by
    * modelRootHandler.ts on the host side, same as the other OPEN_*_MODAL
    * senders -- but UNLIKE openPatternModal/openScheduleModal, Settings is
-   * global: no shapeId.
+   * global (no shapeId) and has a fixed size (no modalSize).
    */
   const openSettingsModal = useCallback(() => {
-    send(EnvelopeMessageType.OPEN_SETTINGS_MODAL, { modalSize: getModalSizePref() });
+    send(EnvelopeMessageType.OPEN_SETTINGS_MODAL, {});
   }, [send]);
 
   /**

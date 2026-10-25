@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useMessaging } from "../messaging";
 import { ModelPanel } from "./modelPanel";
 import { PanelTourHost } from "./onboarding/PanelTourHost";
+import { MenuCommandHost } from "./menu/MenuCommandHost";
 import { anchorProps, ClientOutdatedNotice } from "quodsi_studio/platforms/shared";
 
 // Create component-specific logger using the shared logger
@@ -59,6 +60,8 @@ export const LucidApp: React.FC = () => {
       </div>
       {/* Spec 2026-10-21 quodsi-version, Part C: the API refused this package. */}
       <ClientOutdatedNotice />
+      {/* The extension Quodsi menu's Remove / Diagram Mapping items. */}
+      <MenuCommandHost />
     </div>
   );
 };

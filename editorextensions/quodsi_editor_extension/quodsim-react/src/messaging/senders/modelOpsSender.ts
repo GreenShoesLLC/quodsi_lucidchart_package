@@ -213,18 +213,6 @@ export function useModelOpsSender() {
   );
 
   /**
-   * Send a request for the serialized model JSON
-   *
-   * @param documentId Document ID to get model JSON from
-   */
-  const requestModelJson = useCallback((documentId: string) => {
-    // Use MODEL_JSON_REQUEST to get serialized model
-    send(EnvelopeMessageType.MODEL_JSON_REQUEST, {
-      documentId
-    });
-  }, [send]);
-
-  /**
    * Send a request to select an element (or clear selection to show Model Editor)
    *
    * @param elementId Optional element ID to select. If 'model' or undefined, clears selection to show Model Editor.
@@ -261,7 +249,6 @@ export function useModelOpsSender() {
     convertPage,
     updateResourceRequirements,
     updateElement,
-    requestModelJson,
     selectElement,
     locateElement
   }), [
@@ -273,7 +260,6 @@ export function useModelOpsSender() {
     convertPage,
     updateResourceRequirements,
     updateElement,
-    requestModelJson,
     selectElement,
     locateElement
   ]);
