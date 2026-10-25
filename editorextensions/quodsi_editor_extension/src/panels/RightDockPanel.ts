@@ -25,6 +25,14 @@ import { upsertModel } from '../core/sync/scenarioSync';
 import { planInitSync } from './initSyncPolicy';
 
 /**
+ * Posted by an inline script in quodsim-react/index.html as soon as the
+ * dock panel's HTML is parsed, before the React app has downloaded. Not an
+ * envelope: it carries nothing and only starts sign-in. Keep the string in
+ * sync with index.html.
+ */
+export const PANEL_BOOT_MESSAGE = 'QUODSI_PANEL_BOOT';
+
+/**
  * RightDockPanel is responsible for displaying the model editor UI.
  * It integrates with the new messaging router architecture and implements the RoutablePanel
  * interface to facilitate communication with the iframe content.
@@ -110,6 +118,12 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * @param message The message from the iframe
      */
     protected messageFromFrame(message: unknown): void {
+        if (message && typeof message === 'object' && (message as any).type === PANEL_BOOT_MESSAGE) {
+            this.debug.debug('Panel boot message: starting the Kinde sign-in check');
+            void AuthHandler.ensureAuthChecked();
+            return;
+        }
+
         this.debug.debug(`messageFromFrame called with type:`, 
             message && typeof message === 'object' && 'type' in message ? (message as any).type : 'unknown');
         
@@ -160,6 +174,11 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         } catch (err) {
             this.debug.error('Error marking channel as ready:', err);
         }
+
+        // Fallback for the boot message (index.html's inline script): start
+        // sign-in now rather than at REACT_APP_READY. Joins a check already
+        // in flight.
+        void AuthHandler.ensureAuthChecked();
 
         // Dump channel state to diagnose any issues
         this.debug.debug('Dumping channel state for diagnosis');
