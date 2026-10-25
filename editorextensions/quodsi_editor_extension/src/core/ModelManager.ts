@@ -32,9 +32,9 @@ import {
     removeResourceReferences,
     pickFallbackEntityId,
     isPlainAutoRequirement,
-    MODEL_FIELD_KEYS,
 } from '@quodsi/lucid-shared';
 import { StoredResourceRecord } from './StoredResourceRecord';
+import { MODEL_SETTINGS_KEYS } from './modelSettingsKeys';
 import type { ReferenceCleanupOptions } from "@quodsi/lucid-shared";
 
 /** Stored element data a shared reference-cleanup rule runs over, keyed by Lucid item id. */
@@ -78,11 +78,6 @@ interface ChangeTracker {
     pendingChanges: Set<string>;          // IDs of elements with pending changes
 }
 
-/**
- * updateModelRoot keys that write the page's own model settings: the Model
- * field roster minus `id` (the host owns identity). spec 2026-09-12 §2.
- */
-const MODEL_SETTINGS_KEYS: readonly string[] = MODEL_FIELD_KEYS.filter(key => key !== 'id');
 
 /** A blank model name takes the page title, else 'Untitled Model' (spec 2026-09-12 decision 7). */
 function blankModelNameFallback(page: PageProxy): string {

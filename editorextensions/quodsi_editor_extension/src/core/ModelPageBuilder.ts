@@ -21,6 +21,7 @@ import {
 } from '@quodsi/lucid-shared';
 import { Viewport, DocumentProxy, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from './ModelManager';
+import { MODEL_SETTINGS_KEYS } from './modelSettingsKeys';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 
 const log = getLogger('ModelPageBuilder');
@@ -43,23 +44,9 @@ export function stripGeometry(element: JsonObject): JsonObject {
   return stripped;
 }
 
-/**
- * The document root keys that make up the page-level "Model" write -- the
- * same run-settings fields ElementOpsHandler.handleElementUpdate writes for
- * `type === 'Model'`. Only keys the document actually carries are copied
- * through.
- */
-const RUN_SETTINGS_KEYS = [
-  'name',
-  'description',
-  'replications',
-  'seed',
-  'timeUnit',
-  'timeMode',
-  'runTime',
-  'warmupTime',
-  'startDateTime',
-] as const;
+// The page-level "Model" write uses MODEL_SETTINGS_KEYS -- the same settings
+// fields ElementOpsHandler.handleElementUpdate writes for `type === 'Model'`.
+// Only keys the document actually carries are copied through.
 
 /**
  * The document root keys that make up the model-ROOT patch, i.e. exactly the
@@ -241,7 +228,7 @@ export async function buildModelPage(
     // itself as the element).
     currentStep = 'page settings';
     const runSettings: JsonObject = {};
-    for (const key of RUN_SETTINGS_KEYS) {
+    for (const key of MODEL_SETTINGS_KEYS) {
       if (key in document) {
         (runSettings as any)[key] = document[key];
       }
@@ -503,7 +490,7 @@ export async function drawModelInPage(
 
   try {
     const runSettings: JsonObject = {};
-    for (const key of RUN_SETTINGS_KEYS) {
+    for (const key of MODEL_SETTINGS_KEYS) {
       if (key !== 'name' && key in document) {
         (runSettings as any)[key] = document[key];
       }
