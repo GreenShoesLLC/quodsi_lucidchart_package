@@ -308,6 +308,18 @@ export function PanelTourHost({ userKey, authStatus, isConverted, currentPageId,
     }
   }, [userKey, start])
 
+  // The pause card's ×, the same exit as the docked card's: the cursor is
+  // kept and marked paused (which also stops the modal's session), and the
+  // invitation offers Resume or Start over. Without it a user whose example
+  // page is gone could only rebuild it (smoke 2026-10-25).
+  const exitTour = useCallback(() => {
+    const saved = readTourState(userKey, TOUR.id)
+    if (saved.state === 'started') {
+      writeTourState(userKey, TOUR.id, { ...saved, paused: true, lastActionAt: new Date().toISOString() })
+    }
+    stopSession()
+  }, [userKey, stopSession])
+
   return (
     <div data-testid="panel-tour-host" className="flex-none">
       <div ref={dockRef} data-testid="tour-dock" />
@@ -328,7 +340,13 @@ export function PanelTourHost({ userKey, authStatus, isConverted, currentPageId,
       )}
       {showPause && (
         <div className={CARD} data-testid="tour-page-pause">
-          <p className="m-0">Go back to the example page to continue the tour.</p>
+          <div className="flex items-start gap-2">
+            <p className="m-0 flex-1">Go back to the example page to continue the tour.</p>
+            <button type="button" className="px-1 leading-none text-muted"
+                    aria-label="Exit tour (you can resume later)" onClick={exitTour}>
+              ×
+            </button>
+          </div>
           <button type="button" className={PRIMARY_BUTTON} onClick={() => { void goToExamplePage() }}>
             Go to example page
           </button>
