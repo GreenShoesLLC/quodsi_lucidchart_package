@@ -160,6 +160,30 @@ describe('PanelTourHost', () => {
     expect(screen.queryByText('Go back to the example page to continue the tour.')).toBeNull()
   })
 
+  // Smoke 2026-10-25: the user deleted the example page mid-tour and was left
+  // with a card whose only button rebuilds it. Its × pauses the tour like the
+  // docked card's ×: the invitation returns, and Resume still works later.
+  it('the pause card × pauses the tour and brings back the invitation', async () => {
+    seed('panel')
+    const { rerender } = render(<Harness isConverted={false} currentPageId="ex-1" />)
+    await waitFor(() => expect(dock().textContent).toContain('This is the Quodsi Panel'))
+    rerender(<Harness isConverted={false} currentPageId="other" />)
+    await waitFor(() => expect(screen.getByTestId('tour-page-pause')).toBeInTheDocument())
+
+    const before = postedOf(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE).length
+    fireEvent.click(screen.getByRole('button', { name: 'Exit tour (you can resume later)' }))
+
+    await waitFor(() => expect(screen.queryByTestId('tour-page-pause')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Resume tour' })).toBeInTheDocument()
+    expect(readTourState(USER, TOUR)).toMatchObject({ state: 'started', currentStepId: 'panel', paused: true })
+    expect(postedOf(EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE)).toHaveLength(before)
+
+    // Back on the example page nothing resumes by itself.
+    rerender(<Harness isConverted={false} currentPageId="ex-1" />)
+    await flush()
+    expect(dock().textContent).toBe('')
+  })
+
   it('cursor at run-baseline (written by the modal) shows the handoff card, also on a fresh mount', async () => {
     // Live: the panel is on open-studies when the modal writes run-baseline.
     seed('open-studies')
