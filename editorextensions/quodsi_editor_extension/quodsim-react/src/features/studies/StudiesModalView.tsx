@@ -11,13 +11,14 @@ import { useMessaging } from '../../messaging/MessageProvider'
 import { ModalTourHost } from '../onboarding/ModalTourHost'
 
 // The surface with the Advisor Workspace's model and writer (spec 2026-10-16
-// advisor-workspace): the hook lives in the same lazy chunk, so it is called here.
+// advisor-workspace): the hook lives in the same lazy chunk, so it is called here. The
+// hook wraps the sync with a catalog refresh and page check (spec 2026-10-25 advisor tasks
+// in Lucid) and can build with it.
 const StudiesSurface = lazy(() => import('quodsi_studio/platforms/studies').then((m) => {
-  function SurfaceWithWorkspace({ host, syncModel, ...props }:
-    StudiesSurfaceProps & { host: LucidModalHost; syncModel: () => Promise<void> }) {
-    const { parts } = m.useLucidWorkspaceHost(host)
-    const workspaceHost = useMemo(() => (parts ? { ...parts, syncModel } : undefined), [parts, syncModel])
-    return <m.StudiesSurface {...props} workspaceHost={workspaceHost} />
+  function SurfaceWithWorkspace({ host, syncModel, pageId, ...props }:
+    StudiesSurfaceProps & { host: LucidModalHost; syncModel: () => Promise<void>; pageId?: string }) {
+    const { parts } = m.useLucidWorkspaceHost(host, { pageId, syncModel })
+    return <m.StudiesSurface {...props} workspaceHost={parts ?? undefined} />
   }
   return { default: SurfaceWithWorkspace }
 }))
@@ -37,7 +38,8 @@ export function StudiesModalView() {
 
   // A writer, so the Workspace's model proposals can Apply from Studies too.
   // Writes carry the page this modal was launched for (ClickUp 86e381h8g).
-  const host = useLucidModalHost({ withWriter: true, pageId: params.get('pageId') ?? undefined })
+  const pageId = params.get('pageId') ?? undefined
+  const host = useLucidModalHost({ withWriter: true, pageId })
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: queryClientDefaultOptions }))
   const getToken = useStudioApiSetup(apiBaseUrl, host)
   // The onboarding tour's key: the same signed-in email the side panel uses
@@ -87,7 +89,7 @@ export function StudiesModalView() {
             {/* Inside the provider: the tour's run observer watches this modal's queries. */}
             <ModalTourHost userKey={tourUserKey} documentId={documentId} />
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading Studies…</p>}>
-              <StudiesSurface host={host} syncModel={syncModel} initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
+              <StudiesSurface host={host} syncModel={syncModel} pageId={pageId} initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
             </Suspense>
           </QueryClientProvider>
         )}

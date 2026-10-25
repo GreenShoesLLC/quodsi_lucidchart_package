@@ -32,13 +32,14 @@ export function writeTtlMs(kind: EmbedWriteKind): number {
  * `basedOnPageId` is the page this modal was launched for (its `pageId` URL
  * param). The host's page guard refuses a write whose page is no longer the
  * current one (ClickUp 86e381h8g), so an Advisor proposal made on page A can
- * never land on page B. `createModel` builds a NEW page and carries none.
+ * never land on page B. `createModel` carries it too (spec 2026-10-25 advisor tasks in
+ * Lucid): a project build draws on this page (`requireInPlace`), never on another.
  */
 export function buildWriteEnvelope(
   kind: EmbedWriteKind, payload: any, id: string, basedOnPageId?: string,
 ): EnvelopeBase | null {
   const envelope = buildEnvelope(kind, payload, id)
-  if (!envelope || !basedOnPageId || kind === 'createModel') return envelope
+  if (!envelope || !basedOnPageId) return envelope
   return { ...envelope, data: { ...(envelope.data as object), basedOnPageId } }
 }
 
@@ -90,8 +91,10 @@ function buildEnvelope(kind: EmbedWriteKind, payload: any, id: string): Envelope
       return { ...base, type: EnvelopeMessageType.SHAPE_MOVE, data: { elementId, x, y } } as EnvelopeBase;
     }
     case 'createModel': {
-      const { document } = payload as { document: unknown };
-      return { ...base, type: EnvelopeMessageType.MODEL_CREATE_PAGE, data: { document } } as EnvelopeBase;
+      // requireInPlace: draw on the modal's own page, refusing one that already has a model.
+      const { document, requireInPlace } = payload as { document: unknown; requireInPlace?: boolean };
+      const data = requireInPlace ? { document, requireInPlace: true } : { document };
+      return { ...base, type: EnvelopeMessageType.MODEL_CREATE_PAGE, data } as EnvelopeBase;
     }
     default:
       return null;
