@@ -7,6 +7,7 @@ import {
   generateUUID,
   ENGINE_VERSION,
   getLogger,
+  entitlementLimitMessage,
 } from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
@@ -62,19 +63,8 @@ export class SimulationHandler {
     const code = detail?.code;
     const feature = detail?.feature;
     if (response?.status === 402 && code === 'entitlement_exceeded') {
-      if (feature === 'simulations_per_month') {
-        const limit = detail?.limit;
-        return limit
-          ? `Monthly simulation quota reached (${limit} runs). Upgrade your plan to run more this month.`
-          : 'Monthly simulation quota reached. Upgrade your plan to run more this month.';
-      }
-      if (feature === 'scenarios_per_model') {
-        const limit = detail?.limit;
-        return limit
-          ? `This model has reached its plan's run cap (${limit} distinct ${limit === 1 ? 'scenario' : 'scenarios'} per model). Re-runs are free, but to run a new scenario you'll need to delete an existing one or upgrade your plan.`
-          : 'This model has reached its plan\'s run cap. Re-runs are free, but to run a new scenario you\'ll need to delete an existing one or upgrade your plan.';
-      }
-      return 'This action requires a paid plan. Upgrade to continue.';
+      // The table Studio's EntitlementLimitDialog reads (@quodsi/shared).
+      return entitlementLimitMessage({ ...detail, feature: String(feature ?? '') });
     }
     const detailText =
       typeof detail === 'string' ? detail : detail?.message ?? JSON.stringify(response?.json);

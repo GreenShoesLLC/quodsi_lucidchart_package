@@ -1,6 +1,6 @@
 import { VersionManager, VersionManagerOptions } from '@quodsi/lucid-shared';
 import { PlatformType } from '@quodsi/lucid-shared';
-import { VersionUpgraderFactory } from '@quodsi/lucid-shared';
+import { VersionUpgraderFactory, compareVersions } from '@quodsi/lucid-shared';
 import { LucidVersionUpgrader } from './LucidVersionUpgrader';
 import { PageProxy } from 'lucid-extension-sdk';
 import { NotificationService } from '../services/NotificationService';
@@ -57,13 +57,16 @@ export class LucidVersionManager {
                 return noUpgrade;
             }
 
-            // Already current. preflight() reports canUpgrade = !hasErrors and
-            // never compares source to target, so without this guard every
-            // page load ran a no-op "upgrade" — notifying "upgrade required
-            // from X to X" and writing to the document while Lucid was still
-            // loading ("Document Actions should not run before the
-            // application has loaded", 2026-08-27).
-            if (preflightResult.sourceVersion === preflightResult.targetVersion) {
+            // Already current, or newer. preflight() reports canUpgrade =
+            // !hasErrors and never compares source to target, so without this
+            // guard every page load ran a no-op "upgrade" — notifying "upgrade
+            // required from X to X" and writing to the document while Lucid
+            // was still loading ("Document Actions should not run before the
+            // application has loaded", 2026-08-27). A page saved by a NEWER
+            // package is left alone too: "upgrading" it re-stamped it down to
+            // this package's version, so the newer package re-ran every
+            // transform on its next open. drawio's upgrader skips it the same way.
+            if (compareVersions(preflightResult.sourceVersion, preflightResult.targetVersion) >= 0) {
                 return { ...noUpgrade, sourceVersion: preflightResult.sourceVersion, targetVersion: preflightResult.targetVersion };
             }
 

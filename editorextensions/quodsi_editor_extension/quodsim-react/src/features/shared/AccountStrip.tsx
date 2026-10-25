@@ -18,6 +18,7 @@ import {
   trialDaysRemaining,
 } from "../../messaging/state/entitlementsSlice";
 import { getLogger } from "@quodsi/lucid-shared";
+import { copyTextToClipboard } from "quodsi_studio/platforms/shared";
 
 const log = getLogger("AccountStrip");
 
@@ -152,12 +153,9 @@ const PlanDetails: React.FC = () => {
   };
 
   const handleCopyEmail = async () => {
-    let copySucceeded = true;
-    try {
-      await navigator.clipboard.writeText(salesEmail);
-    } catch {
-      copySucceeded = false;
-    }
+    // Not navigator.clipboard alone: Lucid's iframe blocks it. The shared
+    // helper tries the textarea + execCommand path first.
+    const copySucceeded = await copyTextToClipboard(salesEmail);
     pingInterest();
     if (!copySucceeded) {
       // Don't claim "Copied" when nothing was copied — select the address

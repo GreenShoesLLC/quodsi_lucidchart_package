@@ -111,6 +111,13 @@ export { parseSimulationObjectType } from '@quodsi/shared';
 // settings patch are both built from it (spec 2026-09-12).
 export { MODEL_FIELD_KEYS, MODEL_DATE_FIELD_KEYS } from '@quodsi/shared';
 
+// Schema version order: the page-load upgrade skips a page stamped at or
+// above this package's version, as drawio does.
+export { compareVersions } from '@quodsi/shared';
+
+// Plan names and plan-limit (402) wording, one table for every host.
+export { formatPlanName, PLAN_FREE, entitlementLimitMessage } from '@quodsi/shared';
+
 // Scenario levers. `ScenarioLever` is the two-shape union since SP3d (path
 // shape + the old property shape, translated on read -- J1); Lucid stores and
 // copies levers opaquely. `createScenarioLever` builds the OLD shape, for

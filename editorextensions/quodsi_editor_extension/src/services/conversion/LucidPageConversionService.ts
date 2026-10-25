@@ -13,6 +13,7 @@ import {
     SwimLaneLaneMapping,
     generateUUID,
     planAutoResources,
+    MODEL_DATE_FIELD_KEYS,
     type ActivityResourceRef,
 } from '@quodsi/lucid-shared';
 import { ConversionResult, ProcessAnalysisResult } from './types';
@@ -20,16 +21,11 @@ import { StoredResourceRecord } from '../../core/StoredResourceRecord';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 
-/** Run settings a parked Model record hands to the model Convert creates. */
-const PENDING_MODEL_KEYS = [
-    'name', 'description', 'replications', 'seed', 'timeUnit', 'timeMode',
-    'runTime', 'warmupTime', 'startDateTime',
-] as const;
-
 import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
+import { MODEL_SETTINGS_KEYS } from '../../core/modelSettingsKeys';
 
 const log = getLogger('LucidPageConversionService');
 
@@ -619,10 +615,10 @@ export class LucidPageConversionService {
         const pending = this.storageAdapter.takePendingModel(page);
         if (!pending) return;
         const target = model as unknown as Record<string, unknown>;
-        for (const key of PENDING_MODEL_KEYS) {
+        for (const key of MODEL_SETTINGS_KEYS) {
             const value = pending[key];
             if (value === undefined || value === null) continue;
-            if (key === 'startDateTime') {
+            if ((MODEL_DATE_FIELD_KEYS as readonly string[]).includes(key)) {
                 const date = value instanceof Date ? value : new Date(String(value));
                 if (!Number.isNaN(date.getTime())) target[key] = date;
                 continue;
