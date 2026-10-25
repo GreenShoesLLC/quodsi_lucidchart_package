@@ -1906,19 +1906,10 @@ export class ModelManager {
                 name: simObject.name
             });
 
-            // For Connectors, calculate and set probability based on outgoing connections
-            if (newType === SimulationObjectType.Connector && element instanceof LineProxy) {
-                const weight = this.calculateConnectorProbability(element as LineProxy, page);
-                (simObject as Connector).weight = weight;
-
-                this.debug.debug('Set connector probability:', {
-                    connectorId: simObject.id,
-                    probability: weight
-                });
-
-                // Update storage with the probability
-                platformObject.updateFromPlatform();
-            }
+            // A Connector keeps its default weight 1, a relative share the
+            // engine normalizes -- as Convert and drawio/Visio do. Pre-dividing
+            // to 1/outgoing made a branch drawn later 3x as likely as three
+            // siblings at 0.333.
 
             // Register with model manager
             this.debug.debug('Registering element with model manager');
@@ -2014,45 +2005,6 @@ export class ModelManager {
                 this.debug.error(`Failed to auto-convert line ${lineId}:`, error);
                 // Continue with other lines rather than failing the whole operation
             }
-        }
-    }
-
-    /**
-     * Calculates connector probability based on outgoing connections from source
-     * Probability = 1.0 / number of outgoing connections from source
-     */
-    private calculateConnectorProbability(line: LineProxy, page: PageProxy): number {
-        try {
-            const endpoint1 = line.getEndpoint1();
-            if (!endpoint1?.connection) {
-                this.debug.debug('No source connection, defaulting probability to 1.0');
-                return 1.0;
-            }
-
-            const sourceId = endpoint1.connection.id;
-
-            // Count outgoing connections from this source
-            let outgoingCount = 0;
-            for (const [, otherLine] of page.allLines) {
-                const otherEndpoint1 = otherLine.getEndpoint1();
-                if (otherEndpoint1?.connection?.id === sourceId) {
-                    outgoingCount++;
-                }
-            }
-
-            const probability = outgoingCount > 0 ? 1.0 / outgoingCount : 1.0;
-
-            this.debug.debug('Calculated connector probability:', {
-                sourceId,
-                outgoingCount,
-                probability
-            });
-
-            return probability;
-
-        } catch (error) {
-            this.debug.error('Error calculating connector probability:', error);
-            return 1.0; // Default to 1.0 on error
         }
     }
 
