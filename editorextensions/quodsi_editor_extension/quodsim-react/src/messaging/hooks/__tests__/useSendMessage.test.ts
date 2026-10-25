@@ -82,7 +82,6 @@ describe('useSendMessage — flush before sends that read the stored model', () 
       [
         EnvelopeMessageType.MODEL_RUN_REQUEST,
         EnvelopeMessageType.MODEL_VALIDATE,
-        EnvelopeMessageType.MODEL_JSON_REQUEST,
         EnvelopeMessageType.RUN_SCENARIO,
         EnvelopeMessageType.OPEN_STUDIES_MODAL,
         EnvelopeMessageType.OPEN_ADVISOR_MODAL,

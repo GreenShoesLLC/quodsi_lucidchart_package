@@ -3,11 +3,13 @@ import {
   ChevronDown,
   ExternalLink,
   LogOut,
+  Settings,
   User,
 } from "lucide-react";
 import { useAuth, useEntitlements } from "../../messaging/MessageContext";
 import { useAuthSender } from "../../messaging/senders/authSender";
 import { usePortalSender } from "../../messaging/senders/portalSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useUpgradeInterestSender } from "../../messaging/senders/upgradeInterestSender";
 import {
   planDisplayLabel,
@@ -439,12 +441,33 @@ const AuthStatusIndicator: React.FC = () => {
   );
 };
 
+/**
+ * The strip's Settings gear: the deliberate entry point to the shared Settings
+ * screen (ViewTell is the teaching one), shown signed in or out, as on drawio,
+ * Visio and Miro. It opens the Settings modal through the extension.
+ */
+const SettingsButton: React.FC = () => {
+  const { openSettingsModal } = useSimulationRunSender();
+  return (
+    <button
+      type="button"
+      onClick={() => openSettingsModal()}
+      aria-label="Settings"
+      title="Settings"
+      className="w-7 h-7 rounded flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+    >
+      <Settings className="w-4 h-4" />
+    </button>
+  );
+};
+
 export const AccountStrip: React.FC = () => (
   <div className="flex items-center justify-between gap-2 p-2 bg-gray-50 border-b border-gray-200 flex-shrink-0">
     <div className="flex items-center gap-2 min-w-0">
       <PlanBadge />
     </div>
-    <div className="flex-shrink-0">
+    <div className="flex items-center gap-1 flex-shrink-0">
+      <SettingsButton />
       <AuthStatusIndicator />
     </div>
   </div>

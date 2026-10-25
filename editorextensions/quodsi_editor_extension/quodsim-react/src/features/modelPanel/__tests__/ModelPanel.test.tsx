@@ -15,8 +15,7 @@ const mockUseModelPanel = {
   onElementUpdate: vi.fn(),
   onElementTypeChange: vi.fn(),
   onValidate: vi.fn(),
-  onSimulate: vi.fn(),
-  onRemoveModel: vi.fn(),
+  onSimulate: vi.fn(),
 };
 
 vi.mock("../../../messaging/hooks/useModelPanel", () => ({
@@ -24,9 +23,7 @@ vi.mock("../../../messaging/hooks/useModelPanel", () => ({
 }));
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
-  useModelOpsSender: () => ({
-    requestModelJson: vi.fn(),
-  }),
+  useModelOpsSender: () => ({}),
 }));
 
 vi.mock("../../../messaging/MessageProvider", () => ({
@@ -39,7 +36,6 @@ vi.mock("../../../messaging/MessageProvider", () => ({
 vi.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
 vi.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));
 vi.mock("../ElementEditor", () => ({ ElementEditor: () => <div /> }));
-vi.mock("../ModelDefinitionViewer", () => ({ ModelDefinitionViewer: () => <div /> }));
 vi.mock("../../../utils/pendingNavigation", () => ({
   consumePendingModelEditorTab: () => null,
 }));

@@ -8,6 +8,8 @@
 //   TOUR_SELECT_SHAPE      select + focus a shape by its Quodsi name, or clear
 //                          the selection. No reply.
 //   TOUR_SHOW_EXAMPLE_PAGE switch back to the example page (C2).
+//   TOUR_START             from the Settings modal's "Take the tour": show the
+//                          panel and start the tour there (startTour).
 import {
   EnvelopeBase,
   EnvelopeMessageType,
@@ -55,6 +57,26 @@ export function scaleLayout(doc: Record<string, any>, k: number): Record<string,
 }
 
 export class TourHandler {
+  /** Shows the model panel. Set by registerQuodsiMenu, which holds the dock panel. */
+  public static showPanel: () => void = () => {};
+
+  /**
+   * Shows the panel and starts the tour from the beginning, `reset` so a
+   * finished or dismissed tour runs cleanly again. Used by the Quodsi menu's
+   * Take the Tour and by Settings' "Take the tour".
+   */
+  public static startTour(): void {
+    TourHandler.showPanel();
+    router.send('model', {
+      id: '',
+      type: EnvelopeMessageType.TOUR_START,
+      source: 'host',
+      target: 'model-iframe',
+      version: '1.0',
+      data: { reset: true },
+    });
+  }
+
   /**
    * Handle onboarding tour messages.
    *
@@ -74,6 +96,10 @@ export class TourHandler {
 
       case EnvelopeMessageType.TOUR_SHOW_EXAMPLE_PAGE:
         TourHandler.handleShowExamplePage(msg);
+        return true;
+
+      case EnvelopeMessageType.TOUR_START:
+        TourHandler.startTour();
         return true;
 
       default:

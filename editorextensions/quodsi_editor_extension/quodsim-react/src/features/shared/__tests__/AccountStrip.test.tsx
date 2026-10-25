@@ -29,6 +29,11 @@ vi.mock("../../../messaging/senders/upgradeInterestSender", () => ({
   useUpgradeInterestSender: () => ({ pingUpgradeInterest: mockPingUpgradeInterest }),
 }));
 
+const mockOpenSettingsModal = vi.fn();
+vi.mock("../../../messaging/senders/simulationRunSender", () => ({
+  useSimulationRunSender: () => ({ openSettingsModal: mockOpenSettingsModal }),
+}));
+
 import { AccountStrip } from "../AccountStrip";
 
 function openPlanDetails() {
@@ -100,8 +105,30 @@ beforeEach(() => {
   mockRequestAuth.mockClear();
   mockLogout.mockClear();
   mockPingUpgradeInterest.mockClear().mockResolvedValue(undefined);
+  mockOpenSettingsModal.mockClear();
   mockWriteText.mockReset().mockResolvedValue(undefined);
   Object.assign(navigator, { clipboard: { writeText: mockWriteText } });
+});
+
+// Settings lives behind the strip's gear, as on drawio, Visio and Miro. A
+// signed-out user needs it too: the view level is chosen there.
+describe("AccountStrip / Settings gear", () => {
+  afterEach(() => {
+    mockAuthState.isAuthenticated = true;
+  });
+
+  it("opens Settings when signed in", () => {
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(mockOpenSettingsModal).toHaveBeenCalledTimes(1);
+  });
+
+  it("is there when signed out too", () => {
+    mockAuthState.isAuthenticated = false;
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(mockOpenSettingsModal).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("AccountStrip / PlanBadge", () => {

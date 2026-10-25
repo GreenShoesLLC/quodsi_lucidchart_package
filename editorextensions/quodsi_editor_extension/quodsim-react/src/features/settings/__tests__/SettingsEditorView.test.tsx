@@ -14,19 +14,26 @@
 // prior version's "wires the close button to CLOSE_MODAL" assertion, which
 // tested exactly the redundancy this fix removes.
 
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { EnvelopeMessageType } from '@quodsi/lucid-shared'
+
+const mockSendMessage = vi.fn()
+vi.mock('../../../messaging/MessageProvider', () => ({
+  useMessaging: () => ({ sendMessage: mockSendMessage }),
+}))
 
 import { SettingsEditorView } from '../SettingsEditorView'
 
 describe('SettingsEditorView', () => {
   beforeEach(() => {
     localStorage.clear()
+    mockSendMessage.mockClear()
   })
 
-  it('renders the shared Settings screen', () => {
+  it("renders the shared Settings screen, without repeating the title bar's heading", () => {
     render(<SettingsEditorView />)
-    expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /settings/i })).not.toBeInTheDocument()
     // The View section is the one every host gets (Studio's theme control
     // lives behind extraSections, deliberately omitted here -- see this
     // view's own header comment).
@@ -42,5 +49,14 @@ describe('SettingsEditorView', () => {
     localStorage.setItem('quodsi_modal_size', 'large')
     render(<SettingsEditorView />)
     expect(screen.getByRole('combobox', { name: 'Window size' })).toHaveValue('large')
+  })
+
+  it('Take the tour asks the extension to start the tour, then closes the modal', () => {
+    render(<SettingsEditorView />)
+    fireEvent.click(screen.getByRole('button', { name: /take the tour/i }))
+    expect(mockSendMessage.mock.calls.map((c) => c[0])).toEqual([
+      EnvelopeMessageType.TOUR_START,
+      EnvelopeMessageType.CLOSE_MODAL,
+    ])
   })
 })

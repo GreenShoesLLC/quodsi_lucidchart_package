@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, modelDefinitionToCleanDocument, resolveModelName } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, SimulationObjectType, resolveModelName } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -9,7 +9,6 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 // Simple ID generator for extension context (crypto.getRandomValues not available)
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { getLogger } from '@quodsi/lucid-shared';
-import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import { SelectionHandler } from './selection';
 import { AnalyticsHandler } from './analyticsHandler';
 
@@ -47,9 +46,6 @@ export class ModelOpsHandler {
 
       case EnvelopeMessageType.MODEL_REMOVE:
         return ModelOpsHandler.handleRemove(msg);
-
-      case EnvelopeMessageType.MODEL_JSON_REQUEST:
-        return ModelOpsHandler.handleModelJsonRequest(msg);
 
       // Not a model operations message
       default:
@@ -470,162 +466,6 @@ export class ModelOpsHandler {
         id: msg.id,
         type: EnvelopeMessageType.MODEL_REMOVE_RESULT,
         source: 'host', 
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: false,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle model JSON request
-   *
-   * @param msg MODEL_JSON_REQUEST message
-   * @returns True indicating message was handled
-   */
-  private static handleModelJsonRequest(msg: EnvelopeBase): boolean {
-    const data = msg.data as { documentId: string };
-
-    ModelOpsHandler.logger.debug('Model JSON requested', {
-      documentId: data.documentId
-    });
-
-    // Start async process but return true immediately
-    ModelOpsHandler.serializeAndSendModel(msg, data)
-      .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_JSON_REQUEST:', err));
-
-    return true;
-  }
-
-  /**
-   * Serialize the model and send it back
-   */
-  private static async serializeAndSendModel(msg: EnvelopeBase, data: { documentId: string }): Promise<void> {
-    try {
-      const modelManager = ModelManager.getInstance();
-      const client = ModelManager.getClient();
-      const viewport = new Viewport(client);
-      const activePageProxy = viewport.getCurrentPage();
-
-      // Verify we have an active page
-      if (!activePageProxy) {
-        ModelOpsHandler.logger.error('No active page found');
-
-        router.send('model', {
-          id: msg.id,
-          type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
-          source: 'host',
-          target: 'model-iframe',
-          version: '1.0',
-          data: {
-            success: false,
-            error: 'No active page found'
-          }
-        });
-
-        return;
-      }
-
-      // Ensure the model is loaded for the current page
-      ModelOpsHandler.logger.debug('Ensuring model is loaded for current page...');
-      try {
-        // Check if current page is set in ModelManager
-        let currentModelDef = await modelManager.getModelDefinition();
-        if (!currentModelDef) {
-          // Try to initialize/reload the model for the current page
-          ModelOpsHandler.logger.debug('No current model definition, attempting to initialize...');
-
-          // Check if this is a Quodsi model page
-          const isQuodsiModel = modelManager.isQuodsiModel(activePageProxy);
-          if (!isQuodsiModel) {
-            ModelOpsHandler.logger.error('Current page is not a Quodsi model');
-
-            router.send('model', {
-              id: msg.id,
-              type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
-              source: 'host',
-              target: 'model-iframe',
-              version: '1.0',
-              data: {
-                success: false,
-                error: 'Current page is not a Quodsi model. Please convert it first.'
-              }
-            });
-
-            return;
-          }
-
-          // Try to initialize the model for the current page
-          ModelOpsHandler.logger.debug('Initializing model for current page...');
-          // The Model's id becomes the PAGE's q_data envelope id (initializeModel ->
-          // StorageAdapter.setElementData stamps `id` from the Model). It must be
-          // the page id, not the document id: ModelManager's own convert path uses
-          // `page.id`, and a document-id stamp leaves every page envelope naming
-          // something that is not a page.
-          const basicModel = Model.createDefault(activePageProxy.id);
-          await modelManager.initializeModel(basicModel, activePageProxy);
-
-          // Get the model definition again after initialization
-          currentModelDef = await modelManager.getModelDefinition();
-        }
-
-        // Final check if we have a model definition
-        if (!currentModelDef) {
-          ModelOpsHandler.logger.error('No model definition found after initialization attempt');
-
-          router.send('model', {
-            id: msg.id,
-            type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
-            source: 'host',
-            target: 'model-iframe',
-            version: '1.0',
-            data: {
-              success: false,
-              error: 'No model definition found. Please ensure the page contains Quodsi model elements.'
-            }
-          });
-
-          return;
-        }
-
-        // Serialize the model (same as simulation button)
-        ModelOpsHandler.logger.debug('Serializing model...');
-        const serializedModel = modelDefinitionToCleanDocument(currentModelDef);
-
-        // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
-        SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
-
-        ModelOpsHandler.logger.debug('Model serialized successfully');
-
-        // Send success response with JSON
-        router.send('model', {
-          id: msg.id,
-          type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
-          source: 'host',
-          target: 'model-iframe',
-          version: '1.0',
-          data: {
-            success: true,
-            modelJson: serializedModel
-          }
-        });
-
-      } catch (initError) {
-        ModelOpsHandler.logger.error('Error during model initialization:', initError);
-        throw initError;
-      }
-
-    } catch (error) {
-      ModelOpsHandler.logger.error('Error serializing model:', error);
-
-      // Send error response
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
-        source: 'host',
         target: 'model-iframe',
         version: '1.0',
         data: {

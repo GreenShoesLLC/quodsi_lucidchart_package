@@ -43,3 +43,6 @@ export type {
   TourShowExamplePageResultData,
   TourStartData,
 } from './onboarding/messages';
+
+// Extension menu message payloads
+export type { MenuCommand, MenuCommandData } from './menu/messages';

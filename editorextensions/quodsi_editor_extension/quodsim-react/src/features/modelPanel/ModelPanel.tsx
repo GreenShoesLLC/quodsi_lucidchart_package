@@ -1,20 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
-import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender';
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
-import { SimulationObjectType, DiagramElementType, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
+import { SimulationObjectType, DiagramElementType } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
-import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
 import { useModelEditorTab } from './useModelEditorTab';
 import { BlankSlateConverter, HostAdvisorProvider, type AdvisorFocus } from 'quodsi_studio/platforms/shared';
 import { useLucidBlankSlateAccessor } from '../../adapters/useLucidBlankSlateAccessor';
-
-const log = getLogger('ModelPanel');
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -34,24 +30,13 @@ export const ModelPanel: React.FC = () => {
     onElementUpdate,
     onElementTypeChange,
     onValidate,
-    onRemoveModel
   } = useModelPanel();
-
-  // Get message senders
-  const {
-    requestModelJson
-  } = useModelOpsSender();
 
   // Selection context (document/page ids, selection changes) and sign-in state
   const { selection, auth } = useMessaging();
 
-  // Simulation run senders (diagram mapping, settings and Advisor modals)
-  const { openDiagramMappingModal, openSettingsModal, openAdvisorModal, openStatusModal } = useSimulationRunSender();
-
-  // Status opens the shared StatusPanel in a Lucid modal (?view=status,
-  // ClickUp 86e3f949t), not Studio's /status in a tab. Always offered: with no
-  // API base URL for this package the modal shows a clear "not configured".
-  const onOpenStatus = openStatusModal;
+  // The Advisor modal sender
+  const { openAdvisorModal } = useSimulationRunSender();
 
   // The Model editor's tab, held here so it survives ElementEditor's
   // page-keyed remount (spec 2026-09-13).
@@ -108,40 +93,6 @@ export const ModelPanel: React.FC = () => {
       }
     }
   }, [currentElement, applyPendingTab]);
-
-  // State for Model JSON viewer modal
-  const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
-  const [modelJson, setModelJson] = useState<object | null>(null);
-
-  // Handler for viewing model JSON
-  const handleViewModelJson = () => {
-    requestModelJson(selection.documentContext?.documentId || '');
-  };
-
-  // Listen for MODEL_JSON_RESPONSE
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const msg = event.data as EnvelopeBase;
-
-      if (msg?.type === EnvelopeMessageType.MODEL_JSON_RESPONSE) {
-        const data = msg.data as {
-          success: boolean;
-          modelJson?: any;
-          error?: string;
-        };
-
-        if (data.success && data.modelJson) {
-          setModelJson(data.modelJson);
-          setIsModelViewerOpen(true);
-        } else {
-          log.error('Failed to get model JSON:', data.error);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   useEffect(() => {
     // Handle element type issues
@@ -245,13 +196,8 @@ export const ModelPanel: React.FC = () => {
         <AccountStrip />
         {!isSwimLane && <PanelHeader
           currentElement={currentElement}
-          onRemoveModel={onRemoveModel}
-          onOpenDiagramMapping={openDiagramMappingModal}
           onElementTypeChange={onElementTypeChange}
           diagramElementType={diagramElementType}
-          onViewModelJson={handleViewModelJson}
-          onOpenStatus={onOpenStatus}
-          onOpenSettings={() => openSettingsModal()}
         />}
 
         <div className="flex-1 bg-gray-50 overflow-auto">
@@ -276,14 +222,6 @@ export const ModelPanel: React.FC = () => {
             />
           )}
         </div>
-
-        {/* Model Definition Viewer Modal */}
-        {isModelViewerOpen && modelJson && (
-          <ModelDefinitionViewer
-            modelJson={modelJson}
-            onClose={() => setIsModelViewerOpen(false)}
-          />
-        )}
       </div>
     </HostAdvisorProvider>
   );
