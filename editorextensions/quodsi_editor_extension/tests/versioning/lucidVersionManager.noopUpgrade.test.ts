@@ -26,6 +26,20 @@ describe('LucidVersionManager.handlePageLoad', () => {
     expect(showMessage).not.toHaveBeenCalled();
   });
 
+  // A page saved by a newer package, opened in an older one: upgrading would
+  // re-stamp it DOWN to the older version, and the newer package would then
+  // re-run every transform from that stamp. drawio skips it too
+  // (DrawioVersionUpgrader: compareVersions(current, source) <= 0).
+  it('does nothing when the page is newer than this package', async () => {
+    const { lvm, performUpgrade, showMessage } = managerWith({
+      sourceVersion: '2026.12.01', targetVersion: '2026.11.01', canUpgrade: true, issues: [],
+    });
+    const result = await lvm.handlePageLoad({} as any);
+    expect(result).toMatchObject({ upgraded: false, sourceVersion: '2026.12.01', targetVersion: '2026.11.01' });
+    expect(performUpgrade).not.toHaveBeenCalled();
+    expect(showMessage).not.toHaveBeenCalled();
+  });
+
   it('still upgrades a page at an older version', async () => {
     const { lvm, performUpgrade } = managerWith({
       sourceVersion: '2026.10.11', targetVersion: '2026.11.01', canUpgrade: true, issues: [],
