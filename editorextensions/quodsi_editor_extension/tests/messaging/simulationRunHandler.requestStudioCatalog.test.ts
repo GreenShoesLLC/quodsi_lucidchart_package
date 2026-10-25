@@ -94,14 +94,14 @@ function buildStorageParsedCalendarModel(): ModelDefinition {
   return new ModelDefinition(model);
 }
 
-function requestCatalogMessage() {
+function requestCatalogMessage(data: Record<string, unknown> = {}) {
   return {
     id: 'msg-1',
     type: EnvelopeMessageType.REQUEST_STUDIO_CATALOG,
     source: 'studio-embed-iframe',
     target: 'host',
     version: '1.0',
-    data: {},
+    data,
   } as any;
 }
 
@@ -203,6 +203,24 @@ describe('SimulationRunHandler.handleRequestStudioCatalog names the page showing
     expect(catalog.activities).toEqual([]);
     expect(catalog.generators).toEqual([]);
     expect(catalog.resources).toEqual([]);
+  });
+
+  it("echoes the request's requestId on the catalog", async () => {
+    stubModelDefinition = buildStorageParsedCalendarModel();
+    SimulationRunHandler.handleMessage(requestCatalogMessage({ requestId: 'cat-1' }));
+    await flush();
+    expect(sentCatalog().requestId).toBe('cat-1');
+  });
+
+  it('echoes it on a no-model reply too, and stamps none for an id-less request', async () => {
+    stubModelDefinition = null;
+    SimulationRunHandler.handleMessage(requestCatalogMessage({ requestId: 'cat-2' }));
+    await flush();
+    expect(sentCatalog().requestId).toBe('cat-2');
+    sendMock.mockClear();
+    SimulationRunHandler.handleMessage(requestCatalogMessage());
+    await flush();
+    expect('requestId' in sentCatalog()).toBe(false);
   });
 
   it('still answers, with the page, when reading the model throws', async () => {

@@ -125,7 +125,10 @@ export function createLucidModalHost(
       unlisten?.()
       unlisten = null
     },
-    requestCatalog: () => ports.send(EnvelopeMessageType.REQUEST_STUDIO_CATALOG),
+    // The extension echoes `requestId` on its reply's `catalog.requestId`.
+    requestCatalog: (requestId) => (requestId
+      ? ports.send(EnvelopeMessageType.REQUEST_STUDIO_CATALOG, { requestId })
+      : ports.send(EnvelopeMessageType.REQUEST_STUDIO_CATALOG)),
     onCatalog: (cb) => on((env) => {
       if (env.type === EnvelopeMessageType.STUDIO_CATALOG) cb((env.data as { catalog: RelayedCatalog }).catalog)
     }),

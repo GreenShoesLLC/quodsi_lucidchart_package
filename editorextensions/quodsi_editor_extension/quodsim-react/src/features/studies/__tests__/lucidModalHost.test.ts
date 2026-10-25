@@ -38,6 +38,18 @@ describe('createLucidModalHost', () => {
     ])
   })
 
+  it("sends a catalog request's requestId, and delivers the echo on the catalog", () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const onCatalog = vi.fn()
+    host.onCatalog(onCatalog)
+    host.requestCatalog('cat-7')
+    expect(ports.sent).toEqual([[EnvelopeMessageType.REQUEST_STUDIO_CATALOG, { requestId: 'cat-7' }]])
+    reply(EnvelopeMessageType.STUDIO_CATALOG, { catalog: { activities: [], requestId: 'cat-7' } })
+    expect(onCatalog).toHaveBeenCalledWith({ activities: [], requestId: 'cat-7' })
+  })
+
   it('delivers STUDIO_CATALOG and RUN_SCENARIO_RESULT to subscribers', () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)

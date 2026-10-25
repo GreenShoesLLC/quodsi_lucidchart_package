@@ -468,6 +468,10 @@ export class SimulationRunHandler {
    * Lucid). A page with no Quodsi model -- or a model that can't be read --
    * gets a catalog with empty lists and no model or document, rather than
    * silence the view would sit out to its timeout.
+   *
+   * A request carrying `requestId` gets it back on `catalog.requestId`: the
+   * reply reaches every listener in the modal, and only the refresh that asked
+   * settles on it.
    */
   private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
     let page: { id: string; name: string } | undefined;
@@ -487,6 +491,8 @@ export class SimulationRunHandler {
       catalog = noModel;
     }
 
+    const rawId = (msg.data as { requestId?: unknown } | undefined)?.requestId;
+    const requestId = typeof rawId === 'string' && rawId ? rawId : undefined;
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
       id: `msg-${Date.now()}`,
@@ -494,7 +500,7 @@ export class SimulationRunHandler {
       source: 'host',
       target: `${channel}-iframe`,
       version: '1.0',
-      data: { catalog: page ? { ...catalog, page } : catalog },
+      data: { catalog: { ...catalog, ...(page ? { page } : {}), ...(requestId ? { requestId } : {}) } },
     });
   }
 
