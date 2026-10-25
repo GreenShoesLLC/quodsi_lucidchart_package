@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { v4 as uuid } from 'uuid';
+import { generateUUID } from '@quodsi/lucid-shared';
 import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
 import type { SeizeReleaseDisposition } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
@@ -149,7 +149,7 @@ export function useModelOpsSender() {
           reject(new Error('No parent window to send resource requirements to'));
           return;
         }
-        const correlationId = uuid();
+        const correlationId = generateUUID();
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const handler = (event: MessageEvent) => {
           const msg = event.data;
@@ -190,7 +190,7 @@ export function useModelOpsSender() {
     (elementId: string, type: string, data: Record<string, unknown>): Promise<void> =>
       new Promise<void>((resolve, reject) => {
         if (!window.parent) { reject(new Error('No parent window to send element update to')); return; }
-        const correlationId = uuid();
+        const correlationId = generateUUID();
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         const handler = (event: MessageEvent) => {
           const msg = event.data;

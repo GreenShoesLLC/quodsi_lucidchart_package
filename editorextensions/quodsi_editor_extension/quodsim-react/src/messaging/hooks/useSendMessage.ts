@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { v4 as uuid } from 'uuid';
+import { generateUUID } from '@quodsi/lucid-shared';
 import { EnvelopeBase, EnvelopeMessageType, MessageSource, getLogger } from '@quodsi/lucid-shared';
 import { flushAllModelRootWrites, hasPendingModelRootWrites } from '../../adapters/modelRootWrites';
 
@@ -48,7 +48,7 @@ export function useSendMessage(
         'diagram-mapping': 'diagram-mapping-iframe',
       };
       const envelope: EnvelopeBase = {
-        id: uuid(),
+        id: generateUUID(),
         type,
         source: sourceMap[state.app.panelType || 'model'] ?? 'model-iframe',
         target: "host",
