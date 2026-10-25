@@ -79,13 +79,19 @@ describe('buildWriteEnvelope', () => {
     })
   })
 
+  it('createModel: carries requireInPlace (a project build draws on its own page)', () => {
+    const document = { activities: [] }
+    expect(buildWriteEnvelope('createModel', { document, requireInPlace: true }, 'id-12')?.data)
+      .toEqual({ document, requireInPlace: true })
+  })
+
   it('returns null for an unknown kind', () => {
     expect(buildWriteEnvelope('bogus' as any, {} as any, 'id-6')).toBeNull()
   })
 })
 
 // ClickUp 86e381h8g: the host's page guard ties every write to the page the
-// modal was launched for. createModel builds a NEW page, so it carries none.
+// modal was launched for, createModel included (spec 2026-10-25 advisor tasks in Lucid).
 describe('buildWriteEnvelope with the launch page id', () => {
   const payloads: Array<[string, unknown]> = [
     ['element', { elementId: 'a1', type: 'Activity', patch: { capacity: 2 } }],
@@ -96,15 +102,16 @@ describe('buildWriteEnvelope with the launch page id', () => {
     ['createShape', { type: 'Activity', element: { name: 'X' } }],
     ['deleteShape', { type: 'Activity', elementId: 'a1' }],
     ['moveShape', { elementId: 'a1', x: 1, y: 2 }],
+    ['createModel', { document: {} }],
   ]
 
   it.each(payloads)('%s carries basedOnPageId', (kind, payload) => {
     expect(buildWriteEnvelope(kind as any, payload, 'id', 'page-1')?.data).toMatchObject({ basedOnPageId: 'page-1' })
   })
 
-  it('createModel carries no basedOnPageId', () => {
-    const data = buildWriteEnvelope('createModel', { document: {} }, 'id', 'page-1')?.data as Record<string, unknown>
-    expect(data).not.toHaveProperty('basedOnPageId')
+  it('createModel carries basedOnPageId beside requireInPlace', () => {
+    expect(buildWriteEnvelope('createModel', { document: {}, requireInPlace: true }, 'id', 'page-1')?.data)
+      .toEqual({ document: {}, requireInPlace: true, basedOnPageId: 'page-1' })
   })
 
   it('without a page id the envelope is unchanged', () => {

@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, modelDefinitionToCleanDocument, ModalSize, buildRelayedCatalog } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, modelDefinitionToCleanDocument, ModalSize, buildRelayedCatalog, RelayedCatalog } from '@quodsi/lucid-shared';
 import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
@@ -11,6 +11,7 @@ import { AdvisorConsultModal } from '../../../panels/AdvisorConsultModal';
 import { DiagramMappingModal } from '../../../panels/DiagramMappingModal';
 import { StatusModal } from '../../../panels/StatusModal';
 import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
+import { otherPageLine } from '../pageGuard';
 
 /**
  * Handler for simulation run management messages
@@ -211,38 +212,49 @@ export class SimulationRunHandler {
    * the most recent open's sync once its channel has registered. Replies
    * STUDIES_MODEL_SYNC { modelId?, synced, error? } after both the upsert and
    * the snapshot push settle. On failure the cached id (if any) still rides
-   * along. Pull (not push) sidesteps the channel-registration race that drops
-   * messages sent before the view is ready.
+   * along. A resync for a page that isn't showing syncs nothing and replies
+   * { synced: false, error, userMessage } naming that page. Pull (not push)
+   * sidesteps the channel-registration race that drops messages sent before
+   * the view is ready.
    */
   private static async handleRequestStudiesModelSync(msg: EnvelopeBase): Promise<void> {
     const channel = SimulationRunHandler.getResponseChannel(msg);
+    const reply = (data: { modelId?: string; synced: boolean; error?: string; userMessage?: string }) =>
+      router.send(channel, {
+        id: `msg-${Date.now()}`,
+        type: EnvelopeMessageType.STUDIES_MODEL_SYNC,
+        source: 'host',
+        target: `${channel}-iframe`,
+        version: '1.0',
+        data,
+      });
     // resync: start a fresh sync first, for the page named or the last Studies open's.
     const req = (msg.data ?? {}) as { resync?: boolean; documentId?: string; pageId?: string };
     if (req.resync) {
       const last = SimulationRunHandler.studiesSync;
       const documentId = req.documentId ?? last?.documentId;
       const pageId = req.pageId ?? last?.pageId;
+      // The upsert reads the model of the page showing: a sync keyed to another page
+      // would store this page's model under it. Refuse, naming the page to go back to
+      // (spec 2026-10-25, advisor tasks in Lucid).
+      const showing = new Viewport(ModelManager.getClient()).getCurrentPage();
+      if (pageId && showing?.id !== pageId) {
+        const line = otherPageLine(ModelManager.getClient(), pageId);
+        reply({ synced: false, error: line, userMessage: line });
+        return;
+      }
       if (documentId && pageId) await SimulationRunHandler.startStudiesSync(documentId, pageId);
     }
     const sync = SimulationRunHandler.studiesSync;
-    let data: { modelId?: string; synced: boolean; error?: string };
     if (!sync) {
-      data = { synced: false, error: 'no pending Studies open' };
-    } else {
-      try {
-        data = { modelId: await sync.promise, synced: true };
-      } catch (e) {
-        data = { modelId: sync.cachedModelId, synced: false, error: e instanceof Error ? e.message : String(e) };
-      }
+      reply({ synced: false, error: 'no pending Studies open' });
+      return;
     }
-    router.send(channel, {
-      id: `msg-${Date.now()}`,
-      type: EnvelopeMessageType.STUDIES_MODEL_SYNC,
-      source: 'host',
-      target: `${channel}-iframe`,
-      version: '1.0',
-      data,
-    });
+    try {
+      reply({ modelId: await sync.promise, synced: true });
+    } catch (e) {
+      reply({ modelId: sync.cachedModelId, synced: false, error: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   /**
@@ -449,14 +461,54 @@ export class SimulationRunHandler {
    * model catalog (model block + per-record fields), and send STUDIO_CATALOG
    * back to the Studies/Advisor view (validation, and the Advisor's
    * document).
+   *
+   * Every request is answered, and every catalog names the page showing
+   * (`page: {id, name}`): the view compares it with its own page and refuses
+   * to read, sync or draw from another one (spec 2026-10-25, advisor tasks in
+   * Lucid). A page with no Quodsi model -- or a model that can't be read --
+   * gets a catalog with empty lists and no model or document, rather than
+   * silence the view would sit out to its timeout.
+   *
+   * A request carrying `requestId` gets it back on `catalog.requestId`: the
+   * reply reaches every listener in the modal, and only the refresh that asked
+   * settles on it.
    */
   private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
+    let page: { id: string; name: string } | undefined;
+    let catalog: RelayedCatalog | null;
+    try {
+      const showing = new Viewport(ModelManager.getClient()).getCurrentPage();
+      page = showing ? { id: showing.id, name: showing.getTitle() } : undefined;
+      catalog = await SimulationRunHandler.buildCatalog();
+    } catch (e) {
+      SimulationRunHandler.logger.error('REQUEST_STUDIO_CATALOG: could not read the model', e);
+      catalog = null;
+    }
+    if (!catalog) {
+      // No model to describe: the lists empty, and no model block or document (nothing to
+      // hash or apply to; the view tells this apart from a model relayed without a document).
+      const { document: _document, model: _model, ...noModel } = buildRelayedCatalog({}, { modelId: '', finishDateTime: null });
+      catalog = noModel;
+    }
+
+    const rawId = (msg.data as { requestId?: unknown } | undefined)?.requestId;
+    const requestId = typeof rawId === 'string' && rawId ? rawId : undefined;
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    router.send(channel, {
+      id: `msg-${Date.now()}`,
+      type: EnvelopeMessageType.STUDIO_CATALOG,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data: { catalog: { ...catalog, ...(page ? { page } : {}), ...(requestId ? { requestId } : {}) } },
+    });
+  }
+
+  /** The live model's catalog, or null when the page has no Quodsi model. */
+  private static async buildCatalog(): Promise<RelayedCatalog | null> {
     const modelManager = ModelManager.getInstance();
     const modelDefinition = await modelManager.getModelDefinition();
-    if (!modelDefinition) {
-      SimulationRunHandler.logger.error('REQUEST_STUDIO_CATALOG: no model definition available');
-      return;
-    }
+    if (!modelDefinition) return null;
     const serializedModel = modelDefinitionToCleanDocument(modelDefinition);
     // `modelDefinition.model.id`/`.finishDateTime` (the Lucid page/document
     // id, and the host-projection-only finish-date convenience) have no
@@ -482,19 +534,9 @@ export class SimulationRunHandler {
       typeof rawFinishDateTime === 'string'
         ? rawFinishDateTime
         : (rawFinishDateTime as Date | null)?.toISOString?.() ?? null;
-    const catalog = buildRelayedCatalog(serializedModel, {
+    return buildRelayedCatalog(serializedModel, {
       modelId: modelDefinition.model.id,
       finishDateTime,
-    });
-
-    const channel = SimulationRunHandler.getResponseChannel(msg);
-    router.send(channel, {
-      id: `msg-${Date.now()}`,
-      type: EnvelopeMessageType.STUDIO_CATALOG,
-      source: 'host',
-      target: `${channel}-iframe`,
-      version: '1.0',
-      data: { catalog },
     });
   }
 

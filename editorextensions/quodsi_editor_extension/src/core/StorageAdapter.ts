@@ -30,8 +30,45 @@ export class StorageAdapter {
     // overlays its run settings onto the model it creates.
     private static readonly PENDING_MODEL_KEY = 'q_pending_model';
 
+    /**
+     * Every page-level key that holds the page's model (run settings, the
+     * model-root lists, states, entities, and the stamps the first write sets).
+     * A writer that must be able to undo itself snapshots these raw values
+     * first (snapshotPageModel) and puts them back (restorePageModel).
+     */
+    private static readonly PAGE_MODEL_KEYS = [
+        StorageAdapter.DATA_KEY,
+        StorageAdapter.STATES_KEY,
+        StorageAdapter.ENTITIES_KEY,
+        StorageAdapter.RESOURCES_KEY,
+        StorageAdapter.RESOURCE_REQUIREMENTS_KEY,
+        StorageAdapter.ARRIVAL_PATTERNS_KEY,
+        StorageAdapter.ARRIVAL_SCHEDULES_KEY,
+        StorageAdapter.WORK_SCHEDULES_KEY,
+        StorageAdapter.SKIPPED_ELEMENTS_KEY,
+        StorageAdapter.STORAGE_FORMAT_KEY,
+    ] as const;
+
     constructor() {
         log.trace('StorageAdapter initialized');
+    }
+
+    /** The page's model keys as stored (raw strings; absent keys left out). */
+    public snapshotPageModel(page: ElementProxy): Record<string, unknown> {
+        const snapshot: Record<string, unknown> = {};
+        for (const key of StorageAdapter.PAGE_MODEL_KEYS) {
+            const value = page.shapeData.get(key);
+            if (value !== undefined) snapshot[key] = value;
+        }
+        return snapshot;
+    }
+
+    /** Puts a snapshotPageModel back: each key as it was, absent ones deleted. */
+    public restorePageModel(page: ElementProxy, snapshot: Record<string, unknown>): void {
+        for (const key of StorageAdapter.PAGE_MODEL_KEYS) {
+            if (key in snapshot) page.shapeData.set(key, snapshot[key] as any);
+            else page.shapeData.delete(key);
+        }
     }
 
     /**

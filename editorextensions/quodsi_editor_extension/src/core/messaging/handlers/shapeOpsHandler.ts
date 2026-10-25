@@ -6,9 +6,10 @@
 // compiled Advisor modal (AdvisorConsultModal) sends them with source
 // 'studio-embed-iframe' whenever the Advisor proposes adding, removing or
 // repositioning one Activity/Generator/Connector on the page.
-// MODEL_CREATE_PAGE (bulk page creation from an Advisor-authored document)
-// delegates to buildModelPage in ../../ModelPageBuilder.ts, which also holds
-// the record helpers SHAPE_CREATE uses.
+// MODEL_CREATE_PAGE (a whole Advisor-authored document) delegates to
+// ../../ModelPageBuilder.ts -- drawModelInPage on its own empty page, else
+// buildModelPage on a new one -- which also holds the record helpers
+// SHAPE_CREATE uses.
 //
 // Mirrors ElementOpsHandler.handleElementUpdate for the
 // client/viewport/currentPage/getResponseChannel/reply/selection-refresh
@@ -18,19 +19,22 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   JsonObject,
+  NOT_EMPTY_LINE,
   Resource,
   getLogger,
 } from '@quodsi/lucid-shared';
 import { router } from '../index';
-import { assertWritePage } from '../pageGuard';
+import { PAGE_GUARD_MISSING_MESSAGE, assertWritePage, otherPageLine } from '../pageGuard';
 import { BlockProxy, Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import {
   ModelPageBuildError,
   buildModelPage,
   createBlockRecord,
+  drawModelInPage,
   createLineRecord,
   newElementFactory,
+  pageModelIsEmpty,
   stripGeometry,
 } from '../../ModelPageBuilder';
 import { PanelRole } from '../types';
@@ -422,27 +426,54 @@ export class ShapeOpsHandler {
   }
 
   /**
-   * Handle MODEL_CREATE_PAGE: builds a whole new page from an
-   * Advisor-authored document via buildModelPage (ModelPageBuilder.ts --
-   * shared with the onboarding tour's TOUR_LOAD_EXAMPLE), titled after the
-   * document, and replies with the page id and the id map. A failure once
-   * the page exists has already been rolled back by the builder; the reply
+   * Handle MODEL_CREATE_PAGE: draws an Advisor-authored document, and replies
+   * with the page id and the id map. Where it draws (spec 2026-10-25,
+   * advisor tasks in Lucid):
+   *  1. `basedOnPageId` is the page showing and its model is empty (no
+   *     activities, generators or resources) -> on that page
+   *     (drawModelInPage);
+   *  2. otherwise, with `requireInPlace` (a project build) -> nowhere: the
+   *     reply names the page to go back to (OTHER_PAGE_LINE) or says the
+   *     page already has a model (NOT_EMPTY_LINE);
+   *  3. otherwise -> a new page titled after the document (buildModelPage,
+   *     shared with the onboarding tour's TOUR_LOAD_EXAMPLE).
+   * A draw that fails has already been undone by the builder; the reply
    * names the step it failed at.
    */
   private static async handleModelCreatePage(msg: EnvelopeBase): Promise<boolean> {
-    const data = msg.data as { document: JsonObject };
+    const data = msg.data as { document: JsonObject; basedOnPageId?: string; requireInPlace?: boolean };
     const document = (data.document ?? {}) as Record<string, any>;
     const channel = ShapeOpsHandler.getResponseChannel(msg);
-    log.debug('Model create page requested', { name: document.name });
+    log.debug('Model create page requested', { name: document.name, requireInPlace: !!data.requireInPlace });
 
     const client = ModelManager.getClient();
     const modelManager = ModelManager.getInstance();
     const viewport = new Viewport(client);
 
-    try {
-      const { page, idMap } = await buildModelPage(document, {
-        title: String(document.name ?? 'Generated model'),
+    const refuse = (errorMessage: string): boolean => {
+      router.send(channel, {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_CREATE_PAGE_RESULT,
+        source: 'host',
+        target: `${channel}-iframe`,
+        version: '1.0',
+        data: { success: false, errorMessage },
       });
+      return false;
+    };
+
+    try {
+      const current = viewport.getCurrentPage();
+      const onOwnPage = !!current && !!data.basedOnPageId && data.basedOnPageId === current.id;
+      const inPlace = onOwnPage && await pageModelIsEmpty(current!);
+      if (!inPlace && data.requireInPlace) {
+        if (!data.basedOnPageId) return refuse(PAGE_GUARD_MISSING_MESSAGE);
+        return refuse(onOwnPage ? NOT_EMPTY_LINE : otherPageLine(client, data.basedOnPageId));
+      }
+
+      const { page, idMap } = inPlace
+        ? await drawModelInPage(current!, document)
+        : await buildModelPage(document, { title: String(document.name ?? 'Generated model') });
 
       router.send(channel, {
         id: msg.id,

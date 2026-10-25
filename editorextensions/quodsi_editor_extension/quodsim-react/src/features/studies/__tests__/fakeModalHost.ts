@@ -9,7 +9,7 @@ export function deferred<T>(): Deferred<T> {
   return { promise, resolve }
 }
 
-export type SyncResult = { modelId?: string; synced: boolean; error?: string }
+export type SyncResult = { modelId?: string; synced: boolean; error?: string; userMessage?: string }
 
 /** Stand-in for requestModelSync's callback stream: `emit` delivers a result
  *  (the timeout or a reply, possibly more than once) to the live subscriber. */

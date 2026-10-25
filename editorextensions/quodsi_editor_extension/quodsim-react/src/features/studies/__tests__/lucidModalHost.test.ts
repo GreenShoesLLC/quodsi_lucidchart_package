@@ -38,6 +38,18 @@ describe('createLucidModalHost', () => {
     ])
   })
 
+  it("sends a catalog request's requestId, and delivers the echo on the catalog", () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const onCatalog = vi.fn()
+    host.onCatalog(onCatalog)
+    host.requestCatalog('cat-7')
+    expect(ports.sent).toEqual([[EnvelopeMessageType.REQUEST_STUDIO_CATALOG, { requestId: 'cat-7' }]])
+    reply(EnvelopeMessageType.STUDIO_CATALOG, { catalog: { activities: [], requestId: 'cat-7' } })
+    expect(onCatalog).toHaveBeenCalledWith({ activities: [], requestId: 'cat-7' })
+  })
+
   it('delivers STUDIO_CATALOG and RUN_SCENARIO_RESULT to subscribers', () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)
@@ -78,6 +90,16 @@ describe('createLucidModalHost', () => {
     expect(onResult).toHaveBeenCalledWith({ modelId: 'm1', synced: true, error: undefined })
     reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { modelId: 'm9', synced: true })
     expect(onResult).toHaveBeenCalledTimes(1)
+  })
+
+  it("carries a failed sync's userMessage when the extension sends one", () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const onResult = vi.fn()
+    host.requestModelSync(onResult)
+    reply(EnvelopeMessageType.STUDIES_MODEL_SYNC, { synced: false, error: 'other page', userMessage: 'Go back.' })
+    expect(onResult).toHaveBeenCalledWith({ modelId: undefined, synced: false, error: 'other page', userMessage: 'Go back.' })
   })
 
   it('reports a timeout after 120 s (not before), then still delivers a late reply', async () => {

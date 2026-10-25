@@ -10,6 +10,10 @@
 // Task 5) so the Advisor's MODEL_CREATE_PAGE and the onboarding tour's
 // TOUR_LOAD_EXAMPLE build pages the same way (spec 2026-10-16 §5.3). The
 // single-shape record helpers SHAPE_CREATE also uses live here too.
+//
+// drawModelInPage draws a document on the page showing instead (an Advisor
+// project build on its own empty page, spec 2026-10-25): it merges into the
+// page's model rather than replacing it, and undoes itself on failure.
 import {
   JsonObject,
   SimulationObjectType,
@@ -274,79 +278,10 @@ export async function buildModelPage(
       await modelManager.updateEntities(document.entities, page);
     }
 
-    const factory = newElementFactory(modelManager);
-    const idMap: Record<string, string> = {};
-
-    // Loaded ONCE for the whole page -- not per block.
-    await client.loadBlockClasses(['ProcessBlock']);
-
-    // A document that carries a block's size (the onboarding example, from
-    // drawio's geometry) is drawn at it; mixing sizes otherwise misaligns
-    // centres and bends the connecting lines. Advisor documents carry none.
-    const blockBox = (record: Record<string, any>) => ({
-      x: Number(record.x) || 0,
-      y: Number(record.y) || 0,
-      w: Number(record.width) || 80,
-      h: Number(record.height) || 80,
+    const { idMap } = await drawRecords(page, document, {
+      textSize: opts.textSize,
+      onStep: (step) => { currentStep = step; },
     });
-    const styleText = async (block: any) => {
-      if (opts.textSize !== undefined) await block.textStyles.set('Text', { size: opts.textSize });
-    };
-
-    // Each createBlockRecord/createLineRecord call below runs
-    // registerElement, which -- while the ModelDefinition is dirty --
-    // triggers a full ensureModelDefinition() rebuild from storage. That
-    // makes this loop O(n) rebuilds for an n-element page, not one; fine for
-    // Advisor- and example-sized models.
-    const generators = (document.generators ?? []) as Array<Record<string, any>>;
-    for (const record of generators) {
-      currentStep = String(record.id);
-      const created = await createBlockRecord(page, modelManager, factory, 'Generator', blockBox(record), stripGeometry(record));
-      await styleText(created.block);
-      idMap[String(record.id)] = created.id;
-    }
-
-    const activities = (document.activities ?? []) as Array<Record<string, any>>;
-    for (const record of activities) {
-      currentStep = String(record.id);
-      const created = await createBlockRecord(page, modelManager, factory, 'Activity', blockBox(record), stripGeometry(record));
-      await styleText(created.block);
-      idMap[String(record.id)] = created.id;
-    }
-
-    const resources = (document.resources ?? []) as Array<Record<string, any>>;
-    for (const record of resources) {
-      currentStep = String(record.id);
-      const created = await createResourceBlockRecord(page, modelManager, blockBox(record), stripGeometry(record));
-      await styleText(created.block);
-      idMap[String(record.id)] = created.id;
-    }
-
-    const connectors = (document.connectors ?? []) as Array<Record<string, any>>;
-    for (const record of connectors) {
-      currentStep = String(record.id);
-      const sourceDocId = record.sourceId;
-      const targetDocId = record.targetId;
-
-      const sourceLucidId = sourceDocId !== undefined ? idMap[String(sourceDocId)] : undefined;
-      if (!sourceLucidId) {
-        throw new Error(`Connector source not found: ${sourceDocId}`);
-      }
-      const targetLucidId = targetDocId !== undefined ? idMap[String(targetDocId)] : undefined;
-      if (!targetLucidId) {
-        throw new Error(`Connector target not found: ${targetDocId}`);
-      }
-
-      const created = await createLineRecord(
-        page,
-        modelManager,
-        factory,
-        page.allBlocks.get(sourceLucidId),
-        page.allBlocks.get(targetLucidId),
-        stripGeometry(record)
-      );
-      idMap[String(record.id)] = created.id;
-    }
 
     await modelManager.validateModel();
 
@@ -373,4 +308,273 @@ export async function buildModelPage(
 
     throw new ModelPageBuildError(currentStep, error instanceof Error ? error.message : String(error));
   }
+}
+
+/** Where drawRecords records what it made, so a caller can undo it. */
+interface DrawnItems {
+  blocks: any[];
+  lines: any[];
+}
+
+/**
+ * Draws a document's blocks (generators, activities, resources, in that
+ * order) then its lines (connectors, endpoints resolved through the
+ * document-id -> Lucid-id map) on `page`, each block at its record's layout
+ * position moved by `opts.offset`. Every block and line is recorded in
+ * `opts.drawn` as soon as it exists; `opts.onStep` hears the document id of
+ * the record being drawn. The page-level model must already be written.
+ */
+async function drawRecords(
+  page: any,
+  document: Record<string, any>,
+  opts: {
+    textSize?: number;
+    offset?: { dx: number; dy: number };
+    drawn?: DrawnItems;
+    onStep: (step: string) => void;
+  }
+): Promise<{ idMap: Record<string, string> }> {
+  const client = ModelManager.getClient();
+  const modelManager = ModelManager.getInstance();
+  const factory = newElementFactory(modelManager);
+  const idMap: Record<string, string> = {};
+  const dx = opts.offset?.dx ?? 0;
+  const dy = opts.offset?.dy ?? 0;
+
+  // Loaded ONCE for the whole page -- not per block.
+  await client.loadBlockClasses(['ProcessBlock']);
+
+  // A document that carries a block's size (the onboarding example, from
+  // drawio's geometry) is drawn at it; mixing sizes otherwise misaligns
+  // centres and bends the connecting lines. Advisor documents carry none.
+  const blockBox = (record: Record<string, any>) => ({
+    x: (Number(record.x) || 0) + dx,
+    y: (Number(record.y) || 0) + dy,
+    w: Number(record.width) || 80,
+    h: Number(record.height) || 80,
+  });
+  const styleText = async (block: any) => {
+    if (opts.textSize !== undefined) await block.textStyles.set('Text', { size: opts.textSize });
+  };
+  // The record helpers only add blocks and lines; this stand-in for the page
+  // records each one the moment Lucid hands it back, so a failure later in the
+  // same record still undoes it.
+  const recordingPage = {
+    addBlock: (def: unknown) => {
+      const block = page.addBlock(def);
+      opts.drawn?.blocks.push(block);
+      return block;
+    },
+    addLine: (def: unknown) => {
+      const line = page.addLine(def);
+      opts.drawn?.lines.push(line);
+      return line;
+    },
+  };
+
+  // Each createBlockRecord/createLineRecord call below runs
+  // registerElement, which -- while the ModelDefinition is dirty --
+  // triggers a full ensureModelDefinition() rebuild from storage. That
+  // makes this loop O(n) rebuilds for an n-element page, not one; fine for
+  // Advisor- and example-sized models.
+  const generators = (document.generators ?? []) as Array<Record<string, any>>;
+  for (const record of generators) {
+    opts.onStep(String(record.id));
+    const created = await createBlockRecord(recordingPage, modelManager, factory, 'Generator', blockBox(record), stripGeometry(record));
+    await styleText(created.block);
+    idMap[String(record.id)] = created.id;
+  }
+
+  const activities = (document.activities ?? []) as Array<Record<string, any>>;
+  for (const record of activities) {
+    opts.onStep(String(record.id));
+    const created = await createBlockRecord(recordingPage, modelManager, factory, 'Activity', blockBox(record), stripGeometry(record));
+    await styleText(created.block);
+    idMap[String(record.id)] = created.id;
+  }
+
+  const resources = (document.resources ?? []) as Array<Record<string, any>>;
+  for (const record of resources) {
+    opts.onStep(String(record.id));
+    const created = await createResourceBlockRecord(recordingPage, modelManager, blockBox(record), stripGeometry(record));
+    await styleText(created.block);
+    idMap[String(record.id)] = created.id;
+  }
+
+  const connectors = (document.connectors ?? []) as Array<Record<string, any>>;
+  for (const record of connectors) {
+    opts.onStep(String(record.id));
+    const sourceDocId = record.sourceId;
+    const targetDocId = record.targetId;
+
+    const sourceLucidId = sourceDocId !== undefined ? idMap[String(sourceDocId)] : undefined;
+    if (!sourceLucidId) {
+      throw new Error(`Connector source not found: ${sourceDocId}`);
+    }
+    const targetLucidId = targetDocId !== undefined ? idMap[String(targetDocId)] : undefined;
+    if (!targetLucidId) {
+      throw new Error(`Connector target not found: ${targetDocId}`);
+    }
+
+    const created = await createLineRecord(
+      recordingPage,
+      modelManager,
+      factory,
+      page.allBlocks.get(sourceLucidId),
+      page.allBlocks.get(targetLucidId),
+      stripGeometry(record)
+    );
+    idMap[String(record.id)] = created.id;
+  }
+
+  return { idMap };
+}
+
+/**
+ * True when the model on `page` has no activities, generators or resources
+ * (records, not shapes) -- the rule Studio's `modelIsEmpty` and the API's
+ * `model_is_empty` use. A page with no Quodsi model at all is NOT empty
+ * (ruling R7, as drawio's isEmptyModelPage and Studio's modelIsEmpty(undefined)):
+ * a build is drawn in place only on a page that already is a model.
+ */
+export async function pageModelIsEmpty(page: PageProxy): Promise<boolean> {
+  const modelManager = ModelManager.getInstance();
+  if (modelManager.getCurrentPageId() !== page.id) modelManager.setCurrentPage(page);
+  const definition = await modelManager.getModelDefinition();
+  if (!definition) return false;
+  return definition.activities.getAll().length === 0
+    && definition.generators.getAll().length === 0
+    && definition.resources.getAll().length === 0;
+}
+
+/** Records of `incoming` replace same-id records of `existing`, whose others stay. */
+function mergeById<T>(existing: T[], incoming: T[]): T[] {
+  const ids = new Set(incoming.map((r) => String((r as any)?.id)));
+  return [...incoming, ...existing.filter((r) => !ids.has(String((r as any)?.id)))];
+}
+
+/** The gap between the shapes already on a page and a model drawn beside them. */
+const IN_PLACE_MARGIN = 120;
+
+/**
+ * Moves the document's layout clear of the blocks already on `page`: to the
+ * right of their bounding box by IN_PLACE_MARGIN, top-aligned with it. The
+ * document's own positions are kept as offsets. Nothing on the page: no move.
+ */
+function offsetBesideExisting(page: any, document: Record<string, any>): { dx: number; dy: number } {
+  const existing = Array.from(page.allBlocks.values() as Iterable<any>).map((b) => b.getBoundingBox());
+  if (existing.length === 0) return { dx: 0, dy: 0 };
+  const records: Array<Record<string, any>> = [].concat(
+    document.generators ?? [], document.activities ?? [], document.resources ?? []);
+  const docMinX = records.length ? Math.min(...records.map((r) => Number(r.x) || 0)) : 0;
+  const docMinY = records.length ? Math.min(...records.map((r) => Number(r.y) || 0)) : 0;
+  const maxX = Math.max(...existing.map((b) => b.x + b.w));
+  const minY = Math.min(...existing.map((b) => b.y));
+  return { dx: maxX + IN_PLACE_MARGIN - docMinX, dy: minY - docMinY };
+}
+
+/**
+ * Draws `document` on `page` -- the page showing, whose model the caller has
+ * found empty -- instead of on a new page. No page is added or switched to,
+ * the page keeps its name, and the model keeps its id (documentId:pageId).
+ *
+ * Merges, never replaces: run settings go over the page's own (all but the
+ * name: the model keeps its name too), and the model-root lists, states and
+ * entities merge by id with the document's records winning (drawio's
+ * mergeModelBlob rule). The blocks land clear of the shapes already there.
+ *
+ * Any failure undoes the draw: every line then every block it made is
+ * removed (removeElement before delete), the page's model keys are put back
+ * as they were, and a ModelPageBuildError naming the step is thrown.
+ */
+export async function drawModelInPage(
+  page: PageProxy,
+  document: Record<string, any>
+): Promise<{ page: PageProxy; idMap: Record<string, string> }> {
+  const modelManager = ModelManager.getInstance();
+  const storage = modelManager.getStorageAdapter();
+  if (modelManager.getCurrentPageId() !== page.id) modelManager.setCurrentPage(page);
+
+  const snapshot = storage.snapshotPageModel(page);
+  const drawn: DrawnItems = { blocks: [], lines: [] };
+  // Measured before anything is drawn, so the model goes beside what was there.
+  const offset = offsetBesideExisting(page, document);
+  let currentStep = 'page settings';
+
+  try {
+    const runSettings: JsonObject = {};
+    for (const key of RUN_SETTINGS_KEYS) {
+      if (key !== 'name' && key in document) {
+        (runSettings as any)[key] = document[key];
+      }
+    }
+    // saveElementData merges a Model patch into the page's stored record.
+    await modelManager.saveElementData(page, { ...runSettings, id: page.id }, SimulationObjectType.Model, page);
+
+    currentStep = 'model root';
+    const stored: Record<(typeof MODEL_ROOT_KEYS)[number], () => unknown[]> = {
+      resources: () => storage.getResources(page),
+      resourceRequirements: () => storage.getResourceRequirements(page),
+      arrivalPatterns: () => storage.getArrivalPatterns(page),
+      arrivalSchedules: () => storage.getArrivalSchedules(page),
+      workSchedules: () => storage.getWorkSchedules(page),
+    };
+    const rootPatch: Record<string, unknown> = {};
+    for (const key of MODEL_ROOT_KEYS) {
+      if (key in document) {
+        const incoming = key === 'resources'
+          ? (document.resources as Array<Record<string, any>>).map(stripGeometry)
+          : document[key];
+        rootPatch[key] = mergeById(stored[key](), incoming as unknown[]);
+      }
+    }
+    await modelManager.updateModelRoot(rootPatch, page);
+
+    if ('states' in document) {
+      currentStep = 'states';
+      await modelManager.updateStates(mergeById(storage.getStates(page) as any[], document.states), page);
+    }
+    if ('entities' in document) {
+      currentStep = 'entities';
+      await modelManager.updateEntities(mergeById(storage.getEntities(page) as any[], document.entities), page);
+    }
+
+    const { idMap } = await drawRecords(page, document, {
+      offset,
+      drawn,
+      onStep: (step) => { currentStep = step; },
+    });
+
+    await modelManager.validateModel();
+    return { page, idMap };
+  } catch (error) {
+    log.error('Error drawing the model on its page', error);
+    await undoDraw(page, drawn, snapshot);
+    // Revalidate the restored page, so the panel doesn't keep the partial draw's validation.
+    try {
+      await modelManager.validateModel();
+    } catch (validationError) {
+      log.error('Error revalidating the page after undoing a draw', validationError);
+    }
+    throw new ModelPageBuildError(currentStep, error instanceof Error ? error.message : String(error));
+  }
+}
+
+/** Removes what a failed drawModelInPage made (lines first) and restores the page's model keys. */
+async function undoDraw(page: PageProxy, drawn: DrawnItems, snapshot: Record<string, unknown>): Promise<void> {
+  const modelManager = ModelManager.getInstance();
+  for (const item of [...[...drawn.lines].reverse(), ...[...drawn.blocks].reverse()]) {
+    try {
+      await modelManager.removeElement(item.id);
+      item.delete();
+    } catch (rollbackError) {
+      log.error('Error removing a drawn item while undoing a draw', rollbackError);
+    }
+  }
+  try {
+    modelManager.getStorageAdapter().restorePageModel(page, snapshot);
+  } catch (rollbackError) {
+    log.error('Error restoring the page model while undoing a draw', rollbackError);
+  }
+  modelManager.invalidateModelCache();
 }

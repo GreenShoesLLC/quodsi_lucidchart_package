@@ -131,7 +131,8 @@ describe('AdvisorModalView', () => {
     render(<AdvisorModalView />)
     await screen.findByTestId('consult')
     const host = hostEntry().host as FakeHost
-    void last().syncModel()
+    expect(last().pageId).toBe('p1')
+    void last().syncModel().catch(() => {})
     expect((host.requestModelSync as ReturnType<typeof vi.fn>).mock.calls.at(-1)![1]).toEqual({ documentId: 'd1', pageId: 'p1' })
     act(() => { last().openProjectFallback() })
     expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.OPEN_STUDIES_MODAL,

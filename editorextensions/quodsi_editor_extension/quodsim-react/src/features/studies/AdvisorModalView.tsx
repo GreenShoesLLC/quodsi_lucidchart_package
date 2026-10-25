@@ -18,7 +18,7 @@ const Consult = lazy(() =>
       syncModel?: () => Promise<void>; openProjectFallback?: () => void
     }) => (
       <m.AdvisorConsultSurface focus={m.workspaceFocusFromParams(params)} host={host} modelId={modelId}
-        syncModel={syncModel} openProjectFallback={openProjectFallback} />
+        syncModel={syncModel} pageId={params.get('pageId') ?? undefined} openProjectFallback={openProjectFallback} />
     ),
   })),
 )

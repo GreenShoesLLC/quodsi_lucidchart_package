@@ -27,7 +27,9 @@ vi.mock('quodsi_studio/lib/api', () => ({
   registerAuthRefresher: vi.fn(),
 }))
 vi.mock('quodsi_studio/platforms/studies', () => ({
-  useLucidWorkspaceHost: (host: unknown) => ({ parts: { model: null, apply: h.apply, host }, state: 'ready' }),
+  // The real hook wraps opts.syncModel (refresh + page check); the stand-in hands it on as is.
+  useLucidWorkspaceHost: (host: unknown, opts?: { pageId?: string; syncModel?: () => Promise<void> }) =>
+    ({ parts: { model: null, apply: h.apply, host, syncModel: opts?.syncModel, pageId: opts?.pageId }, state: 'ready' }),
   StudiesSurface: (props: Record<string, any>) => {
     h.surfaceClients.push(useQueryClient())
     h.order.push('surface')
@@ -71,24 +73,45 @@ async function renderView() {
 
 describe('StudiesModalView and the Advisor Workspace (spec 2026-10-16)', () => {
   it('connects a writer and hands the surface the Workspace host, so its Advisor can Apply', async () => {
-    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1&pageId=p1')
     await renderView()
-    expect(h.hosts[h.hosts.length - 1].opts).toMatchObject({ withWriter: true })
-    expect(lastProps().workspaceHost).toMatchObject({ apply: h.apply, host: host() })
+    expect(h.hosts[h.hosts.length - 1].opts).toMatchObject({ withWriter: true, pageId: 'p1' })
+    // The modal's page goes to the Workspace host, which refuses a catalog from another page.
+    expect(lastProps().workspaceHost).toMatchObject({ apply: h.apply, host: host(), pageId: 'p1' })
   })
 
-  it('its syncModel asks the extension for a fresh sync and resolves on the reply (final review I1)', async () => {
-    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+  it('its syncModel asks the extension for a fresh sync of its own page and resolves on the reply (final review I1)', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1&documentId=d1&pageId=p1')
     await renderView()
     const before = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls.length
     let done = false
     const p = (lastProps().workspaceHost.syncModel as () => Promise<void>)().then(() => { done = true })
     const call = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls[before]
-    expect(call[1]).toEqual({})
+    // The page the Workspace's page check names, not the last Studies open's.
+    expect(call[1]).toEqual({ documentId: 'd1', pageId: 'p1' })
     expect(done).toBe(false)
     await act(async () => { host().sync.emit({ modelId: 'm1', synced: true }) })
     await p
     expect(done).toBe(true)
+  })
+
+  it('a URL that names no page syncs the last Studies open', async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const before = (host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls.length
+    void (lastProps().workspaceHost.syncModel as () => Promise<void>)().catch(() => {})
+    expect((host().requestModelSync as ReturnType<typeof vi.fn>).mock.calls[before][1]).toEqual({})
+    await act(async () => { host().sync.emit({ modelId: 'm1', synced: true }) })
+  })
+
+  it("its syncModel rejects with the extension's line for her when the sync did not save, and marks sync failed (spec 2026-10-25)", async () => {
+    setSearch('view=studies&apiBaseUrl=https%3A%2F%2Fapi.example&modelId=m1')
+    await renderView()
+    const p = (lastProps().workspaceHost.syncModel as () => Promise<void>)()
+    const caught = p.catch((e: unknown) => e)
+    await act(async () => { host().sync.emit({ synced: false, error: 'other page', userMessage: 'Go back to Page 1.' }) })
+    expect(((await caught) as Error).message).toBe('Go back to Page 1.')
+    expect(lastProps().syncStatus).toBe('failed')
   })
 })
 
