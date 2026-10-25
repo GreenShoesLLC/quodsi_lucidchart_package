@@ -38,19 +38,22 @@ jest.mock('../../src/core/sync/scenarioSync', () => ({
   pushModelDefinitionSnapshot: (...args: unknown[]) => pushSnapshotMock(...args),
 }));
 
+// The page showing; a test that switches pages sets it.
+let mockCurrentPageId = 'pg-1';
 jest.mock('lucid-extension-sdk', () => {
   const actual = jest.requireActual('lucid-extension-sdk');
   return {
     ...actual,
     Viewport: class {
       getCurrentPage() {
-        return { id: 'pg-1' };
+        return { id: mockCurrentPageId };
       }
     },
   };
 });
 
-import { EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { EnvelopeMessageType, OTHER_PAGE_LINE } from '@quodsi/lucid-shared';
+import { documentPagesForTests } from '../__mocks__/lucid-extension-sdk';
 import { SimulationRunHandler } from '../../src/core/messaging/handlers/simulationRunHandler';
 import { StudiesModal } from '../../src/panels/StudiesModal';
 
@@ -112,6 +115,9 @@ beforeEach(() => {
   pushSnapshotMock.mockReset();
   (SimulationRunHandler as any).studiesSync = null;
   (SimulationRunHandler as any).scenarioModelIdCache.clear();
+  mockCurrentPageId = 'pg-1';
+  documentPagesForTests.length = 0;
+  documentPagesForTests.push({ id: 'pg-1', getTitle: () => 'Clinic floor' }, { id: 'pg-2', getTitle: () => 'Waiting room' });
   jest.spyOn(StudiesModal.prototype, 'show').mockImplementation(async function (this: StudiesModal) {
     shown.push(this);
   });
@@ -247,5 +253,36 @@ describe('REQUEST_STUDIES_MODEL_SYNC with resync', () => {
     await flush();
     expect(upsertModelMock).toHaveBeenCalledTimes(2);
     expect(upsertModelMock.mock.calls[1][1]).toMatchObject({ documentId: 'doc-1', pageId: 'pg-1' });
+  });
+
+  // Spec 2026-10-25 (advisor tasks in Lucid): nothing is synced from another page.
+  it('refuses a page that is not the one showing, naming it: no upsert, no snapshot push', async () => {
+    mockCurrentPageId = 'pg-1';
+    SimulationRunHandler.handleMessage(resync({ documentId: 'doc-1', pageId: 'pg-2' }));
+    await flush();
+    expect(upsertModelMock).not.toHaveBeenCalled();
+    expect(pushSnapshotMock).not.toHaveBeenCalled();
+    expect(replies()[0].msg.data).toEqual({
+      synced: false,
+      error: OTHER_PAGE_LINE('Waiting room'),
+      userMessage: OTHER_PAGE_LINE('Waiting room'),
+    });
+  });
+
+  it('with no page named, refuses when the page of the last Studies open is no longer showing', async () => {
+    upsertModelMock.mockResolvedValue({ serverModelId: 'srv-1' });
+    pushSnapshotMock.mockResolvedValue(undefined);
+    SimulationRunHandler.handleMessage(openMessage());
+    await flush();
+    upsertModelMock.mockClear();
+    pushSnapshotMock.mockClear();
+    sendMock.mockClear();
+
+    mockCurrentPageId = 'pg-2';
+    SimulationRunHandler.handleMessage(resync({}));
+    await flush();
+    expect(upsertModelMock).not.toHaveBeenCalled();
+    expect(pushSnapshotMock).not.toHaveBeenCalled();
+    expect(replies()[0].msg.data).toMatchObject({ synced: false, userMessage: OTHER_PAGE_LINE('Clinic floor') });
   });
 });

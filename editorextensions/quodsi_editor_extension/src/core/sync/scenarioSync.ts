@@ -53,11 +53,26 @@ export async function upsertModel(
 
 /** Serialize the live model and push it as the envelope-level model snapshot
  *  (lands on models.model_definition_snapshot in the backend). Fire-and-forget
- *  friendly — callers `void` it; it must never throw into the caller. */
+ *  friendly — callers `void` it or catch it.
+ *
+ *  The model read is the page showing's, so the push is keyed only to that
+ *  page: when `params.pageId` is another page it rejects and pushes nothing
+ *  (spec 2026-10-25, advisor tasks in Lucid) — another page's model must never
+ *  land under this page's key. The Studies sync refuses such a page before it
+ *  gets here; this keeps every caller honest. */
 export async function pushModelDefinitionSnapshot(
   client: EditorClient,
   params: { documentId: string; pageId: string; modelName: string },
 ): Promise<void> {
+  let page: ReturnType<Viewport['getCurrentPage']> | undefined;
+  try {
+    page = new Viewport(client).getCurrentPage();
+  } catch {
+    page = undefined;
+  }
+  if (page && page.id !== params.pageId) {
+    throw new Error(`Page ${params.pageId} is not the page showing; its snapshot was not pushed.`);
+  }
   const def = await ModelManager.getInstance().getModelDefinition();
   if (!def) return;
   const snapshot = modelDefinitionToCleanDocument(def);
@@ -65,12 +80,6 @@ export async function pushModelDefinitionSnapshot(
   // background diagram, with the snapshot moved into its frame -- the same
   // step the run path takes. Best effort: without an SVG the push still goes
   // out and the animation renders without a diagram.
-  let page: ReturnType<Viewport['getCurrentPage']> | undefined;
-  try {
-    page = new Viewport(client).getCurrentPage();
-  } catch {
-    page = undefined;
-  }
   const modelDiagramSvg = page
     ? await alignModelToPageSvg(snapshot, page, { bestEffort: true })
     : undefined;

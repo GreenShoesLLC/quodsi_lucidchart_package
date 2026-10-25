@@ -147,6 +147,11 @@ export { offsetLayoutCoordinates } from '@quodsi/shared';
 
 // The model catalog relayed to the compiled Studies/Advisor modals (STUDIO_CATALOG).
 export { buildRelayedCatalog } from '@quodsi/shared';
+export type { RelayedCatalog } from '@quodsi/shared';
+
+// The Advisor's host lines (one copy, in @quodsi/shared's advisor/hostLines):
+// the extension refuses a build or sync on the wrong page with these.
+export { OTHER_PAGE_LINE, NOT_EMPTY_LINE } from '@quodsi/shared';
 
 // Page conversion: topology rule, naming policy, structured-name parsing,
 // unique names, per-pass name bookkeeping and the mapping preview -- the same

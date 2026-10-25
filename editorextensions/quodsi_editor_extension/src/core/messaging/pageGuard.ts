@@ -15,6 +15,9 @@
 // wording differs: that modal has no snapshot to refresh, so it tells the user
 // to go back to the page instead.
 
+import { DocumentProxy, EditorClient } from 'lucid-extension-sdk';
+import { OTHER_PAGE_LINE } from '@quodsi/lucid-shared';
+
 /** The compiled Studies/Advisor modal's envelope source. */
 export const STUDIO_EMBED_SOURCE = 'studio-embed-iframe';
 
@@ -75,4 +78,14 @@ export function assertWritePage(
 /** True for a refused write whose page id named a different page. */
 export function isPageMismatch(error: unknown): boolean {
     return error instanceof PageGuardError && error.reason === 'mismatch';
+}
+
+/**
+ * The line that sends her back to `pageId` (spec 2026-10-25, advisor tasks in
+ * Lucid): a project's build or sync refused because another page is showing.
+ * Names the page by its title, or by its id when the document no longer has it.
+ */
+export function otherPageLine(client: EditorClient, pageId: string): string {
+    const page = new DocumentProxy(client).pages.get(pageId);
+    return OTHER_PAGE_LINE(page?.getTitle() || pageId);
 }

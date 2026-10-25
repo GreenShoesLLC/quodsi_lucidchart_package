@@ -24,6 +24,13 @@ import { EnvelopeMessageType, SimulationObjectType } from '@quodsi/lucid-shared'
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelLucid } from '../../src/types/ModelLucid';
 import { makeFakePage } from '../helpers/fakeProxies';
+import { Viewport } from '../__mocks__/lucid-extension-sdk';
+
+// The page showing: the catalog names it (spec 2026-10-25, advisor tasks in Lucid).
+let currentPage: any = null;
+(Viewport.prototype as any).getCurrentPage = function (): any {
+  return currentPage;
+};
 
 const sendMock = jest.fn();
 jest.mock('../../src/core/messaging/index', () => ({
@@ -31,13 +38,18 @@ jest.mock('../../src/core/messaging/index', () => ({
 }));
 
 // Stubs the ModelManager singleton entirely — handleRequestStudioCatalog
-// only ever calls `ModelManager.getInstance().getModelDefinition()`.
+// only calls `getModelDefinition()` (and `getClient()` for the page showing).
 let stubModelDefinition: any;
+let stubDefinitionError: Error | null = null;
 jest.mock('../../src/core/ModelManager', () => ({
   ModelManager: {
     getInstance: () => ({
-      getModelDefinition: async () => stubModelDefinition,
+      getModelDefinition: async () => {
+        if (stubDefinitionError) throw stubDefinitionError;
+        return stubModelDefinition;
+      },
     }),
+    getClient: () => ({}),
   },
 }));
 
@@ -96,6 +108,8 @@ function requestCatalogMessage() {
 describe('SimulationRunHandler.handleRequestStudioCatalog (review R1)', () => {
   beforeEach(() => {
     sendMock.mockClear();
+    stubDefinitionError = null;
+    currentPage = makeFakePageWithTitle('page-1', 'Clinic floor');
   });
 
   it('sends the catalog (does not throw) for a storage-parsed calendar-mode model, with finishDateTime intact', async () => {
@@ -146,5 +160,56 @@ describe('SimulationRunHandler.handleRequestStudioCatalog (review R1)', () => {
         }),
       }),
     );
+  });
+});
+
+const flush = async () => {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+};
+
+function sentCatalog(): any {
+  const calls = sendMock.mock.calls.filter((c) => c[1]?.type === EnvelopeMessageType.STUDIO_CATALOG);
+  expect(calls).toHaveLength(1);
+  return calls[0][1].data.catalog;
+}
+
+// Spec 2026-10-25 (advisor tasks in Lucid): the panel compares the catalog's page with its
+// own, so every request is answered and names the page showing.
+describe('SimulationRunHandler.handleRequestStudioCatalog names the page showing', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stubDefinitionError = null;
+    currentPage = makeFakePageWithTitle('page-1', 'Clinic floor');
+  });
+
+  it('carries page {id, name} with the model', async () => {
+    stubModelDefinition = buildStorageParsedCalendarModel();
+    SimulationRunHandler.handleMessage(requestCatalogMessage());
+    await flush();
+    const catalog = sentCatalog();
+    expect(catalog.page).toEqual({ id: 'page-1', name: 'Clinic floor' });
+    expect(catalog.document).toBeDefined();
+  });
+
+  it('answers a page with no Quodsi model: the page, empty lists, no document', async () => {
+    stubModelDefinition = null;
+    currentPage = makeFakePageWithTitle('page-2', 'Waiting room');
+    SimulationRunHandler.handleMessage(requestCatalogMessage());
+    await flush();
+    const catalog = sentCatalog();
+    expect(catalog.page).toEqual({ id: 'page-2', name: 'Waiting room' });
+    expect(catalog.document).toBeUndefined();
+    expect(catalog.activities).toEqual([]);
+    expect(catalog.generators).toEqual([]);
+    expect(catalog.resources).toEqual([]);
+  });
+
+  it('still answers, with the page, when reading the model throws', async () => {
+    stubDefinitionError = new Error('storage boom');
+    SimulationRunHandler.handleMessage(requestCatalogMessage());
+    await flush();
+    const catalog = sentCatalog();
+    expect(catalog.page).toEqual({ id: 'page-1', name: 'Clinic floor' });
+    expect(catalog.document).toBeUndefined();
   });
 });
