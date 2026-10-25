@@ -433,14 +433,15 @@ async function drawRecords(
 /**
  * True when the model on `page` has no activities, generators or resources
  * (records, not shapes) -- the rule Studio's `modelIsEmpty` and the API's
- * `model_is_empty` use. A page with no Quodsi model at all is empty too:
- * there is nothing on it a draw could clobber.
+ * `model_is_empty` use. A page with no Quodsi model at all is NOT empty
+ * (ruling R7, as drawio's isEmptyModelPage and Studio's modelIsEmpty(undefined)):
+ * a build is drawn in place only on a page that already is a model.
  */
 export async function pageModelIsEmpty(page: PageProxy): Promise<boolean> {
   const modelManager = ModelManager.getInstance();
   if (modelManager.getCurrentPageId() !== page.id) modelManager.setCurrentPage(page);
   const definition = await modelManager.getModelDefinition();
-  if (!definition) return true;
+  if (!definition) return false;
   return definition.activities.getAll().length === 0
     && definition.generators.getAll().length === 0
     && definition.resources.getAll().length === 0;
@@ -549,6 +550,12 @@ export async function drawModelInPage(
   } catch (error) {
     log.error('Error drawing the model on its page', error);
     await undoDraw(page, drawn, snapshot);
+    // Revalidate the restored page, so the panel doesn't keep the partial draw's validation.
+    try {
+      await modelManager.validateModel();
+    } catch (validationError) {
+      log.error('Error revalidating the page after undoing a draw', validationError);
+    }
     throw new ModelPageBuildError(currentStep, error instanceof Error ? error.message : String(error));
   }
 }

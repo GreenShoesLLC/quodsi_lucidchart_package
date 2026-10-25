@@ -466,8 +466,8 @@ export class SimulationRunHandler {
    * (`page: {id, name}`): the view compares it with its own page and refuses
    * to read, sync or draw from another one (spec 2026-10-25, advisor tasks in
    * Lucid). A page with no Quodsi model -- or a model that can't be read --
-   * gets a catalog with empty lists and no document, rather than silence the
-   * view would sit out to its timeout.
+   * gets a catalog with empty lists and no model or document, rather than
+   * silence the view would sit out to its timeout.
    */
   private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
     let page: { id: string; name: string } | undefined;
@@ -481,8 +481,9 @@ export class SimulationRunHandler {
       catalog = null;
     }
     if (!catalog) {
-      // No model to describe: the lists empty and no document (nothing to hash or apply to).
-      const { document: _none, ...noModel } = buildRelayedCatalog({}, { modelId: page?.id ?? '', finishDateTime: null });
+      // No model to describe: the lists empty, and no model block or document (nothing to
+      // hash or apply to; the view tells this apart from a model relayed without a document).
+      const { document: _document, model: _model, ...noModel } = buildRelayedCatalog({}, { modelId: '', finishDateTime: null });
       catalog = noModel;
     }
 

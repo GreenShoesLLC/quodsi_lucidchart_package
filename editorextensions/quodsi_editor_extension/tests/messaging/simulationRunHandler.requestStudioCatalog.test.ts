@@ -191,7 +191,7 @@ describe('SimulationRunHandler.handleRequestStudioCatalog names the page showing
     expect(catalog.document).toBeDefined();
   });
 
-  it('answers a page with no Quodsi model: the page, empty lists, no document', async () => {
+  it('answers a page with no Quodsi model: the page, empty lists, no model or document', async () => {
     stubModelDefinition = null;
     currentPage = makeFakePageWithTitle('page-2', 'Waiting room');
     SimulationRunHandler.handleMessage(requestCatalogMessage());
@@ -199,6 +199,7 @@ describe('SimulationRunHandler.handleRequestStudioCatalog names the page showing
     const catalog = sentCatalog();
     expect(catalog.page).toEqual({ id: 'page-2', name: 'Waiting room' });
     expect(catalog.document).toBeUndefined();
+    expect(catalog.model).toBeUndefined();
     expect(catalog.activities).toEqual([]);
     expect(catalog.generators).toEqual([]);
     expect(catalog.resources).toEqual([]);

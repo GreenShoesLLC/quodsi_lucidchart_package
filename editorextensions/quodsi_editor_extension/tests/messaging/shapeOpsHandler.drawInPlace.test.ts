@@ -157,7 +157,11 @@ beforeEach(() => {
 
   addPageMock = jest.fn(() => {
     const page = makeFakePage('page-new');
-    page.addBlock = jest.fn((def: any) => makeFakeBlock(`new-${Math.random()}`, { box: def.boundingBox }));
+    page.addBlock = jest.fn((def: any) => {
+      const block = makeFakeBlock(`new-${page.allBlocks.size + 1}`, { box: def.boundingBox });
+      page.allBlocks.set(block.id, block);
+      return block;
+    });
     page.addLine = jest.fn(() => ({ id: `new-ln-${Math.random()}` }));
     return page;
   });
@@ -279,7 +283,10 @@ describe('a draw that fails part-way', () => {
     expect(order).toEqual(['removeElement:blk-2', 'delete:blk-2', 'removeElement:blk-1', 'delete:blk-1']);
     expect(readKeys(currentPage)).toEqual(before);
     expect(addPageMock).not.toHaveBeenCalled();
-    expect(modelManagerStub.validateModel).not.toHaveBeenCalled();
+    // Revalidated once, on the restored page, so no partial-draw validation lingers.
+    expect(modelManagerStub.validateModel).toHaveBeenCalledTimes(1);
+    expect(modelManagerStub.invalidateModelCache.mock.invocationCallOrder[0])
+      .toBeLessThan(modelManagerStub.validateModel.mock.invocationCallOrder[0]);
     const data = reply();
     expect(data.success).toBe(false);
     expect(data.errorMessage).toEqual(expect.stringContaining('a2'));
@@ -298,6 +305,31 @@ describe('a draw that fails part-way', () => {
     expect(order.filter((o) => o.startsWith('delete:'))).toHaveLength(5);
     expect(readKeys(currentPage)).toEqual(before);
     expect(reply().success).toBe(false);
+  });
+
+  it('a merge write fails (states): the run settings and lists come back as they were, nothing drawn', async () => {
+    const before = readKeys(currentPage);
+    modelManagerStub.updateStates.mockImplementationOnce(async (states: any, page: any) => {
+      storage.setStates(page, states);
+      throw new Error('states write failed');
+    });
+
+    const handled = await (ShapeOpsHandler as any).handleModelCreatePage(
+      msg({ document: buildDocument(), basedOnPageId: 'page-1', requireInPlace: true }),
+    );
+
+    expect(handled).toBe(false);
+    // The run settings and resources had already been written before the states failed.
+    expect(modelManagerStub.saveElementData).toHaveBeenCalled();
+    expect(modelManagerStub.updateModelRoot).toHaveBeenCalled();
+    expect(readKeys(currentPage)).toEqual(before);
+    expect(JSON.parse(currentPage.shapeData.get('q_data'))).toEqual(JSON.parse(before.q_data!));
+    expect(currentPage.addBlock).not.toHaveBeenCalled();
+    expect(currentPage.addLine).not.toHaveBeenCalled();
+    expect(Array.from(currentPage.allBlocks.keys())).toEqual(['note-1']);
+    const data = reply();
+    expect(data.success).toBe(false);
+    expect(data.errorMessage).toEqual(expect.stringContaining('states'));
   });
 });
 
@@ -321,6 +353,29 @@ describe('MODEL_CREATE_PAGE that cannot draw on its own page', () => {
     expect(currentPage.addBlock).not.toHaveBeenCalled();
     expect(addPageMock).not.toHaveBeenCalled();
     expect(modelManagerStub.saveElementData).not.toHaveBeenCalled();
+  });
+
+  // Ruling R7: in place only on a page that already is a Quodsi model.
+  it('requireInPlace on a page with no Quodsi model: refuses with NOT_EMPTY_LINE, draws nothing', async () => {
+    modelCounts = null;
+    await (ShapeOpsHandler as any).handleModelCreatePage(
+      msg({ document: buildDocument(), basedOnPageId: 'page-1', requireInPlace: true }),
+    );
+    expect(reply()).toEqual({ success: false, errorMessage: NOT_EMPTY_LINE });
+    expect(currentPage.addBlock).not.toHaveBeenCalled();
+    expect(addPageMock).not.toHaveBeenCalled();
+    expect(modelManagerStub.saveElementData).not.toHaveBeenCalled();
+  });
+
+  it('without requireInPlace, a page with no Quodsi model gets a new page, nothing drawn on it', async () => {
+    modelCounts = null;
+    const before = readKeys(currentPage);
+    await (ShapeOpsHandler as any).handleModelCreatePage(msg({ document: buildDocument(), basedOnPageId: 'page-1' }));
+    expect(addPageMock).toHaveBeenCalledWith({ title: 'Clinic' });
+    expect(currentPage.addBlock).not.toHaveBeenCalled();
+    expect(currentPage.addLine).not.toHaveBeenCalled();
+    expect(readKeys(currentPage)).toEqual(before);
+    expect(reply()).toMatchObject({ success: true, pageId: 'page-new' });
   });
 
   it('a page with only a resource is not empty', async () => {
