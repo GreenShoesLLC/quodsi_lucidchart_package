@@ -56,4 +56,12 @@ describe('pushModelDefinitionSnapshot', () => {
     ).rejects.toThrow(/not the page showing/);
     expect(performDataActionMock).not.toHaveBeenCalled();
   });
+
+  it.each([400, 500])('rejects when Lucid reports the push failed (HTTP %i)', async (status) => {
+    currentPage = { id: 'pg-1' };
+    performDataActionMock.mockResolvedValue({ status });
+    await expect(
+      pushModelDefinitionSnapshot({} as any, { documentId: 'doc-1', pageId: 'pg-1', modelName: 'Clinic' }),
+    ).rejects.toThrow(`Model snapshot push failed (HTTP ${status})`);
+  });
 });

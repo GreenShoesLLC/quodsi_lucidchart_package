@@ -87,7 +87,7 @@ export async function pushModelDefinitionSnapshot(
   // extension is not scenario-authoritative (scenarios live in the DB / embed),
   // so it must not send a scenario list: a replace-all with an empty list would
   // soft-delete + purge the embed's study-less scenarios (data loss).
-  await LucidDataActionUtility.performDataAction(client, {
+  const pushResult = (await LucidDataActionUtility.performDataAction(client, {
     dataConnectorName: 'quodsi_api_data_connector',
     actionName: 'UpsertModel',
     actionData: {
@@ -99,5 +99,10 @@ export async function pushModelDefinitionSnapshot(
       ...(modelDiagramSvg !== undefined ? { modelDiagramSvg } : {}),
     },
     asynchronous: false,
-  });
+  })) as { status?: number } | undefined;
+  // A 4xx/5xx comes back as a value, not a throw (as in upsertModel): a sync whose
+  // snapshot didn't land has failed, since runs read the snapshot (spec call 4).
+  if (pushResult?.status && pushResult.status >= 400) {
+    throw new Error(`Model snapshot push failed (HTTP ${pushResult.status})`);
+  }
 }

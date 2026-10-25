@@ -53,11 +53,14 @@ export function StudiesModalView() {
   const [syncStatus, setSyncStatus] = useState<EmbedSyncStatus>('pending')
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const scenariosSource = useMemo(() => ({ kind: 'lucid' as const, host }), [host])
-  // After an Apply or before Check: a fresh sync, with the surface's run guard following it.
+  // After an Apply or before Check: a fresh sync of this modal's own page (the one the
+  // Workspace's page check names), with the surface's run guard following it. A URL that
+  // doesn't name its page syncs the last Studies open's.
   const syncModel = useCallback(() => {
     setSyncStatus('pending')
-    return syncModelOnce(host, {}, (r) => setSyncStatus(r.synced ? 'done' : 'failed'))
-  }, [host])
+    const page = documentId && pageId ? { documentId, pageId } : {}
+    return syncModelOnce(host, page, (r) => setSyncStatus(r.synced ? 'done' : 'failed'))
+  }, [host, documentId, pageId])
 
   useEffect(() => {
     host.connect()
