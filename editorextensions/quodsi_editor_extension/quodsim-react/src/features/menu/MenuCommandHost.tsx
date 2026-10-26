@@ -3,7 +3,7 @@ import { EnvelopeMessageType, type EnvelopeBase, type MenuCommandData } from "@q
 import { useMessaging } from "../../messaging";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
-import { RemoveModelModal } from "../shared/RemoveModelModal";
+import { RemoveModelModal } from "quodsi_studio/platforms/shared";
 
 /**
  * Carries out the extension "Quodsi" menu's panel items (MENU_COMMAND, see
