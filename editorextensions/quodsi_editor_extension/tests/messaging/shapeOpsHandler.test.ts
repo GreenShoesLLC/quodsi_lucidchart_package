@@ -119,6 +119,7 @@ beforeEach(() => {
     const newBlock = {
       id: 'blk-9',
       textAreas: new Map<string, string>(),
+      textStyles: { set: jest.fn() },
       getBoundingBox: () => def.boundingBox,
       setBoundingBox: jest.fn(),
       delete: jest.fn(),
@@ -194,11 +195,13 @@ describe('SHAPE_CREATE', () => {
     // round(1.75*80) = 140 -> x = 100 + 80 + 140 = 320
     expect(addBlockMock).toHaveBeenCalledWith({
       className: 'ProcessBlock',
-      boundingBox: { x: 320, y: 100, w: 80, h: 80 },
+      boundingBox: { x: 320, y: 100, w: 120, h: 120 },
     });
 
     const createdBlock = allBlocksMap.get('blk-9');
     expect(createdBlock.textAreas.get('Text')).toBe('Triage');
+    // Drawn at the same text size as a built model's blocks (lucidDrawSizing).
+    expect(createdBlock.textStyles.set).toHaveBeenCalledWith('Text', { size: 10 });
 
     expect(createPlatformObjectMock).toHaveBeenCalledWith(createdBlock, SimulationObjectType.Activity, true);
 
@@ -339,7 +342,7 @@ describe('SHAPE_CREATE', () => {
     // pointer block ('blk-r1'), not the Advisor's 'r1' record id.
     expect(addBlockMock).toHaveBeenCalledWith({
       className: 'ProcessBlock',
-      boundingBox: { x: 720, y: 200, w: 80, h: 80 },
+      boundingBox: { x: 720, y: 200, w: 120, h: 120 },
     });
   });
 

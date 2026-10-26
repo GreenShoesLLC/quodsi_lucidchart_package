@@ -17,11 +17,16 @@ jest.mock('../../src/core/messaging/index', () => ({
   router: { send: sendMock },
 }));
 
+const mockIsQuodsiModel = jest.fn((_page: unknown) => false);
 jest.mock('../../src/core/ModelManager', () => ({
   ModelManager: {
-    getInstance: () => ({}),
+    getInstance: () => ({ isQuodsiModel: mockIsQuodsiModel }),
     getClient: () => ({}),
   },
+}));
+
+jest.mock('../../src/core/messaging/pageGuard', () => ({
+  otherPageLine: (_client: unknown, pageId: string) => `Go back to ${pageId}`,
 }));
 
 jest.mock('../../src/core/messaging/handlers/selection', () => ({
@@ -62,6 +67,7 @@ let refreshSpy: jest.SpyInstance;
 
 beforeEach(() => {
   sendMock.mockClear();
+  mockIsQuodsiModel.mockReset().mockReturnValue(false);
   analyzeMock.mockReset();
   convertMock.mockReset();
   currentPage = {
@@ -237,5 +243,39 @@ describe('APPLY_SHAPE_CHANGES resetExisting', () => {
     convertMock.mockResolvedValue({ success: true });
     await apply({});
     expect(convertMock.mock.calls[0][3]).toEqual({ resetExisting: false });
+  });
+});
+
+describe('AUTO_CONVERT_PAGE from the Advisor modal (onlyIfUnconverted)', () => {
+  const fromAdvisor = (data: object) =>
+    ({ ...envelope(EnvelopeMessageType.AUTO_CONVERT_PAGE, 'adv-1', data), source: 'studio-embed-iframe' });
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it('leaves a page that is already a model alone, replying on the modal channel', async () => {
+    mockIsQuodsiModel.mockReturnValue(true);
+    DiagramMappingRelayHandler.handleMessage(fromAdvisor({ pageId: 'page-1', onlyIfUnconverted: true }));
+    await flush();
+    expect(convertMock).not.toHaveBeenCalled();
+    expect(refreshSpy).not.toHaveBeenCalled();
+    const [channel, reply] = sendMock.mock.calls[0];
+    expect(channel).toBe('studio-embed');
+    expect(reply).toMatchObject({ id: 'adv-1', type: EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, data: { success: true } });
+  });
+
+  it('refuses a page other than the one showing, naming it', async () => {
+    DiagramMappingRelayHandler.handleMessage(fromAdvisor({ pageId: 'page-9', onlyIfUnconverted: true }));
+    await flush();
+    expect(convertMock).not.toHaveBeenCalled();
+    expect(sendMock.mock.calls[0][1].data).toEqual({ success: false, error: 'Go back to page-9' });
+  });
+
+  it('converts an unconverted page', async () => {
+    analyzeMock.mockReturnValue({ pageId: 'page-1', mappings: [] });
+    convertMock.mockResolvedValue({ success: true, modelId: 'page-1', elementCount: { activities: 0, generators: 0, resources: 0, connectors: 0 } });
+    DiagramMappingRelayHandler.handleMessage(fromAdvisor({ pageId: 'page-1', onlyIfUnconverted: true }));
+    await flush();
+    expect(convertMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls[0][0]).toBe('studio-embed');
+    expect(sendMock.mock.calls[0][1].data.success).toBe(true);
   });
 });

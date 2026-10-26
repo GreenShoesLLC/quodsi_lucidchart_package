@@ -6,7 +6,7 @@
 // matching what ShapeOpsHandler will hand them from a real BlockProxy /
 // PageProxy at runtime.
 
-import { placeNear, placeAtFlowEnd, Box } from '../../src/core/messaging/handlers/shapePlacement';
+import { placeNear, placeAtFlowEnd, Box, DEFAULT_SHAPE_SIZE } from '../../src/core/messaging/handlers/shapePlacement';
 
 function block(id: string, box: Box) {
   return { id, getBoundingBox: () => box };
@@ -25,7 +25,7 @@ describe('placeNear', () => {
     const result = placeNear(p, anchor, 'right');
 
     // round(1.75 * 80) = 140
-    expect(result).toEqual({ x: 100 + 80 + 140, y: 200, w: 80, h: 80 });
+    expect(result).toEqual({ x: 100 + 80 + 140, y: 200, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('places to the left, offset round(1.75 * anchor.w)', () => {
@@ -34,7 +34,7 @@ describe('placeNear', () => {
 
     const result = placeNear(p, anchor, 'left');
 
-    expect(result).toEqual({ x: 300 - 140 - 80, y: 200, w: 80, h: 80 });
+    expect(result).toEqual({ x: 300 - 140 - DEFAULT_SHAPE_SIZE.w, y: 200, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('places below, offset round(1.75 * anchor.w)', () => {
@@ -43,7 +43,7 @@ describe('placeNear', () => {
 
     const result = placeNear(p, anchor, 'below');
 
-    expect(result).toEqual({ x: 100, y: 200 + 60 + 140, w: 80, h: 80 });
+    expect(result).toEqual({ x: 100, y: 200 + 60 + 140, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('places above, offset round(1.75 * anchor.w)', () => {
@@ -52,7 +52,7 @@ describe('placeNear', () => {
 
     const result = placeNear(p, anchor, 'above');
 
-    expect(result).toEqual({ x: 100, y: 400 - 140 - 80, w: 80, h: 80 });
+    expect(result).toEqual({ x: 100, y: 400 - 140 - DEFAULT_SHAPE_SIZE.h, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('rounds a fractional offset to the nearest integer', () => {
@@ -76,7 +76,7 @@ describe('placeNear', () => {
     const result = placeNear(p, anchor, 'right');
 
     // Nudged down by anchor.h (60) once, clearing the blocker.
-    expect(result).toEqual({ x: 220, y: 60, w: 80, h: 80 });
+    expect(result).toEqual({ x: 220, y: 60, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('keeps nudging down through multiple stacked overlaps', () => {
@@ -87,7 +87,7 @@ describe('placeNear', () => {
 
     const result = placeNear(p, anchor, 'right');
 
-    expect(result).toEqual({ x: 220, y: 120, w: 80, h: 80 });
+    expect(result).toEqual({ x: 220, y: 120, ...DEFAULT_SHAPE_SIZE });
   });
 });
 
@@ -120,14 +120,14 @@ describe('placeAtFlowEnd', () => {
     const result = await placeAtFlowEnd(p, modelManager);
 
     // rightmost is act2: x=400,w=100 -> right edge 500; offset round(1.75*100)=175
-    expect(result).toEqual({ x: 500 + 175, y: 500, w: 80, h: 80 });
+    expect(result).toEqual({ x: 500 + 175, y: 500, ...DEFAULT_SHAPE_SIZE });
   });
 
-  it('falls back to {x:0,y:0,w:80,h:80} when there is no model yet', async () => {
+  it('falls back to {x:0,y:0} at the default size when there is no model yet', async () => {
     const p = page();
     const modelManager = { getModelDefinition: async () => null };
 
-    expect(await placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, w: 80, h: 80 });
+    expect(await placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('falls back to the default box when no block on the page is part of the flow', async () => {
@@ -135,7 +135,7 @@ describe('placeAtFlowEnd', () => {
     const p = page(decoy);
     const modelManager = modelDefStub(['a1'], []);
 
-    expect(await placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, w: 80, h: 80 });
+    expect(await placeAtFlowEnd(p, modelManager)).toEqual({ x: 0, y: 0, ...DEFAULT_SHAPE_SIZE });
   });
 
   it('falls back to the rightmost flow block\'s own row when the model has no generator', async () => {

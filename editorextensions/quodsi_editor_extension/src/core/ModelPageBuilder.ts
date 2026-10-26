@@ -22,6 +22,7 @@ import {
 import { Viewport, DocumentProxy, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from './ModelManager';
 import { MODEL_SETTINGS_KEYS } from './modelSettingsKeys';
+import { DRAWN_BLOCK_SIZE, labelBlock } from './lucidDrawSizing';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 
 const log = getLogger('ModelPageBuilder');
@@ -107,8 +108,7 @@ export async function createBlockRecord(
 ): Promise<{ id: string; block: any; record: JsonObject }> {
   const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
 
-  const name = (advisorElement as any).name ?? `New ${shapeType}`;
-  newBlock.textAreas.set('Text', name);
+  await labelBlock(newBlock, (advisorElement as any).name ?? `New ${shapeType}`);
 
   const platformObject = factory.createPlatformObject(newBlock, shapeSimType(shapeType), true);
   const record = {
@@ -147,8 +147,7 @@ export async function createResourceBlockRecord(
 ): Promise<{ id: string; block: any }> {
   const newBlock = page.addBlock({ className: 'ProcessBlock', boundingBox: box });
 
-  const name = (advisorElement as any).name ?? 'New Resource';
-  newBlock.textAreas.set('Text', name);
+  await labelBlock(newBlock, (advisorElement as any).name ?? 'New Resource');
 
   modelManager.setElementData(
     newBlock as any,
@@ -206,7 +205,7 @@ export async function createLineRecord(
  */
 export async function buildModelPage(
   document: Record<string, any>,
-  opts: { title: string; textSize?: number }
+  opts: { title: string }
 ): Promise<{ page: PageProxy; idMap: Record<string, string> }> {
   const client = ModelManager.getClient();
   const modelManager = ModelManager.getInstance();
@@ -266,7 +265,6 @@ export async function buildModelPage(
     }
 
     const { idMap } = await drawRecords(page, document, {
-      textSize: opts.textSize,
       onStep: (step) => { currentStep = step; },
     });
 
@@ -315,7 +313,6 @@ async function drawRecords(
   page: any,
   document: Record<string, any>,
   opts: {
-    textSize?: number;
     offset?: { dx: number; dy: number };
     drawn?: DrawnItems;
     onStep: (step: string) => void;
@@ -337,12 +334,9 @@ async function drawRecords(
   const blockBox = (record: Record<string, any>) => ({
     x: (Number(record.x) || 0) + dx,
     y: (Number(record.y) || 0) + dy,
-    w: Number(record.width) || 80,
-    h: Number(record.height) || 80,
+    w: Number(record.width) || DRAWN_BLOCK_SIZE.w,
+    h: Number(record.height) || DRAWN_BLOCK_SIZE.h,
   });
-  const styleText = async (block: any) => {
-    if (opts.textSize !== undefined) await block.textStyles.set('Text', { size: opts.textSize });
-  };
   // The record helpers only add blocks and lines; this stand-in for the page
   // records each one the moment Lucid hands it back, so a failure later in the
   // same record still undoes it.
@@ -368,7 +362,6 @@ async function drawRecords(
   for (const record of generators) {
     opts.onStep(String(record.id));
     const created = await createBlockRecord(recordingPage, modelManager, factory, 'Generator', blockBox(record), stripGeometry(record));
-    await styleText(created.block);
     idMap[String(record.id)] = created.id;
   }
 
@@ -376,7 +369,6 @@ async function drawRecords(
   for (const record of activities) {
     opts.onStep(String(record.id));
     const created = await createBlockRecord(recordingPage, modelManager, factory, 'Activity', blockBox(record), stripGeometry(record));
-    await styleText(created.block);
     idMap[String(record.id)] = created.id;
   }
 
@@ -384,7 +376,6 @@ async function drawRecords(
   for (const record of resources) {
     opts.onStep(String(record.id));
     const created = await createResourceBlockRecord(recordingPage, modelManager, blockBox(record), stripGeometry(record));
-    await styleText(created.block);
     idMap[String(record.id)] = created.id;
   }
 

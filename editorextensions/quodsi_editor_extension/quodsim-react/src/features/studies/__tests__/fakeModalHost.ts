@@ -40,6 +40,7 @@ export function makeFakeHost(ports: { send: (type: EnvelopeMessageType, data?: u
     closeModal: vi.fn(() => ports.send(EnvelopeMessageType.CLOSE_MODAL)),
     requestToken: vi.fn(() => token.promise),
     requestModelSync: vi.fn((onResult: (r: SyncResult) => void) => sync.subscribe(onResult)),
+    convertPageIfNeeded: vi.fn((_page: { documentId: string; pageId: string }) => Promise.resolve()),
   }
 }
 export type FakeHost = ReturnType<typeof makeFakeHost>

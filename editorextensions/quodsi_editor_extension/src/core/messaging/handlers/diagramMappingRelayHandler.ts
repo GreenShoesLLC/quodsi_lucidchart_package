@@ -18,6 +18,7 @@ import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyze
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
 import { getLogger } from '@quodsi/lucid-shared';
 import { refreshPageContext } from './pageContextRefresh';
+import { otherPageLine } from '../pageGuard';
 
 interface MappingChangeLike {
   elementId: string;
@@ -150,12 +151,14 @@ export class DiagramMappingRelayHandler {
    * Determine which panel channel to send the response to. The inline
    * Diagram Mapping modal's own ANALYZE_PAGE/APPLY_SHAPE_CHANGES come back
    * on the 'diagram-mapping' channel; PAGE_COUNTS_REQUEST/AUTO_CONVERT_PAGE
-   * from the model panel's blank-slate card come back on 'model'. Mirrors
+   * from the model panel's blank-slate card come back on 'model', and the
+   * Advisor modal's AUTO_CONVERT_PAGE on 'studio-embed'. Mirrors
    * SimulationRunHandler.getResponseChannel.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
     if (msg.source === 'diagram-mapping-iframe') return 'diagram-mapping';
+    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     return 'model';
   }
 
@@ -292,6 +295,11 @@ export class DiagramMappingRelayHandler {
    * registered/snapshotted in quodsi_api. A failure replies with the error
    * instead, so the card can show it with Retry (spec 2026-09-15 section 1).
    *
+   * `onlyIfUnconverted` (the Advisor modal's Start a project, 2026-10-26): a page that
+   * is already a model replies success with zero counts and is left alone, and a page
+   * other than the one showing is refused, naming it -- the conversion works on the page
+   * showing, not the one the modal was opened for.
+   *
    * Recovered from the deleted ConversionPreviewHandler.handleApplyConversion
    * (git ce884d4).
    */
@@ -305,6 +313,18 @@ export class DiagramMappingRelayHandler {
       const page = viewport.getCurrentPage();
 
       if (!page) throw new Error('No current page available');
+
+      const req = (msg.data ?? {}) as { pageId?: string; onlyIfUnconverted?: boolean };
+      if (req.onlyIfUnconverted) {
+        if (req.pageId && page.id !== req.pageId) throw new Error(otherPageLine(client, req.pageId));
+        if (modelManager.isQuodsiModel(page)) {
+          DiagramMappingRelayHandler.sendAutoConvertResult(msg, {
+            success: true,
+            result: { activities: 0, generators: 0, resources: 0, entities: 0, connectors: 0, skipped: 0 },
+          });
+          return;
+        }
+      }
 
       // Build services the same way handleApply does
       const storageAdapter = new StorageAdapter();
