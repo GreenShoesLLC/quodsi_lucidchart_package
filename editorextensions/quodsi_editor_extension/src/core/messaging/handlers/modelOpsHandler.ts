@@ -11,6 +11,7 @@ const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(
 import { getLogger } from '@quodsi/lucid-shared';
 import { SelectionHandler } from './selection';
 import { AnalyticsHandler } from './analyticsHandler';
+import { SimulationRunHandler } from './simulationRunHandler';
 
 /**
  * Handler for model operations (validate, convert, remove, results page)
@@ -364,6 +365,12 @@ export class ModelOpsHandler {
       // Perform the actual model removal
       const modelManager = ModelManager.getInstance();
       modelManager.removeModelFromPage(currentPage);
+
+      // The server model goes too (RemoveModel below): forget its id, and close an Advisor
+      // or Studies window still showing it (smoke 2026-10-26: the Advisor kept the deleted
+      // model's Simulation Project). Duck-typed: importing RoutingModal here is a cycle.
+      SimulationRunHandler.forgetModel(new DocumentProxy(client).id, currentPage.id);
+      (router.retrieveFromGlobalRegistry('studio-embed') as { close?: () => void } | null)?.close?.();
       
       ModelOpsHandler.logger.debug('Model removal successful');
       

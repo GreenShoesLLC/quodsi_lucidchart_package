@@ -147,3 +147,22 @@ describe('OPEN_ADVISOR_MODAL at project focus', () => {
     expect((studies.mock.calls[0][0] as any).data).toMatchObject({ documentId: 'd1', pageId: 'p1', tab: 'project' });
   });
 });
+
+// Remove Quodsi Model deletes the server model; the page's cached id must go with it, or the
+// next Advisor open reads the deleted model's project (smoke 2026-10-26).
+describe('forgetModel', () => {
+  const cache = (SimulationRunHandler as any).scenarioModelIdCache as Map<string, string>;
+  afterEach(() => { cache.clear(); (SimulationRunHandler as any).studiesSync = null; });
+
+  it("drops that page's cached id and pending sync, leaving other pages alone", () => {
+    cache.set('d1:p1', 'm-1');
+    cache.set('d1:p2', 'm-2');
+    (SimulationRunHandler as any).studiesSync = { promise: Promise.resolve('m-1'), documentId: 'd1', pageId: 'p1' };
+    SimulationRunHandler.forgetModel('d1', 'p1');
+    expect(cache.has('d1:p1')).toBe(false);
+    expect(cache.get('d1:p2')).toBe('m-2');
+    expect((SimulationRunHandler as any).studiesSync).toBeNull();
+    SimulationRunHandler.handleMessage(openMessage({ focusId: '', focusType: 'Model', documentId: 'd1', pageId: 'p1' }));
+    expect(queryOf(shown[shown.length - 1]).get('modelId')).toBeNull();
+  });
+});

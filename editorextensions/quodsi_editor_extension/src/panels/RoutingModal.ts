@@ -66,6 +66,12 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      * hide() stays consistent. When the flag is already true this is exactly
      * what hide() does.
      */
+    /** Closes this modal from the host (Remove Quodsi Model closes an Advisor or
+     *  Studies window whose model it just deleted), as its own Close does. */
+    public close(): void {
+        this.hideRegardless();
+    }
+
     private hideRegardless(): void {
         const sdk = this as unknown as { visible?: boolean };
         if (sdk.visible) {

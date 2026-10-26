@@ -52,6 +52,19 @@ export class SimulationRunHandler {
   private static openStatusModal: StatusModal | null = null;
 
   /**
+   * Forgets a page's server model id once Remove Quodsi Model has deleted that model, so
+   * the next Advisor or Studies open doesn't carry the deleted id (smoke 2026-10-26: the
+   * Advisor kept showing the deleted model's Simulation Project).
+   */
+  public static forgetModel(documentId: string, pageId: string): void {
+    SimulationRunHandler.scenarioModelIdCache.delete(`${documentId}:${pageId}`);
+    const sync = SimulationRunHandler.studiesSync;
+    if (sync && sync.documentId === documentId && sync.pageId === pageId) {
+      SimulationRunHandler.studiesSync = null;
+    }
+  }
+
+  /**
    * Handle messages related to simulation run operations
    *
    * @param msg The received message
