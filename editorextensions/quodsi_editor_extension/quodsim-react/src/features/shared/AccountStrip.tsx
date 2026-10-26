@@ -18,7 +18,7 @@ import {
   trialDaysRemaining,
 } from "../../messaging/state/entitlementsSlice";
 import { getLogger } from "@quodsi/lucid-shared";
-import { copyTextToClipboard } from "quodsi_studio/platforms/shared";
+import { BetaBadge, copyTextToClipboard } from "quodsi_studio/platforms/shared";
 
 const log = getLogger("AccountStrip");
 
@@ -462,6 +462,7 @@ const SettingsButton: React.FC = () => {
 export const AccountStrip: React.FC = () => (
   <div className="flex items-center justify-between gap-2 p-2 bg-gray-50 border-b border-gray-200 flex-shrink-0">
     <div className="flex items-center gap-2 min-w-0">
+      <BetaBadge />
       <PlanBadge />
     </div>
     <div className="flex items-center gap-1 flex-shrink-0">
