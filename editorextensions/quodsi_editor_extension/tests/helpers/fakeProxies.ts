@@ -37,6 +37,7 @@ export function makeFakeBlock(id: string, opts: FakeBlockOptions = {}) {
     getBoundingBox: () => ({ ...box }),
     getPrimaryLanes: () => lanes,
     textAreas: new Map<string, string>(opts.text !== undefined ? [['Text', opts.text]] : []),
+    textStyles: { set: jest.fn() },
     page: null as any,
     getPage: () => block.page,
   };
@@ -66,6 +67,7 @@ export function makeFakeLine(id: string, opts: FakeLineOptions = {}) {
     getEndpoint1: () => endpoint(opts.endpoint1),
     getEndpoint2: () => endpoint(opts.endpoint2),
     textAreas: new Map<string, string>(opts.text !== undefined ? [['Text', opts.text]] : []),
+    textStyles: { set: jest.fn() },
     page: null as any,
     getPage: () => line.page,
   };

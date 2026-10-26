@@ -40,6 +40,7 @@ import {
 import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
 import { placeNear, placeAtFlowEnd, ShapeSide } from './shapePlacement';
+import { sizeForLucid } from '../../lucidDrawSizing';
 
 const log = getLogger('ShapeOpsHandler');
 
@@ -471,9 +472,13 @@ export class ShapeOpsHandler {
         return refuse(onOwnPage ? NOT_EMPTY_LINE : otherPageLine(client, data.basedOnPageId));
       }
 
+      // Sized as the onboarding example is: the shared layout's 80px nodes overflow
+      // at Lucid's text size (Daniel's smoke, 2026-10-26: "Wait for a table and seat
+      // guests" ran far out of its block).
+      const drawable = sizeForLucid(document);
       const { page, idMap } = inPlace
-        ? await drawModelInPage(current!, document)
-        : await buildModelPage(document, { title: String(document.name ?? 'Generated model') });
+        ? await drawModelInPage(current!, drawable)
+        : await buildModelPage(drawable, { title: String(document.name ?? 'Generated model') });
 
       router.send(channel, {
         id: msg.id,

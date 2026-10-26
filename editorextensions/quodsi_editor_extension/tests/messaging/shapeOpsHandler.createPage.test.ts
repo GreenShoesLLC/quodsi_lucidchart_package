@@ -144,6 +144,7 @@ beforeEach(() => {
     const block = {
       id: `blk-${blockCounter}`,
       textAreas: new Map<string, string>(),
+      textStyles: { set: jest.fn() },
       getBoundingBox: () => def.boundingBox,
       setBoundingBox: jest.fn(),
       delete: jest.fn(),
@@ -280,12 +281,14 @@ describe('MODEL_CREATE_PAGE', () => {
     expect(clientStub.loadBlockClasses).toHaveBeenCalledTimes(1);
     expect(clientStub.loadBlockClasses).toHaveBeenCalledWith(['ProcessBlock']);
 
-    // 4 blocks: generator, 2 activities, 1 resource -- in that order, each an
-    // 80x80 box at the record's own x/y.
-    expect(addBlockMock).toHaveBeenNthCalledWith(1, { className: 'ProcessBlock', boundingBox: { x: 100, y: 100, w: 80, h: 80 } });
-    expect(addBlockMock).toHaveBeenNthCalledWith(2, { className: 'ProcessBlock', boundingBox: { x: 300, y: 100, w: 80, h: 80 } });
-    expect(addBlockMock).toHaveBeenNthCalledWith(3, { className: 'ProcessBlock', boundingBox: { x: 500, y: 100, w: 80, h: 80 } });
-    expect(addBlockMock).toHaveBeenNthCalledWith(4, { className: 'ProcessBlock', boundingBox: { x: 700, y: 100, w: 80, h: 80 } });
+    // 4 blocks: generator, 2 activities, 1 resource -- in that order, the
+    // layout's 80x80 node at the record's own x/y, all scaled by LAYOUT_SCALE
+    // (1.5) and drawn at DRAW_TEXT_SIZE, as the onboarding example is.
+    expect(addBlockMock).toHaveBeenNthCalledWith(1, { className: 'ProcessBlock', boundingBox: { x: 150, y: 150, w: 120, h: 120 } });
+    expect(addBlockMock).toHaveBeenNthCalledWith(2, { className: 'ProcessBlock', boundingBox: { x: 450, y: 150, w: 120, h: 120 } });
+    expect(addBlockMock).toHaveBeenNthCalledWith(3, { className: 'ProcessBlock', boundingBox: { x: 750, y: 150, w: 120, h: 120 } });
+    expect(addBlockMock).toHaveBeenNthCalledWith(4, { className: 'ProcessBlock', boundingBox: { x: 1050, y: 150, w: 120, h: 120 } });
+    expect(newPageBlocks.get('blk-1').textStyles.set).toHaveBeenCalledWith('Text', { size: 10 });
 
     expect(newPageBlocks.get('blk-1').textAreas.get('Text')).toBe('Arrivals');
     expect(newPageBlocks.get('blk-2').textAreas.get('Text')).toBe('Triage');
@@ -390,16 +393,16 @@ describe('MODEL_CREATE_PAGE', () => {
       'updateStates',
       'updateEntities',
       'loadBlockClasses',
-      'addBlock:100,100',
+      'addBlock:150,150',
       'registerElement:blk-1',
       'updateElementData:blk-1',
-      'addBlock:300,100',
+      'addBlock:450,150',
       'registerElement:blk-2',
       'updateElementData:blk-2',
-      'addBlock:500,100',
+      'addBlock:750,150',
       'registerElement:blk-3',
       'updateElementData:blk-3',
-      'addBlock:700,100',
+      'addBlock:1050,150',
       'setElementData:blk-4',
       'addLine',
       'registerElement:ln-1',

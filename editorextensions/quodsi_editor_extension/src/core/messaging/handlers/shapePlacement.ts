@@ -1,5 +1,7 @@
 // editorextensions/quodsi_editor_extension/src/core/messaging/handlers/shapePlacement.ts
 //
+import { DRAWN_BLOCK_SIZE } from '../../lucidDrawSizing';
+
 // Pure placement helpers for ShapeOpsHandler's SHAPE_CREATE. No SDK types are
 // imported here on purpose -- everything is expressed over plain boxes
 // (`{x, y, w, h}`, exactly what `getBoundingBox()` returns) and duck-typed
@@ -59,10 +61,12 @@ export interface PlacementModelManagerLike {
 
 /**
  * Default size for a newly created shape, in the absence of any other size
- * to copy. Matches the fallback box `placeAtFlowEnd` returns when there is
- * nothing on the page to place relative to.
+ * to copy: the size a built model's blocks are drawn at (lucidDrawSizing), so
+ * an Advisor-added shape matches them and its name fits. Matches the fallback
+ * box `placeAtFlowEnd` returns when there is nothing on the page to place
+ * relative to.
  */
-export const DEFAULT_SHAPE_SIZE = { w: 80, h: 80 };
+export const DEFAULT_SHAPE_SIZE = DRAWN_BLOCK_SIZE;
 
 function boxesOverlap(a: Box, b: Box): boolean {
   return (
@@ -131,7 +135,7 @@ export function placeNear(
  * activities / generators list managers, not by shape class, since a page
  * can hold blocks the model doesn't track.
  *
- * Falls back to `{x:0, y:0, w:80, h:80}` when there is no model yet, or no
+ * Falls back to `{x:0, y:0, ...DEFAULT_SHAPE_SIZE}` when there is no model yet, or no
  * block on the page is currently part of the flow.
  */
 export async function placeAtFlowEnd(

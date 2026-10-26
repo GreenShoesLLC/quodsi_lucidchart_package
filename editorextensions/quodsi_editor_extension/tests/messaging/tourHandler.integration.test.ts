@@ -63,7 +63,8 @@ import { LucidElementFactory } from '../../src/services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../src/services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../src/services/conversion/LucidPageConversionService';
 import { buildAutoMappings } from '../../src/core/messaging/handlers/diagramMappingRelayHandler';
-import { TourHandler, EXAMPLE_TEXT_SIZE } from '../../src/core/messaging/handlers/tourHandler';
+import { TourHandler } from '../../src/core/messaging/handlers/tourHandler';
+import { DRAW_TEXT_SIZE } from '../../src/core/lucidDrawSizing';
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r));
@@ -172,7 +173,7 @@ it('builds the example at drawio sizes, centres aligned, with small text', async
   const page = documentPagesForTests.find((p) => p.id === result![1].data.pageId);
   const box = (name: string) => builtBoxes.get(blockNamed(page, name).id)!;
 
-  // drawio's 80x80 / 120x60 layout, scaled by EXAMPLE_LAYOUT_SCALE (1.5) so
+  // drawio's 80x80 / 120x60 layout, scaled by LAYOUT_SCALE (1.5) so
   // the names fit their blocks in Lucid (smoke 2, 2026-10-19).
   expect(box('Passengers Arrive')).toMatchObject({ x: 135, y: 495, w: 120, h: 120 });
   expect(box('ID Check')).toMatchObject({ w: 180, h: 90 });
@@ -181,6 +182,6 @@ it('builds the example at drawio sizes, centres aligned, with small text', async
     expect(centreY(box(name))).toBe(centreY(box('Passengers Arrive')));
   }
   for (const [, block] of page.allBlocks) {
-    expect(block.textStyles.set).toHaveBeenCalledWith('Text', { size: EXAMPLE_TEXT_SIZE });
+    expect(block.textStyles.set).toHaveBeenCalledWith('Text', { size: DRAW_TEXT_SIZE });
   }
 });

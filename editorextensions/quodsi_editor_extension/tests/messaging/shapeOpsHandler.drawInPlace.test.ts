@@ -255,9 +255,10 @@ describe('MODEL_CREATE_PAGE on its own empty page', () => {
         && box.y < noteBox.y + noteBox.h && box.y + box.h > noteBox.y;
       expect(overlaps).toBe(false);
     }
-    // The document's own layout survives as offsets (g1 -> a1 is 200 apart).
-    expect(boxes[1].x - boxes[0].x).toBe(200);
-    expect(boxes[3].y - boxes[0].y).toBe(200);
+    // The document's own layout survives as offsets (g1 -> a1 is 200 apart),
+    // scaled by LAYOUT_SCALE (1.5) for Lucid's label text.
+    expect(boxes[1].x - boxes[0].x).toBe(300);
+    expect(boxes[3].y - boxes[0].y).toBe(300);
   });
 
   it('draws in place without requireInPlace too, when the current page is its own and empty', async () => {
