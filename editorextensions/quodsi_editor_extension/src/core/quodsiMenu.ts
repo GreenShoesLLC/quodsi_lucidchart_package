@@ -2,6 +2,7 @@ import { EditorClient, Menu, MenuLocation, Viewport } from 'lucid-extension-sdk'
 import { EnvelopeMessageType, type MenuCommand } from '@quodsi/lucid-shared';
 import { router } from './messaging';
 import { DiagramMappingRelayHandler } from './messaging/handlers/diagramMappingRelayHandler';
+import { ModelRootHandler } from './messaging/handlers/modelRootHandler';
 import { SimulationRunHandler } from './messaging/handlers/simulationRunHandler';
 import { TourHandler } from './messaging/handlers/tourHandler';
 import { ModelManager } from './ModelManager';
@@ -11,6 +12,7 @@ export const REMOVE_ACTION = 'quodsi.remove';
 export const DIAGRAM_MAPPING_ACTION = 'quodsi.diagramMapping';
 export const TAKE_TOUR_ACTION = 'quodsi.takeTour';
 export const STATUS_ACTION = 'quodsi.status';
+export const FEEDBACK_ACTION = 'quodsi.feedback';
 const IS_CONVERTED_ACTION = 'quodsi.isConverted';
 const IS_UNCONVERTED_ACTION = 'quodsi.isUnconverted';
 
@@ -21,10 +23,12 @@ const IS_UNCONVERTED_ACTION = 'quodsi.isUnconverted';
  * Model, which Lucid has no equivalent for, Show/Hide Panel (Lucid's own dock
  * already opens and closes the panel; ours did nothing visible when it was
  * open) and About (Status shows the same version, and its version line holds
- * the developer-mode switch). Lucid's menu has no separators, so Status
- * simply comes last.
+ * the developer-mode switch). Lucid's menu has no separators, so Status and
+ * Feedback & Support simply come last.
  *
- * Convert and Status run here in the extension; Take the Tour is TourHandler's
+ * Feedback & Support opens the Settings modal, whose Help section holds it
+ * (ClickUp 86e3vtdjz), as drawio's does.
+ * Convert, Status and Feedback & Support run here in the extension; Take the Tour is TourHandler's
  * startTour, which Settings' "Take the tour" also uses. Remove and Diagram
  * Mapping need the model panel (its Remove confirmation, its window-size
  * preference and pending-edit flush), so they show the panel and send it
@@ -83,6 +87,17 @@ export function registerQuodsiMenu(client: EditorClient, panel: { show(): void }
     });
   });
 
+  client.registerAction(FEEDBACK_ACTION, () => {
+    ModelRootHandler.handleMessage({
+      id: '',
+      type: EnvelopeMessageType.OPEN_SETTINGS_MODAL,
+      source: 'host',
+      target: 'host',
+      version: '1.0',
+      data: {},
+    });
+  });
+
   const menu = new Menu(client);
   const add = (label: string, action: string, visibleAction?: string) =>
     menu.addDropdownMenuItem({ label, action, visibleAction, location: MenuLocation.Extension });
@@ -91,4 +106,5 @@ export function registerQuodsiMenu(client: EditorClient, panel: { show(): void }
   add('Diagram Mapping', DIAGRAM_MAPPING_ACTION, IS_CONVERTED_ACTION);
   add('Take the Tour', TAKE_TOUR_ACTION);
   add('Status', STATUS_ACTION);
+  add('Feedback & Support', FEEDBACK_ACTION);
 }
