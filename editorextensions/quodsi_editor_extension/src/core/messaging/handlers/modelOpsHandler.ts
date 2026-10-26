@@ -16,6 +16,31 @@ import { SimulationRunHandler } from './simulationRunHandler';
 /**
  * Handler for model operations (validate, convert, remove, results page)
  */
+/** What Remove Quodsi Model tells her when the server copy couldn't be deleted. */
+export const SERVER_COPY_KEPT_ALERT =
+  "The model was removed from this page, but Quodsi couldn't delete its saved copy " +
+  '(its Simulation Project, scenarios and runs). Converting this page again brings them ' +
+  'back; remove the model again then to delete them.';
+
+/**
+ * After Remove Quodsi Model's RemoveModel data action (2026-10-26): true when the server
+ * removed it (or had nothing to remove). Otherwise alerts once and returns false. A data
+ * action doesn't throw on an HTTP error; it returns its status, so a 401 or 500 used to
+ * pass as done. `undefined` is a call that threw (no network). 426 is left to
+ * LucidDataActionUtility, which already says to reload.
+ */
+export function reportServerRemove(client: { alert?: (text: string) => unknown }, result: any): boolean {
+  const status = result?.status;
+  if (typeof status === 'number' && status >= 200 && status < 300 && result?.json?.success === true) return true;
+  if (status === 426) return false;
+  try {
+    client.alert?.(SERVER_COPY_KEPT_ALERT);
+  } catch {
+    // An alert that can't show changes nothing; the failure is already logged.
+  }
+  return false;
+}
+
 export class ModelOpsHandler {
   private static logger = getLogger('ModelOpsHandler');
 
@@ -447,7 +472,9 @@ export class ModelOpsHandler {
         
         ModelOpsHandler.logger.debug('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
 
-        // Remove model from quodsi_api database (fire-and-forget)
+        // Remove the model from quodsi_api too. The page is already clear, so this isn't
+        // waited for, but a failure is told (reportServerRemove): otherwise its Simulation
+        // Project and runs stay, and come back if the page is converted again.
         LucidDataActionUtility.performDataAction(client, {
           dataConnectorName: 'quodsi_api_data_connector',
           actionName: 'RemoveModel',
@@ -456,10 +483,13 @@ export class ModelOpsHandler {
             pageId: currentPage.id
           },
           asynchronous: false
-        }).then(() => {
-          ModelOpsHandler.logger.debug('Model removed from database after unmap');
+        }).then((result) => {
+          if (!reportServerRemove(client, result)) {
+            ModelOpsHandler.logger.error('RemoveModel did not remove the server model', { status: result?.status });
+          }
         }).catch(err => {
           ModelOpsHandler.logger.error('Failed to remove model from database:', err);
+          reportServerRemove(client, undefined);
         });
       }).catch(error => {
         ModelOpsHandler.logger.error('Error sending context refresh messages after removal:', error);
