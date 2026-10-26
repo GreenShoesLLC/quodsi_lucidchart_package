@@ -11,6 +11,10 @@ const simulationRunMock = jest.fn();
 jest.mock('../src/core/messaging/handlers/simulationRunHandler', () => ({
   SimulationRunHandler: { handleMessage: simulationRunMock },
 }));
+const modelRootMock = jest.fn();
+jest.mock('../src/core/messaging/handlers/modelRootHandler', () => ({
+  ModelRootHandler: { handleMessage: modelRootMock },
+}));
 let converted = false;
 jest.mock('../src/core/ModelManager', () => ({
   ModelManager: { getInstance: () => ({ isQuodsiModel: () => converted }) },
@@ -53,6 +57,7 @@ describe('the extension Quodsi menu', () => {
       'Diagram Mapping',
       'Take the Tour',
       'Status',
+      'Feedback & Support',
     ]);
     expect(menuItemsForTests.every((i) => i.location === 'extension')).toBe(true);
   });
@@ -115,6 +120,15 @@ describe('the extension Quodsi menu', () => {
     actions.get('quodsi.status')!();
     expect(simulationRunMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: EnvelopeMessageType.OPEN_STATUS_MODAL }),
+    );
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('Feedback & Support opens the Settings modal (its Help holds it) without the panel', () => {
+    const { actions, show } = setup();
+    actions.get('quodsi.feedback')!();
+    expect(modelRootMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: EnvelopeMessageType.OPEN_SETTINGS_MODAL }),
     );
     expect(show).not.toHaveBeenCalled();
   });
