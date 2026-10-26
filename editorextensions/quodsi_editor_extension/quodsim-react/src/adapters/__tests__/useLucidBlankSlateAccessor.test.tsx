@@ -51,6 +51,18 @@ describe('useLucidBlankSlateAccessor', () => {
     ])
   })
 
+  it('reports the counts pending until this page reports them', () => {
+    const { result, rerender } = renderHook((props: typeof base) => useLucidBlankSlateAccessor(props), {
+      initialProps: base,
+    })
+    expect(result.current.countsPending).toBe(true)
+    hostReplies({ id: 'r', type: EnvelopeMessageType.PAGE_COUNTS, data: { pageId: 'pg-1', shapeCount: 0, lineCount: 0 } })
+    expect(result.current.countsPending).toBe(false)
+    // Another page: the counts on hand are the old page's.
+    rerender({ ...base, pageId: 'pg-2' })
+    expect(result.current.countsPending).toBe(true)
+  })
+
   it('convertDiagram sends AUTO_CONVERT_PAGE and resolves with the result carrying the same id', async () => {
     const { result } = renderHook(() => useLucidBlankSlateAccessor(base))
     const counts = { activities: 3, generators: 1, resources: 0, entities: 0, connectors: 4, skipped: 1 }

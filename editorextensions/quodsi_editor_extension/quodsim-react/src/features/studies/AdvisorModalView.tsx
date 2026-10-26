@@ -13,12 +13,14 @@ import { useSimulationRunSender } from '../../messaging/senders/simulationRunSen
 // studies export, so neither lands in the panel's entry chunk.
 const Consult = lazy(() =>
   import('quodsi_studio/platforms/studies').then((m) => ({
-    default: ({ params, host, modelId, syncModel, openProjectFallback }: {
+    default: ({ params, host, modelId, syncModel, openProjectFallback, prepareModel }: {
       params: URLSearchParams; host: LucidModalHost; modelId?: string
       syncModel?: () => Promise<void>; openProjectFallback?: () => void
+      prepareModel?: () => Promise<string | null>
     }) => (
       <m.AdvisorConsultSurface focus={m.workspaceFocusFromParams(params)} host={host} modelId={modelId}
-        syncModel={syncModel} pageId={params.get('pageId') ?? undefined} openProjectFallback={openProjectFallback} />
+        syncModel={syncModel} pageId={params.get('pageId') ?? undefined} openProjectFallback={openProjectFallback}
+        prepareModel={prepareModel} />
     ),
   })),
 )
@@ -36,14 +38,33 @@ export function AdvisorModalView() {
   const getToken = useStudioApiSetup(apiBaseUrl, host)
   // The model's Simulation Project (spec 2026-10-16): the host puts the cached model id on
   // the URL. The Advisor Workspace widens to the whole project in place (spec 2026-10-16
-  // advisor-workspace), so this modal never opens Studies itself.
-  const modelId = params.get('modelId') || undefined
+  // advisor-workspace), so this modal never opens Studies itself. A sync from this modal
+  // can give a page its first id, which then shows the Project room.
+  const [modelId, setModelId] = useState(params.get('modelId') || undefined)
   const documentId = params.get('documentId')
   const pageId = params.get('pageId')
   const { openStudiesModal } = useSimulationRunSender()
   // The server's copy follows the diagram after an Apply and before Check (final review I1).
   const syncModel = useMemo(
-    () => (documentId && pageId ? () => syncModelOnce(host, { documentId, pageId }) : undefined),
+    () => (documentId && pageId
+      ? () => syncModelOnce(host, { documentId, pageId }, (r) => { if (r.synced && r.modelId) setModelId(r.modelId) })
+      : undefined),
+    [documentId, pageId, host],
+  )
+  // The Project room before there is a model, as drawio has (Daniel, 2026-10-23: the project
+  // comes first). Start a project converts a page that isn't a model yet (the Get started
+  // card's Convert, Ctrl+Z-able), then syncs it so the server can hold the project. A
+  // failure rejects with its line (e.g. the page to go back to), which the Project intro shows.
+  const prepareModel = useMemo(
+    () => (documentId && pageId
+      ? async () => {
+        await host.convertPageIfNeeded({ documentId, pageId })
+        let id: string | undefined
+        await syncModelOnce(host, { documentId, pageId }, (r) => { if (r.synced && r.modelId) id = r.modelId })
+        if (id) setModelId(id)
+        return id ?? null
+      }
+      : undefined),
     [documentId, pageId, host],
   )
   // No model id yet: Studies on its Project tab syncs the model and creates one.
@@ -73,7 +94,8 @@ export function AdvisorModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading the Advisor…</p>}>
-              <Consult params={params} host={host} modelId={modelId} syncModel={syncModel} openProjectFallback={openProjectFallback} />
+              <Consult params={params} host={host} modelId={modelId} syncModel={syncModel}
+                openProjectFallback={openProjectFallback} prepareModel={prepareModel} />
             </Suspense>
           </QueryClientProvider>
         )}

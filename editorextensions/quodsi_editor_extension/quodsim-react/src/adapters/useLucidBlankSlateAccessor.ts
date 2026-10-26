@@ -6,7 +6,8 @@
 //
 //   - counts: PAGE_COUNTS_REQUEST -> PAGE_COUNTS, asked on mount and after
 //     every selection change while the card shows, so they follow the user's
-//     drawing;
+//     drawing; `countsPending` until this page's counts arrive, so the card
+//     doesn't lay out a page with shapes as an empty one;
 //   - convertDiagram: AUTO_CONVERT_PAGE, resolved or rejected by the
 //     AUTO_CONVERT_PAGE_RESULT carrying the same envelope id (the
 //     mint-your-own-correlation-id idiom of modelOpsSender.updateElement);
@@ -52,7 +53,7 @@ export function useLucidBlankSlateAccessor(options: {
 }): BlankSlateConverterAccessor {
   const { enabled, documentId, pageId, selectionVersion } = options
   const { openDiagramMappingModal } = useSimulationRunSender()
-  const [counts, setCounts] = useState({ shapeCount: 0, lineCount: 0 })
+  const [counts, setCounts] = useState<{ shapeCount: number; lineCount: number; pageId?: string }>({ shapeCount: 0, lineCount: 0 })
   const inFlightRef = useRef<InFlightConversion | null>(null)
 
   // One in-flight AUTO_CONVERT_PAGE conversion per accessor, many waiters:
@@ -93,7 +94,7 @@ export function useLucidBlankSlateAccessor(options: {
       const msg = event.data as EnvelopeBase | undefined
       if (msg?.type !== EnvelopeMessageType.PAGE_COUNTS) return
       const data = msg.data as PageCountsData
-      setCounts({ shapeCount: data.shapeCount, lineCount: data.lineCount })
+      setCounts({ shapeCount: data.shapeCount, lineCount: data.lineCount, pageId: data.pageId })
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
@@ -137,7 +138,10 @@ export function useLucidBlankSlateAccessor(options: {
   const reviewDiagram = openDiagramMappingModal
 
   return useMemo(
-    () => ({ shapeCount: counts.shapeCount, lineCount: counts.lineCount, convertDiagram, reviewDiagram }),
-    [counts, convertDiagram, reviewDiagram],
+    () => ({
+      shapeCount: counts.shapeCount, lineCount: counts.lineCount, countsPending: counts.pageId !== pageId,
+      convertDiagram, reviewDiagram,
+    }),
+    [counts, pageId, convertDiagram, reviewDiagram],
   )
 }

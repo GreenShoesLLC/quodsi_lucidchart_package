@@ -4,7 +4,7 @@
 // AdvisorConsultModal): requests are sent straight to the extension over
 // this modal's messaging (channel role 'studio-embed').
 import { generateUUID } from '@quodsi/lucid-shared'
-import { EnvelopeMessageType, isEnvelope, type EnvelopeBase } from '@quodsi/lucid-shared'
+import { EnvelopeMessageType, isEnvelope, type AutoConvertPageResultData, type EnvelopeBase } from '@quodsi/lucid-shared'
 import {
   createEmbedWriter,
   QUODSI_EMBED_WRITE_RESULT,
@@ -20,6 +20,8 @@ import { buildWriteEnvelope, WRITE_RESULT_TYPES, writeTtlMs } from './embedWrite
  *  cold-starting dev API (30-60 s), so this is generous; a reply that still
  *  arrives later is delivered too. */
 export const MODEL_SYNC_TIMEOUT_MS = 120_000
+/** How long convertPageIfNeeded waits (the model panel's card waits as long). */
+export const CONVERT_TIMEOUT_MS = 60_000
 const TOKEN_TIMEOUT_MS = 10_000
 const TOKEN_RETRY_MS = 1_000
 
@@ -47,6 +49,10 @@ export interface LucidModalHost extends LucidHost {
    *  Studies open's), rather than the outcome of the last open (spec 2026-10-16). */
   requestModelSync(onResult: (result: ModelSyncResult) => void,
     resync?: { documentId?: string; pageId?: string }): () => void
+  /** Converts the page if it isn't a model yet (AUTO_CONVERT_PAGE, onlyIfUnconverted):
+   *  the Advisor's Start a project before there is a model (2026-10-26). Rejects with the
+   *  extension's error (e.g. the page to go back to) or on timeout. */
+  convertPageIfNeeded(page: { documentId: string; pageId: string }): Promise<void>
   connect(): void
   disconnect(): void
 }
@@ -180,6 +186,23 @@ export function createLucidModalHost(
       else ports.send(EnvelopeMessageType.REQUEST_STUDIES_MODEL_SYNC)
       return stop
     },
+    // Its own envelope id, which the extension echoes on AUTO_CONVERT_PAGE_RESULT.
+    convertPageIfNeeded: ({ documentId, pageId }) => new Promise<void>((resolve, reject) => {
+      const id = generateUUID()
+      const stop = () => { off(); window.clearTimeout(timer) }
+      const off = on((env) => {
+        if (env.id !== id || env.type !== EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT) return
+        stop()
+        const d = env.data as AutoConvertPageResultData
+        if (d.success) resolve()
+        else reject(new Error(d.error))
+      })
+      const timer = window.setTimeout(() => { off(); reject(new Error('The extension did not answer.')) }, CONVERT_TIMEOUT_MS)
+      ports.postEnvelope({
+        id, type: EnvelopeMessageType.AUTO_CONVERT_PAGE, source: 'studio-embed-iframe', target: 'host', version: '1.0',
+        data: { documentId, pageId, onlyIfUnconverted: true },
+      })
+    }),
   }
   return host
 }

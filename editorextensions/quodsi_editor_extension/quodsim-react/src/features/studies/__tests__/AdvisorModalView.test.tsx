@@ -140,6 +140,32 @@ describe('AdvisorModalView', () => {
     expect(h.sendMessage).toHaveBeenCalledWith(EnvelopeMessageType.CLOSE_MODAL)
   })
 
+  it('prepares a model for the Project room: converts if needed, syncs, then carries the new id', async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Model&documentId=d1&pageId=p1')
+    render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    const host = hostEntry().host as FakeHost
+    expect(last().modelId).toBeUndefined()
+    let prepared!: Promise<string | null>
+    act(() => { prepared = last().prepareModel() })
+    expect(host.convertPageIfNeeded).toHaveBeenCalledWith({ documentId: 'd1', pageId: 'p1' })
+    await act(async () => { await Promise.resolve() })
+    expect((host.requestModelSync as ReturnType<typeof vi.fn>).mock.calls.at(-1)![1]).toEqual({ documentId: 'd1', pageId: 'p1' })
+    await act(async () => { host.sync.emit({ modelId: 'm-new', synced: true }); await prepared })
+    await expect(prepared).resolves.toBe('m-new')
+    expect(last().modelId).toBe('m-new')
+  })
+
+  it("a failed conversion rejects with the extension's line", async () => {
+    setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Model&documentId=d1&pageId=p1')
+    render(<AdvisorModalView />)
+    await screen.findByTestId('consult')
+    const host = hostEntry().host as FakeHost
+    host.convertPageIfNeeded.mockRejectedValueOnce(new Error('Go back to Page 2.'))
+    await expect(last().prepareModel()).rejects.toThrow('Go back to Page 2.')
+    expect(host.requestModelSync).not.toHaveBeenCalled()
+  })
+
   it('focusType=Project reaches the surface as a project focus', async () => {
     setSearch('view=advisor&apiBaseUrl=https%3A%2F%2Fapi.example&focusType=Project&modelId=m-1&documentId=d1&pageId=p1')
     render(<AdvisorModalView />)

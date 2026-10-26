@@ -92,6 +92,38 @@ describe('createLucidModalHost', () => {
     expect(onResult).toHaveBeenCalledTimes(1)
   })
 
+  it('converts the page only if unconverted, settling on the reply carrying its own id', async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const done = vi.fn()
+    void host.convertPageIfNeeded({ documentId: 'd1', pageId: 'p1' }).then(done)
+    const sent = ports.posted.at(-1)!
+    expect(sent).toMatchObject({
+      type: EnvelopeMessageType.AUTO_CONVERT_PAGE, source: 'studio-embed-iframe', target: 'host',
+      data: { documentId: 'd1', pageId: 'p1', onlyIfUnconverted: true },
+    })
+    reply(EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, { success: true, result: {} }, 'someone-else')
+    await Promise.resolve()
+    expect(done).not.toHaveBeenCalled()
+    reply(EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, { success: true, result: {} }, sent.id)
+    await Promise.resolve()
+    expect(done).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects with the extension's error, or when it doesn't answer", async () => {
+    const { ports, reply } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    const failed = host.convertPageIfNeeded({ documentId: 'd1', pageId: 'p1' })
+    reply(EnvelopeMessageType.AUTO_CONVERT_PAGE_RESULT, { success: false, error: 'Go back to Page 2.' }, ports.posted.at(-1)!.id)
+    await expect(failed).rejects.toThrow('Go back to Page 2.')
+    const silent = host.convertPageIfNeeded({ documentId: 'd1', pageId: 'p1' })
+    const check = expect(silent).rejects.toThrow('The extension did not answer.')
+    await vi.advanceTimersByTimeAsync(60_000)
+    await check
+  })
+
   it("carries a failed sync's userMessage when the extension sends one", () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)
