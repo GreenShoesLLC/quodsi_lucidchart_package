@@ -3,7 +3,6 @@ const fs = require("fs");
 const path = require("path");
 const process = require("process");
 
-const webpack = require("webpack");
 const WebpackShellPluginNext = require("webpack-shell-plugin-next");
 const { rewriteDevHtml, stripToRelative } = require("./scripts/devHtmlRewrite");
 
@@ -64,12 +63,20 @@ module.exports = (env, argv) => {
     path: __dirname,
   },
   plugins: [
-    new webpack.DefinePlugin({
-      __LOCAL_API_OVERRIDE__: JSON.stringify(readLocalApiOverride()),
-      __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
-      // The Quodsi version build-bundle.ps1 computed (spec 2026-10-21 quodsi-version).
-      __QUODSI_VERSION__: JSON.stringify(process.env.VITE_QUODSI_VERSION || ""),
-    }),
+    // DefinePlugin must come from the webpack running this build, which is
+    // lucid-package's (npx), not this workspace's: a newer workspace webpack's
+    // DefinePlugin calls parser.getLocation, which an older running parser
+    // lacks ("Module parse failed: parser.getLocation is not a function").
+    {
+      apply(compiler) {
+        new compiler.webpack.DefinePlugin({
+          __LOCAL_API_OVERRIDE__: JSON.stringify(readLocalApiOverride()),
+          __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
+          // The Quodsi version build-bundle.ps1 computed (spec 2026-10-21 quodsi-version).
+          __QUODSI_VERSION__: JSON.stringify(process.env.VITE_QUODSI_VERSION || ""),
+        }).apply(compiler);
+      },
+    },
     new WebpackShellPluginNext({
       // Run during execution of `npx lucid-package@latest test-editor-extension`.
       // When doing a watch build, the user must manually first run "npm start".
