@@ -103,6 +103,7 @@ export type ModelRootProjection = ModelRootModelFields & {
         categoryValues?: unknown;
         description?: string;
         collectStatistics?: boolean;
+        resetAtWarmupEnd?: boolean;
     }>;
     // Lucid global resources (Plan 2b). shapeId/shapeLabel/laneRef are
     // TRANSIENT link markers stamped at build time for the Resources tab's
