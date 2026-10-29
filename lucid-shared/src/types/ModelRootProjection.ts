@@ -25,8 +25,9 @@ export type ModelRootModelFields = {
     timeMode?: string;
     warmupTime?: ISerializedDuration;
     runTime?: ISerializedDuration;
-    // Legacy host-local field: nothing writes or reads it. The engine reads no
-    // warm-up date from the clean wire (the warm-up is the first part of the run).
+    // Legacy host-local field, kept so stored data round-trips. The engine reads no
+    // warm-up date from the clean wire (the warm-up is the first part of the run);
+    // the shared editor only clears it to null on a switch to Clock mode.
     warmupDateTime?: string | null;
     startDateTime?: string | null;
     finishDateTime?: string | null;

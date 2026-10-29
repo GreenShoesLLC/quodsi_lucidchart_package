@@ -59,8 +59,8 @@ interface StoredModelData {
     // see that class's own doc comment) and relayed to the Studio embed
     // catalog (buildRelayedCatalog). This class keeps writing them; the
     // clean-era hop simply never re-materializes them once dropped.
-    // warmupDateTime is a legacy host-local field: nothing writes or reads it,
-    // and the engine reads no warm-up date (the warm-up is the first part of the run).
+    // warmupDateTime is a legacy host-local field, kept so stored data round-trips;
+    // the engine reads no warm-up date (the warm-up is the first part of the run) and the shared editor only clears it to null on a switch to Clock mode.
     warmupDateTime?: Date | null;
     startDateTime?: Date | null;
     finishDateTime?: Date | null;
