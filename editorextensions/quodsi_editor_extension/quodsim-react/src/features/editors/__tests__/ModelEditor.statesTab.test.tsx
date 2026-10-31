@@ -46,7 +46,7 @@ describe("Model editor — States tab uses the shared editor", () => {
     fireEvent.click(screen.getByLabelText("Delete unit_price"));
 
     expect(
-      screen.getByText(/steps that set this state directly will have that reference removed automatically/)
+      screen.getByText(/steps that use this state directly will have that reference removed automatically/)
     ).toBeInTheDocument();
     expect(
       screen.getByText(/1 expression references this state inside a formula and cannot be fixed automatically/)
