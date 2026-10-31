@@ -83,31 +83,32 @@ describe("ModelEditor — view gates the model-level FIELDS", () => {
   // non-default one.
   beforeEach(() => localStorage.clear());
 
-  it("hides Replications, Time Mode, Clock Unit and Warmup in Basic", () => {
+  it("hides Replications, Time Mode, Clock Unit and Warm-up Period in Basic", () => {
     setView("basic");
     // No accordion in Basic (every control in it is intermediate).
     mountModelEditor();
     expect(screen.queryByTestId("reps-input")).not.toBeInTheDocument();
     expect(screen.queryByText("Time Mode")).not.toBeInTheDocument();
     expect(screen.queryByText("Clock Unit")).not.toBeInTheDocument();
-    expect(screen.queryByText("Warmup Time")).not.toBeInTheDocument();
+    expect(screen.queryByText("Warm-up Period")).not.toBeInTheDocument();
   });
 
   it("shows all four in Intermediate", () => {
     setView("intermediate");
-    // All four live inside the DEFAULT-COLLAPSED accordion: open it first.
+    // Warm-up Period sits beside Run Length at the top, outside the accordion.
     mountModelEditor();
+    expect(screen.getByText("Warm-up Period")).toBeInTheDocument();
+    // The other three live inside the DEFAULT-COLLAPSED accordion: open it.
     fireEvent.click(screen.getByText("Advanced Settings"));
     expect(screen.getByTestId("reps-input")).toBeInTheDocument();
     expect(screen.getByText("Time Mode")).toBeInTheDocument();
     expect(screen.getByText("Clock Unit")).toBeInTheDocument();
-    expect(screen.getByText("Warmup Time")).toBeInTheDocument();
   });
 
-  it("keeps Run Time visible in Basic", () => {
+  it("keeps Run Length visible in Basic", () => {
     setView("basic");
     mountModelEditor();
-    expect(screen.getByText("Run Time")).toBeInTheDocument();
+    expect(screen.getByText("Run Length")).toBeInTheDocument();
   });
 });
 

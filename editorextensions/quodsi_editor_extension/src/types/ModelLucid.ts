@@ -59,6 +59,8 @@ interface StoredModelData {
     // see that class's own doc comment) and relayed to the Studio embed
     // catalog (buildRelayedCatalog). This class keeps writing them; the
     // clean-era hop simply never re-materializes them once dropped.
+    // warmupDateTime is a legacy host-local field, kept so stored data round-trips;
+    // the engine reads no warm-up date (the warm-up is the first part of the run) and the shared editor only clears it to null on a switch to Clock mode.
     warmupDateTime?: Date | null;
     startDateTime?: Date | null;
     finishDateTime?: Date | null;
@@ -135,6 +137,7 @@ export class ModelLucid extends SimObjectLucid<Model> {
             timeMode,
             warmupTime,
             runTime,
+            // legacy host-local field, kept only so stored data round-trips
             coerceDate(storedData?.warmupDateTime),
             coerceDate(storedData?.startDateTime),
             coerceDate(storedData?.finishDateTime)
@@ -175,6 +178,7 @@ export class ModelLucid extends SimObjectLucid<Model> {
             timeMode: this.simObject.timeMode,
             warmupTime: this.simObject.warmupTime,
             runTime: this.simObject.runTime,
+            // legacy host-local field (see the interface comment above)
             warmupDateTime: this.simObject.warmupDateTime,
             startDateTime: this.simObject.startDateTime,
             finishDateTime: this.simObject.finishDateTime,

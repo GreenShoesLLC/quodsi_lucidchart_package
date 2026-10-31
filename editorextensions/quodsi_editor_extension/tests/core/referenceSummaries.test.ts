@@ -75,6 +75,11 @@ describe('referenceSummaries', () => {
         });
     });
 
+    it('carries resetAtWarmupEnd through, so the States editor does not read a stored true as false', () => {
+        const state = { id: 'st', name: 'Tally', componentType: 'model', dataType: 'NUMBER', initialValue: 0, resetAtWarmupEnd: true };
+        expect(summarizeState(state).resetAtWarmupEnd).toBe(true);
+    });
+
     it('summarizes activities and generators exactly as referenceData has always carried them', () => {
         const activity = {
             id: 'a1', name: 'Intake', routing: 'probability', capacity: 3, levers: ['noise'],

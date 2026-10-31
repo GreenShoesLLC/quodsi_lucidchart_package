@@ -130,6 +130,7 @@ export function summarizeState(s: any) {
         categoryValues: s.categoryValues,
         description: s.description,
         collectStatistics: s.collectStatistics,
+        resetAtWarmupEnd: s.resetAtWarmupEnd,
     };
 }
 
