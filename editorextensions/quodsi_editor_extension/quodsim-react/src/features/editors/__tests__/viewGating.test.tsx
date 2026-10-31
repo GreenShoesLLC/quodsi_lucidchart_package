@@ -95,11 +95,10 @@ describe("ModelEditor — view gates the model-level FIELDS", () => {
 
   it("shows all four in Intermediate", () => {
     setView("intermediate");
-    // Warm-up Period sits beside Run Length at the top, outside the accordion.
+    // All four live inside the DEFAULT-COLLAPSED accordion: open it first.
     mountModelEditor();
-    expect(screen.getByText("Warm-up Period")).toBeInTheDocument();
-    // The other three live inside the DEFAULT-COLLAPSED accordion: open it.
     fireEvent.click(screen.getByText("Advanced Settings"));
+    expect(screen.getByText("Warm-up Period")).toBeInTheDocument();
     expect(screen.getByTestId("reps-input")).toBeInTheDocument();
     expect(screen.getByText("Time Mode")).toBeInTheDocument();
     expect(screen.getByText("Clock Unit")).toBeInTheDocument();
