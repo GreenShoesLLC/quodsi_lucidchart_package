@@ -28,6 +28,7 @@ import {
     resourceLinkIssues,
     removeEntityReferences,
     removeStateReferences,
+    renameStateReferences,
     removeRequirementReferences,
     removeResourceReferences,
     pickFallbackEntityId,
@@ -1423,6 +1424,16 @@ export class ModelManager {
                     page
                 );
                 totalAffected += affectedCount;
+            }
+
+            // Carry a renamed state through everything that names it
+            for (const previous of currentStates) {
+                const renamed = states.find(s => s.id === previous.id && s.name !== previous.name);
+                if (renamed) {
+                    totalAffected += this.applySharedReferenceCleanup(page, (c) =>
+                        renameStateReferences(c, previous.name, renamed.name)
+                    );
+                }
             }
 
             // Save states to page storage

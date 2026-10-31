@@ -500,4 +500,23 @@ describe('ModelManager cascade cleanup (review F2)', () => {
         expect(storage.getElementData<any>(gen).initialStates).toEqual([]);
         expect(storage.getStates(page).map((s: any) => s.id)).toEqual(['state-keep']);
     });
+
+    it('updateStates carries a renamed state through stored element data', async () => {
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+        const qty = { id: 'state-qty', name: 'qty', componentType: 'entity', dataType: 'number', initialValue: 0 };
+        storage.setStates(page, [qty] as any);
+        const gen = makeFakeBlock('gen-1');
+        storage.setElementData(gen, {
+            id: 'gen-1', name: 'G', entityId: 'e',
+            initialStates: [{ stateId: 'state-other', operation: 'assign', expression: 'qty + 1' }],
+        }, SimulationObjectType.Generator);
+        page.allBlocks.set(gen.id, gen);
+
+        const manager = new ModelManager(storage);
+        await manager.updateStates([{ ...qty, name: 'amount' }] as any, page);
+
+        expect(storage.getElementData<any>(gen).initialStates[0].expression).toBe('amount + 1');
+        expect(storage.getStates(page).map((s: any) => s.name)).toEqual(['amount']);
+    });
 });
