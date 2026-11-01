@@ -24,7 +24,7 @@
 //
 // Close = unmount: the session stops without touching the cursor, and the
 // panel shows its handoff card.
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   TOUR_STORAGE_KEY,
@@ -56,10 +56,14 @@ export type ModalTourHostProps = {
   /** The document the modal opened over (its URL's documentId). Absent:
    *  the tour is never picked up here. */
   documentId?: string
+  /** The user pressed the tour's last button. */
+  onCompleted?: () => void
 }
 
-export function ModalTourHost({ userKey, documentId }: ModalTourHostProps) {
+export function ModalTourHost({ userKey, documentId, onCompleted }: ModalTourHostProps) {
   const queryClient = useQueryClient()
+  const onCompletedRef = useRef(onCompleted)
+  onCompletedRef.current = onCompleted
 
   useEffect(() => {
     if (!userKey || !documentId) return
@@ -80,7 +84,7 @@ export function ModalTourHost({ userKey, documentId }: ModalTourHostProps) {
       const mine: TourSession = startTourSession({
         tour: TOUR,
         userKey,
-        platform,
+        platform: { ...platform, onCompleted: () => onCompletedRef.current?.() },
         queryClient,
         fromBeginning: false,
         syncAcrossFrames: true,

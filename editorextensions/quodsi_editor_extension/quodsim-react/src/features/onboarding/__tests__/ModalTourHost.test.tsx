@@ -15,11 +15,11 @@ import { ModalTourHost } from '../ModalTourHost'
 const USER = 'ann@example.com'
 const TOUR = lucidCapacityTradeoff.id
 
-type HarnessProps = { client: QueryClient; userKey?: string; documentId?: string; children?: ReactNode }
-function Harness({ client, userKey = USER, documentId = 'doc-1', children }: HarnessProps) {
+type HarnessProps = { client: QueryClient; userKey?: string; documentId?: string; onCompleted?: () => void; children?: ReactNode }
+function Harness({ client, userKey = USER, documentId = 'doc-1', onCompleted, children }: HarnessProps) {
   return (
     <QueryClientProvider client={client}>
-      <ModalTourHost userKey={userKey} documentId={documentId} />
+      <ModalTourHost userKey={userKey} documentId={documentId} onCompleted={onCompleted} />
       {children}
     </QueryClientProvider>
   )
@@ -73,7 +73,7 @@ describe('ModalTourHost', () => {
   it('aha → completed is written, and the panel-side stored state reads completed', async () => {
     seed({ state: 'started', currentStepId: 'aha' })
     render(<Harness client={client} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Explore Quodsi' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Start with my own process' }))
     await waitFor(() => expect(readTourState(USER, TOUR).state).toBe('completed'))
     await waitFor(() => expect(screen.queryByText('You just priced a change before making it')).toBeNull())
   })
@@ -118,10 +118,20 @@ describe('ModalTourHost', () => {
     expect(screen.queryByText('You just priced a change before making it')).toBeNull()
   })
 
+  // Onboarding feedback 2026-10-31: the last button must take the user out of
+  // the Tradeoff screen. In Lucid that means closing the Studies modal.
+  it("the tour's last button asks the modal to close", async () => {
+    seed({ state: 'started', currentStepId: 'aha' })
+    const onCompleted = vi.fn()
+    render(<Harness client={client} onCompleted={onCompleted} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Start with my own process' }))
+    await waitFor(() => expect(onCompleted).toHaveBeenCalledTimes(1))
+  })
+
   it('after the tour completes, a fresh start from the panel is picked up again', async () => {
     seed({ state: 'started', currentStepId: 'aha' })
     render(<Harness client={client} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Explore Quodsi' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Start with my own process' }))
     await waitFor(() => expect(readTourState(USER, TOUR).state).toBe('completed'))
     await otherFrameWrites({ state: 'started', currentStepId: 'aha' })
     expect(await screen.findByText('You just priced a change before making it')).toBeTruthy()
