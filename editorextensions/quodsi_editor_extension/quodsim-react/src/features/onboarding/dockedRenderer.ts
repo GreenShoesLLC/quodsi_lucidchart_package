@@ -8,7 +8,7 @@
 //
 // Plain DOM like the overlay renderer: the session calls show/clear from inside
 // the machine, outside React's render cycle.
-import type { TourFrame, TourRenderer } from 'quodsi_studio/platforms/shared'
+import { renderEmphasis, type TourFrame, type TourRenderer } from 'quodsi_studio/platforms/shared'
 
 const TARGET_ATTR = 'data-quodsi-tour-target'
 
@@ -83,7 +83,7 @@ export function createDockedRenderer(container: HTMLElement): TourRenderer {
 
       const body = document.createElement('p')
       body.className = 'm-0 text-secondary'
-      body.textContent = frame.body
+      renderEmphasis(body, frame.body)
 
       const footer = document.createElement('div')
       footer.className = 'flex items-center gap-3'

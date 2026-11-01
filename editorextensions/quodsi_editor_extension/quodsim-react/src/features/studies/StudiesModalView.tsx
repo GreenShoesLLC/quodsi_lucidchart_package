@@ -90,7 +90,7 @@ export function StudiesModalView() {
         ) : (
           <QueryClientProvider client={queryClient}>
             {/* Inside the provider: the tour's run observer watches this modal's queries. */}
-            <ModalTourHost userKey={tourUserKey} documentId={documentId} />
+            <ModalTourHost userKey={tourUserKey} documentId={documentId} onCompleted={() => host.closeModal()} />
             <Suspense fallback={<p className="p-4 text-sm text-muted">Loading Studies…</p>}>
               <StudiesSurface host={host} syncModel={syncModel} pageId={pageId} initialScreen={screen} resetKey={resetKey} syncStatus={syncStatus} scenariosSource={scenariosSource} door="lucid" />
             </Suspense>

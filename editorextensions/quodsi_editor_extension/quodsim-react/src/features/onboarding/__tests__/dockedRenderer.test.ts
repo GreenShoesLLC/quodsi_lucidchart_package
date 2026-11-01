@@ -63,6 +63,15 @@ describe('dockedRenderer', () => {
     expect(other.style.outline).toBe('')
   })
 
+  // The body is user-facing tour copy going through the DOM, never innerHTML.
+  it('shows **marked** words emphasized, without the markers', () => {
+    const container = document.createElement('div')
+    const r = createDockedRenderer(container)
+    r.show(frame({ body: 'Click **Convert** now' }))
+    expect(container.textContent).toContain('Click Convert now')
+    expect(container.querySelector('[data-tour-emphasis]')!.textContent).toBe('Convert')
+  })
+
   it('omits the progress for an off-path frame and shows a waiting cue without a primary', () => {
     const r = createDockedRenderer(container)
     r.show(frame({ progress: undefined, primary: undefined }))
