@@ -33,7 +33,7 @@ export interface ExtensionConfig {
    *  copy-to-clipboard address). Optional and environment-overridable —
    *  kept out of the React bundle so one build can run against any Lucid
    *  app. Absent on older hosts (or if the host never chooses to set it);
-   *  the panel falls back to a hardcoded `sales@quodsi.com` default in that
+   *  the panel falls back to a hardcoded `support@quodsi.com` default in that
    *  case. Deliberately NOT a CRA build var (`REACT_APP_*`), which would
    *  bake a single hardcoded value into the compiled bundle. */
   salesEmail?: string;

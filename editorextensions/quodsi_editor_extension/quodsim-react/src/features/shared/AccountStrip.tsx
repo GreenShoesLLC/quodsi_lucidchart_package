@@ -22,7 +22,7 @@ import { BetaBadge, copyTextToClipboard } from "quodsi_studio/platforms/shared";
 
 const log = getLogger("AccountStrip");
 
-const DEFAULT_SALES_EMAIL = "sales@quodsi.com";
+const DEFAULT_SALES_EMAIL = "support@quodsi.com";
 const COPIED_RESET_MS = 1500;
 
 type Tone = "danger" | "warning" | "info" | "neutral";
