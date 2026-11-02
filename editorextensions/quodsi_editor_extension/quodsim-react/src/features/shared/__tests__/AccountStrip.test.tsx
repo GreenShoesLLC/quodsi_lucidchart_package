@@ -324,14 +324,14 @@ describe("AccountStrip / PlanDetails — contact-to-upgrade affordance (free pla
     ).toBeNull();
   });
 
-  it("defaults the sales address to sales@quodsi.com when config.salesEmail is absent", () => {
+  it("defaults the sales address to support@quodsi.com when config.salesEmail is absent", () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
     openPlanDetails();
-    expect(screen.getByText("sales@quodsi.com")).toBeInTheDocument();
+    expect(screen.getByText("support@quodsi.com")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Contact us to upgrade/i })
-    ).toHaveAttribute("href", expect.stringContaining("mailto:sales@quodsi.com"));
+    ).toHaveAttribute("href", expect.stringContaining("mailto:support@quodsi.com"));
   });
 
   it("uses config.salesEmail when the host provides one", () => {
@@ -349,7 +349,7 @@ describe("AccountStrip / PlanDetails — contact-to-upgrade affordance (free pla
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
 
     await screen.findByRole("button", { name: /copied/i });
-    expect(mockWriteText).toHaveBeenCalledWith("sales@quodsi.com");
+    expect(mockWriteText).toHaveBeenCalledWith("support@quodsi.com");
   });
 
   // Inside Lucid's iframe navigator.clipboard is blocked; the copy must go
