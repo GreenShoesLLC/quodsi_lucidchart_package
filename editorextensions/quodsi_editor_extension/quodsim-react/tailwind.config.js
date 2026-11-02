@@ -33,6 +33,11 @@ module.exports = {
         border: 'rgb(var(--border) / <alpha-value>)',
         'border-strong': 'rgb(var(--border-strong) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
+        quodsi: {
+          DEFAULT: 'rgb(var(--quodsi) / <alpha-value>)',
+          hover: 'rgb(var(--quodsi-hover) / <alpha-value>)',
+          ink: 'rgb(var(--quodsi-ink) / <alpha-value>)',
+        },
         danger: 'rgb(var(--danger) / <alpha-value>)',
         success: 'rgb(var(--success) / <alpha-value>)',
         warning: 'rgb(var(--warning) / <alpha-value>)',
