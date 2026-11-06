@@ -57,7 +57,7 @@ The Marketplace app is a second Lucid app id, separate from the private prd app.
 - [ ] Add the new app's package id to `editorextensions/quodsi_editor_extension/src/core/apiBaseUrl.ts` (next to the private prd id `d38c7ced-35e8-4962-a622-1d3fa480ab58`), and rebuild
 - [ ] Add the new app's origin (`https://<32 hex>.lucidextensions.app`) to `corsOrigins` in the monorepo's `infrastructure/bicep/env/prd.bicepparam`, and deploy the bicep first. Storage CORS reuses `corsOrigins`
 - [ ] Open the Zendesk ticket with Lucid for the Marketplace listing
-- [ ] Re-record contract fixtures from this build (`quodsi_api/tests/contracts/lucid/SESSION.md`) and commit them with the submission
+- [ ] Re-record contract fixtures from this build (`quodsi_api/tests/contracts/lucid/SESSION.md`) and commit them with the submission, in the monorepo (`quodsi_api/tests/contracts/lucid/` there), not in this repo
 - [ ] Then submit the package in the developer portal
 
 ## When Lucid publishes
