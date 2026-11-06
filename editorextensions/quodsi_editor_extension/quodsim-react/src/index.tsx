@@ -44,7 +44,8 @@ import "./index_new.css";
 // Relative, not via the exports map: quodsi_studio's package.json exports
 // does not publish theme.css as a subpath.
 import '../../../../../quodsi_studio/src/platforms/shared/theme.css';
-import { applyViewUrlOverride } from 'quodsi_studio/platforms/shared';
+import { applyViewUrlOverride, setDocsUrl } from 'quodsi_studio/platforms/shared';
+import { docsUrlForApi } from '@quodsi/shared';
 import { applyLucidClientOutdatedWording } from './features/shared/clientOutdatedWording';
 
 // Every out-of-date notice in this app says to reload LucidChart (Part C).
@@ -62,6 +63,10 @@ const log = getLogger('index');
 // ?view= route (model panel AND the pattern/schedule/work-schedule/settings
 // modals below), so calling it once here covers all of them.
 applyViewUrlOverride();
+
+// Settings' Help links to the docs for this package's environment, named by its
+// API URL (build-bundle.ps1 sets it per target, as for environmentDetection).
+setDocsUrl(docsUrlForApi(import.meta.env.VITE_DATA_CONNECTOR_API_URL));
 
 // One developer flag (spec 2026-09-15 §3): carry a legacy quodsi_devtools=true
 // over to the shared quodsi_devmode before the first render reads it.
