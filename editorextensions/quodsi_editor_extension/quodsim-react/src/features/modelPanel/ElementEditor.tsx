@@ -9,19 +9,17 @@ import {
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 
-// The Connector case renders the SHARED ConnectorEditor (2026-09-03): Routing |
-// Levers tabs, source resolution and the not-found/unconnected banners all
-// live there, same as Studio/drawio.
-import { ConnectorEditor, type ModelEditorTab } from "quodsi_studio/platforms/shared";
+// The Connector case renders the SHARED ConnectorEditor (2026-09-03) through
+// LucidConnectorEditor (2026-11-06): Routing | Levers tabs, source resolution
+// and the not-found/unconnected banners all live there, same as Studio/drawio.
+import type { ModelEditorTab } from "quodsi_studio/platforms/shared";
 import { ModelEditorForPage } from "../editors/ModelEditorForPage";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { LucidActivityEditor } from "../editors/LucidActivityEditor";
 import { LucidGeneratorEditor } from "../editors/LucidGeneratorEditor";
+import { LucidConnectorEditor } from "../editors/LucidConnectorEditor";
 import { ResourceBlockEditor } from "../editors/ResourceBlockEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
-import { useReferenceDataAccessor } from "../../adapters/useReferenceDataAccessor";
-import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
-import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 
 const log = getLogger("ElementEditor");
 
@@ -53,21 +51,9 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const previousEditorTypeRef = useRef<string | null>(null);
 
-  // Unconditional (hook order): backs the Connector case's ConnectorEditor
-  // below. Every routing edit made here (weight/priority/condition/entity
-  // template/connect type) writes straight through to storage via the
-  // ELEMENT_UPDATE sender.
-  const { updateResourceRequirements, updateElement } = useModelOpsSender();
-  // OPEN_SETTINGS_MODAL sender for the Connector case's ConnectorEditor (its
-  // routing cards' ViewTell mounts) below.
-  const { openSettingsModal } = useSimulationRunSender();
   // The Model case keys its editor on the Lucid page (spec 2026-09-12): a
   // page switch remounts the whole Model editor and its model-root source.
   const pageId = useMessaging()?.selection?.documentContext?.pageId;
-  const connectorAccessor = useReferenceDataAccessor(referenceData, {
-    updateResourceRequirements,
-    updateElement,
-  });
 
   const currentEditorType = elementData?.className === 'AdvancedSwimLaneBlock'
     ? 'SwimLane'
@@ -195,11 +181,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           log.error("Source not found for connector:", safeElementData.id, "sourceId:", sourceId);
         }
         return (
-          <ConnectorEditor
-            shapeId={safeElementData.id}
-            accessor={connectorAccessor}
-            onOpenSettings={openSettingsModal}
-          />
+          <LucidConnectorEditor shapeId={safeElementData.id} referenceData={referenceData} />
         );
       }
 
