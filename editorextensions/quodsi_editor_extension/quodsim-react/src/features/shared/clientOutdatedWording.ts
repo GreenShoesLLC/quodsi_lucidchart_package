@@ -9,5 +9,6 @@ import { LUCID_CLIENT_OUTDATED_MESSAGE } from "@quodsi/lucid-shared";
 export { LUCID_CLIENT_OUTDATED_MESSAGE };
 
 export function applyLucidClientOutdatedWording(): void {
-  setClientOutdatedMessage(LUCID_CLIENT_OUTDATED_MESSAGE);
+  // No Reload: reloading only loads the same reviewed package (spec D1).
+  setClientOutdatedMessage(LUCID_CLIENT_OUTDATED_MESSAGE, { reload: false });
 }

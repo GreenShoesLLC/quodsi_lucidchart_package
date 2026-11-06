@@ -48,7 +48,7 @@ import { applyViewUrlOverride, setDocsUrl, setQuodsiHost } from 'quodsi_studio/p
 import { docsUrlForApi } from '@quodsi/shared';
 import { applyLucidClientOutdatedWording } from './features/shared/clientOutdatedWording';
 
-// Every out-of-date notice in this app says to reload LucidChart (Part C).
+// Every out-of-date notice in this app uses the Lucid wording and offers no Reload (Part C).
 applyLucidClientOutdatedWording();
 // Name this host on every request: the API picks its client minimum by it.
 setQuodsiHost('lucid');
