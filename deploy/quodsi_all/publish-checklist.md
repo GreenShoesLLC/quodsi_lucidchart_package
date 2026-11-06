@@ -49,3 +49,30 @@
 - [ ] Verify model creation and simulation submission work
 - [ ] Verify existing models auto-upgrade to new version
 - [ ] Spot-check Application Insights "Live Metrics" for the API (`ai-quodsi-dev`) — no spike in 5xx
+
+## Marketplace submission
+
+The Marketplace app is a second Lucid app id, separate from the private prd app. Both run the same package and API.
+
+- [ ] In the monorepo, confirm `release/prd` is at the release you want to ship. Build only from its tip: `.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD -RunReactBuild`
+- [ ] Add the new app's package id to `editorextensions/quodsi_editor_extension/src/core/apiBaseUrl.ts` (next to the private prd id `d38c7ced-35e8-4962-a622-1d3fa480ab58`), and rebuild
+- [ ] Add the new app's origin (`https://<32 hex>.lucidextensions.app`) to `corsOrigins` in the monorepo's `infrastructure/bicep/env/prd.bicepparam`, and deploy the bicep first. Storage CORS reuses `corsOrigins`
+- [ ] Open the Zendesk ticket with Lucid for the Marketplace listing
+- [ ] Then submit the package in the developer portal
+
+## When Lucid publishes
+
+Do this when Lucid has approved and published a package, not when you upload it. The Lucid floor (`quodsi_api/app/host_floors.json`) records what Lucid users have, so it moves only after they have it.
+
+- [ ] Edit `quodsi_api/app/host_floors.json` in the monorepo: set the lucid entry's `quodsiVersion` (the package's Quodsi version), `modelSchemaVersion` and `outputSchemaMajor` to the published package's values
+- [ ] Regenerate `quodsi_api/tests/fixtures/host_floors/lucid.json` in the same change, and run `./venv/Scripts/python -m pytest tests/test_host_floors.py` from `quodsi_api`
+- [ ] Merge to `main` and promote through `release/dev`, `release/test` and `release/prd`. Writer capabilities with `lucid_floor_since` at or below the new floor turn on in prd with that deploy
+- [ ] `MIN_LUCID_CLIENT_VERSION` may be raised only to a version at or below the new floor's `quodsiVersion`; the API deploy refuses anything higher
+
+## Retire the private prd app
+
+Do this once the Marketplace app is live and the floor has moved to a Marketplace package.
+
+- [ ] Tell the private app's users to install the Marketplace app
+- [ ] Check that a document saved under the private app opens and runs under the Marketplace app
+- [ ] On the retirement date, remove `d38c7ced-35e8-4962-a622-1d3fa480ab58` from `apiBaseUrl.ts` and its origin from `corsOrigins` in `infrastructure/bicep/env/prd.bicepparam`; deploy the bicep and publish the package
