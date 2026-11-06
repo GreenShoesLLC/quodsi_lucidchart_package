@@ -69,7 +69,7 @@ import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
 import { LucidPreflightChecker } from "../versioning/LucidPreflightChecker";
-import { LUCID_STORAGE_FORMAT, StorageFormatTooNewError, ModelSchemaTooNewError } from "./storageFormat";
+import { StorageFormatTooNewError, ModelSchemaTooNewError, pageTooNewError as pageTooNewErrorFor } from "./storageFormat";
 import { migrateResourcesToModelLevel } from "./ResourceStorageMigration";
 
 
@@ -219,20 +219,7 @@ export class ModelManager {
      * newer extension. Returns the error to refuse with, or null.
      */
     private pageTooNewError(page: PageProxy | null): Error | null {
-        if (!page) return null;
-        const format = this.storageAdapter.getStorageFormat(page);
-        if (format !== null && format > LUCID_STORAGE_FORMAT) {
-            return new StorageFormatTooNewError(format);
-        }
-        const pageVersion = new LucidPreflightChecker().getPageVersion(page);
-        if (
-            typeof pageVersion === 'string' &&
-            /^\d+(\.\d+)+$/.test(pageVersion) &&
-            compareVersions(pageVersion, MODEL_SCHEMA_VERSION) > 0
-        ) {
-            return new ModelSchemaTooNewError(pageVersion, MODEL_SCHEMA_VERSION);
-        }
-        return null;
+        return page ? pageTooNewErrorFor(this.storageAdapter, page) : null;
     }
 
     /**

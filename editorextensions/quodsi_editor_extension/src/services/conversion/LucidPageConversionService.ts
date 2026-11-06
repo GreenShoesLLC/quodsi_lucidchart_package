@@ -23,6 +23,7 @@ const SWIMLANE_DATA_KEY = 'q_swimlane';
 
 import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
+import { pageTooNewError } from '../../core/storageFormat';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
 import { MODEL_SETTINGS_KEYS } from '../../core/modelSettingsKeys';
@@ -69,6 +70,12 @@ export class LucidPageConversionService {
      * Converts a LucidChart page to a Quodsi simulation model
      */
     public async convertPage(page: PageProxy): Promise<ConversionResult> {
+        // D2: a too-new page gets no model built and no writes. Refuse up
+        // front, ahead of initializeModel (which refuses silently and would
+        // surface as a confusing 'Failed to initialize model').
+        const tooNew = pageTooNewError(this.storageAdapter, page);
+        if (tooNew) throw tooNew;
+
         log.trace('Starting page conversion');
 
         try {
@@ -145,6 +152,12 @@ export class LucidPageConversionService {
         userOverrideIds: Set<string> = new Set(),
         opts: { resetExisting?: boolean } = {}
     ): Promise<ConversionResult> {
+        // D2: a too-new page gets no model built and no writes. Refuse up
+        // front, ahead of initializeModel (which refuses silently and would
+        // surface as a confusing 'Failed to initialize model').
+        const tooNew = pageTooNewError(this.storageAdapter, page);
+        if (tooNew) throw tooNew;
+
         log.trace('Starting page conversion with explicit mappings');
 
         try {

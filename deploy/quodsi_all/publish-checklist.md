@@ -10,8 +10,7 @@
   - `build-bundle.ps1` reads `MODEL_SCHEMA_VERSION` for the package filename and git tag.
 - [ ] Update `__version__` in `quodsim/quodsim/__init__.py` to match `ENGINE_VERSION`
       (engine only — it does not track the schema version)
-- [ ] Update `"version"` in all `manifest*.json` files to 1 day before target (Lucid auto-increments)
-  - `manifest.json`, `manifest_dev.json`, `manifest_test.json`, `manifest_prod.json`, `manifest_local.json`
+- The manifest `"version"` needs no hand edit: `build-bundle.ps1` overwrites it with the release's Quodsi version.
 - [ ] Add version transformation in the monorepo's `quodsi_shared/src/versioning/transformations/`
   - Determine which transform files need entries (Activity, Connector, Entity, Generator, Resource, Model)
   - Use identity transform if no schema changes for that element type
@@ -20,7 +19,7 @@
 
 ## Simulation engine (Azure Batch)
 
-- [ ] Ensure the engine image tag pinned by the target env's `batchAppVersion` exists in ACR (`crquodsim/quodsim-runner`)
+- [ ] Ensure the runner image for `ENGINE_VERSION` (`quodsi_shared/src/constants/version.ts` on the release branch) exists in ACR (`crquodsim/quodsim-runner`). There is no bicep engine pin: the engine moves with the API deploy, which refuses an engine with no runner image
 
 ## Backend API (FastAPI)
 
@@ -29,7 +28,7 @@
 - [ ] Confirm `quodsi_api/**` changes are merged to `main` — workflow `deploy-api-dev.yml` runs automatically
 - [ ] Watch the workflow: GitHub → Actions → "Deploy API (dev)"
 - [ ] Smoke test: `curl https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/health` → expect HTTP 200
-- [ ] Test: `curl https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/health` → expect HTTP 200. Prd: not yet provisioned — TBD
+- [ ] Test: `curl https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/health` → expect HTTP 200. Prd: `curl https://<ca-quodsim-prd-api FQDN>/health` (live since 2026-10-04; FQDN from `az containerapp show -n ca-quodsim-prd-api -g rg-quodsim-prd`)
 
 ## LucidChart extension
 
