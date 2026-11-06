@@ -8,9 +8,9 @@ import { ModelManager } from '../../src/core/ModelManager';
 import { LucidVersionManager } from '../../src/versioning/LucidVersionManager';
 import { ModelDefinitionPageBuilder } from '../../src/core/ModelDefinitionPageBuilder';
 import { router } from '../../src/core/messaging';
-import { EXTENSION_UPDATE_ADVICE } from '../../src/core/storageFormat';
+import { EXTENSION_UPDATE_ADVICE, LUCID_STORAGE_FORMAT } from '../../src/core/storageFormat';
 import { SimulationObjectType, MODEL_SCHEMA_VERSION } from '@quodsi/lucid-shared';
-import { makeFakePage } from '../helpers/fakeProxies';
+import { makeFakePage, makeFakeBlock, addBlock } from '../helpers/fakeProxies';
 
 function pageWithVersion(storage: StorageAdapter, version?: string): any {
     const page = makeFakePage('page-1');
@@ -106,5 +106,75 @@ describe('ModelManager - model schema forward guard (D2)', () => {
         await manager.getModelDefinition();
 
         expect(handlePageLoadSpy).toHaveBeenCalled();
+    });
+});
+
+describe('ModelManager - too-new page is never written (D2 write guard)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    type Setup = { storage: StorageAdapter; page: any; block: any; manager: ModelManager; sendSpy: jest.SpyInstance };
+
+    async function setup(kind: 'schema' | 'format' | 'current'): Promise<Setup> {
+        const storage = new StorageAdapter();
+        const page = pageWithVersion(storage, kind === 'schema' ? '9999.01.01' : MODEL_SCHEMA_VERSION);
+        if (kind === 'format') page.shapeData.set('q_lucid_format', String(LUCID_STORAGE_FORMAT + 1));
+        const block = addBlock(page, makeFakeBlock('blk-1', { text: 'A' }));
+        jest.spyOn(LucidVersionManager.prototype, 'handlePageLoad')
+            .mockResolvedValue({ upgraded: false, sourceVersion: '', targetVersion: '' });
+        const sendSpy = jest.spyOn(router, 'send').mockImplementation(() => { });
+        writes.length = 0;
+        trackWrites(page, block);
+        const manager = new ModelManager(storage);
+        manager.setCurrentPage(page);
+        await manager.getModelDefinition();
+        writes.length = 0;
+        sendSpy.mockClear();
+        return { storage, page, block, manager, sendSpy };
+    }
+
+    /** Every shapeData set/delete on the page or block is logged; a clean refusal logs none. */
+    const writes: string[] = [];
+    function trackWrites(...proxies: any[]): void {
+        for (const proxy of proxies) {
+            const sd = proxy.shapeData;
+            const set = sd.set.bind(sd);
+            const del = sd.delete.bind(sd);
+            sd.set = (k: string, v: string) => { writes.push(`set ${proxy.id} ${k}`); set(k, v); };
+            sd.delete = (k: string) => { writes.push(`delete ${proxy.id} ${k}`); del(k); };
+        }
+    }
+    function snapshot(page: any, block: any): string {
+        return JSON.stringify([writes.length, page.shapeData.get('q_data'), block.shapeData.get('q_data')]);
+    }
+
+    const activity = { id: 'blk-1', name: 'A', capacity: 1, inboundCapacity: 1, outboundCapacity: 1, actions: [] };
+
+    it.each(['schema', 'format'] as const)('%s: saveElementData, initializeModel, updateModelRoot write nothing', async (kind) => {
+        const { page, block, manager, sendSpy } = await setup(kind);
+        const before = snapshot(page, block);
+
+        await manager.saveElementData(block, activity, SimulationObjectType.Activity, page);
+        expect(snapshot(page, block)).toBe(before);
+
+        await manager.initializeModel({ id: 'model-1', name: 'X', type: SimulationObjectType.Model } as any, page);
+        expect(snapshot(page, block)).toBe(before);
+
+        await manager.updateModelRoot({ resources: [{ id: 'r1', name: 'N', capacity: 1 }] }, page);
+        await manager.updateStates([], page);
+        await manager.updateEntities([], page);
+        manager.setElementData(block, activity, SimulationObjectType.Activity);
+        manager.clearElementData(block);
+        expect(snapshot(page, block)).toBe(before);
+
+        const issues = issuesFrom(sendSpy);
+        expect(issues[issues.length - 1].code).toBe('extension_outdated');
+        expect(issues[issues.length - 1].message).toContain(EXTENSION_UPDATE_ADVICE);
+    });
+
+    it('control: the same save on a current-version page does write', async () => {
+        const { page, block, manager } = await setup('current');
+        const before = snapshot(page, block);
+        await manager.saveElementData(block, activity, SimulationObjectType.Activity, page);
+        expect(snapshot(page, block)).not.toBe(before);
     });
 });

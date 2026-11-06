@@ -1,3 +1,6 @@
+// An unversioned, unstamped page: the too-new write guard reads both and finds nothing.
+const PAGE = { id: 'page-1', shapeData: { get: () => undefined } };
+
 describe('ModelManager.updateModelRoot', () => {
   function harness() {
     const saved: Record<string, unknown> = {};
@@ -8,6 +11,7 @@ describe('ModelManager.updateModelRoot', () => {
       getArrivalSchedules: () => [],
       setWorkSchedules: (_p: unknown, v: unknown) => { saved.workSchedules = v; },
       getWorkSchedules: () => [],
+      getStorageFormat: () => null,
     };
     const changeTracker = {
       modelDefinitionDirty: false,
@@ -24,10 +28,10 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
-    await mm.updateModelRoot({ arrivalPatterns: [{ id: 'ap-1', name: 'P1' }] }, { id: 'page-1' });
+    await mm.updateModelRoot({ arrivalPatterns: [{ id: 'ap-1', name: 'P1' }] }, PAGE);
 
     expect(saved.arrivalPatterns).toEqual([{ id: 'ap-1', name: 'P1' }]);
 
@@ -44,10 +48,10 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
-    await mm.updateModelRoot({ arrivalSchedules: [{ id: 'as-1', name: 'S1' }] }, { id: 'page-1' });
+    await mm.updateModelRoot({ arrivalSchedules: [{ id: 'as-1', name: 'S1' }] }, PAGE);
 
     expect(saved.arrivalSchedules).toEqual([{ id: 'as-1', name: 'S1' }]);
     expect(changeTracker.modelDefinitionDirty).toBe(true);
@@ -63,7 +67,7 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
     await mm.updateModelRoot(
@@ -71,7 +75,7 @@ describe('ModelManager.updateModelRoot', () => {
         arrivalPatterns: [{ id: 'ap-1', name: 'P1' }],
         arrivalSchedules: [{ id: 'as-1', name: 'S1' }],
       },
-      { id: 'page-1' }
+      PAGE
     );
 
     expect(saved.arrivalPatterns).toEqual([{ id: 'ap-1', name: 'P1' }]);
@@ -84,12 +88,12 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
     await mm.updateModelRoot(
       { workSchedules: [{ id: 'ws-1', name: 'Nursing team' }] },
-      { id: 'page-1' }
+      PAGE
     );
 
     expect(saved.workSchedules).toEqual([{ id: 'ws-1', name: 'Nursing team' }]);
@@ -108,7 +112,7 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
     await mm.updateModelRoot(
@@ -117,7 +121,7 @@ describe('ModelManager.updateModelRoot', () => {
         arrivalSchedules: [{ id: 'as-1', name: 'S1' }],
         workSchedules: [{ id: 'ws-1', name: 'Nursing team' }],
       },
-      { id: 'page-1' }
+      PAGE
     );
 
     expect(saved.arrivalPatterns).toEqual([{ id: 'ap-1', name: 'P1' }]);
@@ -135,13 +139,13 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
     const updateEntities = jest.fn().mockResolvedValue(undefined);
     mm.updateEntities = updateEntities;
 
     const entities = [{ id: 'ent-1', name: 'Customer', description: 'walk-in' }];
-    const page = { id: 'page-1' };
+    const page = PAGE;
     await mm.updateModelRoot({ entities }, page);
 
     expect(updateEntities).toHaveBeenCalledTimes(1);
@@ -154,13 +158,13 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
     const updateEntities = jest.fn().mockResolvedValue(undefined);
     mm.updateEntities = updateEntities;
 
     await expect(
-      mm.updateModelRoot({ entities: [], bogus: 1 }, { id: 'page-1' })
+      mm.updateModelRoot({ entities: [], bogus: 1 }, PAGE)
     ).rejects.toThrow(/bogus/);
     expect(updateEntities).not.toHaveBeenCalled();
   });
@@ -170,11 +174,11 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
     await expect(
-      mm.updateModelRoot({ somethingNobodyHandles: [1, 2] }, { id: 'page-1' })
+      mm.updateModelRoot({ somethingNobodyHandles: [1, 2] }, PAGE)
     ).rejects.toThrow(/somethingNobodyHandles/);
   });
 
@@ -183,13 +187,13 @@ describe('ModelManager.updateModelRoot', () => {
     const { ModelManager } = require('../../src/core/ModelManager');
     const mm: any = Object.create(ModelManager.prototype);
     mm.storageAdapter = storageAdapter;
-    mm.debug = { debug: () => {}, error: () => {} };
+    mm.debug = { debug: () => {}, error: () => {}, warn: () => {} };
     mm.changeTracker = changeTracker;
 
     await expect(
       mm.updateModelRoot(
         { arrivalPatterns: [{ id: 'ap-1', name: 'P1' }], bogus: true },
-        { id: 'page-1' }
+        PAGE
       )
     ).rejects.toThrow(/bogus/);
 

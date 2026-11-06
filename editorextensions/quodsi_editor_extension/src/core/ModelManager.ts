@@ -213,6 +213,46 @@ export class ModelManager {
     }
 
     /**
+     * The forward-guard checks, shared by the open path and every write entry
+     * point: a page stamped with a newer storage format, or a well-formed
+     * model schema version strictly newer than this build's, was written by a
+     * newer extension. Returns the error to refuse with, or null.
+     */
+    private pageTooNewError(page: PageProxy | null): Error | null {
+        if (!page) return null;
+        const format = this.storageAdapter.getStorageFormat(page);
+        if (format !== null && format > LUCID_STORAGE_FORMAT) {
+            return new StorageFormatTooNewError(format);
+        }
+        const pageVersion = new LucidPreflightChecker().getPageVersion(page);
+        if (
+            typeof pageVersion === 'string' &&
+            /^\d+(\.\d+)+$/.test(pageVersion) &&
+            compareVersions(pageVersion, MODEL_SCHEMA_VERSION) > 0
+        ) {
+            return new ModelSchemaTooNewError(pageVersion, MODEL_SCHEMA_VERSION);
+        }
+        return null;
+    }
+
+    /**
+     * Write-path guard: when the page is too new, write nothing, log at warn
+     * and re-broadcast the extension_outdated result. Returns true to refuse.
+     */
+    private refuseWriteIfTooNew(page: PageProxy | null, entryPoint: string): boolean {
+        const error = this.pageTooNewError(page);
+        if (!error) return false;
+        this.debug.warn(`${entryPoint} refused: ${error.message}`);
+        this.currentValidationResult = {
+            isValid: false,
+            issues: [ValidationMessages.createIssue(ValidationSeverity.ERROR, 'extension_outdated', error.message)],
+            summary: { errorCount: 1, warningCount: 0, infoCount: 0 }
+        };
+        this.broadcastValidationResults(this.currentValidationResult);
+        return true;
+    }
+
+    /**
      * Gets the current ModelDefinition, rebuilding if necessary
      */
     private async ensureModelDefinition(): Promise<ModelDefinition | null> {
@@ -229,20 +269,9 @@ export class ModelManager {
                         // The clean-only readers would silently default away
                         // whatever they don't recognize, so refuse to build at all
                         // -- same posture as the upgrade-failure catch below.
-                        const format = this.storageAdapter.getStorageFormat(this.currentPage);
-                        if (format !== null && format > LUCID_STORAGE_FORMAT) {
-                            throw new StorageFormatTooNewError(format);
-                        }
-                        // Same posture for the model schema: only a well-formed,
-                        // strictly newer version is refused; absent or
-                        // unparseable versions open normally. Writes nothing.
-                        const pageVersion = new LucidPreflightChecker().getPageVersion(this.currentPage);
-                        if (
-                            typeof pageVersion === 'string' &&
-                            /^\d+(\.\d+)+$/.test(pageVersion) &&
-                            compareVersions(pageVersion, MODEL_SCHEMA_VERSION) > 0
-                        ) {
-                            throw new ModelSchemaTooNewError(pageVersion, MODEL_SCHEMA_VERSION);
+                        const tooNewError = this.pageTooNewError(this.currentPage);
+                        if (tooNewError) {
+                            throw tooNewError;
                         }
                         // Lucid storage format 1 -> 2: lift shape-owned and
                         // lane-owned resources into page-level q_resources.
@@ -373,6 +402,7 @@ export class ModelManager {
      * Initializes a new model definition with data from storage
      */
     public async initializeModel(modelData: Model, pageProxy: PageProxy): Promise<void> {
+        if (this.refuseWriteIfTooNew(pageProxy, 'initializeModel')) return;
         this.currentPage = pageProxy;
 
         // Store the model data FIRST so ensureModelDefinition can read it
@@ -451,6 +481,7 @@ export class ModelManager {
      * Updates an existing element
      */
     public async updateElement(element: SimulationObject): Promise<void> {
+        if (this.refuseWriteIfTooNew(this.currentPage, 'updateElement')) return;
         const modelDef = await this.ensureModelDefinition();
         if (!modelDef || !this.currentPage) {
             throw new Error('Model not initialized');
@@ -506,6 +537,7 @@ export class ModelManager {
      * Activities (sourceConfig), and CreateActions (entityTemplateId).
      */
     public async removeElement(elementId: string): Promise<void> {
+        if (this.refuseWriteIfTooNew(this.currentPage, 'removeElement')) return;
         const modelDef = await this.ensureModelDefinition();
         if (!modelDef || !this.currentPage) return;
 
@@ -961,6 +993,7 @@ export class ModelManager {
         type: SimulationObjectType,
         options?: { mappingSource?: import('@quodsi/lucid-shared').MappingSource }
     ): void {
+        if (this.refuseWriteIfTooNew(this.currentPage, 'setElementData')) return;
         try {
             // Call storage adapter
             this.storageAdapter.setElementData(element, data, type, options);
@@ -977,6 +1010,7 @@ export class ModelManager {
     }
 
     public clearElementData(element: ElementProxy): void {
+        if (this.refuseWriteIfTooNew(this.currentPage, 'clearElementData')) return;
         this.storageAdapter.clearElementData(element);
         this.markModelDirty(element.id);
     }
@@ -1014,6 +1048,7 @@ export class ModelManager {
         type: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
+        if (this.refuseWriteIfTooNew(page, 'saveElementData')) return;
         try {
             // Take the explicit cleared-field declaration OFF the payload before
             // anything else looks at it. The declaration says which fields the
@@ -1411,6 +1446,7 @@ export class ModelManager {
      * Updates the states array for the model
      */
     public async updateStates(states: ISerializedState[], page: PageProxy): Promise<void> {
+        if (this.refuseWriteIfTooNew(page, 'updateStates')) return;
         this.debug.debug('updateStates - Start', {
             statesCount: states.length,
             pageId: page.id,
@@ -1480,6 +1516,7 @@ export class ModelManager {
      * depth so a malformed payload cannot drop it.
      */
     public async updateEntities(entities: ISerializedEntity[], page: PageProxy): Promise<void> {
+        if (this.refuseWriteIfTooNew(page, 'updateEntities')) return;
         this.debug.debug('updateEntities - Start', {
             entitiesCount: entities.length,
             pageId: page.id,
@@ -1608,6 +1645,7 @@ export class ModelManager {
      * rule over stored shape data.
      */
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy, options: ReferenceCleanupOptions = {}): Promise<void> {
+        if (this.refuseWriteIfTooNew(page, 'updateModelRoot')) return;
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
         const knownKeys = [
@@ -1750,6 +1788,7 @@ export class ModelManager {
      * Updates the resource requirements array for the model
      */
     public async updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy, options: ReferenceCleanupOptions = {}): Promise<void> {
+        if (this.refuseWriteIfTooNew(page, 'updateResourceRequirements')) return;
         this.debug.debug('updateResourceRequirements - Start', {
             requirementsCount: requirements.length,
             pageId: page.id,
