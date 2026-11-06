@@ -44,12 +44,14 @@ import "./index_new.css";
 // Relative, not via the exports map: quodsi_studio's package.json exports
 // does not publish theme.css as a subpath.
 import '../../../../../quodsi_studio/src/platforms/shared/theme.css';
-import { applyViewUrlOverride, setDocsUrl } from 'quodsi_studio/platforms/shared';
+import { applyViewUrlOverride, setDocsUrl, setQuodsiHost } from 'quodsi_studio/platforms/shared';
 import { docsUrlForApi } from '@quodsi/shared';
 import { applyLucidClientOutdatedWording } from './features/shared/clientOutdatedWording';
 
 // Every out-of-date notice in this app says to reload LucidChart (Part C).
 applyLucidClientOutdatedWording();
+// Name this host on every request: the API picks its client minimum by it.
+setQuodsiHost('lucid');
 import { migrateLegacyDevFlag } from './utils/migrateLegacyDevFlag';
 
 const log = getLogger('index');
