@@ -32,6 +32,8 @@ import {
     removeRequirementReferences,
     removeResourceReferences,
     pickFallbackEntityId,
+    compareVersions,
+    MODEL_SCHEMA_VERSION,
     isPlainAutoRequirement,
 } from '@quodsi/lucid-shared';
 import { StoredResourceRecord } from './StoredResourceRecord';
@@ -66,7 +68,8 @@ import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
-import { LUCID_STORAGE_FORMAT, StorageFormatTooNewError } from "./storageFormat";
+import { LucidPreflightChecker } from "../versioning/LucidPreflightChecker";
+import { LUCID_STORAGE_FORMAT, StorageFormatTooNewError, ModelSchemaTooNewError } from "./storageFormat";
 import { migrateResourcesToModelLevel } from "./ResourceStorageMigration";
 
 
@@ -230,6 +233,17 @@ export class ModelManager {
                         if (format !== null && format > LUCID_STORAGE_FORMAT) {
                             throw new StorageFormatTooNewError(format);
                         }
+                        // Same posture for the model schema: only a well-formed,
+                        // strictly newer version is refused; absent or
+                        // unparseable versions open normally. Writes nothing.
+                        const pageVersion = new LucidPreflightChecker().getPageVersion(this.currentPage);
+                        if (
+                            typeof pageVersion === 'string' &&
+                            /^\d+(\.\d+)+$/.test(pageVersion) &&
+                            compareVersions(pageVersion, MODEL_SCHEMA_VERSION) > 0
+                        ) {
+                            throw new ModelSchemaTooNewError(pageVersion, MODEL_SCHEMA_VERSION);
+                        }
                         // Lucid storage format 1 -> 2: lift shape-owned and
                         // lane-owned resources into page-level q_resources.
                         // UNCONDITIONAL, and ahead of handlePageLoad: the schema
@@ -274,7 +288,7 @@ export class ModelManager {
                         // cannot help, only updating the extension can, so it
                         // carries its own code and its own (already complete)
                         // message rather than the retry advice below.
-                        const tooNew = error instanceof StorageFormatTooNewError;
+                        const tooNew = error instanceof StorageFormatTooNewError || error instanceof ModelSchemaTooNewError;
                         this.currentValidationResult = {
                             isValid: false,
                             issues: [ValidationMessages.createIssue(

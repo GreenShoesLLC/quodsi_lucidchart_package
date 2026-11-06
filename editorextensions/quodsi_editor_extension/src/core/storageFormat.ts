@@ -13,13 +13,35 @@
  */
 export const LUCID_STORAGE_FORMAT = 2;
 
+/** A Marketplace user cannot update the extension by hand; Lucid does it. */
+export const EXTENSION_UPDATE_ADVICE =
+    'Lucid updates the Quodsi extension automatically; open this document again after it has updated.';
+
 export class StorageFormatTooNewError extends Error {
     constructor(public readonly documentFormat: number) {
         super(
             `This document was saved by a newer version of the Quodsi extension ` +
             `(storage format ${documentFormat}; this version reads up to ${LUCID_STORAGE_FORMAT}). ` +
-            `Update the Quodsi extension to open it.`
+            EXTENSION_UPDATE_ADVICE
         );
         this.name = 'StorageFormatTooNewError';
+    }
+}
+
+/**
+ * The page's model schema version (q_data `version`) is strictly newer than
+ * this build's MODEL_SCHEMA_VERSION: a newer extension saved it.
+ */
+export class ModelSchemaTooNewError extends Error {
+    constructor(
+        public readonly documentVersion: string,
+        public readonly packageVersion: string
+    ) {
+        super(
+            `This document was saved with a newer Quodsi model version ` +
+            `(${documentVersion}; this version reads up to ${packageVersion}). ` +
+            EXTENSION_UPDATE_ADVICE
+        );
+        this.name = 'ModelSchemaTooNewError';
     }
 }
