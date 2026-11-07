@@ -113,7 +113,7 @@ describe('reconcilePage wiring', () => {
     expect((await manager.getModelDefinition())!.connectors.get('L1')).toMatchObject({ weight: 3 });
   });
 
-  it("the user's None on a line opts it out: skip 'user', stash cleared, and the rule maps nothing", async () => {
+  it("the user's None on a line opts it out: the line's opt-out key, stash cleared, and the rule maps nothing", async () => {
     const { storage, page, manager, deps } = await setup();
     const l1 = line(page, 'L1', 'A', 'B');
     await reconcilePage(page, deps);
@@ -121,15 +121,15 @@ describe('reconcilePage wiring', () => {
 
     await manager.saveElementData(l1, {}, T.None, page);
 
-    expect(storage.getSkippedElements(page)).toEqual({ L1: 'user' });
+    expect(storage.isConnectorOptedOut(l1)).toBe(true);
     expect(storage.getConnectorStash(l1)).toBeNull();
     expect(storage.getElementType(l1)).toBeNull();
     expect(await reconcilePage(page, deps)).toEqual([]);
     expect(storage.getElementType(l1)).toBeNull();
 
-    // choosing Connector again deletes the skip entry
+    // choosing Connector again clears it
     await manager.saveElementData(l1, {}, T.Connector, page);
-    expect(storage.getSkippedElements(page)).toEqual({});
+    expect(storage.isConnectorOptedOut(l1)).toBe(false);
     expect(storage.getElementType(l1)?.type).toBe(T.Connector);
   });
 

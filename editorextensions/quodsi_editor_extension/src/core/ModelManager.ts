@@ -1080,16 +1080,18 @@ export class ModelManager {
 
             // A line's type is the user's say over the connector rule: None
             // opts it out (and forgets its stash), Connector opts it back in.
-            // Written BEFORE the removal below, whose validation rebuild runs
-            // the rule and would otherwise map the line straight back.
+            // The opt-out is on the line (q_connector_opt_out), so it travels
+            // on paste and page duplicate. Written BEFORE the removal below,
+            // whose validation rebuild runs the rule and would otherwise map
+            // the line straight back.
             if (page.allLines.get(element.id)) {
                 if (type === SimulationObjectType.None) {
-                    this.storageAdapter.setSkippedElements(page, {
-                        ...this.storageAdapter.getSkippedElements(page),
-                        [element.id]: 'user',
-                    });
+                    this.storageAdapter.setConnectorOptOut(element, true);
                     this.storageAdapter.setConnectorStash(element, null);
                 } else if (type === SimulationObjectType.Connector) {
+                    this.storageAdapter.setConnectorOptOut(element, false);
+                    // A page written before the key opted lines out in its
+                    // skip record; that entry goes too.
                     const skipped = this.storageAdapter.getSkippedElements(page);
                     if (element.id in skipped) {
                         const { [element.id]: _optedIn, ...rest } = skipped;

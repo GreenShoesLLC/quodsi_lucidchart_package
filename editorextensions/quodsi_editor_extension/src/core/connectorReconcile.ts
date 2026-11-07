@@ -36,7 +36,9 @@ export function buildReconcileView(page: PageProxy, storage: StorageAdapter): Re
             text: lineToNameable(line).text ?? null,
             hostName: null,
             mapped: isConnector ? (storage.getElementData<StoredRecord>(line) as ReconcileLine['mapped']) : null,
-            optedOut: skipped[id] === 'user',
+            // The line's own key; a page written before it kept the user's
+            // None as a skip-record 'user' entry, still honoured.
+            optedOut: storage.isConnectorOptedOut(line) || skipped[id] === 'user',
             stash: storage.getConnectorStash(line) as ReconcileLine['stash'],
         });
     }
@@ -45,7 +47,7 @@ export function buildReconcileView(page: PageProxy, storage: StorageAdapter): Re
 
 /**
  * Applies the rule's actions through Lucid's write paths. One failing write
- * never aborts the rest. Never writes the skip record: only the user's explicit
+ * never aborts the rest. Never writes the opt-out: only the user's explicit
  * None opts a line out.
  */
 export async function applyReconcileActions(

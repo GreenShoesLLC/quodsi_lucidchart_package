@@ -26,6 +26,10 @@ export class StorageAdapter {
     // A line's Connector record parked when the connector rule unmapped it, so a
     // later re-map restores weight, condition, actions, levers.
     private static readonly CONNECTOR_STASH_KEY = 'q_connector_stash';
+    // The user's None on a line: the connector rule never maps it. On the line,
+    // not the page skip record, so it travels with the line on paste and page
+    // duplicate (ruling 11).
+    private static readonly CONNECTOR_OPT_OUT_KEY = 'q_connector_opt_out';
     private static readonly RESOURCES_KEY = 'q_resources';
     private static readonly STORAGE_FORMAT_KEY = 'q_lucid_format';
     // A page's Model record PARKED so the page reads as unconverted (spec
@@ -828,6 +832,24 @@ export class StorageAdapter {
         }
     }
 
+    /** True when the user opted this line out of the connector rule (its own key only). */
+    public isConnectorOptedOut(line: ElementProxy): boolean {
+        try {
+            return line.shapeData.get(StorageAdapter.CONNECTOR_OPT_OUT_KEY) === 'true';
+        } catch (error) {
+            log.error('Error reading connector opt-out:', error);
+            return false;
+        }
+    }
+
+    public setConnectorOptOut(line: ElementProxy, on: boolean): void {
+        if (on) {
+            line.shapeData.set(StorageAdapter.CONNECTOR_OPT_OUT_KEY, 'true');
+        } else {
+            this.clearShapeDataKey(line, StorageAdapter.CONNECTOR_OPT_OUT_KEY);
+        }
+    }
+
     public clearAllModelData(page: PageProxy): void {
         try {
             // Clear model data from page
@@ -861,6 +883,7 @@ export class StorageAdapter {
             for (const [, line] of page.allLines) {
                 this.clearElementData(line);
                 this.clearShapeDataKey(line, StorageAdapter.CONNECTOR_STASH_KEY);
+                this.clearShapeDataKey(line, StorageAdapter.CONNECTOR_OPT_OUT_KEY);
             }
         } catch (error) {
             log.error('Error clearing model data:', error);
