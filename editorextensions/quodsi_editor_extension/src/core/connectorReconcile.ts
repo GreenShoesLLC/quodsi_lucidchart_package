@@ -78,9 +78,17 @@ async function applyOne(
     switch (action.kind) {
         case 'map': {
             if (action.restore) {
+                // The action's name, not the stash's: the rule renames a
+                // restore whose earlier name another Connector now holds.
                 storage.setElementData(
                     line,
-                    { ...action.restore, id: line.id, sourceId: action.sourceId, targetId: action.targetId },
+                    {
+                        ...action.restore,
+                        id: line.id,
+                        name: action.name,
+                        sourceId: action.sourceId,
+                        targetId: action.targetId,
+                    },
                     SimulationObjectType.Connector
                 );
                 // Read it back through the Lucid class so registerElement puts it
@@ -89,6 +97,7 @@ async function applyOne(
                 const restored = new LucidElementFactory(storage)
                     .createPlatformObject(line, SimulationObjectType.Connector)
                     .getSimulationObject() as Connector;
+                restored.name = action.name;
                 restored.sourceId = action.sourceId;
                 restored.targetId = action.targetId;
                 await modelManager.registerElement(restored, line);

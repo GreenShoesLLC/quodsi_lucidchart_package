@@ -84,7 +84,9 @@ describe('applyReconcileActions', () => {
     return d;
   }
 
-  it('map with restore writes the stashed record with the new ends and clears the stash', async () => {
+  // The rule renames a restore whose stashed name is now taken (ruling 10); the
+  // action's name is the one to write.
+  it('map with restore writes the stashed record with the new ends and the action name, and clears the stash', async () => {
     const d = deps();
     const l = line('L1', 'A', 'B', { q_connector_stash: JSON.stringify({ id: 'L1', name: 'old', weight: 3 }) });
     const p = page([block('A', T.Activity), block('B', T.Activity)], [l]);
@@ -96,7 +98,7 @@ describe('applyReconcileActions', () => {
     const r = await applyReconcileActions(p, [action], d);
     expect(r.applied).toEqual([action]);
     const data = d.storage.getElementData<any>(l as any);
-    expect(data).toMatchObject({ name: 'old', weight: 3, sourceId: 'A', targetId: 'B' });
+    expect(data).toMatchObject({ name: 'n', weight: 3, sourceId: 'A', targetId: 'B' });
     expect(d.storage.getElementType(l as any)!.type).toBe(T.Connector);
     expect(l.shapeData.has('q_connector_stash')).toBe(false);
   });

@@ -54,17 +54,17 @@ describe('applyReconcileActions with a real ModelManager', () => {
     expect(c).toMatchObject({ name: 'A to B', sourceId: 'A', targetId: 'B', weight: 1 });
   });
 
-  it('map with restore brings back the stashed id and settings', async () => {
+  it('map with restore brings back the stashed id and settings, under the action name', async () => {
     const { storage, page, manager, mkLine } = await setup();
     mkLine('L1', 'A', 'B');
     const restore = { id: 'L1', name: 'Old name', weight: 4, priority: 2 };
     storage.setConnectorStash(page.allLines.get('L1'), restore);
     const r = await applyReconcileActions(page, [
-      { kind: 'map', lineId: 'L1', sourceId: 'A', targetId: 'B', name: 'ignored', restore },
+      { kind: 'map', lineId: 'L1', sourceId: 'A', targetId: 'B', name: 'Old name (L1)', restore },
     ], { storage, modelManager: manager });
     expect(r.failed).toEqual([]);
     const c = (await manager.getModelDefinition())!.connectors.get('L1')!;
-    expect(c).toMatchObject({ id: 'L1', name: 'Old name', weight: 4, priority: 2, sourceId: 'A', targetId: 'B' });
+    expect(c).toMatchObject({ id: 'L1', name: 'Old name (L1)', weight: 4, priority: 2, sourceId: 'A', targetId: 'B' });
     expect(storage.getConnectorStash(page.allLines.get('L1'))).toBeNull();
   });
 
@@ -165,5 +165,20 @@ describe('applyReconcileActions with a real ModelManager', () => {
     const c = (await manager.getModelDefinition())!.connectors.get('L1')!;
     expect(c).toMatchObject({ sourceId: 'G', targetId: 'A' });
     expect(await reconcilePage(page, { storage, modelManager: manager })).toEqual([]);
+  });
+
+  it('a restore whose stashed name another Connector holds comes back under a unique name', async () => {
+    const { storage, page, manager, mkLine } = await setup();
+    mkLine('L0', 'A', 'C');
+    await applyReconcileActions(page, [
+      { kind: 'map', lineId: 'L0', sourceId: 'A', targetId: 'C', name: 'Kept', restore: null },
+    ], { storage, modelManager: manager });
+    const line = mkLine('L1', 'A', 'B');
+    storage.setConnectorStash(line, { id: 'L1', name: 'Kept', weight: 5 });
+    await reconcilePage(page, { storage, modelManager: manager });
+    const md = (await manager.getModelDefinition())!;
+    expect(md.connectors.get('L0')!.name).toBe('Kept');
+    expect(md.connectors.get('L1')).toMatchObject({ weight: 5 });
+    expect(md.connectors.get('L1')!.name).not.toBe('Kept');
   });
 });
