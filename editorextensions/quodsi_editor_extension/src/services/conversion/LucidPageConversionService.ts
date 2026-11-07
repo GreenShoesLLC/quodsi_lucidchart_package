@@ -25,7 +25,7 @@ import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter
 import { ModelManager } from '../../core/ModelManager';
 import { pageTooNewError } from '../../core/storageFormat';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
-import { LucidPageAnalyzer } from './LucidPageAnalyzer';
+import { LucidPageAnalyzer, isConnectorPair } from './LucidPageAnalyzer';
 import { MODEL_SETTINGS_KEYS } from '../../core/modelSettingsKeys';
 
 const log = getLogger('LucidPageConversionService');
@@ -351,6 +351,17 @@ export class LucidPageConversionService {
                 continue;
             }
 
+            // Only between a valid flow pair, judged on each end's stored type,
+            // else its mapped type. The live rule would unmap it at once anyway.
+            // Recorded as an automatic skip, never a user opt-out.
+            const endType = (id: string) =>
+                this.storedTypeOf(page, id) ?? mappings.get(id) ?? null;
+            if (!isConnectorPair(endType(endpoint1.connection.id), endType(endpoint2.connection.id))) {
+                log.trace(`Line ${lineId} is not between a valid flow pair, skipping`);
+                skippedElements[lineId] = 'auto';
+                continue;
+            }
+
             try {
                 log.trace(`Converting line ${lineId} to Connector (source: ${mappingSource})`);
 
@@ -538,6 +549,12 @@ export class LucidPageConversionService {
         connectorNames.add(connector.name);
     }
 
+    /** The type stored on a block on this page, or null if it has none. */
+    private storedTypeOf(page: PageProxy, blockId: string): SimulationObjectType | null {
+        const block = page.allBlocks.get(blockId);
+        return block ? this.storageAdapter.getElementType(block)?.type ?? null : null;
+    }
+
     private async convertConnections(
         page: PageProxy,
         analysis: ProcessAnalysisResult
@@ -556,6 +573,14 @@ export class LucidPageConversionService {
 
                 if (!endpoint1?.connection || !endpoint2?.connection) {
                     log.trace(`Line ${lineId} has invalid endpoints`);
+                    continue;
+                }
+
+                // Same pair rule as the mapped path and the preview.
+                const endType = (id: string) =>
+                    this.storedTypeOf(page, id) ?? analysis.blockAnalysis.get(id)?.elementType ?? null;
+                if (!isConnectorPair(endType(endpoint1.connection.id), endType(endpoint2.connection.id))) {
+                    log.trace(`Line ${lineId} is not between a valid flow pair, skipping`);
                     continue;
                 }
 
