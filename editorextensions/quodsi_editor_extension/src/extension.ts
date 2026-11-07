@@ -41,6 +41,7 @@ import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
 import { AnalyticsHandler } from './core/messaging/handlers/analyticsHandler';
 import { onItemsCreated } from './core/pasteHookWiring';
+import { onDiagramChanged } from './core/connectorReconcileWiring';
 import { registerQuodsiMenu } from './core/quodsiMenu';
 
 const log = getLogger('extension');
@@ -77,8 +78,21 @@ viewport.hookSelection((items) => {
 // Hook item creation (covers paste) to the paste normalizer, via
 // pasteHookWiring's onItemsCreated -- see src/core/PasteNormalizer.ts for
 // what "pasted" means and what gets normalized.
-new DocumentProxy(client).hookCreateItems((items) => {
+// The paste hook also runs the connector rule, after normalizing.
+const lucidDocument = new DocumentProxy(client);
+lucidDocument.hookCreateItems((items) => {
     void onItemsCreated(items, { storageAdapter, modelManager, client });
+});
+
+// Lines follow the live diagram (connector rule, connectorReconcileWiring):
+// delete is immediate; all-changes is debounced by Lucid but is the only hook
+// that sees line-end moves, undo and collaborators' edits. The rule's own
+// writes fire these again; that run finds nothing to do.
+lucidDocument.hookDeleteItems(() => {
+    void onDiagramChanged({ storageAdapter, modelManager, client });
+});
+lucidDocument.hookAllChanges(() => {
+    void onDiagramChanged({ storageAdapter, modelManager, client });
 });
 
 // The extension's "Quodsi" menu (mirrors drawio's; see quodsiMenu.ts).
