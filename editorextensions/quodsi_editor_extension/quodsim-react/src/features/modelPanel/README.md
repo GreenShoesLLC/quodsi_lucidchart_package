@@ -11,12 +11,15 @@ Studio editors.
   initialization/loading/unconverted-page states. An unconverted page renders
   the shared `BlankSlateConverter` (driven by `useLucidBlankSlateAccessor`)
   instead of `ElementEditor`. Wraps its content in the shared
-  `HostAdvisorProvider` (enabled while signed in), which the shared editor
-  headers and the blank-slate card use for their Advisor button.
-- **`PanelHeader.tsx`** — host toolbar above the editor: the Studies and
-  Project launchers (model view) or the type selector (element view), and,
-  in developer mode, the Developer Tools button (five clicks on the Status
-  window's version line turn developer mode on or off). Diagram Mapping,
+  `HostAdvisorProvider` (enabled while signed in), which the header's launch
+  bar and the blank-slate card use for their Advisor button.
+- **`PanelHeader.tsx`** — host toolbar above the editor. Its first row, in
+  every view (swimlanes too), is the shared `PanelLaunchBar`, as in drawio:
+  the Advisor (the panel's only Advisor button; it consults on the selected
+  element, or opens the project when none is), What-if Analysis and, in
+  developer mode, the Developer Tools button (five clicks on the Status
+  window's version line turn developer mode on or off). An element view adds
+  the type selector below it. Diagram Mapping,
   Status, Take the Tour and Remove Quodsi Model are in the extension's Quodsi menu
   (`src/core/quodsiMenu.ts`, carried out by `features/menu/MenuCommandHost`);
   Settings is the account strip's gear. Icon, name, accent stripe and type
@@ -26,7 +29,8 @@ Studio editors.
   element's type (the shared Studio Activity/Generator/Model editors via
   their `Lucid*Editor` wrappers, `ResourceBlockEditor`, `SwimLaneEditor`,
   `ConnectorRoutingView`).
-- **`StudiesLaunchButton.tsx`** — opens the Studies modal; disabled when
+- **`useLucidStudiesLaunch.ts`** — what Lucid feeds the launch bar's
+  What-if button: opens the Studies modal; disabled when
   signed out or when validation has outstanding errors.
 - **`useModelEditorTab.ts`** — holds the Model editor's active tab across
   `ElementEditor`'s page-keyed remounts, and applies a pending tab set by

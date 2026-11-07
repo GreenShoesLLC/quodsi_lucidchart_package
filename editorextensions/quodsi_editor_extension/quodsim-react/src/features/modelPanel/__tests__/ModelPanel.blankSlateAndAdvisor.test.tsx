@@ -1,6 +1,6 @@
 // ModelPanel hosts two shared Studio pieces (spec 2026-09-15 sections 1-2): the
-// blank-slate card on an unconverted page, and the Advisor context every shared
-// editor header's Advisor button reads.
+// blank-slate card on an unconverted page, and the Advisor context the header's
+// launch bar reads (the panel's one Advisor button, user decision 2026-11-07).
 import React from "react";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { EnvelopeMessageType } from "@quodsi/lucid-shared";
@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
     referenceData: {} as any,
     onElementUpdate: vi.fn(),
     onElementTypeChange: vi.fn(),
-    onValidate: vi.fn(),
+    onValidate: vi.fn(),
   },
   auth: { isAuthenticated: true },
   openDiagramMappingModal: vi.fn(),
@@ -48,21 +48,22 @@ vi.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));
 vi.mock("../../../utils/pendingNavigation", () => ({
   consumePendingModelEditorTab: () => null,
 }));
-// Stand-in element editor: two real shared EditorHeaders, so the test drives
-// the Advisor context ModelPanel supplies without mounting whole shared editors.
+// Stand-in element editor: a real shared EditorHeader (which must draw no
+// Advisor button now) and two real launch buttons, one per selection case, so
+// the test drives the Advisor context ModelPanel supplies without mounting
+// whole shared editors or PanelHeader's messaging.
 vi.mock("../ElementEditor", async () => {
   // `quodsi_studio/platforms/shared` is never mocked here, so a plain dynamic
   // import returns the real module. vi.importActual hits a module-resolution
   // error for this bare package specifier from inside a hoisted vi.mock
-  // factory (harness quirk, unrelated to the behavior under test) — this is
-  // the smallest adjustment that keeps two real EditorHeaders in the DOM.
+  // factory (harness quirk, unrelated to the behavior under test).
   const { EditorHeader, ProjectLaunchButton } = await import("quodsi_studio/platforms/shared");
   return {
     ElementEditor: () => (
       <>
         <ProjectLaunchButton />
-        <EditorHeader type="Model" name="Clinic" />
-        <EditorHeader type="Activity" name="Triage" focusId="a1" />
+        <ProjectLaunchButton focus={{ id: "a1", type: "Activity", name: "Triage", mode: "definition" }} />
+        <EditorHeader type="Activity" name="Triage" />
       </>
     ),
   };
@@ -88,7 +89,7 @@ afterEach(() => {
 
 const hostReplies = (data: object) =>
   act(() => { window.dispatchEvent(new MessageEvent("message", { data })); });
-const advisorButtons = () => screen.queryAllByRole("button", { name: /ask the advisor/i });
+const advisorButtons = () => screen.queryAllByRole("button", { name: /advisor/i });
 
 describe("ModelPanel — unconverted page shows the shared blank-slate card", () => {
   it("asks the host for the page counts and shows them", () => {
@@ -135,27 +136,20 @@ describe("ModelPanel — the Advisor for everyone signed in", () => {
     mocks.panel.currentElement = { id: "a1", metadata: { type: "Activity" }, data: { name: "Triage" } };
   });
 
-  it("the Project button opens the Advisor at project focus (Advisor Workspace)", () => {
+  it("with nothing focused, the Advisor button opens the Advisor at project focus (Advisor Workspace)", () => {
     render(<ModelPanel />);
-    fireEvent.click(screen.getByRole("button", { name: "Open the Advisor" }));
+    const [projectButton] = advisorButtons();
+    fireEvent.click(projectButton);
     expect(mocks.openAdvisorModal).toHaveBeenLastCalledWith({
       focusId: "", focusType: "Project", mode: "project", documentId: "doc-1", pageId: "pg-1",
     });
   });
 
-  it("with developer mode off, each shared editor header's Advisor button opens that element's consult", () => {
+  it("with an element focus, the Advisor button opens that element's consult; the editor header has none", () => {
     render(<ModelPanel />);
-    const [modelButton, activityButton] = advisorButtons();
-    fireEvent.click(modelButton);
-    expect(mocks.openAdvisorModal).toHaveBeenLastCalledWith({
-      focusId: "",
-      focusType: "Model",
-      focusName: "Clinic",
-      mode: "definition",
-      documentId: "doc-1",
-      pageId: "pg-1",
-    });
-    fireEvent.click(activityButton);
+    const buttons = advisorButtons();
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[1]);
     expect(mocks.openAdvisorModal).toHaveBeenLastCalledWith({
       focusId: "a1",
       focusType: "Activity",

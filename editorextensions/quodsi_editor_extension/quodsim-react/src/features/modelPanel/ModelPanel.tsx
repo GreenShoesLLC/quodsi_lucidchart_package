@@ -52,9 +52,9 @@ export const ModelPanel: React.FC = () => {
     selectionVersion: selection.lastUpdated,
   });
 
-  // Every Advisor button in the panel -- the shared editor headers and the
+  // Every Advisor button in the panel -- the header's launch bar and the
   // blank-slate card -- opens the embedded consult in a Lucid host modal (spec
-  // 2026-09-15 §2). Editors only open definition consults. The page ids let the host
+  // 2026-09-15 §2). An element focus opens a definition consult. The page ids let the host
   // find the model's cached id, so the consult can read its Simulation Project
   // (spec 2026-10-16).
   const documentId = selection.documentContext?.documentId
@@ -186,7 +186,7 @@ export const ModelPanel: React.FC = () => {
   // Determine if the current element is the Model itself
   const isModelElement = currentElement?.metadata?.type === SimulationObjectType.Model;
 
-  // Swimlanes have their own header; PanelHeader's "unconverted" view is irrelevant
+  // Swimlanes draw their own header: PanelHeader shows them only its launch bar
   const isSwimLane = currentElement?.data?.className === 'AdvancedSwimLaneBlock';
 
   // Main content render
@@ -194,11 +194,12 @@ export const ModelPanel: React.FC = () => {
     <HostAdvisorProvider onOpenAdvisor={onOpenAdvisor} onOpenProject={openProject} enabled={advisorEnabled}>
       <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
         <AccountStrip />
-        {!isSwimLane && <PanelHeader
+        <PanelHeader
           currentElement={currentElement}
+          isSwimLane={isSwimLane}
           onElementTypeChange={onElementTypeChange}
           diagramElementType={diagramElementType}
-        />}
+        />
 
         <div className="flex-1 bg-gray-50 overflow-auto">
           {/* If current element exists and is either not unconverted or is a Model type */}

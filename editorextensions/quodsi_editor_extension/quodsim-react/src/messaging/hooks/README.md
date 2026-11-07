@@ -15,7 +15,7 @@ Hooks that sit on top of the messaging context/reducer (`../MessageContext.ts`,
   (`{ id, type, source, target, version, data }`) to the parent window,
   picking the message `source` from the current panel type.
 - **`useValidationState.ts`** — derives errors/warnings/infos counts from the
-  validation slice; used by `StudiesLaunchButton.tsx` to gate the Studies
+  validation slice; used by `features/modelPanel/useLucidStudiesLaunch.ts` to gate the Studies
   launch button on outstanding validation errors.
 
 Tests live in `__tests__/`.

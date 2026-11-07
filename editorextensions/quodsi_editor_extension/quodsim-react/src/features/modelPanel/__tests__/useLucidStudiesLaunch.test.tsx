@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { StudiesLaunchButton } from 'quodsi_studio/platforms/shared';
 
 const mockOpenStudiesModal = vi.fn();
 vi.mock('../../../messaging/senders/simulationRunSender', () => ({
@@ -21,12 +22,16 @@ vi.mock('../../../messaging/hooks/useValidationState', () => ({
   useValidationState: () => mockValidationState,
 }));
 
-import { StudiesLaunchButton } from '../StudiesLaunchButton';
+import { useLucidStudiesLaunch } from '../useLucidStudiesLaunch';
 
 // The shared button's titles, disabled states and variants are pinned in
 // quodsi_studio (platforms/shared/__tests__/StudiesLaunchButton.test.tsx).
 // This file pins only what LucidChart feeds it.
-describe('StudiesLaunchButton (Lucid host)', () => {
+function Launcher() {
+  return <StudiesLaunchButton {...useLucidStudiesLaunch()} />;
+}
+
+describe('useLucidStudiesLaunch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthState = { isAuthenticated: false };
@@ -34,7 +39,7 @@ describe('StudiesLaunchButton (Lucid host)', () => {
   });
 
   it('maps signed out to the shared signed-out state', () => {
-    render(<StudiesLaunchButton />);
+    render(<Launcher />);
     const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute('title', 'Sign in to use What-if Analysis');
@@ -45,15 +50,15 @@ describe('StudiesLaunchButton (Lucid host)', () => {
   it("passes the extension's error count as the blocker count", () => {
     mockAuthState = { isAuthenticated: true };
     mockValidationState = { errorCount: 2 };
-    render(<StudiesLaunchButton />);
+    render(<Launcher />);
     const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toBeDisabled();
     expect(btn).toHaveAttribute('title', "Fix 2 validation errors before opening What-if Analysis — see the ⚠ in the Model editor's header");
   });
 
-  it('renders the full-width variant and opens Studies for this document and page', () => {
+  it('asks for the full-width variant and opens Studies for this document and page', () => {
     mockAuthState = { isAuthenticated: true };
-    render(<StudiesLaunchButton />);
+    render(<Launcher />);
     const btn = screen.getByTestId('studies-launch-button');
     expect(btn).toHaveClass('w-full');
     expect(btn).not.toBeDisabled();
