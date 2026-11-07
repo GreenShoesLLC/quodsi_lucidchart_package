@@ -5,7 +5,9 @@ import { BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import { SimulationObjectType } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelManager } from '../../src/core/ModelManager';
-import { applyReconcileActions } from '../../src/core/connectorReconcile';
+import { applyReconcileActions, buildReconcileView } from '../../src/core/connectorReconcile';
+import { reconcilePage } from '../../src/core/connectorReconcileWiring';
+import { reconcileConnectors } from '@quodsi/shared';
 import { router } from '../../src/core/messaging';
 import { makeFakeBlock, makeFakeLine, makeFakePage, addBlock, addLine } from '../helpers/fakeProxies';
 
@@ -20,6 +22,9 @@ async function setup() {
     Object.setPrototypeOf(b, BlockProxy.prototype);
     storage.setElementData(b, { id, name: `Act ${id}` }, T.Activity);
   }
+  const g = addBlock(page, makeFakeBlock('G', { text: 'G' }));
+  Object.setPrototypeOf(g, BlockProxy.prototype);
+  storage.setElementData(g, { id: 'G', name: 'Gen G' }, T.Generator);
   const mkLine = (id: string, a: string, b: string) => {
     const l = addLine(page, makeFakeLine(id, { endpoint1: { connection: { id: a } }, endpoint2: { connection: { id: b } } }));
     Object.setPrototypeOf(l, LineProxy.prototype);
@@ -118,5 +123,47 @@ describe('applyReconcileActions with a real ModelManager', () => {
     expect(r.failed).toEqual([action]);
     expect(r.applied).toEqual([]);
     expect(storage.getConnectorStash(line)).toEqual(prior);
+  });
+
+  // O8: the rule maps a line drawn Activity -> Generator as Generator -> Activity;
+  // the Lucid write path and the model builder must keep that direction.
+  it('a line drawn A -> G is G -> A in the built model, and a second run does nothing', async () => {
+    const { storage, page, manager, mkLine } = await setup();
+    mkLine('L1', 'A', 'G');
+    const applied = await reconcilePage(page, { storage, modelManager: manager });
+    expect(applied).toEqual([expect.objectContaining({ kind: 'map', lineId: 'L1', sourceId: 'G', targetId: 'A' })]);
+
+    const c = (await manager.getModelDefinition())!.connectors.get('L1')!;
+    expect(c).toMatchObject({ sourceId: 'G', targetId: 'A' });
+    expect(storage.getElementData<{ sourceId: string; targetId: string }>(page.allLines.get('L1'))).toMatchObject({
+      sourceId: 'G',
+      targetId: 'A',
+    });
+
+    expect(reconcileConnectors(buildReconcileView(page, storage))).toEqual([]);
+    expect(await reconcilePage(page, { storage, modelManager: manager })).toEqual([]);
+  });
+
+  it('a restored stash on a line drawn A -> G is G -> A in the built model', async () => {
+    const { storage, page, manager, mkLine } = await setup();
+    const line = mkLine('L1', 'A', 'G');
+    storage.setConnectorStash(line, { id: 'L1', name: 'Kept', weight: 5, sourceId: 'G', targetId: 'A' });
+    await reconcilePage(page, { storage, modelManager: manager });
+    const c = (await manager.getModelDefinition())!.connectors.get('L1')!;
+    expect(c).toMatchObject({ name: 'Kept', weight: 5, sourceId: 'G', targetId: 'A' });
+    expect(await reconcilePage(page, { storage, modelManager: manager })).toEqual([]);
+  });
+
+  it('a refresh to G -> A on a line drawn A -> G sticks', async () => {
+    const { storage, page, manager, mkLine } = await setup();
+    const line = mkLine('L1', 'A', 'G');
+    // an older build stored the drawn order
+    storage.setElementData(line, { id: 'L1', name: 'Old', sourceId: 'A', targetId: 'G', weight: 1 } as any, T.Connector);
+    manager.invalidateModelCache();
+    const applied = await reconcilePage(page, { storage, modelManager: manager });
+    expect(applied).toEqual([{ kind: 'refresh', lineId: 'L1', sourceId: 'G', targetId: 'A' }]);
+    const c = (await manager.getModelDefinition())!.connectors.get('L1')!;
+    expect(c).toMatchObject({ sourceId: 'G', targetId: 'A' });
+    expect(await reconcilePage(page, { storage, modelManager: manager })).toEqual([]);
   });
 });

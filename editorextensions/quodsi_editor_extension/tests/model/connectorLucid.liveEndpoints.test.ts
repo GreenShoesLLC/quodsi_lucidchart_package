@@ -144,3 +144,28 @@ describe('ConnectorLucid endpoints follow the live line', () => {
         expect(storage.getElementData<any>(line).name).toBe('Original A → Original B');
     });
 });
+
+describe('ConnectorLucid keeps a stored direction the live ends match swapped', () => {
+    const line = () =>
+        makeFakeLine('conn-1', {
+            endpoint1: { x: 10, y: 10, connection: { id: 'blk-A' } },
+            endpoint2: { x: 20, y: 20, connection: { id: 'blk-G' } },
+        });
+
+    it('stored G -> A on a line drawn A -> G stays G -> A, through reads and write-backs', () => {
+        const storage = new StorageAdapter();
+        const l = line();
+        storeConnector(storage, l, { sourceId: 'blk-G', targetId: 'blk-A' });
+        const lucid = new ConnectorLucid(l, storage);
+        expect(lucid.getSimulationObject()).toMatchObject({ sourceId: 'blk-G', targetId: 'blk-A' });
+        lucid.updateFromPlatform();
+        expect(storage.getElementData<any>(l)).toMatchObject({ sourceId: 'blk-G', targetId: 'blk-A' });
+    });
+
+    it('a stored pair that is not the live pair swapped takes the drawn order', () => {
+        const storage = new StorageAdapter();
+        const l = line();
+        storeConnector(storage, l, { sourceId: 'blk-G', targetId: 'blk-X' });
+        expect(new ConnectorLucid(l, storage).getSimulationObject()).toMatchObject({ sourceId: 'blk-A', targetId: 'blk-G' });
+    });
+});

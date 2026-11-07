@@ -66,6 +66,24 @@ export function liveEndpointIds(line: LineProxy): { sourceId?: string; targetId?
 }
 
 /**
+ * The line's live ends as a connector's source and target. Drawn order
+ * (endpoint 1 -> endpoint 2), except when `current` already holds the same two
+ * ends swapped: then its order is kept. That is the connector rule's direction
+ * (a line drawn Activity -> Generator is Generator -> Activity) and drawio
+ * bootstrap's tie-break, so a stored direction the rule chose is never flipped
+ * back to the drawn one. A loose end is '' (no end).
+ */
+export function liveEndsKeepingOrder(
+    line: LineProxy,
+    current: { sourceId?: string | null; targetId?: string | null } | null | undefined
+): { sourceId: string; targetId: string } {
+    const e1 = line.getEndpoint1().connection?.id ?? '';
+    const e2 = line.getEndpoint2().connection?.id ?? '';
+    const swapped = e1 !== '' && e2 !== '' && e1 !== e2 && current?.sourceId === e2 && current?.targetId === e1;
+    return swapped ? { sourceId: e2, targetId: e1 } : { sourceId: e1, targetId: e2 };
+}
+
+/**
  * Lucid-specific implementation of a Connector.
  * Maps a Lucid Line element to a simulation Connector.
  */
@@ -90,14 +108,17 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const endpoint1 = line.getEndpoint1();
         const endpoint2 = line.getEndpoint2();
 
+        // The LIVE line is the only source of the ends -- see
+        // refreshEndpointIds. A loose end is '' (no end), never the stored id;
+        // the stored record only decides the direction (liveEndsKeepingOrder).
+        const ends = liveEndsKeepingOrder(line, storedData);
+
         // Create connector using stored data or defaults
         const connector = new Connector(
             this.platformElementId,
             storedData?.name || this.getElementName('Connector'),
-            // The LIVE line is the only source of the ends -- see
-            // refreshEndpointIds. A loose end is '' (no end), never the stored id.
-            endpoint1.connection?.id ?? '',
-            endpoint2.connection?.id ?? '',
+            ends.sourceId,
+            ends.targetId,
             storedData?.weight ?? 1,
             storedData?.sourceX ?? endpoint1.x ?? 0,
             storedData?.sourceY ?? endpoint1.y ?? 0,
@@ -160,13 +181,14 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
      * A DETACHED endpoint reads as '' (no end): the connector rule unmaps a
      * line with a loose end and stashes its record, so storage no longer needs
      * to remember the old id.
+     *
+     * When the connector already holds the live ends swapped, that direction
+     * is kept (liveEndsKeepingOrder): the rule chose it.
      */
     private refreshEndpointIds(connector: Connector): void {
-        const line = this.element as LineProxy;
-        const { sourceId, targetId } = liveEndpointIds(line);
-
-        connector.sourceId = sourceId ?? '';
-        connector.targetId = targetId ?? '';
+        const { sourceId, targetId } = liveEndsKeepingOrder(this.element as LineProxy, connector);
+        connector.sourceId = sourceId;
+        connector.targetId = targetId;
     }
 
     private updatePlatformSpecificFields(connector: Connector): void {
