@@ -12,20 +12,13 @@ import {
     pickName,
     pickConnectorName,
 } from '@quodsi/lucid-shared';
-import { flowPair, type FlowType } from '@quodsi/shared';
+import { isFlowPairEitherWay, toFlowType } from '@quodsi/shared';
 import { ProcessAnalysisResult, BlockAnalysis } from './types';
 import { StorageAdapter } from '../../core/StorageAdapter';
 
 import { blockToNameable, lineToNameable } from '../../types/nameableShape';
 
 const log = getLogger('LucidPageAnalyzer');
-
-/** A Lucid type as the shared connector rule sees it. */
-export function toFlowType(type: SimulationObjectType | null | undefined): FlowType {
-    return type === SimulationObjectType.Activity || type === SimulationObjectType.Generator
-        ? type
-        : 'Other';
-}
 
 /**
  * Naming metadata per simulation type, matching what conversion passes to the
@@ -36,20 +29,6 @@ const NAME_OPTS_BY_TYPE: Partial<Record<SimulationObjectType, { typeLabel: strin
     [SimulationObjectType.Generator]: { typeLabel: 'Generator', includeMasterName: true },
     [SimulationObjectType.Resource]: { typeLabel: 'Resource', includeMasterName: false },
 };
-
-/**
- * The one connector rule for Lucid: a line is a Connector only between a valid
- * flow pair (flowPair), in either direction. Callers pass each end's stored type,
- * else its proposed/mapped type. Used by the preview and by both conversion paths.
- */
-export function isConnectorPair(
-    sourceType: SimulationObjectType | null | undefined,
-    targetType: SimulationObjectType | null | undefined
-): boolean {
-    const a = toFlowType(sourceType);
-    const b = toFlowType(targetType);
-    return flowPair(a, b) || flowPair(b, a);
-}
 
 export class LucidPageAnalyzer {
     public analyzePage(page: PageProxy): ProcessAnalysisResult {
@@ -183,9 +162,9 @@ export class LucidPageAnalyzer {
             // Resource, an unmapped shape -- is skipped.
             const validPair =
                 hasValidConnections &&
-                isConnectorPair(
-                    endpoint1.connection ? flowTypeByBlock.get(endpoint1.connection.id) : null,
-                    endpoint2.connection ? flowTypeByBlock.get(endpoint2.connection.id) : null
+                isFlowPairEitherWay(
+                    toFlowType(endpoint1.connection ? flowTypeByBlock.get(endpoint1.connection.id) : null),
+                    toFlowType(endpoint2.connection ? flowTypeByBlock.get(endpoint2.connection.id) : null)
                 );
             const proposedType = validPair ? SimulationObjectType.Connector : null;
 

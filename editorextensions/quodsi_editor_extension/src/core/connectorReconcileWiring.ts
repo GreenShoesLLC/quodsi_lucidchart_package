@@ -10,7 +10,7 @@
 import type { EditorClient, PageProxy } from 'lucid-extension-sdk';
 import { Viewport } from 'lucid-extension-sdk';
 import { getLogger } from '@quodsi/lucid-shared';
-import { ValidationMessages, connectorNotices, reconcileConnectors, type ReconcileAction } from '@quodsi/shared';
+import { connectorNotices, reconcileConnectors, unmappedFlowLineNotices, type ReconcileAction } from '@quodsi/shared';
 import type { StorageAdapter } from './StorageAdapter';
 import type { ModelManager } from './ModelManager';
 import { buildReconcileView, applyReconcileActions } from './connectorReconcile';
@@ -55,13 +55,7 @@ export async function reconcilePage(
             applyReconcileActions(page, actions, deps)
         );
 
-        const shapeName = (id: string) => view.shapes.find((s) => s.id === id)?.name ?? id;
-        const notices = connectorNotices(applied, view);
-        for (const a of failed) {
-            if (a.kind === 'map') {
-                notices.push(ValidationMessages.unmappedFlowLine(a.lineId, shapeName(a.sourceId), shapeName(a.targetId)));
-            }
-        }
+        const notices = [...connectorNotices(applied, view), ...unmappedFlowLineNotices(failed, view)];
         if (notices.length > 0) modelManager.pushNotices(notices);
         if (applied.length > 0) modelManager.invalidateModelCache();
         return applied;

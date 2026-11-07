@@ -25,7 +25,8 @@ import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter
 import { ModelManager } from '../../core/ModelManager';
 import { pageTooNewError } from '../../core/storageFormat';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
-import { LucidPageAnalyzer, isConnectorPair } from './LucidPageAnalyzer';
+import { LucidPageAnalyzer } from './LucidPageAnalyzer';
+import { isFlowPairEitherWay, toFlowType } from '@quodsi/shared';
 import { MODEL_SETTINGS_KEYS } from '../../core/modelSettingsKeys';
 
 const log = getLogger('LucidPageConversionService');
@@ -356,7 +357,7 @@ export class LucidPageConversionService {
             // Recorded as an automatic skip, never a user opt-out.
             const endType = (id: string) =>
                 this.storedTypeOf(page, id) ?? mappings.get(id) ?? null;
-            if (!isConnectorPair(endType(endpoint1.connection.id), endType(endpoint2.connection.id))) {
+            if (!isFlowPairEitherWay(toFlowType(endType(endpoint1.connection.id)), toFlowType(endType(endpoint2.connection.id)))) {
                 log.trace(`Line ${lineId} is not between a valid flow pair, skipping`);
                 skippedElements[lineId] = 'auto';
                 continue;
@@ -579,7 +580,7 @@ export class LucidPageConversionService {
                 // Same pair rule as the mapped path and the preview.
                 const endType = (id: string) =>
                     this.storedTypeOf(page, id) ?? analysis.blockAnalysis.get(id)?.elementType ?? null;
-                if (!isConnectorPair(endType(endpoint1.connection.id), endType(endpoint2.connection.id))) {
+                if (!isFlowPairEitherWay(toFlowType(endType(endpoint1.connection.id)), toFlowType(endType(endpoint2.connection.id)))) {
                     log.trace(`Line ${lineId} is not between a valid flow pair, skipping`);
                     continue;
                 }

@@ -1,9 +1,8 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
 import { SimulationObjectType, getLogger, type Connector } from '@quodsi/lucid-shared';
-import type { ReconcileAction, ReconcileLine, ReconcileShape, ReconcileView } from '@quodsi/shared';
+import { toFlowType, type ReconcileAction, type ReconcileLine, type ReconcileShape, type ReconcileView } from '@quodsi/shared';
 import { StorageAdapter } from './StorageAdapter';
 import type { ModelManager } from './ModelManager';
-import { toFlowType } from '../services/conversion/LucidPageAnalyzer';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { blockToNameable, lineToNameable } from '../types/nameableShape';
 
