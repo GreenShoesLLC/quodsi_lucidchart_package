@@ -12,12 +12,20 @@ import {
     pickName,
     pickConnectorName,
 } from '@quodsi/lucid-shared';
+import { flowPair, type FlowType } from '@quodsi/shared';
 import { ProcessAnalysisResult, BlockAnalysis } from './types';
 import { StorageAdapter } from '../../core/StorageAdapter';
 
 import { blockToNameable, lineToNameable } from '../../types/nameableShape';
 
 const log = getLogger('LucidPageAnalyzer');
+
+/** A Lucid type as the shared connector rule sees it. */
+function toFlowType(type: SimulationObjectType | null | undefined): FlowType {
+    return type === SimulationObjectType.Activity || type === SimulationObjectType.Generator
+        ? type
+        : 'Other';
+}
 
 /**
  * Naming metadata per simulation type, matching what conversion passes to the
@@ -76,6 +84,9 @@ export class LucidPageAnalyzer {
         // you use to choose types disagreed with the result.
         const namer = new ConversionNamer();
         const assignedBlockNames = new Map<string, string>();
+        // Each block's type as the shared rule judges a line's ends: the stored
+        // type wins, else the proposed one.
+        const flowTypeByBlock = new Map<string, FlowType>();
 
         // Process all blocks
         for (const [blockId, block] of page.allBlocks) {
@@ -126,6 +137,7 @@ export class LucidPageAnalyzer {
                 });
             }
             assignedBlockNames.set(blockId, elementName);
+            flowTypeByBlock.set(blockId, toFlowType(currentType ?? proposedType));
 
             mappings.push({
                 elementId: blockId,
@@ -152,8 +164,19 @@ export class LucidPageAnalyzer {
             const endpoint2 = line.getEndpoint2();
             const hasValidConnections = !!(endpoint1?.connection && endpoint2?.connection);
 
-            // Lines with valid connections become Connectors, otherwise skipped
-            const proposedType = hasValidConnections ? SimulationObjectType.Connector : null;
+            // A line becomes a Connector only between a valid flow pair (the shared
+            // rule, either direction); anything else -- an unattached end, a
+            // Resource, an unmapped shape -- is skipped.
+            const sourceFlow = endpoint1?.connection
+                ? flowTypeByBlock.get(endpoint1.connection.id) ?? 'Other'
+                : 'Other';
+            const targetFlow = endpoint2?.connection
+                ? flowTypeByBlock.get(endpoint2.connection.id) ?? 'Other'
+                : 'Other';
+            const validPair =
+                hasValidConnections &&
+                (flowPair(sourceFlow, targetFlow) || flowPair(targetFlow, sourceFlow));
+            const proposedType = validPair ? SimulationObjectType.Connector : null;
 
             // Get source and target block names for better display
             let sourceBlockName: string | undefined;
