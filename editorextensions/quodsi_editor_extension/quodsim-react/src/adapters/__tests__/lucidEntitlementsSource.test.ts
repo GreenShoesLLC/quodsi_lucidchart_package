@@ -10,4 +10,16 @@ describe('toSharedEntitlements (spec 2026-09-13 §1)', () => {
     expect(toSharedEntitlements(null)).toBeUndefined()
     expect(toSharedEntitlements(undefined)).toBeUndefined()
   })
+
+  it('maps capabilities onto Entitlements, even with no limit', () => {
+    expect(toSharedEntitlements(null, ['x'])).toEqual({ capabilities: ['x'] })
+    expect(toSharedEntitlements(5, ['x'])).toEqual({
+      replications_per_scenario_limit: 5,
+      capabilities: ['x'],
+    })
+  })
+
+  it('has no entitlements when nothing is known', () => {
+    expect(toSharedEntitlements(null, [])).toBeUndefined()
+  })
 })

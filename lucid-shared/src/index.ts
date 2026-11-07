@@ -24,6 +24,7 @@ export {
 } from './types/swimlane/SwimLaneQuodsiData';
 
 export * from './quodsi-messaging';
+export { LUCID_CLIENT_OUTDATED_MESSAGE } from './clientOutdated';
 
 // ---------------------------------------------------------------------------
 // Re-exports from @quodsi/shared

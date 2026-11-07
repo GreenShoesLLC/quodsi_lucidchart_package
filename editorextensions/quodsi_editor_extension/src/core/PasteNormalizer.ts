@@ -49,6 +49,7 @@ import {
 } from '@quodsi/lucid-shared';
 import { StoredResourceRecord } from './StoredResourceRecord';
 import { StorageAdapter } from './StorageAdapter';
+import { pageTooNewError } from './storageFormat';
 import { liveEndpointIds } from '../types/ConnectorLucid';
 import { lineToNameable } from '../types/nameableShape';
 
@@ -114,6 +115,12 @@ export function normalizePastedItems(
         // the loop moves on; the inner catches stay exactly as they were, so
         // a failure keeps its narrower blast radius wherever one applies.
         try {
+            // D2: a too-new page gets no writes at all -- skip the batch.
+            const tooNew = pageTooNewError(sa, page);
+            if (tooNew) {
+                log.warn('Paste normalization skipped: page is too new for this extension', { pageId: page.id, reason: tooNew.message });
+                continue;
+            }
             normalizePageBatch(page, pageItems, sa, result, opts);
         } catch (error) {
             log.error('Paste normalization failed for page; remaining pages continue', { pageId: page.id, error });

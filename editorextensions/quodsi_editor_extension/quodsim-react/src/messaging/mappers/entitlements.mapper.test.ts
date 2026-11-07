@@ -69,3 +69,13 @@ test('mapEntitlements returns null for a non-ENTITLEMENTS_STATUS envelope', () =
   (other as any).type = EnvelopeMessageType.AUTH_STATUS;
   expect(mapEntitlements(other)).toBeNull();
 });
+
+test('mapEntitlements carries capabilities through', () => {
+  const action = mapEntitlements(
+    envelope({
+      subjectType: 'user', planKey: 'quodsi_free', planStatus: 'active',
+      features: {}, capabilities: ['x'],
+    })
+  );
+  expect(action).toMatchObject({ capabilities: ['x'] });
+});

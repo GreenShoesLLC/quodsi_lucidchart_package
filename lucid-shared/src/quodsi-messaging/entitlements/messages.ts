@@ -46,4 +46,6 @@ export interface EntitlementsStatusData {
   replicationsPerScenarioLimit?: number | null;
   tradeoffAnalysis?: boolean;
   chartExport?: boolean;
+  /** Server-granted capability names; absent from older APIs. */
+  capabilities?: string[];
 }

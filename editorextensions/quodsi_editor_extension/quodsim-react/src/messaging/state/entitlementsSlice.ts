@@ -43,6 +43,8 @@ export interface EntitlementsState {
   tradeoffAnalysis: boolean | null;
   /** Whether chart export is enabled for the current plan. null = unknown (old host). */
   chartExport: boolean | null;
+  /** Server-granted capability names. [] when the host sent none. */
+  capabilities: string[];
 }
 
 export const initialEntitlementsState: EntitlementsState = {
@@ -61,6 +63,7 @@ export const initialEntitlementsState: EntitlementsState = {
   replicationsPerScenarioLimit: null,
   tradeoffAnalysis: null,
   chartExport: null,
+  capabilities: [],
 };
 
 export type EntitlementsAction =
@@ -94,6 +97,7 @@ export function entitlementsReducer(
         replicationsPerScenarioLimit: action.replicationsPerScenarioLimit ?? null,
         tradeoffAnalysis: action.tradeoffAnalysis ?? null,
         chartExport: action.chartExport ?? null,
+        capabilities: action.capabilities ?? [],
       };
     case 'ENTITLEMENTS_CLEAR':
       return initialEntitlementsState;

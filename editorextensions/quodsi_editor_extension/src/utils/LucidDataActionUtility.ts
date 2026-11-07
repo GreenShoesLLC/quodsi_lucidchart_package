@@ -1,4 +1,4 @@
-import { getLogger } from '@quodsi/lucid-shared';
+import { getLogger, LUCID_CLIENT_OUTDATED_MESSAGE } from '@quodsi/lucid-shared';
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
 
 /**
@@ -25,7 +25,7 @@ import { AuthHandler } from '../core/messaging/handlers/authHandler';
 const log = getLogger('LucidDataActionUtility');
 
 /** What an outdated package tells the user (spec 2026-10-21 quodsi-version, Part C). */
-export const CLIENT_OUTDATED_ALERT = 'Quodsi has been updated. Reload LucidChart to get the latest version.';
+export const CLIENT_OUTDATED_ALERT = LUCID_CLIENT_OUTDATED_MESSAGE;
 
 /** This package's Quodsi release, from the build (build-bundle.ps1 Step 1.2). */
 function quodsiVersion(): string {

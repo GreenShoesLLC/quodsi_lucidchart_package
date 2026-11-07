@@ -27,11 +27,11 @@ describe('LucidApp out-of-date notice', () => {
     setClientOutdatedMessage(CLIENT_OUTDATED_MESSAGE)
   })
 
-  it('shows "Reload LucidChart" when the API refuses this package', () => {
+  it('shows the Marketplace wording when the API refuses this package', () => {
     applyLucidClientOutdatedWording()
     render(<LucidApp />)
     act(() => emitClientOutdated({ code: 'client_outdated' }))
     expect(screen.getByRole('alert')).toHaveTextContent(LUCID_CLIENT_OUTDATED_MESSAGE)
-    expect(LUCID_CLIENT_OUTDATED_MESSAGE).toBe('Quodsi has been updated. Reload LucidChart to get the latest version.')
+    expect(LUCID_CLIENT_OUTDATED_MESSAGE).toBe('This version of Quodsi is no longer supported. Lucid updates the Quodsi extension automatically; try again later.')
   })
 })

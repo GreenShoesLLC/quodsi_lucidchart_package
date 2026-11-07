@@ -123,3 +123,22 @@ describe('simulationsUsage', () => {
     expect(simulationsUsage(state)).toBeNull();
   });
 });
+
+test('capabilities default to [] and initial state is []', () => {
+  expect(initialEntitlementsState.capabilities).toEqual([]);
+  const s = entitlementsReducer(initialEntitlementsState, {
+    type: 'ENTITLEMENTS_STATUS_UPDATE',
+    subjectType: 'organization', planKey: 'quodsi_free', planStatus: 'active',
+    features: {},
+  } as any);
+  expect(s.capabilities).toEqual([]);
+});
+
+test('ENTITLEMENTS_STATUS_UPDATE stores capabilities', () => {
+  const s = entitlementsReducer(initialEntitlementsState, {
+    type: 'ENTITLEMENTS_STATUS_UPDATE',
+    subjectType: 'organization', planKey: 'quodsi_free', planStatus: 'active',
+    features: {}, capabilities: ['x'],
+  } as any);
+  expect(s.capabilities).toEqual(['x']);
+});

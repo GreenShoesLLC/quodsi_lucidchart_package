@@ -15,6 +15,7 @@ describe('convertPageWithMappings re-conversion', () => {
     };
     const storageAdapter: any = {
       isQuodsiModel: () => true,            // force the re-conversion branch
+      getStorageFormat: () => null,         // D2 guard reads it; null = not too new
       clearElementData: () => {},
       getSkippedElements: () => ({}),
       setSkippedElements: () => {},

@@ -25,7 +25,7 @@ import { ModelManager } from '../../src/core/ModelManager';
 import { LucidVersionManager } from '../../src/versioning/LucidVersionManager';
 import { ModelDefinitionPageBuilder } from '../../src/core/ModelDefinitionPageBuilder';
 import { router } from '../../src/core/messaging';
-import { LUCID_STORAGE_FORMAT } from '../../src/core/storageFormat';
+import { LUCID_STORAGE_FORMAT, EXTENSION_UPDATE_ADVICE } from '../../src/core/storageFormat';
 import { SimulationObjectType, ActionType, PeriodUnit } from '@quodsi/lucid-shared';
 import { makeFakePage, makeFakeBlock, makeFakeLine, addBlock } from '../helpers/fakeProxies';
 import { buildLegacyResourcesPage } from '../fixtures/legacyResourcesPage';
@@ -119,7 +119,7 @@ describe('ModelManager — storage-format forward guard + migrate-on-open (Plan 
         expect(issues).toHaveLength(1);
         expect(issues[0].code).toBe('extension_outdated');
         expect(issues[0].severity).toBe('error');
-        expect(issues[0].message).toMatch(/Update the Quodsi extension/);
+        expect(issues[0].message).toContain(EXTENSION_UPDATE_ADVICE);
         // No "reload to retry" advice: reloading cannot help; only an update can.
         expect(issues[0].message).not.toMatch(/Reload the page to retry/);
 
