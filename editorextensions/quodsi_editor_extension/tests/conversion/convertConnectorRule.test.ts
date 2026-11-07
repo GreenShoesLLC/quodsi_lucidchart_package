@@ -2,6 +2,8 @@
 // - the rule is suspended while Convert runs, so the dialog's None on a line
 //   between two Activities is not overridden mid-Convert, then runs once after;
 // - Convert's user None writes the line's opt-out, Convert's Connector clears it;
+// - a line the user chose Connector for that is not a valid pair is skipped
+//   with an INFO notice (ruling 5).
 // Real StorageAdapter + LucidElementFactory + ModelManager over fake proxies.
 import { BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import { Viewport } from '../__mocks__/lucid-extension-sdk';
@@ -103,5 +105,44 @@ describe('Convert and the connector rule', () => {
 
     expect((await manager.getModelDefinition())!.connectors.get('L1')).toMatchObject({ sourceId: 'G', targetId: 'A' });
     expect(await reconcilePage(page, { storage, modelManager: manager })).toEqual([]);
+  });
+
+  it('a line the user chose Connector for that is not a valid pair is skipped with an INFO notice', async () => {
+    const { storage, service, page, mkLine, notices } = harness();
+    const l2 = mkLine('L2', 'A', 'R', 'to the nurse');
+
+    await service.convertPageWithMappings(
+      page,
+      new Map<string, SimulationObjectType | null>([
+        ['A', T.Activity],
+        ['B', T.Activity],
+        ['R', T.Resource],
+        ['L2', T.Connector],
+      ]),
+      new Set(['L2'])
+    );
+
+    expect(storage.getElementType(l2)).toBeNull();
+    const info = notices().filter((n) => n.code === 'connector_not_flow_pair');
+    expect(info).toHaveLength(1);
+    expect(info[0]).toMatchObject({ elementId: 'L2' });
+    expect(info[0].message).toBe(
+      `"to the nurse" wasn't made a Connector: it doesn't connect an Activity or Generator to an Activity.`
+    );
+  });
+
+  it('an automatic Connector proposal that is not a valid pair is skipped without a notice', async () => {
+    const { storage, service, page, mkLine, notices } = harness();
+    const l2 = mkLine('L2', 'A', 'R');
+    await service.convertPageWithMappings(
+      page,
+      new Map<string, SimulationObjectType | null>([
+        ['A', T.Activity],
+        ['R', T.Resource],
+        ['L2', T.Connector],
+      ])
+    );
+    expect(storage.getElementType(l2)).toBeNull();
+    expect(notices().filter((n) => n.code === 'connector_not_flow_pair')).toEqual([]);
   });
 });

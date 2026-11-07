@@ -27,9 +27,10 @@ import { ModelManager } from '../../core/ModelManager';
 import { pageTooNewError } from '../../core/storageFormat';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
-import { isFlowPairEitherWay, toFlowType } from '@quodsi/shared';
+import { connectorNotAFlowPairNotice, isFlowPairEitherWay, toFlowType } from '@quodsi/shared';
 import { reconcilePage, withReconcileSuspended } from '../../core/connectorReconcileWiring';
 import { MODEL_SETTINGS_KEYS } from '../../core/modelSettingsKeys';
+import { blockToNameable, lineToNameable } from '../../types/nameableShape';
 
 const log = getLogger('LucidPageConversionService');
 
@@ -394,6 +395,10 @@ export class LucidPageConversionService {
             if (!isFlowPairEitherWay(toFlowType(endType(endpoint1.connection.id)), toFlowType(endType(endpoint2.connection.id)))) {
                 log.trace(`Line ${lineId} is not between a valid flow pair, skipping`);
                 skippedElements[lineId] = 'auto';
+                // The user asked for a Connector here: say why there isn't one.
+                if (isUserOverride) {
+                    this.modelManager.pushNotices([connectorNotAFlowPairNotice(lineId, this.lineNoticeName(page, line))]);
+                }
                 continue;
             }
 
@@ -584,6 +589,26 @@ export class LucidPageConversionService {
         }
 
         connectorNames.add(connector.name);
+    }
+
+    /**
+     * A line's name for a notice: its stored Connector name, else the shared
+     * connector naming policy over its label and its ends' names.
+     */
+    private lineNoticeName(page: PageProxy, line: LineProxy): string {
+        const stored = this.storageAdapter.getElementData<{ name?: string }>(line)?.name?.trim();
+        if (stored) return stored;
+        const endName = (id: string | undefined): string => {
+            const block = id ? page.allBlocks.get(id) : undefined;
+            if (!block) return id ?? '';
+            return this.storageAdapter.getElementData<{ name?: string }>(block)?.name?.trim()
+                || blockToNameable(block).text?.trim()
+                || block.id;
+        };
+        return pickConnectorName(lineToNameable(line), {
+            sourceName: endName(line.getEndpoint1()?.connection?.id),
+            targetName: endName(line.getEndpoint2()?.connection?.id),
+        });
     }
 
     /** The type stored on a block on this page, or null if it has none. */
