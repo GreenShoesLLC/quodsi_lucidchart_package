@@ -13,10 +13,10 @@
 // from the other direction -- storage kept naming the block the line used to
 // touch.
 //
-// The live line therefore wins, and storage is the fallback for the case it
-// is the only answer available: a DETACHED endpoint, which LineProxy reports
-// as `connection === undefined`. Otherwise a line dragged loose would silently
-// lose the routing it was given.
+// The live line therefore wins and is the only source of the ends. A DETACHED
+// endpoint (LineProxy `connection === undefined`) reads as empty: the connector
+// rule unmaps a loose line and stashes its record, so storage no longer stands
+// in for the missing end.
 //
 // Out of scope on purpose: the stored `name`. A pasted connector still carries
 // its "A -> B" name from the original pair, because names are user-visible,
@@ -68,7 +68,7 @@ describe('ConnectorLucid endpoints follow the live line', () => {
         expect(connector.targetId).toBe('blk-D');
     });
 
-    it('keeps the stored id for a DETACHED endpoint -- the live line has no answer there', () => {
+    it('reads a DETACHED endpoint as empty, not the stored id (the connector rule unmaps loose lines)', () => {
         const storage = new StorageAdapter();
         const line = makeFakeLine('conn-1', {
             endpoint1: { x: 10, y: 10 },                       // dragged loose
@@ -78,7 +78,7 @@ describe('ConnectorLucid endpoints follow the live line', () => {
 
         const connector = new ConnectorLucid(line, storage).getSimulationObject();
 
-        expect(connector.sourceId).toBe('blk-A');   // storage is the fallback
+        expect(connector.sourceId).toBe('');        // loose end: no stored fallback
         expect(connector.targetId).toBe('blk-D');   // live wins
     });
 

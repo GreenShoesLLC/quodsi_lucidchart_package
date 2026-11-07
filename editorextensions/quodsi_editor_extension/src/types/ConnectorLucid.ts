@@ -94,12 +94,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const connector = new Connector(
             this.platformElementId,
             storedData?.name || this.getElementName('Connector'),
-            // The LIVE line wins over storage for both endpoints -- see
-            // refreshEndpointIds. Storage is the fallback for a DETACHED end
-            // (connection === undefined), which is the one case the canvas
-            // cannot answer.
-            endpoint1.connection?.id || storedData?.sourceId || '',
-            endpoint2.connection?.id || storedData?.targetId || '',
+            // The LIVE line is the only source of the ends -- see
+            // refreshEndpointIds. A loose end is '' (no end), never the stored id.
+            endpoint1.connection?.id ?? '',
+            endpoint2.connection?.id ?? '',
             storedData?.weight ?? 1,
             storedData?.sourceX ?? endpoint1.x ?? 0,
             storedData?.sourceY ?? endpoint1.y ?? 0,
@@ -159,17 +157,16 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
      * the model disagreeing silently. Re-attaching an endpoint by hand had
      * the same failure from the other side.
      *
-     * A DETACHED endpoint is the exception: LineProxy reports `connection ===
-     * undefined` and the canvas simply has no answer, so the stored id is
-     * left in place rather than blanked -- a line dragged loose must not lose
-     * the routing it was given.
+     * A DETACHED endpoint reads as '' (no end): the connector rule unmaps a
+     * line with a loose end and stashes its record, so storage no longer needs
+     * to remember the old id.
      */
     private refreshEndpointIds(connector: Connector): void {
         const line = this.element as LineProxy;
         const { sourceId, targetId } = liveEndpointIds(line);
 
-        if (sourceId) connector.sourceId = sourceId;
-        if (targetId) connector.targetId = targetId;
+        connector.sourceId = sourceId ?? '';
+        connector.targetId = targetId ?? '';
     }
 
     private updatePlatformSpecificFields(connector: Connector): void {

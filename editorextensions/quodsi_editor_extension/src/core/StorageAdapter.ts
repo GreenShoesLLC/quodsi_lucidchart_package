@@ -23,6 +23,9 @@ export class StorageAdapter {
     // database; the key is only cleared (clearAllModelData) so old pages tidy up.
     private static readonly SCENARIOS_KEY = 'q_scenarios';
     private static readonly SWIMLANE_DATA_KEY = 'q_swimlane';
+    // A line's Connector record parked when the connector rule unmapped it, so a
+    // later re-map restores weight, condition, actions, levers.
+    private static readonly CONNECTOR_STASH_KEY = 'q_connector_stash';
     private static readonly RESOURCES_KEY = 'q_resources';
     private static readonly STORAGE_FORMAT_KEY = 'q_lucid_format';
     // A page's Model record PARKED so the page reads as unconverted (spec
@@ -805,6 +808,26 @@ export class StorageAdapter {
         }
     }
 
+    public getConnectorStash(line: ElementProxy): Record<string, unknown> | null {
+        try {
+            const str = line.shapeData.get(StorageAdapter.CONNECTOR_STASH_KEY);
+            if (!str || typeof str !== 'string') return null;
+            const parsed = JSON.parse(str);
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (error) {
+            log.error('Error reading connector stash:', error);
+            return null;
+        }
+    }
+
+    public setConnectorStash(line: ElementProxy, record: Record<string, unknown> | null): void {
+        if (record === null) {
+            this.clearShapeDataKey(line, StorageAdapter.CONNECTOR_STASH_KEY);
+        } else {
+            line.shapeData.set(StorageAdapter.CONNECTOR_STASH_KEY, JSON.stringify(record));
+        }
+    }
+
     public clearAllModelData(page: PageProxy): void {
         try {
             // Clear model data from page
@@ -837,6 +860,7 @@ export class StorageAdapter {
             // Clear data from all lines
             for (const [, line] of page.allLines) {
                 this.clearElementData(line);
+                this.clearShapeDataKey(line, StorageAdapter.CONNECTOR_STASH_KEY);
             }
         } catch (error) {
             log.error('Error clearing model data:', error);
