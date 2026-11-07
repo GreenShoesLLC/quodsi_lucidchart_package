@@ -1,11 +1,13 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { SimulationObjectType, type Connector } from '@quodsi/lucid-shared';
+import { SimulationObjectType, getLogger, type Connector } from '@quodsi/lucid-shared';
 import type { ReconcileAction, ReconcileLine, ReconcileShape, ReconcileView } from '@quodsi/shared';
 import { StorageAdapter } from './StorageAdapter';
 import type { ModelManager } from './ModelManager';
 import { toFlowType } from '../services/conversion/LucidPageAnalyzer';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { blockToNameable, lineToNameable } from '../types/nameableShape';
+
+const log = getLogger('connectorReconcile');
 
 type StoredRecord = Record<string, unknown> & { id: string };
 
@@ -60,7 +62,8 @@ export async function applyReconcileActions(
             if (!line) throw new Error(`line ${action.lineId} not on page`);
             await applyOne(line, action, deps);
             applied.push(action);
-        } catch {
+        } catch (error) {
+            log.error(`Reconcile ${action.kind} failed for line ${action.lineId}:`, error);
             failed.push(action);
         }
     }
@@ -80,6 +83,15 @@ async function applyOne(
                     { ...action.restore, id: line.id, sourceId: action.sourceId, targetId: action.targetId },
                     SimulationObjectType.Connector
                 );
+                // Read it back through the Lucid class so registerElement puts it
+                // in the cached model and marks the model dirty (a bare q_data
+                // write leaves the cache stale).
+                const restored = new LucidElementFactory(storage)
+                    .createPlatformObject(line, SimulationObjectType.Connector)
+                    .getSimulationObject() as Connector;
+                restored.sourceId = action.sourceId;
+                restored.targetId = action.targetId;
+                await modelManager.registerElement(restored, line);
             } else {
                 const platformObject = new LucidElementFactory(storage).createPlatformObject(
                     line,
@@ -97,12 +109,31 @@ async function applyOne(
             storage.setConnectorStash(line, null);
             return;
         }
-        case 'unmap':
+        case 'unmap': {
+            const priorStash = storage.getConnectorStash(line);
             storage.setConnectorStash(line, action.stash);
             await modelManager.removeElement(line.id);
+            // removeElement returns silently when it cannot act (element not
+            // found, page too new); only a cleared q_data counts as unmapped.
+            if (storage.getElementType(line)) {
+                storage.setConnectorStash(line, priorStash);
+                throw new Error(`removeElement left line ${line.id} mapped`);
+            }
             return;
-        case 'refresh':
-            storage.updateElementData(line, { id: line.id, sourceId: action.sourceId, targetId: action.targetId });
+        }
+        case 'refresh': {
+            const connector = new LucidElementFactory(storage)
+                .createPlatformObject(line, SimulationObjectType.Connector)
+                .getSimulationObject() as Connector;
+            connector.sourceId = action.sourceId;
+            connector.targetId = action.targetId;
+            await modelManager.updateElement(connector);
+            // updateElement returns silently on a too-new page.
+            const stored = storage.getElementData<{ sourceId?: string; targetId?: string }>(line);
+            if (stored?.sourceId !== action.sourceId || stored?.targetId !== action.targetId) {
+                throw new Error(`updateElement did not store the ends of line ${line.id}`);
+            }
             return;
+        }
     }
 }

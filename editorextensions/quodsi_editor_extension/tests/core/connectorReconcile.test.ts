@@ -73,16 +73,22 @@ describe('buildReconcileView', () => {
 
 describe('applyReconcileActions', () => {
   function deps() {
-    return {
-      storage: new StorageAdapter(),
-      modelManager: { registerElement: jest.fn(async () => {}), removeElement: jest.fn(async () => {}) } as any,
+    const storage = new StorageAdapter();
+    const d: { storage: StorageAdapter; page: any; modelManager: any } = { storage, page: null, modelManager: null };
+    d.modelManager = {
+      registerElement: jest.fn(async () => {}),
+      // like the real one: clears q_data from the line
+      removeElement: jest.fn(async (id: string) => { d.page.allLines.get(id).shapeData.delete("q_data"); }),
+      updateElement: jest.fn(async (c: any) => { storage.updateElementData(d.page.allLines.get(c.id), c); }),
     };
+    return d;
   }
 
   it('map with restore writes the stashed record with the new ends and clears the stash', async () => {
     const d = deps();
     const l = line('L1', 'A', 'B', { q_connector_stash: JSON.stringify({ id: 'L1', name: 'old', weight: 3 }) });
     const p = page([block('A', T.Activity), block('B', T.Activity)], [l]);
+    d.page = p;
     const action: ReconcileAction = {
       kind: 'map', lineId: 'L1', sourceId: 'A', targetId: 'B', name: 'n',
       restore: { id: 'L1', name: 'old', weight: 3 },
@@ -99,6 +105,7 @@ describe('applyReconcileActions', () => {
     const d = deps();
     const l = line('L1', 'A', 'B');
     const p = page([block('A', T.Activity), block('B', T.Activity)], [l]);
+    d.page = p;
     const r = await applyReconcileActions(
       p,
       [{ kind: 'map', lineId: 'L1', sourceId: 'A', targetId: 'B', name: 'A to B', restore: null }],
@@ -115,6 +122,7 @@ describe('applyReconcileActions', () => {
     const d = deps();
     const l = line('L1', 'A', null, { q_data: env(T.Connector, 'L1') });
     const p = page([block('A', T.Activity)], [l]);
+    d.page = p;
     const stash = { id: 'L1', name: 'C1' };
     const r = await applyReconcileActions(p, [{ kind: 'unmap', lineId: 'L1', reason: 'end_loose', stash }], d);
     expect(r.failed).toEqual([]);
@@ -129,6 +137,7 @@ describe('applyReconcileActions', () => {
       q_data: env(T.Connector, 'L1', { name: 'C1', sourceId: 'A', targetId: 'B', weight: 2 }),
     });
     const p = page([], [l]);
+    d.page = p;
     await applyReconcileActions(p, [{ kind: 'refresh', lineId: 'L1', sourceId: 'A', targetId: 'C' }], d);
     expect(d.storage.getElementData<any>(l as any)).toMatchObject({ name: 'C1', weight: 2, targetId: 'C' });
   });
@@ -139,6 +148,7 @@ describe('applyReconcileActions', () => {
     bad.shapeData.set = () => { throw new Error('boom'); };
     const good = line('L2', 'A', 'B', { q_data: env(T.Connector, 'L2', { sourceId: 'A', targetId: 'B' }) });
     const p = page([], [bad, good]);
+    d.page = p;
     const a1: ReconcileAction = { kind: 'refresh', lineId: 'L1', sourceId: 'A', targetId: 'C' };
     const a2: ReconcileAction = { kind: 'refresh', lineId: 'L2', sourceId: 'A', targetId: 'C' };
     const r = await applyReconcileActions(p, [a1, a2], d);
