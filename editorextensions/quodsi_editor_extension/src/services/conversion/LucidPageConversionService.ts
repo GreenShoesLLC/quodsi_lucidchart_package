@@ -14,6 +14,7 @@ import {
     generateUUID,
     planAutoResources,
     MODEL_DATE_FIELD_KEYS,
+    pickConnectorName,
     type ActivityResourceRef,
 } from '@quodsi/lucid-shared';
 import { ConversionResult, ProcessAnalysisResult } from './types';
@@ -27,6 +28,7 @@ import { pageTooNewError } from '../../core/storageFormat';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
 import { isFlowPairEitherWay, toFlowType } from '@quodsi/shared';
+import { reconcilePage, withReconcileSuspended } from '../../core/connectorReconcileWiring';
 import { MODEL_SETTINGS_KEYS } from '../../core/modelSettingsKeys';
 
 const log = getLogger('LucidPageConversionService');
@@ -108,12 +110,16 @@ export class LucidPageConversionService {
             // Analyze the page to determine element types
             const analysis = this.pageAnalyzer.analyzePage(page);
 
-            // Convert blocks and connections
-            const convertedBlocks = await this.convertBlocks(page, analysis);
-            log.trace('Blocks converted:', convertedBlocks);
-
-            const convertedConnectors = await this.convertConnections(page, analysis);
-            log.trace('Connectors converted:', convertedConnectors);
+            // Convert blocks and connections, the connector rule held off
+            // until both are written, then run once.
+            const { convertedBlocks, convertedConnectors } = await withReconcileSuspended(page, async () => {
+                const convertedBlocks = await this.convertBlocks(page, analysis);
+                log.trace('Blocks converted:', convertedBlocks);
+                const convertedConnectors = await this.convertConnections(page, analysis);
+                log.trace('Connectors converted:', convertedConnectors);
+                return { convertedBlocks, convertedConnectors };
+            });
+            await this.runConnectorRule(page);
 
             // Validate the converted model
             const validationResult = await this.modelManager.validateModel();
@@ -162,50 +168,13 @@ export class LucidPageConversionService {
         log.trace('Starting page conversion with explicit mappings');
 
         try {
-            // Check if this is a re-conversion (page already has model data)
-            const isReconversion = this.storageAdapter.isQuodsiModel(page);
-
-            const resetExisting = opts.resetExisting === true;
-
-            if (isReconversion) {
-                log.trace('Re-conversion: removing changed elements before re-adding');
-                // removeElement clears q_data AND removes from every collection
-                // (Activity/Resource/etc.) with cascade cleanup — so a type change
-                // can't leave the old element behind. (Bug 2)
-                //
-                // Without resetExisting only a CHANGED element is removed: one now
-                // skipped (null), or whose stored type differs from its mapped
-                // type. An element mapped to the type it already has keeps its
-                // data (L6) and is re-registered below from what is stored.
-                const items: Array<[string, BlockProxy | LineProxy]> = [...page.allBlocks, ...page.allLines];
-                for (const [id, item] of items) {
-                    if (!mappings.has(id)) continue;
-                    const target = mappings.get(id);
-                    if (resetExisting
-                        || target === null
-                        || this.storageAdapter.getElementType(item)?.type !== target) {
-                        await this.modelManager.removeElement(id);
-                    }
-                }
-            } else {
-                // First-time conversion: create the model
-                const modelLucid = this.elementFactory.createPlatformObject(
-                    page,
-                    SimulationObjectType.Model,
-                    true // isConversion
-                );
-
-                const model = modelLucid.getSimulationObject();
-                this.applyPendingModel(page, model);
-                await this.modelManager.initializeModel(model, page);
-
-                if (!this.storageAdapter.isQuodsiModel(page)) {
-                    throw new Error('Failed to initialize model on page');
-                }
-            }
-
-            // Convert elements using explicit mappings
-            const counts = await this.convertElementsWithMappings(page, mappings, userOverrideIds, !resetExisting);
+            // The connector rule is held off while Convert writes (its own
+            // rebuilds would run it before the user's skips are stored), then
+            // runs once on the result.
+            const counts = await withReconcileSuspended(page, () =>
+                this.writeConversionWithMappings(page, mappings, userOverrideIds, opts)
+            );
+            await this.runConnectorRule(page);
 
             // Validate the converted model
             const validationResult = await this.modelManager.validateModel();
@@ -225,6 +194,64 @@ export class LucidPageConversionService {
             log.error('Conversion with mappings failed:', error);
             throw error;
         }
+    }
+
+    /** convertPageWithMappings' writes, run with the connector rule suspended. */
+    private async writeConversionWithMappings(
+        page: PageProxy,
+        mappings: Map<string, SimulationObjectType | null>,
+        userOverrideIds: Set<string>,
+        opts: { resetExisting?: boolean }
+    ): Promise<{ activities: number; generators: number; resources: number; connectors: number }> {
+        // Check if this is a re-conversion (page already has model data)
+        const isReconversion = this.storageAdapter.isQuodsiModel(page);
+
+        const resetExisting = opts.resetExisting === true;
+
+        if (isReconversion) {
+            log.trace('Re-conversion: removing changed elements before re-adding');
+            // removeElement clears q_data AND removes from every collection
+            // (Activity/Resource/etc.) with cascade cleanup — so a type change
+            // can't leave the old element behind. (Bug 2)
+            //
+            // Without resetExisting only a CHANGED element is removed: one now
+            // skipped (null), or whose stored type differs from its mapped
+            // type. An element mapped to the type it already has keeps its
+            // data (L6) and is re-registered below from what is stored.
+            const items: Array<[string, BlockProxy | LineProxy]> = [...page.allBlocks, ...page.allLines];
+            for (const [id, item] of items) {
+                if (!mappings.has(id)) continue;
+                const target = mappings.get(id);
+                if (resetExisting
+                    || target === null
+                    || this.storageAdapter.getElementType(item)?.type !== target) {
+                    await this.modelManager.removeElement(id);
+                }
+            }
+        } else {
+            // First-time conversion: create the model
+            const modelLucid = this.elementFactory.createPlatformObject(
+                page,
+                SimulationObjectType.Model,
+                true // isConversion
+            );
+
+            const model = modelLucid.getSimulationObject();
+            this.applyPendingModel(page, model);
+            await this.modelManager.initializeModel(model, page);
+
+            if (!this.storageAdapter.isQuodsiModel(page)) {
+                throw new Error('Failed to initialize model on page');
+            }
+        }
+
+        // Convert elements using explicit mappings
+        return await this.convertElementsWithMappings(page, mappings, userOverrideIds, !resetExisting);
+    }
+
+    /** The connector rule's one run after Convert (reconcilePage never rejects). */
+    private async runConnectorRule(page: PageProxy): Promise<void> {
+        await reconcilePage(page, { storage: this.storageAdapter, modelManager: this.modelManager });
     }
 
     /**
@@ -335,6 +362,13 @@ export class LucidPageConversionService {
             if (targetType === null) {
                 log.trace(`Skipping line ${lineId} (explicitly skipped, source: ${mappingSource})`);
                 skippedElements[lineId] = mappingSource;
+                // The user's None opts the line out of the connector rule, on
+                // the line itself, and forgets its kept settings -- as the
+                // panel's None does.
+                if (isUserOverride) {
+                    this.storageAdapter.setConnectorOptOut(line, true);
+                    this.storageAdapter.setConnectorStash(line, null);
+                }
                 continue;
             }
 
@@ -368,6 +402,8 @@ export class LucidPageConversionService {
 
                 // Remove from skipped if it was previously skipped (being converted now)
                 delete skippedElements[lineId];
+                // Choosing Connector undoes an earlier None.
+                this.storageAdapter.setConnectorOptOut(line, false);
 
                 const sourceId = endpoint1.connection.id;
 

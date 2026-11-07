@@ -28,8 +28,31 @@ const log = getLogger('connectorReconcileWiring');
 const inFlight = new Set<string>();
 
 /**
+ * Pages whose Convert is running (count, for nesting). Convert's own
+ * removeElement/registerElement rebuild the model, and a rule run in the middle
+ * would map a line before Convert writes the user's None for it.
+ */
+const suspended = new Map<string, number>();
+
+/**
+ * Runs `fn` with reconcilePage a no-op for `page` (Convert); the caller runs
+ * reconcilePage once after. drawio's equivalent is isConvertInProgress.
+ */
+export async function withReconcileSuspended<T>(page: PageProxy, fn: () => Promise<T>): Promise<T> {
+    suspended.set(page.id, (suspended.get(page.id) ?? 0) + 1);
+    try {
+        return await fn();
+    } finally {
+        const n = (suspended.get(page.id) ?? 1) - 1;
+        if (n > 0) suspended.set(page.id, n);
+        else suspended.delete(page.id);
+    }
+}
+
+/**
  * Brings the page's lines in line with the rule. Returns the applied actions.
- * A call made while a run is in progress for the same page returns [] at once.
+ * A call made while a run is in progress for the same page, or while Convert
+ * runs on it (withReconcileSuspended), returns [] at once.
  * Never rejects: a failure is logged and returns [] (callers include
  * ensureModelDefinition and saveElementData, which must not fail over it).
  */
@@ -38,7 +61,7 @@ export async function reconcilePage(
     deps: { storage: StorageAdapter; modelManager: ModelManager }
 ): Promise<ReconcileAction[]> {
     const { storage, modelManager } = deps;
-    if (inFlight.has(page.id)) return [];
+    if (inFlight.has(page.id) || suspended.has(page.id)) return [];
     if (!storage.isQuodsiModel(page) || pageTooNewError(storage, page)) return [];
     inFlight.add(page.id);
     try {
