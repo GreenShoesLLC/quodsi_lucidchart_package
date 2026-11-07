@@ -19,6 +19,7 @@ jest.mock('../../src/core/messaging/handlers/selection/SelectionHandler', () => 
 }));
 
 import { reconcilePage, onDiagramChanged } from '../../src/core/connectorReconcileWiring';
+import * as connectorReconcile from '../../src/core/connectorReconcile';
 
 const T = SimulationObjectType;
 
@@ -203,6 +204,51 @@ describe('reconcilePage wiring', () => {
 
     expect(storage.getElementType(l1)?.type).toBe(T.Connector);
     expect(storage.getElementData<any>(l1)).toMatchObject({ sourceId: 'A', targetId: 'C', weight: 1 });
+  });
+
+  // The rule is a convenience step: a throw inside it must never fail the build
+  // or the save it runs ahead of, and must release the in-flight entry.
+  describe('a throwing view builder or rule', () => {
+    const throwingView = () =>
+      jest.spyOn(connectorReconcile, 'buildReconcileView').mockImplementation(() => {
+        throw new Error('view boom');
+      });
+    // a malformed view makes the shared rule itself throw
+    const throwingRule = () =>
+      jest.spyOn(connectorReconcile, 'buildReconcileView').mockReturnValue({ shapes: [], lines: null } as any);
+
+    it.each([
+      ['view builder', throwingView],
+      ['rule', throwingRule],
+    ])('%s: getModelDefinition still builds the model', async (_label, makeThrow) => {
+      const { page, manager, deps } = await setup();
+      line(page, 'L1', 'A', 'B');
+      const spy = makeThrow();
+      manager.invalidateModelCache();
+
+      const model = await manager.getModelDefinition();
+
+      expect(model!.activities.get('A')).toBeDefined();
+      expect(model!.activities.get('B')).toBeDefined();
+      expect(await manager.validateModelNow()).toBeDefined();
+      // the in-flight entry was released: with the rule working again, it runs
+      spy.mockRestore();
+      expect((await reconcilePage(page, deps)).map((a) => a.kind)).toEqual(['map']);
+    });
+
+    it.each([
+      ['view builder', throwingView],
+      ['rule', throwingRule],
+    ])('%s: a block type conversion still succeeds', async (_label, makeThrow) => {
+      const { storage, page, manager } = await setup();
+      block(page, 'C', null, storage);
+      makeThrow();
+
+      await expect(manager.saveElementData(page.allBlocks.get('C'), {}, T.Activity, page)).resolves.toBeUndefined();
+
+      expect(storage.getElementType(page.allBlocks.get('C'))?.type).toBe(T.Activity);
+      expect((await manager.getModelDefinition())!.activities.get('C')).toBeDefined();
+    });
   });
 
   it('does nothing on a page that is not a Quodsi model', async () => {

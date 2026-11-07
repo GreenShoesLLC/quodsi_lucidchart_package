@@ -30,6 +30,8 @@ const inFlight = new Set<string>();
 /**
  * Brings the page's lines in line with the rule. Returns the applied actions.
  * A call made while a run is in progress for the same page returns [] at once.
+ * Never rejects: a failure is logged and returns [] (callers include
+ * ensureModelDefinition and saveElementData, which must not fail over it).
  */
 export async function reconcilePage(
     page: PageProxy,
@@ -63,6 +65,11 @@ export async function reconcilePage(
         if (notices.length > 0) modelManager.pushNotices(notices);
         if (applied.length > 0) modelManager.invalidateModelCache();
         return applied;
+    } catch (err) {
+        // A convenience step: the build, validation or save it runs ahead of
+        // must go on (applyReconcileActions already catches per action).
+        log.error(`Connector reconcile failed for page ${page.id}; lines left as they are:`, err);
+        return [];
     } finally {
         inFlight.delete(page.id);
     }
