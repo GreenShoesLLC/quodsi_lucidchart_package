@@ -1,9 +1,10 @@
 // PanelHeader is a host TOOLBAR, not a second header (ClickUp 86e39r8e5).
 // Every converted element and the model render a Studio shared editor
 // directly beneath it, and that editor's EditorHeader already shows the
-// icon, name, accent stripe and type. So for those views PanelHeader carries
-// only what EditorHeader has no home for: the Studies launcher (model), the
-// type dropdown (element) and, in developer mode, the Developer Tools button.
+// icon, name, accent stripe and type. So PanelHeader carries only what
+// EditorHeader has no home for: the shared launch bar in every view (What-if,
+// the Advisor and, in developer mode, Developer Tools; user decision
+// 2026-11-07) and, below it for an element, the type dropdown.
 // The old "..." menu is gone: its items live in the extension's Quodsi menu.
 // The unconverted view is the exception: ModelPanel mounts no editor beneath
 // it, so it keeps its title and instruction.
@@ -11,8 +12,8 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
 
-vi.mock("../StudiesLaunchButton", () => ({
-  StudiesLaunchButton: () => <button type="button">What-if Analysis</button>,
+vi.mock("../useLucidStudiesLaunch", () => ({
+  useLucidStudiesLaunch: () => ({ variant: "full", authStatus: "signed-in", blockerCount: 0, onOpen: () => {} }),
 }));
 
 const baseProps = {
@@ -23,9 +24,10 @@ const activity: any = { id: "a1", name: "Triage", metadata: { type: "Activity" }
 const unconverted: any = { id: "b1", name: "", isUnconverted: true, metadata: { type: "None" }, data: {} };
 
 describe("PanelHeader — slim toolbar", () => {
-  it("a converted element shows only the type dropdown: no icon, name or context line", () => {
+  it("a converted element shows the launch bar and the type dropdown: no icon, name or context line", () => {
     const { container } = render(<PanelHeader {...baseProps} currentElement={activity} />);
 
+    expect(screen.getByRole("button", { name: "What-if Analysis" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Element type" })).toBeInTheDocument();
     expect(screen.queryByTitle("More options")).toBeNull();
     expect(screen.queryByText("Triage")).toBeNull();
@@ -33,7 +35,7 @@ describe("PanelHeader — slim toolbar", () => {
     expect(container.querySelector("svg.lucide-wrench")).toBeNull();
   });
 
-  it("the model view shows only the Studies launcher: no name, icon or stats", () => {
+  it("the model view shows only the launch bar: no name, icon, stats or type dropdown", () => {
     const { container } = render(<PanelHeader {...baseProps} currentElement={null} />);
 
     expect(screen.getByRole("button", { name: "What-if Analysis" })).toBeInTheDocument();
@@ -47,6 +49,7 @@ describe("PanelHeader — slim toolbar", () => {
   it("an unconverted element keeps its title and instruction: nothing else names it", () => {
     render(<PanelHeader {...baseProps} currentElement={unconverted} />);
 
+    expect(screen.getByRole("button", { name: "What-if Analysis" })).toBeInTheDocument();
     expect(screen.getByText("Unconverted Element")).toBeInTheDocument();
     expect(screen.getByText("Select element type to begin:")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Element type" })).toBeInTheDocument();
@@ -61,6 +64,23 @@ describe("PanelHeader — slim toolbar", () => {
     localStorage.setItem("quodsi_devmode", "true");
     render(<PanelHeader {...baseProps} currentElement={null} />);
     expect(screen.getByRole("button", { name: "Developer Tools" })).toBeInTheDocument();
+  });
+
+  it("shows Developer Tools once in every view", () => {
+    localStorage.setItem("quodsi_devmode", "true");
+    for (const element of [null, activity, unconverted]) {
+      const { unmount } = render(<PanelHeader {...baseProps} currentElement={element} />);
+      expect(screen.getAllByRole("button", { name: "Developer Tools" })).toHaveLength(1);
+      unmount();
+    }
+  });
+
+  it("a swimlane shows the launch bar only: it draws its own header", () => {
+    const lane: any = { id: "s1", name: "Lanes", metadata: { type: "None" }, data: { className: "AdvancedSwimLaneBlock" } };
+    render(<PanelHeader {...baseProps} currentElement={lane} isSwimLane />);
+    expect(screen.getByRole("button", { name: "What-if Analysis" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByText("Unconverted Element")).toBeNull();
   });
 });
 

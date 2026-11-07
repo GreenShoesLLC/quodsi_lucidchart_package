@@ -8,7 +8,9 @@ import { DiagramElementType, SimulationObjectType } from "@quodsi/lucid-shared";
 import { setView } from "quodsi_studio/platforms/shared";
 import { PanelHeader } from "../PanelHeader";
 
-vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
+vi.mock("../useLucidStudiesLaunch", () => ({
+  useLucidStudiesLaunch: () => ({ variant: "full", authStatus: "signed-in", blockerCount: 0, onOpen: () => {} }),
+}));
 
 const typeSelect = () => screen.getByRole("combobox", { name: "Element type" }) as HTMLSelectElement;
 const values = () =>
