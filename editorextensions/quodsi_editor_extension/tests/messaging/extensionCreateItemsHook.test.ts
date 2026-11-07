@@ -37,6 +37,14 @@ jest.mock('../../src/core/messaging/handlers/selection/SelectionHandler', () => 
   },
 }));
 
+// The connector rule runs after the normalizer (connector-lifecycle Task 5);
+// its behavior is pinned in tests/core/connectorReconcileWiring.test.ts, so
+// here it is a mock that records when it ran.
+const reconcileCurrentPageMock = jest.fn().mockResolvedValue([]);
+jest.mock('../../src/core/connectorReconcileWiring', () => ({
+  reconcileCurrentPage: (...args: unknown[]) => reconcileCurrentPageMock(...args),
+}));
+
 import { onItemsCreated } from '../../src/core/pasteHookWiring';
 
 /**
@@ -82,6 +90,7 @@ describe('onItemsCreated', () => {
     page = makeFakePage('page-1');
     selectedItems = [{ id: 'shape-9' }];
     handleLucidSelectionEventMock.mockClear();
+    reconcileCurrentPageMock.mockReset().mockResolvedValue([]);
     documentPagesForTests.length = 0;
     modelManagerStub = {
       pushNotices: jest.fn(),
@@ -203,5 +212,28 @@ describe('onItemsCreated', () => {
     expect(modelManagerStub.pushNotices).not.toHaveBeenCalled();
     expect(modelManagerStub.invalidateModelCache).not.toHaveBeenCalled();
     expect(handleLucidSelectionEventMock).not.toHaveBeenCalled();
+  });
+
+  it('runs the connector rule after normalizing, and re-runs the selection when only the rule changed something', async () => {
+    const pastedBlock = addBlock(page, makePastedBlock(sa, 'new-id', 'old-id'));
+    const order: string[] = [];
+    modelManagerStub.invalidateModelCache = jest.fn(() => order.push('normalized'));
+    reconcileCurrentPageMock.mockImplementation(async () => {
+      order.push('reconciled');
+      return [];
+    });
+    const deps = { storageAdapter: sa, modelManager: modelManagerStub, client: clientStub as any };
+
+    await onItemsCreated([pastedBlock], deps);
+    expect(order).toEqual(['normalized', 'reconciled']);
+    expect(reconcileCurrentPageMock).toHaveBeenCalledWith(deps);
+
+    // nothing to normalize, but the rule mapped a drawn line
+    handleLucidSelectionEventMock.mockClear();
+    reconcileCurrentPageMock.mockResolvedValue([{ kind: 'map', lineId: 'L1' }]);
+    const plainBlock = addBlock(page, makeFakeBlock('plain-id'));
+    sa.setElementData(plainBlock, { id: 'plain-id', name: 'Normal Activity' }, SimulationObjectType.Activity);
+    await onItemsCreated([plainBlock], deps);
+    expect(handleLucidSelectionEventMock).toHaveBeenCalledTimes(1);
   });
 });

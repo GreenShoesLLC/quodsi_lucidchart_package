@@ -71,6 +71,7 @@ import { LucidVersionManager } from "../versioning/LucidVersionManager";
 import { LucidPreflightChecker } from "../versioning/LucidPreflightChecker";
 import { StorageFormatTooNewError, ModelSchemaTooNewError, pageTooNewError as pageTooNewErrorFor } from "./storageFormat";
 import { migrateResourcesToModelLevel } from "./ResourceStorageMigration";
+import { reconcilePage } from "./connectorReconcileWiring";
 
 
 
@@ -332,6 +333,14 @@ export class ModelManager {
                     }
                 }
                 this.versionCheckedPageId = this.currentPage.id;
+            }
+
+            // The connector rule before every build, so a hook still waiting
+            // on Lucid's debounce never lets a stale model through. The run's
+            // own writes rebuild through here too; reconcilePage skips those
+            // nested calls (connectorReconcileWiring's in-flight set).
+            if (this.storageAdapter.isQuodsiModel(this.currentPage)) {
+                await reconcilePage(this.currentPage, { storage: this.storageAdapter, modelManager: this });
             }
 
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
@@ -660,11 +669,33 @@ export class ModelManager {
     private async validateModelIfNeeded(): Promise<ValidationResult | null> {
         this.checkCacheTimeouts();
 
-        if (!this.changeTracker.validationDirty) {
+        // Deferred (withValidationDeferred): validation stays dirty and the
+        // next validateModel() runs it.
+        if (this.validationDeferredDepth > 0 || !this.changeTracker.validationDirty) {
             return this.currentValidationResult;
         }
 
         return await this.validateModel();
+    }
+
+    /** > 0 while withValidationDeferred runs: writes skip their own validation. */
+    private validationDeferredDepth = 0;
+
+    /**
+     * Runs `fn` with the per-write validation (validateModelIfNeeded) skipped.
+     * For the connector rule's writes (connectorReconcileWiring.reconcilePage),
+     * which can run inside a validation run's rebuild: a write there that
+     * called validateModel() would queue behind the very run awaiting it and
+     * never settle. Validation stays dirty, so the next validateModel() covers
+     * the writes.
+     */
+    public async withValidationDeferred<T>(fn: () => Promise<T>): Promise<T> {
+        this.validationDeferredDepth++;
+        try {
+            return await fn();
+        } finally {
+            this.validationDeferredDepth--;
+        }
     }
 
     /** The queued, not-yet-started run every validateModel() call shares (ClickUp 86e359a0c). */
@@ -1046,6 +1077,26 @@ export class ModelManager {
             // declaration come back byte-identical (same object reference).
             const { data: payload, clearedFields } = takeClearedFields(data ?? {});
             data = payload;
+
+            // A line's type is the user's say over the connector rule: None
+            // opts it out (and forgets its stash), Connector opts it back in.
+            // Written BEFORE the removal below, whose validation rebuild runs
+            // the rule and would otherwise map the line straight back.
+            if (page.allLines.get(element.id)) {
+                if (type === SimulationObjectType.None) {
+                    this.storageAdapter.setSkippedElements(page, {
+                        ...this.storageAdapter.getSkippedElements(page),
+                        [element.id]: 'user',
+                    });
+                    this.storageAdapter.setConnectorStash(element, null);
+                } else if (type === SimulationObjectType.Connector) {
+                    const skipped = this.storageAdapter.getSkippedElements(page);
+                    if (element.id in skipped) {
+                        const { [element.id]: _optedIn, ...rest } = skipped;
+                        this.storageAdapter.setSkippedElements(page, rest);
+                    }
+                }
+            }
 
             // Handle conversion to NONE type (removing simulation data)
             if (type === SimulationObjectType.None) {
@@ -1966,12 +2017,10 @@ export class ModelManager {
             this.debug.debug('Registering element with model manager');
             await this.registerElement(simObject, element);
 
-            // Auto-convert connected lines to Connectors for Activity/Generator conversions
-            if (
-                element instanceof BlockProxy &&
-                (newType === SimulationObjectType.Activity || newType === SimulationObjectType.Generator)
-            ) {
-                await this.autoConvertConnectedLines(element, page);
+            // A block that became (or stopped being) a flow shape changes which
+            // of its lines the connector rule accepts.
+            if (element instanceof BlockProxy) {
+                await reconcilePage(page, { storage: this.storageAdapter, modelManager: this });
             }
 
             this.debug.debug('handleTypeConversion - Completed successfully');
@@ -1979,83 +2028,6 @@ export class ModelManager {
         } catch (error) {
             this.debug.error('handleTypeConversion - Error:', error);
             throw error;
-        }
-    }
-
-    /**
-     * Auto-converts connected lines to Connectors when a block is converted to Activity or Generator.
-     * Only converts lines where the other endpoint is already mapped to an Activity or Generator.
-     */
-    private async autoConvertConnectedLines(
-        block: BlockProxy,
-        page: PageProxy
-    ): Promise<void> {
-        for (const [lineId, line] of page.allLines) {
-            try {
-                // Skip lines already mapped to a simulation type
-                if (this.storageAdapter.getElementType(line)) {
-                    continue;
-                }
-
-                const endpoint1 = line.getEndpoint1();
-                const endpoint2 = line.getEndpoint2();
-
-                // Both endpoints must be connected to blocks
-                if (!endpoint1?.connection || !endpoint2?.connection) {
-                    continue;
-                }
-
-                // Determine if this line connects to the just-converted block
-                const ep1Id = endpoint1.connection.id;
-                const ep2Id = endpoint2.connection.id;
-
-                let otherBlockId: string;
-                if (ep1Id === block.id) {
-                    otherBlockId = ep2Id;
-                } else if (ep2Id === block.id) {
-                    otherBlockId = ep1Id;
-                } else {
-                    // Line doesn't connect to this block
-                    continue;
-                }
-
-                // Check if the other block is mapped to Activity or Generator
-                const otherBlock = page.allBlocks.get(otherBlockId);
-                if (!otherBlock) {
-                    continue;
-                }
-                const otherTypeInfo = this.storageAdapter.getElementType(otherBlock);
-                if (
-                    !otherTypeInfo ||
-                    (otherTypeInfo.type !== SimulationObjectType.Activity &&
-                     otherTypeInfo.type !== SimulationObjectType.Generator)
-                ) {
-                    continue;
-                }
-
-                // Convert the line to a Connector
-                this.debug.debug('Auto-converting line to Connector', { lineId });
-
-                const factory = new LucidElementFactory(this.storageAdapter);
-
-                const platformObject = factory.createPlatformObject(
-                    line,
-                    SimulationObjectType.Connector,
-                    true
-                );
-
-                const connector = platformObject.getSimulationObject() as Connector;
-                connector.sourceId = ep1Id;
-                connector.targetId = ep2Id;
-                connector.weight = 1.0;
-
-                platformObject.updateFromPlatform();
-                await this.registerElement(connector, line);
-
-            } catch (error) {
-                this.debug.error(`Failed to auto-convert line ${lineId}:`, error);
-                // Continue with other lines rather than failing the whole operation
-            }
         }
     }
 

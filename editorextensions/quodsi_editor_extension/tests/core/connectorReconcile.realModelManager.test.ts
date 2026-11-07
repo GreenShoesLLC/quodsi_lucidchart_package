@@ -88,6 +88,10 @@ describe('applyReconcileActions with a real ModelManager', () => {
       { kind: 'map', lineId: 'L1', sourceId: 'A', targetId: 'B', name: 'A to B', restore: null },
     ], { storage, modelManager: manager });
     const line = page.allLines.get('L1');
+    // the user detaches the target end: the cause the action names. (With
+    // both ends still on a valid pair, the rule -- which runs before every
+    // rebuild -- would map the line straight back.)
+    line.getEndpoint2 = () => ({ x: 0, y: 0, connection: undefined });
     const stash = { id: 'L1', name: 'A to B', weight: 1 };
     const r = await applyReconcileActions(page, [{ kind: 'unmap', lineId: 'L1', reason: 'end_loose', stash }], {
       storage,

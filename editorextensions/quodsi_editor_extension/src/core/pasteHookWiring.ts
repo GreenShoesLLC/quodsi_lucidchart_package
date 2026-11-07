@@ -14,6 +14,7 @@ import { ValidationMessages, ValidationSeverity, getLogger } from '@quodsi/lucid
 import { StorageAdapter } from './StorageAdapter';
 import type { ModelManager } from './ModelManager';
 import { normalizePastedItems } from './PasteNormalizer';
+import { reconcileCurrentPage } from './connectorReconcileWiring';
 import { SelectionHandler } from './messaging/handlers/selection/SelectionHandler';
 
 const log = getLogger('pasteHookWiring');
@@ -64,16 +65,21 @@ async function normalizeAndRefresh(items: ItemProxy[], deps: PasteHookDeps): Pro
     const result = normalizePastedItems(items, storageAdapter, {
         allPages: () => (pages ??= [...new DocumentProxy(client).pages.values()]),
     });
-    if (!result.changed) {
-        return;
+    if (result.changed) {
+        modelManager.pushNotices(
+            result.notices.map(notice =>
+                ValidationMessages.createIssue(ValidationSeverity.INFO, 'paste_normalized', notice)
+            )
+        );
+        modelManager.invalidateModelCache();
     }
 
-    modelManager.pushNotices(
-        result.notices.map(notice =>
-            ValidationMessages.createIssue(ValidationSeverity.INFO, 'paste_normalized', notice)
-        )
-    );
-    modelManager.invalidateModelCache();
+    // Then the connector rule (it reads the normalized ids): a drawn or
+    // pasted line between two flow shapes becomes a Connector here.
+    const reconciled = await reconcileCurrentPage(deps);
+    if (!result.changed && reconciled.length === 0) {
+        return;
+    }
 
     try {
         const viewport = new Viewport(client);
