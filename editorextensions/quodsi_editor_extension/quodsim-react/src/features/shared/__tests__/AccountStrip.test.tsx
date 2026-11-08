@@ -483,3 +483,13 @@ describe("AccountStrip / AuthStatusIndicator — trigger close collapses Plan de
     expect(screen.queryByText("Runs this month")).toBeNull();
   });
 });
+
+describe("AccountStrip — Upgrade plan item (hidden 2026-11-08)", () => {
+  it("offers no Upgrade plan item, even signed in on a plan with upgrades available", () => {
+    mockEntitlementsState = { ...PRO_ENTITLEMENTS, upgradeAvailable: true };
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    expect(screen.queryByRole("button", { name: /Upgrade plan/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /Sign Out/i })).toBeInTheDocument();
+  });
+});
