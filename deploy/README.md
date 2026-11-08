@@ -52,15 +52,15 @@ The Lucid bundler runs the React build internally with the right env vars; you a
 
 ## Backend environment URLs
 
-The LucidChart extension manifests call `quodsi_api` via the data connector `callbackBaseUrl`. Dev and test are on the quodsim-tenant Container Apps; prod is not yet provisioned:
+The LucidChart extension manifests call `quodsi_api` via the data connector `callbackBaseUrl`. All three are quodsim-tenant Container Apps:
 
 | Environment | Data connector `callbackBaseUrl` |
 |---|---|
 | Dev | `https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/` |
 | Test | `https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/` |
-| Prd | TBD (prod Container App not yet provisioned) |
+| Prd | `https://api.quodsi.com/lucid/` (public Marketplace app `22d52bec-…`) |
 
-The value lives in each `manifest_{env}.json`; the build guard in `deploy/lucid-package/build-bundle.ps1` asserts the callback host matches the target environment.
+The value lives in each `manifest_{env}.json`; the build guard in `deploy/lucid-package/build-bundle.ps1` asserts the callback host and the package id match the target environment.
 
 ## Lucid bundle workflow detail
 
