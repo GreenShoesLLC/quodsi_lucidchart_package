@@ -36,11 +36,13 @@ This PowerShell script orchestrates the process of preparing environment variabl
 
 ## Manifest Selection by Environment
 
+The script refuses a manifest whose package id or data-connector host does not match the target environment.
+
 | Environment | Manifest Used | Data Connector URL |
 |-------------|---------------|-------------------|
 | Dev | manifest_dev.json | https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/ (Container App, quodsim tenant) |
 | TST | manifest_test.json | https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/ (Container App, quodsim tenant) |
-| PRD | manifest_prod.json | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ (legacy Azure Functions; prod not yet provisioned) |
+| PRD | manifest_prod.json | https://api.quodsi.com/lucid/ (ca-quodsim-prd-api Container App, live since 2026-10-04; custom domain since 2026-11-08). Package id `22d52bec-1b65-4346-82c0-462844508b73`, the public Marketplace app (the private prd app `d38c7ced-…` is retired). Build only from the monorepo at `origin/release/prd`, with `-RunReactBuild` |
 | (none) | manifest.json | whatever manifest.json points at (typically the local dev FastAPI at http://localhost:8000/lucid/) |
 
 ## Parameters

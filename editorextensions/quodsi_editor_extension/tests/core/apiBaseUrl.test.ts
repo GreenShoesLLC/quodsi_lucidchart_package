@@ -36,8 +36,8 @@ describe('getApiBaseUrl', () => {
   });
 
   it('maps the prod package id to the prod API', () => {
-    g.lucid = { getPackageId: () => 'd38c7ced-35e8-4962-a622-1d3fa480ab58' };
-    expect(getApiBaseUrl()).toBe('https://ca-quodsim-prd-api.calmpebble-41fc51e0.westus.azurecontainerapps.io');
+    g.lucid = { getPackageId: () => '22d52bec-1b65-4346-82c0-462844508b73' };
+    expect(getApiBaseUrl()).toBe('https://api.quodsi.com');
   });
 
   it('returns undefined for an unmapped package id', () => {

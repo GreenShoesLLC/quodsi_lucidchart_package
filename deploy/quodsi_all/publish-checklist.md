@@ -51,10 +51,11 @@
 
 ## Marketplace submission
 
-The Marketplace app is a second Lucid app id, separate from the private prd app. Both run the same package and API.
+The Marketplace app (`22d52bec-1b65-4346-82c0-462844508b73`) is a second Lucid app id, separate from the private prd app (`d38c7ced-35e8-4962-a622-1d3fa480ab58`). Both call the same prd API. Since 2026-11-08 `manifest_prod.json` and `apiBaseUrl.ts` carry the Marketplace id, so every PRD build is for the Marketplace app; the private app keeps the package already installed under it.
 
 - [ ] In the monorepo, confirm `release/prd` is at the release you want to ship. Build only from its tip: `.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD -RunReactBuild`
-- [ ] Add the new app's package id to `editorextensions/quodsi_editor_extension/src/core/apiBaseUrl.ts` (next to the private prd id `d38c7ced-35e8-4962-a622-1d3fa480ab58`), and rebuild
+- [x] The Marketplace package id is in `manifest_prod.json` and `editorextensions/quodsi_editor_extension/src/core/apiBaseUrl.ts` (done 2026-11-08)
+- [ ] In prd Kinde, add the Marketplace app's callback `https://extensibility.lucid.app/packages/22d52bec-1b65-4346-82c0-462844508b73/oauthProviders/kinde/authorized` and logout URL `.../oauthProviders/kinde/loggedOut` to the Quodsi LucidChart application
 - [ ] Add the new app's origin (`https://<32 hex>.lucidextensions.app`) to `corsOrigins` in the monorepo's `infrastructure/bicep/env/prd.bicepparam`, and deploy the bicep first. Storage CORS reuses `corsOrigins`
 - [ ] Open the Zendesk ticket with Lucid for the Marketplace listing
 - [ ] Re-record contract fixtures from this build (`quodsi_api/tests/contracts/lucid/SESSION.md`) and commit them with the submission, in the monorepo (`quodsi_api/tests/contracts/lucid/` there), not in this repo
@@ -75,4 +76,4 @@ Do this once the Marketplace app is live and the floor has moved to a Marketplac
 
 - [ ] Tell the private app's users to install the Marketplace app
 - [ ] Check that a document saved under the private app opens and runs under the Marketplace app
-- [ ] On the retirement date, remove `d38c7ced-35e8-4962-a622-1d3fa480ab58` from `apiBaseUrl.ts` and its origin from `corsOrigins` in `infrastructure/bicep/env/prd.bicepparam`; deploy the bicep and publish the package
+- [ ] On the retirement date, remove the private app's origin (`https://98827c7ede87f33fa23f5932559ad2a6.lucidextensions.app`) from `corsOrigins` in `infrastructure/bicep/env/prd.bicepparam` and deploy the bicep; remove its callback and logout URLs from the prd Kinde Quodsi LucidChart app

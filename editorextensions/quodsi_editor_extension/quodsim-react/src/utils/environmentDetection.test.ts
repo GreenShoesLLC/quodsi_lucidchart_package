@@ -54,6 +54,12 @@ describe('detectEnvironment', () => {
     );
   });
 
+  it('detects Prod from the api.quodsi.com custom domain (prd manifest since 2026-11-08)', () => {
+    withApiUrl('https://api.quodsi.com/lucid/', () =>
+      expect(detectEnvironment()).toBe('Prod'),
+    );
+  });
+
   it('detects Local from a localhost URL', () => {
     withApiUrl('http://localhost:7071/api/dataConnector/', () =>
       expect(detectEnvironment()).toBe('Local'),

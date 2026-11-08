@@ -94,7 +94,7 @@ switch ($TargetEnvironment) {
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
     'PRD' {
-        $env:VITE_DATA_CONNECTOR_API_URL = "https://ca-quodsim-prd-api.calmpebble-41fc51e0.westus.azurecontainerapps.io/lucid/"
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://api.quodsi.com/lucid/"
         Write-Host "PRD environment variables set for this session." -ForegroundColor Green
     }
     default {
@@ -485,13 +485,28 @@ if ($ManifestSource) {
         $manifestContent = Get-Content "manifest.json" -Raw | ConvertFrom-Json
         $callbackUrl = $manifestContent.dataConnectors[0].callbackBaseUrl
 
+        # The package id decides which Lucid app the zip uploads to. PRD is the
+        # public Marketplace app since 2026-11-08; the private prd app
+        # (d38c7ced-...) is retired and gets no new packages.
+        $expectedPackageId = switch ($TargetEnvironment) {
+            'Dev' { '29e0d321-5cb2-4ae0-a1b6-dabd512c098c' }
+            'TST' { 'dcde0747-95a4-4bf8-9e17-b4cf41afa1c7' }
+            'PRD' { '22d52bec-1b65-4346-82c0-462844508b73' }
+        }
+        if ($manifestContent.id -ne $expectedPackageId) {
+            Write-Error "Manifest package id mismatch! Expected $expectedPackageId for $TargetEnvironment but got $($manifestContent.id)"
+            exit 1
+        }
+        Write-Host "[OK] Manifest package id validated: $($manifestContent.id)" -ForegroundColor Green
+
         $expectedUrlPattern = switch ($TargetEnvironment) {
             # Dev cut over to FastAPI Container App on 2026-05-13.
             # Test cut over to FastAPI Container App on 2026-05-29.
-            # Prod went live on its FastAPI Container App on 2026-10-04.
+            # Prod went live on its FastAPI Container App on 2026-10-04; its
+            # manifest uses the custom domain api.quodsi.com since 2026-11-08.
             'Dev' { "https://ca-quodsim-dev-api" }
             'TST' { "https://ca-quodsim-test-api" }
-            'PRD' { "https://ca-quodsim-prd-api" }
+            'PRD' { "https://api.quodsi.com/" }
         }
 
         if ($callbackUrl -like "$expectedUrlPattern*") {

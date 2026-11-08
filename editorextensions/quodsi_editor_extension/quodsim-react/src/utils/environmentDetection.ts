@@ -13,9 +13,10 @@ export function detectEnvironment(): Environment {
   if (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
     return 'Local';
   }
-  // Dev + Test are Azure Container Apps (ca-quodsi{m}-{env}-api.*.azurecontainerapps.io)
-  // since the 2026-05 Functions->Container App cutover; Prod is still legacy
-  // Azure Functions ({prd}-quodsi-func-v1.azurewebsites.net). Match the stable
+  // Every environment is an Azure Container App (ca-quodsi{m}-{env}-api.*.azurecontainerapps.io);
+  // prd's manifest calls it by its custom domain, api.quodsi.com, since
+  // 2026-11-08. The `*-quodsi-func` names are the retired Azure Functions
+  // backends, kept so an old URL still labels correctly. Match the stable
   // `-{env}-api` host segment AND the legacy name so the label is correct on
   // both the legacy `ca-quodsi-{env}-api` estate and the quodsim-tenant
   // `ca-quodsim-{env}-api` estate (2026-07 tenant cutover). (The old loose
@@ -27,7 +28,7 @@ export function detectEnvironment(): Environment {
   if (apiUrl.includes('-test-api') || apiUrl.includes('tst-quodsi-func')) {
     return 'Test';
   }
-  if (apiUrl.includes('-prd-api') || apiUrl.includes('prd-quodsi-func')) {
+  if (apiUrl.includes('-prd-api') || apiUrl.includes('prd-quodsi-func') || apiUrl.startsWith('https://api.quodsi.com/')) {
     return 'Prod';
   }
 
