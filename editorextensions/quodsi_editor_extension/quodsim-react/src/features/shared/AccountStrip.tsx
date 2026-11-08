@@ -23,6 +23,9 @@ import { BetaBadge, copyTextToClipboard } from "quodsi_studio/platforms/shared";
 const log = getLogger("AccountStrip");
 
 const DEFAULT_SALES_EMAIL = "support@quodsi.com";
+// The account menu's "Upgrade plan" item (opens the Kinde plan portal) is hidden
+// for now (user decision 2026-11-08). Flip to true to bring it back.
+const SHOW_UPGRADE_PLAN = false;
 const COPIED_RESET_MS = 1500;
 
 type Tone = "danger" | "warning" | "info" | "neutral";
@@ -272,7 +275,7 @@ const AuthStatusIndicator: React.FC = () => {
   const authDropdownRef = useRef<HTMLDivElement>(null);
 
   // upgradeAvailable: false = billing off → hide; null/true = show (fail-open — do NOT change to === true)
-  const showUpgrade = auth.isAuthenticated && entitlements.loaded && entitlements.upgradeAvailable !== false;
+  const showUpgrade = SHOW_UPGRADE_PLAN && auth.isAuthenticated && entitlements.loaded && entitlements.upgradeAvailable !== false;
 
   // Same fail-closed rule PlanDetails applies internally: entitlements not
   // yet loaded, or billing explicitly dark (upgradeAvailable === false),
