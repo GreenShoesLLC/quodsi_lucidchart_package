@@ -24,11 +24,11 @@
     {
       "name": "kinde",
       "title": "Quodsi Auth",
-      "authorizationUrl": "https://quodsim.kinde.com/oauth2/auth?prompt=login&audience=https://api.quodsi.com",
-      "tokenUrl": "https://quodsim.kinde.com/oauth2/token",
-      "revokeTokenUrl": "https://quodsim.kinde.com/oauth2/revoke",
+      "authorizationUrl": "https://auth.quodsi.com/oauth2/auth?prompt=login&audience=https://api.quodsi.com",
+      "tokenUrl": "https://auth.quodsi.com/oauth2/token",
+      "revokeTokenUrl": "https://auth.quodsi.com/oauth2/revoke",
       "scopes": ["openid", "profile", "email"],
-      "domainWhitelist": ["https://quodsim.kinde.com"],
+      "domainWhitelist": ["https://auth.quodsi.com", "https://quodsim.kinde.com"],
       "clientAuthentication": "clientParameters",
       "usePkce": true
     }

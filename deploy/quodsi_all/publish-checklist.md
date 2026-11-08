@@ -56,6 +56,8 @@ The Marketplace app (`22d52bec-1b65-4346-82c0-462844508b73`) is a second Lucid a
 - [ ] In the monorepo, confirm `release/prd` is at the release you want to ship. Build only from its tip: `.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD -RunReactBuild`
 - [x] The Marketplace package id is in `manifest_prod.json` and `editorextensions/quodsi_editor_extension/src/core/apiBaseUrl.ts` (done 2026-11-08)
 - [ ] In prd Kinde, add the Marketplace app's callback `https://extensibility.lucid.app/packages/22d52bec-1b65-4346-82c0-462844508b73/oauthProviders/kinde/authorized` and logout URL `.../oauthProviders/kinde/loggedOut` to the Quodsi LucidChart application
+- [x] `manifest_prod.json` signs in through the Kinde custom domain `auth.quodsi.com` (2026-11-08). The prd API accepts tokens from it and from `quodsim.kinde.com` (`KINDE_ADDITIONAL_ISSUERS`); `domainWhitelist` keeps both, because the extension fetches the user profile from the token's own issuer
+- [ ] After uploading, sign in once through the new package and confirm Lucid's sign-in window shows `auth.quodsi.com` and the panel loads your models
 - [ ] Add the new app's origin (`https://<32 hex>.lucidextensions.app`) to `corsOrigins` in the monorepo's `infrastructure/bicep/env/prd.bicepparam`, and deploy the bicep first. Storage CORS reuses `corsOrigins`
 - [ ] Open the Zendesk ticket with Lucid for the Marketplace listing
 - [ ] Re-record contract fixtures from this build (`quodsi_api/tests/contracts/lucid/SESSION.md`) and commit them with the submission, in the monorepo (`quodsi_api/tests/contracts/lucid/` there), not in this repo
