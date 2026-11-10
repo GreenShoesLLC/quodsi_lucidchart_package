@@ -156,6 +156,44 @@ describe('expression builder modal', () => {
     expect(replies[0][1].data).toEqual({ requestId: 'r1', expression: 'qty * 2' });
   });
 
+  it('releases the guard on RESULT without waiting for frameClosed', () => {
+    ModelRootHandler.handleMessage(openMessage('r1'));
+    ModelRootHandler.handleMessage(resultMessage('r1', 'qty * 2'));
+
+    // No frameClosed: Lucid may not fire it after the host's own close().
+    ModelRootHandler.handleMessage(openMessage('r2'));
+    expect(shown).toHaveLength(2);
+    expect(sentToModel().map(([, m]) => m.data)).toEqual([
+      { requestId: 'r1', expression: 'qty * 2' },
+    ]);
+
+    // The first modal's late close sends nothing and does not free r2's claim.
+    (shown[0] as any).frameClosed();
+    expect(sentToModel()).toHaveLength(1);
+    ModelRootHandler.handleMessage(openMessage('r3'));
+    expect(shown).toHaveLength(2);
+  });
+
+  it('settles null and releases the guard when the modal fails to show', async () => {
+    (ExpressionBuilderModal.prototype.show as jest.Mock).mockImplementationOnce(async function (
+      this: ExpressionBuilderModal,
+    ) {
+      shown.push(this);
+      throw new Error('ShowModal rejected');
+    });
+
+    ModelRootHandler.handleMessage(openMessage('r1'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const replies = sentToModel();
+    expect(replies).toHaveLength(1);
+    expect(replies[0][1].data).toEqual({ requestId: 'r1', expression: null });
+
+    ModelRootHandler.handleMessage(openMessage('r2'));
+    expect(shown).toHaveLength(2);
+    expect(sentToModel()).toHaveLength(1);
+  });
+
   it('ignores a RESULT for a request that is not the open one', () => {
     ModelRootHandler.handleMessage(openMessage('r1'));
     ModelRootHandler.handleMessage(resultMessage('stale', 'x'));

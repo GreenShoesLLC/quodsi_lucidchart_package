@@ -310,19 +310,43 @@ export class ModelRootHandler {
           data: init,
         });
       },
-      onClosed: () => {
-        if (session.settled === false) {
-          session.settled = true;
-          ModelRootHandler.sendExpressionBuilderResult(session.openId, requestId, null);
-        }
-        if (ModelRootHandler.openExpressionBuilder === session) {
-          ModelRootHandler.openExpressionBuilder = null;
-        }
-      },
+      // Lucid's X: no RESULT came, so the panel is answered null here.
+      onClosed: () => ModelRootHandler.settleExpressionBuilder(session, null),
     });
     const session = { modal, requestId, openId: msg.id, settled: false };
     ModelRootHandler.openExpressionBuilder = session;
-    modal.show();
+    // If ShowModal fails, frameLoaded/frameClosed never fire: answer the
+    // panel null and release the guard here, or both would hang.
+    const showFailed = (err: unknown) => {
+      log.error('OPEN_EXPRESSION_BUILDER: the builder modal failed to open', err);
+      ModelRootHandler.settleExpressionBuilder(session, null);
+    };
+    try {
+      Promise.resolve(modal.show()).catch(showFailed);
+    } catch (err) {
+      showFailed(err);
+    }
+  }
+
+  /**
+   * Answer the panel for this session, once, and release the open-session
+   * guard if it is still this session's. Called from the modal's RESULT, from
+   * frameClosed (Lucid's X) and from a failed show; whichever comes first
+   * answers and the rest send nothing. The guard is released right here
+   * rather than waiting for frameClosed, which is not confirmed to fire after
+   * the host's own modal.close().
+   */
+  private static settleExpressionBuilder(
+    session: NonNullable<typeof ModelRootHandler.openExpressionBuilder>,
+    expression: string | null,
+  ): void {
+    if (!session.settled) {
+      session.settled = true;
+      ModelRootHandler.sendExpressionBuilderResult(session.openId, session.requestId, expression);
+    }
+    if (ModelRootHandler.openExpressionBuilder === session) {
+      ModelRootHandler.openExpressionBuilder = null;
+    }
   }
 
   /**
@@ -337,9 +361,8 @@ export class ModelRootHandler {
       log.warn('EXPRESSION_BUILDER_RESULT: no open builder for this request; ignoring');
       return;
     }
-    session.settled = true;
     const expression = typeof data.expression === 'string' ? data.expression : null;
-    ModelRootHandler.sendExpressionBuilderResult(session.openId, session.requestId, expression);
+    ModelRootHandler.settleExpressionBuilder(session, expression);
     session.modal.close();
   }
 
