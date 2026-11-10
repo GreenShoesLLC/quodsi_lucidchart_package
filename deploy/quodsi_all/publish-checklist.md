@@ -69,6 +69,7 @@ Do this when Lucid has approved and published a package, not when you upload it.
 
 - [ ] Edit `quodsi_api/app/host_floors.json` in the monorepo: set the lucid entry's `quodsiVersion` (the package's Quodsi version), `modelSchemaVersion` and `outputSchemaMajor` to the published package's values
 - [ ] Regenerate `quodsi_api/tests/fixtures/host_floors/lucid.json` in the same change, and run `./venv/Scripts/python -m pytest tests/test_host_floors.py` from `quodsi_api`
+- [ ] If the package carries the methodologies catalog (Simulation Project methodology choice), add `lucid` to the `hosts` of the `project_methods` capability in `quodsi_api/app/capabilities.py` and set its `min_version` to the package's Quodsi version, in the same floor-update change. Until then Lucid creates default-methodology projects
 - [ ] Merge to `main` and promote through `release/dev`, `release/test` and `release/prd`. Writer capabilities with `lucid_floor_since` at or below the new floor turn on in prd with that deploy
 - [ ] `MIN_LUCID_CLIENT_VERSION` may be raised only to a version at or below the new floor's `quodsiVersion`; the API deploy refuses anything higher
 
