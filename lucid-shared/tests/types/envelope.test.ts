@@ -73,4 +73,8 @@ describe('isEnvelope source/target validation', () => {
   it('accepts the diagram-mapping-iframe source used by the inline Diagram Mapping modal (spec 2026-09-15)', () => {
     expect(isEnvelope(envelopeWith({ source: 'diagram-mapping-iframe' }))).toBe(true);
   });
+
+  it('accepts the expression-iframe source used by the expression builder modal (spec 2026-11-10)', () => {
+    expect(isEnvelope(envelopeWith({ source: 'expression-iframe' }))).toBe(true);
+  });
 });

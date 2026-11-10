@@ -46,3 +46,10 @@ export type {
 
 // Extension menu message payloads
 export type { MenuCommand, MenuCommandData } from './menu/messages';
+
+// Expression builder message payloads (spec 2026-11-10)
+export type {
+  OpenExpressionBuilderData,
+  ExpressionBuilderInitData,
+  ExpressionBuilderResultData,
+} from './expressionBuilder/messages';

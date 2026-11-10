@@ -88,6 +88,10 @@ export class ElementOpsHandler {
     // model -- but the branch is here for the same defensive reason as
     // 'work-schedule' above.
     if (msg.source === 'settings-iframe') return 'settings';
+    // The expression builder modal never writes the model either -- it hands
+    // its expression back through EXPRESSION_BUILDER_RESULT -- same
+    // defensive branch as 'settings' above.
+    if (msg.source === 'expression-iframe') return 'expression';
     // The compiled Studies/Advisor modal (Advisor write half) writes with
     // source 'studio-embed-iframe'; its RESULT must come back on the
     // studio-embed channel or the modal's write hangs for the full 30 s

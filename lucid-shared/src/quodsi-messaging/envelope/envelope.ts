@@ -37,6 +37,9 @@ export const MESSAGE_SOURCES = [
   // inline"). Same RUNTIME-list requirement as every entry above -- see
   // this constant's own header for the bug a missing entry here causes.
   'diagram-mapping-iframe',
+  // Expression builder modal (spec 2026-11-10). Same RUNTIME-list
+  // requirement as every entry above.
+  'expression-iframe',
 ] as const;
 
 /**

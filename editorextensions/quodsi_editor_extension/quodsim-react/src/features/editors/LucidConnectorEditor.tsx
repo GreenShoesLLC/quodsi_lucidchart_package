@@ -14,6 +14,7 @@ import { ConnectorEditor } from 'quodsi_studio/platforms/shared'
 import { useElementEditorAccessor } from '../../adapters/useElementEditorAccessor'
 import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender'
+import { useExpressionBuilderBridge } from '../expressionBuilder/useExpressionBuilderBridge'
 
 export interface LucidConnectorEditorProps {
   shapeId: string
@@ -24,6 +25,8 @@ export const LucidConnectorEditor: React.FC<LucidConnectorEditorProps> = ({ shap
   const { accessor, projection } = useElementEditorAccessor(referenceData)
   const { openSettingsModal } = useSimulationRunSender()
   const { selectElement } = useModelOpsSender()
+  // Build expression… opens the builder over the canvas (spec 2026-11-10).
+  const openExpressionBuilder = useExpressionBuilderBridge()
   // Stable (ConnectorEditor memoises its EditorHostContext on it). Above the early return (hook order).
   const onGoToStates = useCallback(() => selectElement('model', { targetTab: 'States' }), [selectElement])
 
@@ -36,6 +39,7 @@ export const LucidConnectorEditor: React.FC<LucidConnectorEditorProps> = ({ shap
       accessor={accessor}
       onOpenSettings={openSettingsModal}
       onGoToStates={onGoToStates}
+      onOpenExpressionBuilder={openExpressionBuilder}
     />
   )
 }

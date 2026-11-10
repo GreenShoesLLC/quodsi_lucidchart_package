@@ -23,7 +23,7 @@ const logger = getLogger('InitializationEffects');
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
   dispatch: React.Dispatch<any>,
-  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings' | 'diagram-mapping'
+  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings' | 'diagram-mapping' | 'expression'
 ) {
   useEffect(() => {
     if (!state.app.initialized) {
@@ -32,7 +32,7 @@ export function usePanelTypeDetectionEffect(
       const panelParam = urlParams.get("panel");
       const viewParam = urlParams.get("view");
 
-      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | "settings" | "diagram-mapping" | undefined = initialPanelType;
+      let detectedType: "auth" | "model" | "results" | "studio-embed" | "pattern" | "schedule" | "work-schedule" | "settings" | "diagram-mapping" | "expression" | undefined = initialPanelType;
 
       if (viewParam === "pattern") {
         detectedType = "pattern";
@@ -59,6 +59,10 @@ export function usePanelTypeDetectionEffect(
         // role. App passes the same value as the prop; listed explicitly for
         // the reason given under work-schedule.
         detectedType = "studio-embed";
+      } else if (viewParam === "expression") {
+        // The expression builder modal (spec 2026-11-10) -- same reasoning
+        // as work-schedule above.
+        detectedType = "expression";
       } else if (viewParam === "results") {
         // Modal mode: view=results takes precedence
         detectedType = "results";
