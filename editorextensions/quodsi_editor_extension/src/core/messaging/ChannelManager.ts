@@ -19,6 +19,7 @@ export class ChannelManager {
     'work-schedule': { ready: false, queue: [] },
     settings: { ready: false, queue: [] },
     'diagram-mapping': { ready: false, queue: [] },
+    expression: { ready: false, queue: [] },
   };
   
   /**

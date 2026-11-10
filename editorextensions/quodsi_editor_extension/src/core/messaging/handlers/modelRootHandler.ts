@@ -1,4 +1,9 @@
 import { EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi/lucid-shared';
+import type {
+  ExpressionBuilderInitData,
+  ExpressionBuilderResultData,
+  OpenExpressionBuilderData,
+} from '@quodsi/lucid-shared';
 import { CLEARED_FIELDS_KEY } from '../../clearedFields';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
@@ -8,6 +13,7 @@ import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 import { ScheduleEditorModal } from '../../../panels/ScheduleEditorModal';
 import { WorkScheduleEditorModal } from '../../../panels/WorkScheduleEditorModal';
 import { SettingsModal } from '../../../panels/SettingsModal';
+import { ExpressionBuilderModal } from '../../../panels/ExpressionBuilderModal';
 import { SelectionHandler } from './selection/SelectionHandler';
 import { assertWritePage } from '../pageGuard';
 import { readReferenceCleanupOptions } from '../referenceCleanupOptions';
@@ -53,6 +59,21 @@ export class ModelRootHandler {
    */
   private static openSettingsModal: SettingsModal | null = null;
 
+  /**
+   * The expression builder modal currently open, if any (spec 2026-11-10),
+   * with the request it serves. Same guard shape as the holders above, plus
+   * `settled`: the panel awaits exactly one EXPRESSION_BUILDER_RESULT per
+   * OPEN, so the first of (the modal's RESULT, the frame closing) answers and
+   * the other sends nothing.
+   */
+  private static openExpressionBuilder: {
+    modal: ExpressionBuilderModal;
+    requestId: string;
+    /** The OPEN's envelope id; the RESULT reuses it so the panel's pending request clears. */
+    openId: string;
+    settled: boolean;
+  } | null = null;
+
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.MODEL_ROOT_REQUEST:
@@ -79,6 +100,14 @@ export class ModelRootHandler {
 
       case EnvelopeMessageType.OPEN_SETTINGS_MODAL:
         ModelRootHandler.handleOpenSettingsModal();
+        return true;
+
+      case EnvelopeMessageType.OPEN_EXPRESSION_BUILDER:
+        ModelRootHandler.handleOpenExpressionBuilder(msg);
+        return true;
+
+      case EnvelopeMessageType.EXPRESSION_BUILDER_RESULT:
+        ModelRootHandler.handleExpressionBuilderResult(msg);
         return true;
 
       default:
@@ -240,6 +269,97 @@ export class ModelRootHandler {
   }
 
   /**
+   * Handle OPEN_EXPRESSION_BUILDER (spec 2026-11-10): open Studio's shared
+   * ExpressionBuilder in a real Lucid modal over the canvas, for the
+   * state-change dialog in the model panel. Mirrors handleOpenPatternModal's
+   * singleton guard, with one addition: the panel is awaiting a promise per
+   * OPEN, so every OPEN gets exactly one EXPRESSION_BUILDER_RESULT on 'model'
+   * -- a refused second OPEN is answered with null at once, and a modal
+   * closed with its own X (no RESULT) is answered with null from frameClosed.
+   */
+  private static handleOpenExpressionBuilder(msg: EnvelopeBase): void {
+    const data = msg.data as Partial<OpenExpressionBuilderData> | undefined;
+    const requestId = data?.requestId;
+    if (!requestId) {
+      log.error('OPEN_EXPRESSION_BUILDER: missing requestId');
+      return;
+    }
+    if (!data.request) {
+      log.error('OPEN_EXPRESSION_BUILDER: missing request');
+      ModelRootHandler.sendExpressionBuilderResult(msg.id, requestId, null);
+      return;
+    }
+
+    if (ModelRootHandler.openExpressionBuilder) {
+      log.debug('OPEN_EXPRESSION_BUILDER: a builder modal is already open; ignoring');
+      ModelRootHandler.sendExpressionBuilderResult(msg.id, requestId, null);
+      return;
+    }
+
+    const request = data.request;
+    const modal = new ExpressionBuilderModal(ModelManager.getClient(), {
+      modalSize: data.modalSize,
+      onLoaded: () => {
+        const init: ExpressionBuilderInitData = { requestId, request };
+        router.send('expression', {
+          id: msg.id,
+          type: EnvelopeMessageType.EXPRESSION_BUILDER_INIT,
+          source: 'host',
+          target: 'expression-iframe',
+          version: '1.0',
+          data: init,
+        });
+      },
+      onClosed: () => {
+        if (session.settled === false) {
+          session.settled = true;
+          ModelRootHandler.sendExpressionBuilderResult(session.openId, requestId, null);
+        }
+        if (ModelRootHandler.openExpressionBuilder === session) {
+          ModelRootHandler.openExpressionBuilder = null;
+        }
+      },
+    });
+    const session = { modal, requestId, openId: msg.id, settled: false };
+    ModelRootHandler.openExpressionBuilder = session;
+    modal.show();
+  }
+
+  /**
+   * Handle EXPRESSION_BUILDER_RESULT from the builder modal: forward it to
+   * the model panel and close the modal. A RESULT for anything but the open,
+   * unsettled request is dropped (the panel has had its answer already).
+   */
+  private static handleExpressionBuilderResult(msg: EnvelopeBase): void {
+    const data = msg.data as Partial<ExpressionBuilderResultData> | undefined;
+    const session = ModelRootHandler.openExpressionBuilder;
+    if (!session || session.settled || session.requestId !== data?.requestId) {
+      log.warn('EXPRESSION_BUILDER_RESULT: no open builder for this request; ignoring');
+      return;
+    }
+    session.settled = true;
+    const expression = typeof data.expression === 'string' ? data.expression : null;
+    ModelRootHandler.sendExpressionBuilderResult(session.openId, session.requestId, expression);
+    session.modal.close();
+  }
+
+  private static sendExpressionBuilderResult(
+    id: string,
+    requestId: string,
+    expression: string | null,
+  ): void {
+    const result: ExpressionBuilderResultData = { requestId, expression };
+    router.send('model', {
+      id,
+      type: EnvelopeMessageType.EXPRESSION_BUILDER_RESULT,
+      source: 'host',
+      target: 'model-iframe',
+      version: '1.0',
+      data: result,
+    });
+  }
+
+  /**
    * Determine which channel to send a response to based on the message
    * source. Mirrors SimulationRunHandler.getResponseChannel /
    * DiagramMappingRelayHandler.getResponseChannel: a message that
@@ -255,6 +375,7 @@ export class ModelRootHandler {
     if (msg.source === 'schedule-iframe') return 'schedule';
     if (msg.source === 'work-schedule-iframe') return 'work-schedule';
     if (msg.source === 'settings-iframe') return 'settings';
+    if (msg.source === 'expression-iframe') return 'expression';
     // The compiled Studies/Advisor modal (Advisor write half) writes with
     // source 'studio-embed-iframe'; its RESULT must come back on the
     // studio-embed channel or the modal's write hangs for the full 30 s

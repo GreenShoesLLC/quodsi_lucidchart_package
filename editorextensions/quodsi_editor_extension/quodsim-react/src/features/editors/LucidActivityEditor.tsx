@@ -18,6 +18,7 @@ import { useElementEditorAccessor } from '../../adapters/useElementEditorAccesso
 import { useMessaging } from '../../messaging/MessageProvider'
 import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender'
+import { useExpressionBuilderBridge } from '../expressionBuilder/useExpressionBuilderBridge'
 
 export interface LucidActivityEditorProps {
   shapeId: string
@@ -29,6 +30,8 @@ export const LucidActivityEditor: React.FC<LucidActivityEditorProps> = ({ shapeI
   const { sendMessage } = useMessaging()
   const { openSettingsModal } = useSimulationRunSender()
   const { selectElement } = useModelOpsSender()
+  // Build expression… opens the builder over the canvas (spec 2026-11-10).
+  const openExpressionBuilder = useExpressionBuilderBridge()
   // Stable hooks: ActivityEditor memoises its EditorHostContext on
   // onGoToStates. Same OPEN_WORK_SCHEDULE_MODAL call as LucidModelEditor.
   const onEditWorkSchedule = useCallback(
@@ -58,6 +61,7 @@ export const LucidActivityEditor: React.FC<LucidActivityEditorProps> = ({ shapeI
           onOpenSettings={openSettingsModal}
           onEditWorkSchedule={onEditWorkSchedule}
           onGoToStates={onGoToStates}
+          onOpenExpressionBuilder={openExpressionBuilder}
           network={false}
         />
       ) : (

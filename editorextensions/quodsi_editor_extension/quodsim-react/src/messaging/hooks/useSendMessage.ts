@@ -30,7 +30,7 @@ export const FLUSH_BEFORE_SEND: ReadonlySet<EnvelopeMessageType> = new Set([
  * Hook for sending messages to the host application
  */
 export function useSendMessage(
-  state: { app: { panelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings' | 'diagram-mapping' } },
+  state: { app: { panelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' | 'schedule' | 'work-schedule' | 'settings' | 'diagram-mapping' | 'expression' } },
   dispatch: React.Dispatch<any>
 ) {
   return useCallback(
@@ -46,6 +46,7 @@ export function useSendMessage(
         'work-schedule': 'work-schedule-iframe',
         settings: 'settings-iframe',
         'diagram-mapping': 'diagram-mapping-iframe',
+        expression: 'expression-iframe',
       };
       const envelope: EnvelopeBase = {
         id: generateUUID(),

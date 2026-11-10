@@ -62,8 +62,8 @@ const log = getLogger('index');
 // before the first render: it writes localStorage synchronously and strips
 // the param, and useView's initial state (useState(getView)) reads that
 // same localStorage key on mount. This single entry point serves every
-// ?view= route (model panel AND the pattern/schedule/work-schedule/settings
-// modals below), so calling it once here covers all of them.
+// ?view= route (model panel AND the pattern/schedule/work-schedule/settings/
+// expression modals below), so calling it once here covers all of them.
 applyViewUrlOverride();
 
 // Settings' Help links to the docs for this package's environment, named by its

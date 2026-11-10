@@ -12,6 +12,7 @@ import { GeneratorEditor } from 'quodsi_studio/platforms/shared'
 import { useElementEditorAccessor } from '../../adapters/useElementEditorAccessor'
 import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender'
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender'
+import { useExpressionBuilderBridge } from '../expressionBuilder/useExpressionBuilderBridge'
 
 export interface LucidGeneratorEditorProps {
   shapeId: string
@@ -22,6 +23,8 @@ export const LucidGeneratorEditor: React.FC<LucidGeneratorEditorProps> = ({ shap
   const { accessor, projection } = useElementEditorAccessor(referenceData)
   const { openPatternModal, openScheduleModal, openSettingsModal } = useSimulationRunSender()
   const { selectElement } = useModelOpsSender()
+  // Build expression… opens the builder over the canvas (spec 2026-11-10).
+  const openExpressionBuilder = useExpressionBuilderBridge()
   // Stable hooks: GeneratorEditor memoises its EditorHostContext on
   // onGoToStates, so a fresh arrow per render would rebuild it every render.
   // Above the early return (hook order).
@@ -40,6 +43,7 @@ export const LucidGeneratorEditor: React.FC<LucidGeneratorEditorProps> = ({ shap
       onOpenScheduleModal={onOpenScheduleModal}
       onOpenSettings={openSettingsModal}
       onGoToStates={onGoToStates}
+      onOpenExpressionBuilder={openExpressionBuilder}
     />
   )
 }

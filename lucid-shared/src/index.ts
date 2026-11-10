@@ -44,6 +44,9 @@ export { PlatformType } from '@quodsi/shared';
 export { DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/shared';
 export type { ModalSize } from '@quodsi/shared';
 
+// Expression builder: what the state-change dialog hands the builder modal
+export type { ExpressionBuilderRequest } from '@quodsi/shared';
+
 // Validation: the gate, its copy, and the result types messages carry
 export { ValidationMessages, evaluateValidationGate, ValidationSeverity } from '@quodsi/shared';
 export type { ValidationIssue, ValidationResult } from '@quodsi/shared';

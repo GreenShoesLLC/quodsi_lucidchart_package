@@ -7,6 +7,7 @@ import { ScheduleEditorView } from "./features/schedule/ScheduleEditorView";
 import { WorkScheduleEditorView } from "./features/workSchedule/WorkScheduleEditorView";
 import { SettingsEditorView } from "./features/settings/SettingsEditorView";
 import { DiagramMappingView } from "./features/diagramMapping/DiagramMappingView";
+import { ExpressionBuilderView } from "./features/expressionBuilder/ExpressionBuilderView";
 
 // Lazy: the compiled Studio surfaces stay out of the panel's entry chunk.
 const StudiesModalView = React.lazy(() => import("./features/studies/StudiesModalView").then((m) => ({ default: m.StudiesModalView })));
@@ -63,6 +64,16 @@ export const App: React.FC = () => {
       <MessageProvider initialPanelType="diagram-mapping">
         <div className="h-full w-full">
           <DiagramMappingView />
+        </div>
+      </MessageProvider>
+    );
+  }
+
+  if (urlParams.get("view") === "expression") {
+    return (
+      <MessageProvider initialPanelType="expression">
+        <div className="h-full w-full">
+          <ExpressionBuilderView />
         </div>
       </MessageProvider>
     );

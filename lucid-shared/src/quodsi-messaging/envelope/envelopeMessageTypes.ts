@@ -119,6 +119,18 @@ export enum EnvelopeMessageType {
   // never the model.
   OPEN_SETTINGS_MODAL = "OPEN_SETTINGS_MODAL",
 
+  // Expression builder (spec 2026-11-10): the state-change dialog's "Build
+  // expression…" opens the shared ExpressionBuilder in a real Lucid modal
+  // (ExpressionBuilderModal, ?view=expression on the 'expression' channel)
+  // because the right-dock panel is ~300px wide. Payloads in
+  // ../expressionBuilder/messages.ts. OPEN: panel -> host. INIT: host -> the
+  // 'expression' modal once it opens. RESULT: modal -> host, then host ->
+  // 'model' (expression null on Cancel, on Lucid's X, or when a builder was
+  // already open).
+  OPEN_EXPRESSION_BUILDER = "OPEN_EXPRESSION_BUILDER",
+  EXPRESSION_BUILDER_INIT = "EXPRESSION_BUILDER_INIT",
+  EXPRESSION_BUILDER_RESULT = "EXPRESSION_BUILDER_RESULT",
+
   // Status (ClickUp 86e3f949t): the model panel's ⋯ -> Status opens
   // quodsi_studio's shared StatusPanel in a Lucid modal (quodsim-react
   // ?view=status, StatusModal) instead of Studio's /status in a browser tab.
