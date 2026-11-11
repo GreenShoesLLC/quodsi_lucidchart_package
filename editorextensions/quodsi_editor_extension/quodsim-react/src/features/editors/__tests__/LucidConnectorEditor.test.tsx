@@ -116,7 +116,10 @@ describe('LucidConnectorEditor — the shared editor over Lucid data', () => {
     pushSnapshot()
 
     const card = within(screen.getByTestId('connector-routing-card-c1'))
-    fireEvent.change(card.getAllByRole('combobox')[0], { target: { value: '__new_state__' } })
+    // The condition's state picker: since the entity-type condition, a "Test"
+    // kind select comes before it, so find it by its "new state" option.
+    const statePicker = card.getAllByRole('combobox').find((s) => s.querySelector('option[value="__new_state__"]'))!
+    fireEvent.change(statePicker, { target: { value: '__new_state__' } })
     fireEvent.change(screen.getByPlaceholderText('e.g. Counter'), { target: { value: 'route_flag' } })
     fireEvent.click(screen.getByLabelText('Use this starting value as a scenario lever'))
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
