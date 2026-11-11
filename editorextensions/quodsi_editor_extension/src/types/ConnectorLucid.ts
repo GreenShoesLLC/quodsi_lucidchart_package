@@ -3,7 +3,6 @@ import {
     Connector,
     SimulationObjectType,
     getLogger,
-    StateCondition,
     StateModification,
     MappingSource,
     ScenarioLever,
@@ -11,6 +10,7 @@ import {
     pickConnectorName,
     pickName
 } from '@quodsi/lucid-shared';
+import { conditionFromJSON } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { blockToNameable, lineToNameable } from './nameableShape';
@@ -133,9 +133,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             connector.description = storedData.description;
         }
 
-        // Deserialize condition (routing guard for STATE_CONDITION connectors)
+        // Deserialize condition (routing guard for STATE_CONDITION connectors):
+        // on a state, or on the entity's type -- read by kind.
         if (storedData?.condition) {
-            connector.condition = StateCondition.fromJSON(storedData.condition);
+            connector.condition = conditionFromJSON(storedData.condition);
         }
 
         // Restore priority

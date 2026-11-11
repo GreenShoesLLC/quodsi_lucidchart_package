@@ -8,6 +8,7 @@ import {
     ModelDefaults,
     ScenarioLever
 } from '@quodsi/lucid-shared';
+import type { CustomMetric } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { SimObjectLucid } from './SimObjectLucid';
 
@@ -65,6 +66,9 @@ interface StoredModelData {
     startDateTime?: Date | null;
     finishDateTime?: Date | null;
     levers?: ScenarioLever[];
+    // Custom-metric authoring records (spec 2026-11-10). Stored as written:
+    // an `entityTypeId: null` (all entities) survives JSON as null.
+    customMetrics?: CustomMetric[];
 }
 
 /**
@@ -146,6 +150,7 @@ export class ModelLucid extends SimObjectLucid<Model> {
         if (storedData) {
             model.description = storedData.description ?? '';
             model.levers = storedData.levers ?? [];
+            model.customMetrics = storedData.customMetrics ?? [];
             if (!storedData.name) {
                 model.name = this.getElementName();
             }
@@ -182,7 +187,8 @@ export class ModelLucid extends SimObjectLucid<Model> {
             warmupDateTime: this.simObject.warmupDateTime,
             startDateTime: this.simObject.startDateTime,
             finishDateTime: this.simObject.finishDateTime,
-            levers: this.simObject.levers
+            levers: this.simObject.levers,
+            customMetrics: this.simObject.customMetrics
         };
 
         this.storageAdapter.updateElementData(page, dataToStore);

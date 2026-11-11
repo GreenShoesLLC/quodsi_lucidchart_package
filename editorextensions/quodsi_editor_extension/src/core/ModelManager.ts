@@ -29,6 +29,7 @@ import {
     removeEntityReferences,
     removeStateReferences,
     renameStateReferences,
+    stateRenameSteps,
     removeRequirementReferences,
     removeResourceReferences,
     pickFallbackEntityId,
@@ -1516,14 +1517,18 @@ export class ModelManager {
                 totalAffected += affectedCount;
             }
 
-            // Carry a renamed state through everything that names it
+            // Carry renamed states through everything that names them. Several
+            // renames in one write (a metric Save swapping Total and Count) go
+            // through placeholder names, or a swap would merge the two names.
+            const renames: Array<{ from: string; to: string }> = [];
             for (const previous of currentStates) {
                 const renamed = states.find(s => s.id === previous.id && s.name !== previous.name);
-                if (renamed) {
-                    totalAffected += this.applySharedReferenceCleanup(page, (c) =>
-                        renameStateReferences(c, previous.name, renamed.name)
-                    );
-                }
+                if (renamed) renames.push({ from: previous.name, to: renamed.name });
+            }
+            for (const { from, to } of stateRenameSteps(renames)) {
+                totalAffected += this.applySharedReferenceCleanup(page, (c) =>
+                    renameStateReferences(c, from, to)
+                );
             }
 
             // Save states to page storage
