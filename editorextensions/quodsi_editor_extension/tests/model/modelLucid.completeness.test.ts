@@ -14,6 +14,7 @@ import {
     createScenarioLever,
     ScenarioPropertyName,
 } from '@quodsi/lucid-shared';
+import type { CustomMetric } from '@quodsi/shared';
 import { makeFakePage } from '../helpers/fakeProxies';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -39,6 +40,19 @@ const LEVER = createScenarioLever({
     range: { min: 5, max: 25, step: 5 },
 });
 
+/** Two cycle-time records: one over all entities (null), one over an entity type. */
+const metric = (id: string, entityTypeId: string | null): CustomMetric => ({
+    id,
+    name: `M_${id}`,
+    recipe: 'cycle_time',
+    recipeVersion: 1,
+    answers: { startActivityId: 'act-a', startTiming: 'starts', stopActivityId: 'act-b', stopTiming: 'finishes', entityTypeId },
+    names: { start: `${id}_Start`, time: `${id}_Time`, total: `${id}_Total`, count: `${id}_Count`, avg: `${id}_Avg` },
+    stateIds: { start: `${id}-s`, time: `${id}-t`, total: `${id}-tot`, count: `${id}-c`, avg: `${id}-a` },
+    actionIds: { start: `${id}-start`, stop: `${id}-stop` },
+});
+const METRICS: CustomMetric[] = [metric('all', null), metric('typed', 'ent-patient')];
+
 /** Full model data — every optional field set to a distinct non-default value. */
 const FULL_MODEL_DATA = {
     id:                   'completeness-model-002',
@@ -56,6 +70,7 @@ const FULL_MODEL_DATA = {
     startDateTime:        START_DATE,
     finishDateTime:       FINISH_DATE,
     levers:               [LEVER],
+    customMetrics:        METRICS,
 };
 
 // ─── test ────────────────────────────────────────────────────────────────────
@@ -129,5 +144,19 @@ describe('ModelLucid completeness round-trip', () => {
         expect(lv.range!.min).toBe(5);
         expect(lv.range!.max).toBe(25);
         expect(lv.range!.step).toBe(5);
+
+        // Custom metrics: both records come back deep-equal, entityTypeId
+        // null included (not dropped to undefined).
+        expect(loaded.customMetrics).toEqual(METRICS);
+        expect(loaded.customMetrics[0].answers.entityTypeId).toBeNull();
+    });
+
+    it('loads a page stored before custom metrics as no metrics', () => {
+        const fakePage = makeFakePageWithTitle('page-002', 'Old page');
+        const storageAdapter = new StorageAdapter();
+        const { customMetrics: _none, ...old } = FULL_MODEL_DATA;
+        storageAdapter.setElementData(fakePage, { ...old, id: 'old' }, SimulationObjectType.Model);
+
+        expect(new ModelLucid(fakePage, storageAdapter).getSimulationObject().customMetrics).toEqual([]);
     });
 });
