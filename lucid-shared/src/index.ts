@@ -196,6 +196,7 @@ export {
   pickFallbackEntityId,
   removeStateReferences,
   renameStateReferences,
+  stateRenameSteps,
   findExpressionsReferencingState,
   removeRequirementReferences,
   removeResourceReferences,
