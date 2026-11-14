@@ -31,6 +31,15 @@ describe('referenceSummaries', () => {
         });
     });
 
+    it('keeps an expression condition, and only that kind of condition', () => {
+        expect(summarizeAction({ id: 'a1', type: 'assign', condition: { expression: 'urgent and qty > 2' } }))
+            .toEqual({ id: 'a1', type: 'assign', condition: { expression: 'urgent and qty > 2' } });
+        expect(summarizeAction({ id: 'a2', type: 'assign', condition: { stateId: 's', comparison: 'equal', value: 1 } }))
+            .toEqual({ id: 'a2', type: 'assign' });
+        expect(summarizeAction({ id: 'a3', type: 'assign', condition: { entityId: 'e', comparison: 'equal' } }))
+            .toEqual({ id: 'a3', type: 'assign' });
+    });
+
     it('keeps a modification expression and drops a literal value', () => {
         const action = {
             id: 'a1', type: 'assign',
