@@ -66,6 +66,12 @@ export function summarizeAction(action: any): EditorReferenceActionSummary {
     const modifications = summarizeModifications(action.modifications);
     if (modifications) summary.modifications = modifications;
 
+    // An expression condition reads states by name; the delete dialog needs it.
+    const condition = action.condition;
+    if (condition && typeof condition.expression === 'string' && condition.entityId === undefined) {
+        summary.condition = { expression: condition.expression };
+    }
+
     if (Array.isArray(action.ifTrue) && action.ifTrue.length > 0) {
         summary.ifTrue = action.ifTrue.map(summarizeAction);
     }

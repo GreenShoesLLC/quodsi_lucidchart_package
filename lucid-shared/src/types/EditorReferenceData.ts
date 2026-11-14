@@ -46,6 +46,9 @@ export interface EditorReferenceActionSummary {
     resourceRequirementId?: string | null;
     /** State modifications carried by this action. */
     modifications?: EditorReferenceStateModification[];
+    /** The action's guard (or a BRANCH's selector), only when it is an
+     *  expression condition: the States delete dialog lists the states it reads. */
+    condition?: { expression: string };
     /** BRANCH: actions to run when the condition is true. */
     ifTrue?: EditorReferenceActionSummary[];
     /** BRANCH: actions to run when the condition is false. */
