@@ -50,6 +50,15 @@ export interface RunSubmitOutcome {
 /**
  * Handler for simulation-related messages
  */
+/**
+ * The data action's trace fields (spec 2026-11-16-lucid-trace): `enableTrace` and `traceReps` when the
+ * run includes trace, none otherwise, so a run without trace sends exactly what it always did. The API
+ * validates the count (1..50) as it validates a REST run's.
+ */
+export function traceActionData(traceReps?: number): { enableTrace?: true; traceReps?: number } {
+  return traceReps ? { enableTrace: true, traceReps } : {};
+}
+
 export class SimulationHandler {
   /** Active simulation jobs, by job id. */
   private static activeJobs: Map<string, ActiveJob> = new Map();
@@ -107,6 +116,8 @@ export class SimulationHandler {
       parameters?: Record<string, unknown>;
       scenarioDefinitionId?: string;
       enableAnimation?: boolean;
+      // Trace replications when the run includes trace (spec 2026-11-16-lucid-trace).
+      traceReps?: number;
       // Embed-originated runs (Studio runner via RUN_SCENARIO delegation) manage
       // their own lifecycle (backend + Studio 10s poll) and must NOT use the legacy
       // in-memory activeJobs concurrency tracker: it's never terminalized in the embed
@@ -429,7 +440,8 @@ export class SimulationHandler {
             appVersion: ENGINE_VERSION,
             // Opt-in animation (default off). Backend reads action_data.enableAnimation
             // (lucid_router); engine generates animation for replication 1 only.
-            enableAnimation: data.enableAnimation ?? false
+            enableAnimation: data.enableAnimation ?? false,
+            ...traceActionData(data.traceReps)
           },
           asynchronous: false
         }) as { status?: number; json?: any };

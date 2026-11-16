@@ -38,6 +38,19 @@ describe('createLucidModalHost', () => {
     ])
   })
 
+  // Spec 2026-11-16-lucid-trace: the run's trace setting rides RUN_SCENARIO, only when set.
+  it('RUN_SCENARIO carries traceReps when the run includes trace, and not otherwise', () => {
+    const { ports } = harness()
+    const host = createLucidModalHost(ports)
+    host.connect()
+    host.runScenario({ scenarioId: 's1', enableAnimation: false, updateModel: true, traceReps: 3 })
+    host.runScenario({ scenarioId: 's2', enableAnimation: false, updateModel: true })
+    expect(ports.sent).toEqual([
+      [EnvelopeMessageType.RUN_SCENARIO, { scenarioId: 's1', enableAnimation: false, updateModel: true, traceReps: 3 }],
+      [EnvelopeMessageType.RUN_SCENARIO, { scenarioId: 's2', enableAnimation: false, updateModel: true }],
+    ])
+  })
+
   it("sends a catalog request's requestId, and delivers the echo on the catalog", () => {
     const { ports, reply } = harness()
     const host = createLucidModalHost(ports)

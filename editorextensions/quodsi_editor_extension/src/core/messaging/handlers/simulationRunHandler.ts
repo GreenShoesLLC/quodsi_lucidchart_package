@@ -381,7 +381,7 @@ export class SimulationRunHandler {
    * RUN_SCENARIO_RESULT back to the Studies view.
    */
   private static async handleRunScenario(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { scenarioId?: string; enableAnimation?: boolean };
+    const data = msg.data as { scenarioId?: string; enableAnimation?: boolean; traceReps?: number };
     if (!data?.scenarioId) {
       SimulationRunHandler.logger.error('RUN_SCENARIO: missing scenarioId');
       return;
@@ -398,6 +398,8 @@ export class SimulationRunHandler {
         documentId,
         scenarioDefinitionId: data.scenarioId,
         enableAnimation: data.enableAnimation ?? false,
+        // The run's trace setting (spec 2026-11-16-lucid-trace), only when the embed sent one.
+        ...(data.traceReps ? { traceReps: data.traceReps } : {}),
         // Embed runs manage their own lifecycle (backend + Studio 10s poll); tell
         // handleRunRequest to skip the legacy in-memory activeJobs concurrency
         // tracker, which never terminalizes here and would wedge runs to one per
