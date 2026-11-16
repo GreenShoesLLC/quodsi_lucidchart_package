@@ -138,8 +138,9 @@ export function createLucidModalHost(
     onCatalog: (cb) => on((env) => {
       if (env.type === EnvelopeMessageType.STUDIO_CATALOG) cb((env.data as { catalog: RelayedCatalog }).catalog)
     }),
-    runScenario: ({ scenarioId, enableAnimation, updateModel }) =>
-      ports.send(EnvelopeMessageType.RUN_SCENARIO, { scenarioId, enableAnimation, updateModel }),
+    // traceReps only when the run includes trace (spec 2026-11-16-lucid-trace).
+    runScenario: ({ scenarioId, enableAnimation, updateModel, traceReps }) =>
+      ports.send(EnvelopeMessageType.RUN_SCENARIO, { scenarioId, enableAnimation, updateModel, ...(traceReps ? { traceReps } : {}) }),
     onRunResult: (cb) => on((env) => {
       if (env.type !== EnvelopeMessageType.RUN_SCENARIO_RESULT) return
       const d = (env.data ?? {}) as { scenarioId?: string; accepted?: boolean; error?: string }

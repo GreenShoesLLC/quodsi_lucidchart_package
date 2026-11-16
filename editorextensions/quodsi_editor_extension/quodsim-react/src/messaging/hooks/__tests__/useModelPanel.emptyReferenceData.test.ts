@@ -31,12 +31,6 @@ vi.mock('../../senders/modelOpsSender', () => ({
   }),
 }))
 
-vi.mock('../../senders/simulationSender', () => ({
-  useSimulationSender: () => ({
-    requestSimulation: vi.fn(),
-  }),
-}))
-
 import { useModelPanel, EMPTY_REFERENCE_DATA } from '../useModelPanel'
 
 describe('useModelPanel EMPTY_REFERENCE_DATA fallback', () => {

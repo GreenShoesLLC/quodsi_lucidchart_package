@@ -366,11 +366,11 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
   }
 
   // runScenario / cancelScenarioRun / loadScenarios / refreshScenarios are
-  // deliberately NOT implemented here. In today's Lucid extension, running a
-  // scenario and polling its status are handled entirely outside the
-  // ModelStateAccessor contract (useSimulationSender /
-  // useModelOpsSender.requestSimulation, wired directly in useModelPanel),
-  // not through this accessor. This mirrors Visio's ModelManager, which
+  // deliberately NOT implemented here. In today's Lucid extension a scenario
+  // runs only from the Studies view (Studio's surfaces, compiled in), whose
+  // LucidEmbedModelAccessor sends RUN_SCENARIO to the extension; the panel
+  // itself has no run path (its old MODEL_RUN_REQUEST sender was removed
+  // 2026-11-16). This mirrors Visio's ModelManager, which
   // omits the same four members for the same reason: those methods exist on
   // the interface for the Lucid EMBED host (the iframe-in-Studio surface,
   // which has its own DB-backed scenario list to sync), not for every host.

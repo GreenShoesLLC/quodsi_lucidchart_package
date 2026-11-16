@@ -39,9 +39,9 @@ describe('useSendMessage — flush before sends that read the stored model', () 
     registerModelRootSource({ hasPendingWrites: () => true, flush: vi.fn().mockRejectedValue(new Error('refused')) })
     const { send, types } = setup()
 
-    send(EnvelopeMessageType.MODEL_RUN_REQUEST, { documentId: 'd' })
+    send(EnvelopeMessageType.RUN_SCENARIO, { scenarioId: 's' })
 
-    await vi.waitFor(() => expect(types()).toEqual([EnvelopeMessageType.MODEL_RUN_REQUEST]))
+    await vi.waitFor(() => expect(types()).toEqual([EnvelopeMessageType.RUN_SCENARIO]))
   })
 
   it('posts a listed message at once when nothing is pending', () => {
@@ -80,7 +80,6 @@ describe('useSendMessage — flush before sends that read the stored model', () 
   it('lists exactly the messages whose host handler reads the stored model', () => {
     expect([...FLUSH_BEFORE_SEND].sort()).toEqual(
       [
-        EnvelopeMessageType.MODEL_RUN_REQUEST,
         EnvelopeMessageType.MODEL_VALIDATE,
         EnvelopeMessageType.RUN_SCENARIO,
         EnvelopeMessageType.OPEN_STUDIES_MODAL,

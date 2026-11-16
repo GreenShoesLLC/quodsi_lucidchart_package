@@ -166,6 +166,10 @@ if ($TargetEnvironment -eq 'PRD') {
         Write-Error "Production Lucid packages need -RunReactBuild, so the React app carries this release's number. Re-run with -RunReactBuild."
         exit 1
     }
+    # The release number turns capabilities on for Lucid (e.g. run_trace from 2026.11.16.2), so the
+    # extension code must be the Lucid repo's merged main, not whatever branch is checked out.
+    & (Join-Path $PSScriptRoot 'Assert-LucidRepoAtMain.ps1') -LucidRepo $LucidPackageDir
+    if ($LASTEXITCODE -ne 0) { exit 1 }
 }
 Push-Location $VersionMonorepoRoot
 try {
