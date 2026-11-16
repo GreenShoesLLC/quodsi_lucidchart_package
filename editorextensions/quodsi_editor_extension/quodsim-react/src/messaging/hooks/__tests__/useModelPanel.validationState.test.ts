@@ -21,10 +21,6 @@ vi.mock('../../senders/modelOpsSender', () => ({
   }),
 }))
 
-vi.mock('../../senders/simulationSender', () => ({
-  useSimulationSender: () => ({ requestSimulation: vi.fn() }),
-}))
-
 import { useModelPanel } from '../useModelPanel'
 
 function baseMessaging(validation: any) {
