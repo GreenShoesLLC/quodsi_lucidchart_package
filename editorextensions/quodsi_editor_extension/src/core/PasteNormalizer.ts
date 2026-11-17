@@ -36,16 +36,16 @@
 
 import { ItemProxy, LineProxy, PageProxy } from 'lucid-extension-sdk';
 import {
-    Action,
-    ScenarioLever,
+    NamedRecord,
     SimulationObjectType,
     SwimLaneLaneMapping,
     SwimLaneQuodsiData,
     generateUUID,
     generateUniqueName,
     getLogger,
-    pickConnectorName,
-    splitActionPath,
+    pasteActivity,
+    pasteConnector,
+    pasteGenerator,
 } from '@quodsi/lucid-shared';
 import { StoredResourceRecord } from './StoredResourceRecord';
 import { StorageAdapter } from './StorageAdapter';
@@ -361,7 +361,7 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
  * the pasted copy stops sharing authoring metadata with the original:
  *
  *   - every action gets a fresh `id`, recursively through BranchAction's
- *     `ifTrue`/`ifFalse` and LoopAction's `actions` (see `remintActionIds`).
+ *     `ifTrue`/`ifFalse` and LoopAction's `actions` (see `remintActionIds` in @quodsi/shared).
  *   - every lever gets a fresh `leverId`; a lever whose `actionId` pointed at
  *     one of the re-minted actions is repointed to that action's NEW id via
  *     the id map `remintActionIds` builds -- a lever whose `actionId` does
@@ -392,84 +392,14 @@ function cloneResourceRecord(source: StoredResourceRecord, takenIn: StoredResour
 function normalizeActivity(item: ItemProxy, page: PageProxy, sa: StorageAdapter, result: PasteNormalizationResult): void {
     const typeInfo = sa.getElementType(item)!;
     const data = (sa.getElementData(item) ?? {}) as Record<string, unknown>;
-    const { id: _old, type: _t, ...domain } = data;
-
-    if (Array.isArray(domain.actions)) {
-        const { actions: remintedActions, idMap } = remintActionIds(domain.actions as Action[]);
-        domain.actions = remintedActions;
-
-        if (Array.isArray(domain.levers)) {
-            domain.levers = (domain.levers as ScenarioLever[]).map((lever) => {
-                const next: ScenarioLever = { ...lever, leverId: generateUUID() };
-                if (lever.actionId !== undefined && idMap.has(lever.actionId)) {
-                    next.actionId = idMap.get(lever.actionId)!;
-                }
-                // Final review I2: since SP3d a step lever is written
-                // path-shaped (`actions[<stepId>].<field>`, no `actionId`).
-                // Repoint the step id inside the path through the SAME id
-                // map, one place (splitActionPath), or the pasted copy's
-                // lever names a step that isn't on it.
-                if (typeof next.path === 'string') {
-                    const split = splitActionPath(next.path);
-                    if (split && idMap.has(split.actionId)) {
-                        next.path = `actions[${idMap.get(split.actionId)!}].${split.field}`;
-                    }
-                }
-                return next;
-            });
-        }
-    } else if (Array.isArray(domain.levers)) {
-        // No actions to re-mint (so no id map), but levers still need fresh
-        // identity; any actionId they carry is necessarily dangling here.
-        domain.levers = (domain.levers as ScenarioLever[]).map((lever) => ({ ...lever, leverId: generateUUID() }));
-    }
-
-    if (typeof domain.name === 'string' && domain.name) {
-        const takenNames = collectTakenNames(page, sa, SimulationObjectType.Activity, item.id);
-        const uniqueName = generateUniqueName(domain.name, (candidate) => takenNames.has(candidate));
-        if (uniqueName !== domain.name) {
-            domain.name = uniqueName;
-            result.notices.push(`Pasted activity renamed to '${uniqueName}'`);
-        }
-    }
+    const takenNames = collectTakenNames(page, sa, SimulationObjectType.Activity, item.id);
+    const { record: domain, notices } = pasteActivity(data, { takenNames });
+    result.notices.push(...notices);
 
     sa.setElementData(item, { id: item.id, ...domain } as { id: string }, SimulationObjectType.Activity, {
         mappingSource: typeInfo.mappingSource,
     });
     result.changed = true;
-}
-
-/**
- * Mints a fresh `id` for every action in `actions`, recursing into
- * BranchAction's `ifTrue`/`ifFalse` and LoopAction's `actions` -- the only
- * nested-action branches the shared Action union has (confirmed by grepping
- * `quodsi_shared/src/types/elements/actions` for `ifTrue`/`ifFalse`/`actions:`
- * -- see the Task 5 report). Returns the rebuilt array alongside an
- * `idMap` from every OLD action id to its NEW one (top-level and nested
- * alike), which the lever-repoint step uses to follow a lever's `actionId`
- * to the same logical action under its new identity.
- */
-function remintActionIds(actions: Action[]): { actions: Action[]; idMap: Map<string, string> } {
-    const idMap = new Map<string, string>();
-
-    const remint = (list: Action[]): Action[] =>
-        list.map((action) => {
-            const newId = generateUUID();
-            if (action.id) idMap.set(action.id, newId);
-            const next: Record<string, unknown> = { ...(action as unknown as Record<string, unknown>), id: newId };
-            if (Array.isArray((action as unknown as { ifTrue?: unknown }).ifTrue)) {
-                next.ifTrue = remint((action as unknown as { ifTrue: Action[] }).ifTrue);
-            }
-            if (Array.isArray((action as unknown as { ifFalse?: unknown }).ifFalse)) {
-                next.ifFalse = remint((action as unknown as { ifFalse: Action[] }).ifFalse);
-            }
-            if (Array.isArray((action as unknown as { actions?: unknown }).actions)) {
-                next.actions = remint((action as unknown as { actions: Action[] }).actions);
-            }
-            return next as unknown as Action;
-        });
-
-    return { actions: remint(actions), idMap };
 }
 
 /** Every OTHER block's stored `name` on `page`, of the given `type`, for unique-name dedup. */
@@ -531,63 +461,34 @@ function normalizeGenerator(
 ): void {
     const typeInfo = sa.getElementType(item)!;
     const data = (sa.getElementData(item) ?? {}) as Record<string, unknown>;
-    const { id: _old, type: _t, ...domain } = data;
+    const takenNames = collectTakenNames(page, sa, SimulationObjectType.Generator, item.id);
 
-    if (Array.isArray(domain.levers)) {
-        domain.levers = (domain.levers as ScenarioLever[]).map((lever) => ({ ...lever, leverId: generateUUID() }));
+    // Lookup space: THIS page's records first, then every other page's (the
+    // order Lucid has always searched). Name collisions are checked against
+    // THIS page's records only. Read live per paste, so earlier pastes in the
+    // same batch (whose clones are already persisted) are visible.
+    const pagePatterns = sa.getArrivalPatterns(page);
+    const pageSchedules = sa.getArrivalSchedules(page);
+    const pasted = pasteGenerator(data, {
+        takenNames,
+        arrivalPatterns: [...pagePatterns, ...otherPagesRecords(page, opts, (p) => sa.getArrivalPatterns(p))] as NamedRecord[],
+        arrivalSchedules: [...pageSchedules, ...otherPagesRecords(page, opts, (p) => sa.getArrivalSchedules(p))] as NamedRecord[],
+        arrivalPatternNamesTaken: namesOf(pagePatterns),
+        arrivalScheduleNamesTaken: namesOf(pageSchedules),
+    });
+    const { record: domain, addedArrivalPatterns, addedArrivalSchedules } = pasted;
+    result.notices.push(...pasted.notices);
+
+    // Fix C: the clones are persisted BEFORE the final element write, and the
+    // flag is raised as soon as they are, so a throw in setElementData still
+    // gets the model cache invalidated.
+    if (addedArrivalPatterns.length) {
+        sa.setArrivalPatterns(page, [...pagePatterns, ...addedArrivalPatterns] as typeof pagePatterns);
+        result.changed = true;
     }
-
-    let finalName: string | undefined = typeof domain.name === 'string' && domain.name ? domain.name : undefined;
-    if (finalName) {
-        const takenNames = collectTakenNames(page, sa, SimulationObjectType.Generator, item.id);
-        const uniqueName = generateUniqueName(finalName, (candidate) => takenNames.has(candidate));
-        if (uniqueName !== finalName) {
-            finalName = uniqueName;
-            domain.name = uniqueName;
-            result.notices.push(`Pasted generator renamed to '${uniqueName}'`);
-        }
-    }
-
-    if (typeof domain.arrivalPatternId === 'string' && domain.arrivalPatternId) {
-        const clone = cloneLinkedRecord(
-            page,
-            domain.arrivalPatternId,
-            (p) => sa.getArrivalPatterns(p),
-            (p, list) => sa.setArrivalPatterns(p, list),
-            opts,
-            finalName,
-            'Arrival Pattern'
-        );
-        if (clone) {
-            domain.arrivalPatternId = clone.id;
-            // Fix C: the clone is ALREADY written to this page's
-            // `q_arrival_patterns` (cloneLinkedRecord calls setList). Raise the
-            // flag here so a throw in the schedule clone below -- or in the
-            // final setElementData -- still gets the model cache invalidated.
-            result.changed = true;
-            result.notices.push('Pasted generator uses a new copy of its arrival pattern');
-        } else {
-            delete domain.arrivalPatternId;
-        }
-    }
-
-    if (typeof domain.arrivalScheduleId === 'string' && domain.arrivalScheduleId) {
-        const clone = cloneLinkedRecord(
-            page,
-            domain.arrivalScheduleId,
-            (p) => sa.getArrivalSchedules(p),
-            (p, list) => sa.setArrivalSchedules(p, list),
-            opts,
-            finalName,
-            'Arrival Schedule'
-        );
-        if (clone) {
-            domain.arrivalScheduleId = clone.id;
-            result.changed = true;                 // fix C: already persisted -- see the pattern branch above
-            result.notices.push('Pasted generator uses a new copy of its arrival schedule');
-        } else {
-            delete domain.arrivalScheduleId;
-        }
+    if (addedArrivalSchedules.length) {
+        sa.setArrivalSchedules(page, [...pageSchedules, ...addedArrivalSchedules] as typeof pageSchedules);
+        result.changed = true;
     }
 
     sa.setElementData(item, { id: item.id, ...domain } as { id: string }, SimulationObjectType.Generator, {
@@ -596,52 +497,19 @@ function normalizeGenerator(
     result.changed = true;
 }
 
-/**
- * Resolves `linkedId` against `getList(page)` (THIS page first, then every
- * other page `opts.allPages` enumerates), and when found, clones it onto
- * THIS page's list: fresh `id`, name deduped against `getList(page)` (via
- * `generateUniqueName`, falling back to `generatorName` then `defaultName`
- * when the source record itself has no usable name). Returns the clone, or
- * `undefined` when `linkedId` resolves nowhere -- callers drop the pointer
- * in that case, they never keep a dangling id.
- */
-function cloneLinkedRecord<T extends { id: string; name?: string }>(
-    page: PageProxy,
-    linkedId: string,
-    getList: (p: PageProxy) => T[],
-    setList: (p: PageProxy, list: T[]) => void,
-    opts: PasteNormalizerOptions,
-    generatorName: string | undefined,
-    defaultName: string
-): T | undefined {
-    const pageRecords = getList(page);
-    const source = pageRecords.find((r) => String(r.id) === linkedId) ?? findLinkedOnOtherPages(page, linkedId, getList, opts);
-    if (!source) return undefined;
-
-    const takenNames = new Set(pageRecords.map((r) => r.name).filter((n): n is string => !!n));
-    const clone: T = {
-        ...source,
-        id: generateUUID(),
-        name: generateUniqueName(source.name ?? generatorName ?? defaultName, (candidate) => takenNames.has(candidate)),
-    };
-    setList(page, [...pageRecords, clone]);
-    return clone;
+function namesOf(records: readonly { name?: string }[]): Set<string> {
+    return new Set(records.map((r) => r.name).filter((n): n is string => !!n));
 }
 
-/** The record `linkedId` names on some OTHER page of the document, if any -- same lazy `opts.allPages` pattern as `findOnOtherPages` (Resource rule). */
-function findLinkedOnOtherPages<T extends { id: string }>(
-    page: PageProxy,
-    linkedId: string,
-    getList: (p: PageProxy) => T[],
-    opts: PasteNormalizerOptions
-): T | undefined {
-    if (!opts.allPages) return undefined;
+/** Every record `getList` returns for the OTHER pages `opts.allPages` enumerates (lazy: empty without it). */
+function otherPagesRecords<T>(page: PageProxy, opts: PasteNormalizerOptions, getList: (p: PageProxy) => T[]): T[] {
+    const out: T[] = [];
+    if (!opts.allPages) return out;
     for (const other of opts.allPages()) {
         if (!other || other === page || other.id === page.id) continue;
-        const found = getList(other).find((r) => String(r.id) === linkedId);
-        if (found) return found;
+        out.push(...getList(other));
     }
-    return undefined;
+    return out;
 }
 
 /**
@@ -677,18 +545,22 @@ function findLinkedOnOtherPages<T extends { id: string }>(
 function normalizeConnector(item: ItemProxy, page: PageProxy, sa: StorageAdapter, result: PasteNormalizationResult): void {
     const typeInfo = sa.getElementType(item)!;
     const data = (sa.getElementData(item) ?? {}) as Record<string, unknown>;
-    const { id: _old, type: _t, ...domain } = data;
 
     const line = item as LineProxy;
-    const overlay = liveEndpointIds(line);
-    if (overlay.sourceId) domain.sourceId = overlay.sourceId;
-    if (overlay.targetId) domain.targetId = overlay.targetId;
-
-    const sourceName = endpointStoredName(page, sa, domain.sourceId);
-    const targetName = endpointStoredName(page, sa, domain.targetId);
-    if (sourceName && targetName) {
-        domain.name = pickConnectorName(lineToNameable(line), { sourceName, targetName });
-    }
+    // lineToNameable reads the line's text areas; the old code only did that
+    // when both ends resolved to a named block. Keep it lazy: the getters run
+    // only if pasteConnector's naming step actually consumes the shape.
+    const nameable = {
+        get shapeId() { return lineToNameable(line).shapeId; },
+        get text() { return lineToNameable(line).text; },
+        masterName: null,
+    };
+    const liveEnds = liveEndpointIds(line);
+    const { record: domain } = pasteConnector(data, {
+        liveEnds: { sourceId: liveEnds.sourceId ?? null, targetId: liveEnds.targetId ?? null },
+        endName: (id) => endpointStoredName(page, sa, id),
+        nameable,
+    });
 
     sa.setElementData(item, { id: item.id, ...domain } as { id: string }, SimulationObjectType.Connector, {
         mappingSource: typeInfo.mappingSource,

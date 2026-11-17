@@ -37,6 +37,10 @@ export type { LogLevel } from '@quodsi/shared';
 export { QUODSI_ICON_BASE64 } from '@quodsi/shared';
 export type { ResourceFinancialPropertiesJson } from '@quodsi/shared';
 
+// Paste rules (pure; PasteNormalizer applies them to Lucid's records)
+export { pasteActivity, pasteGenerator, pasteConnector } from '@quodsi/shared';
+export type { NamedRecord } from '@quodsi/shared';
+
 // Platform (the version manager registers its upgrader for PlatformType.Lucid)
 export { PlatformType } from '@quodsi/shared';
 
