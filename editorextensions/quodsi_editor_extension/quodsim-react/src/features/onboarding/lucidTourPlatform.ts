@@ -10,10 +10,23 @@ import {
   type EnvelopeBase,
   type TourLoadExampleResultData,
 } from '@quodsi/lucid-shared'
-import type { AppEventName, ExampleLoadOutcome, TourPlatform } from 'quodsi_studio/platforms/shared'
-import { createDockedRenderer } from './dockedRenderer'
+import {
+  PANEL_FIRST,
+  PANEL_LAST,
+  createDockedRenderer,
+  framedSteps,
+  lucidCapacityTradeoff,
+  type AppEventName,
+  type ExampleLoadOutcome,
+  type TourPlatform,
+} from 'quodsi_studio/platforms/shared'
 import { clearExamplePageId, readExamplePageId, readTourOwner, writeExamplePage } from './examplePageStore'
-import { ownsPanel } from './stepFrames'
+
+/** The side panel's steps (welcome..open-studies); the Studies modal owns
+ *  the rest (spec 2026-10-16 §9 amendment 1). */
+export const LUCID_PANEL_STEPS: ReadonlySet<string> = framedSteps(lucidCapacityTradeoff, PANEL_FIRST, PANEL_LAST)
+export const ownsPanel = (id: string): boolean => LUCID_PANEL_STEPS.has(id)
+export const ownsModal = (id: string): boolean => !LUCID_PANEL_STEPS.has(id)
 
 /** How long a tour request waits for the extension's reply. */
 export const HOST_REPLY_TIMEOUT_MS = 60_000

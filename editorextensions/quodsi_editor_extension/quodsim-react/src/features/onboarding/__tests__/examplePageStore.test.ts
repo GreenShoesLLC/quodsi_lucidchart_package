@@ -1,12 +1,13 @@
 import {
   EXAMPLE_PAGE_STORAGE_KEY,
-  adoptTourDocument,
   clearExamplePageId,
   readExamplePageId,
   readTourOwner,
   writeExamplePage,
 } from '../examplePageStore'
 
+// The store's logic and its other tests live in Studio's shared
+// tourOwnership (spec 2026-11-18 §5.1); this pins Lucid's key and format.
 describe('examplePageStore', () => {
   beforeEach(() => localStorage.clear())
 
@@ -25,33 +26,5 @@ describe('examplePageStore', () => {
     expect(readExamplePageId('a@x')).toBeNull()
     expect(readTourOwner('a@x')).toEqual({ documentId: 'doc-a', pageId: null })
     expect(readExamplePageId('b@x')).toBe('pg-2')
-  })
-
-  it('adopting keeps the page id for the same document and drops it for another', () => {
-    writeExamplePage('a@x', 'doc-a', 'pg-1')
-    adoptTourDocument('a@x', 'doc-a')
-    expect(readTourOwner('a@x')).toEqual({ documentId: 'doc-a', pageId: 'pg-1' })
-    adoptTourDocument('a@x', 'doc-b')
-    expect(readTourOwner('a@x')).toEqual({ documentId: 'doc-b', pageId: null })
-  })
-
-  it('ignores a v1 blob (page id with no owning document)', () => {
-    localStorage.setItem('quodsi.onboarding.lucid.examplePage.v1', JSON.stringify({ version: 1, users: { 'a@x': 'pg-1' } }))
-    expect(readTourOwner('a@x')).toBeNull()
-  })
-
-  it('degrades to null on corrupt or hostile storage and never throws', () => {
-    localStorage.setItem(EXAMPLE_PAGE_STORAGE_KEY, '{not json')
-    expect(readTourOwner('a@x')).toBeNull()
-    localStorage.setItem(EXAMPLE_PAGE_STORAGE_KEY, JSON.stringify({ version: 2, users: { 'a@x': 7, 'b@x': { pageId: 'p' } } }))
-    expect(readTourOwner('a@x')).toBeNull()
-    expect(readTourOwner('b@x')).toBeNull()
-    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
-    const spySet = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
-    expect(readExamplePageId('a@x')).toBeNull()
-    expect(() => writeExamplePage('a@x', 'doc', 'pg')).not.toThrow()
-    expect(() => adoptTourDocument('a@x', 'doc')).not.toThrow()
-    spy.mockRestore()
-    spySet.mockRestore()
   })
 })
